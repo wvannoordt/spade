@@ -10,6 +10,8 @@ namespace cvdf::ctrs
         { t[i] } -> std::common_with<real_type>;
     };
     
+    template <class T> concept integral_type = std::is_integral<T>::value;
+    
     template<typename dtype, const size_t ar_size> struct array
     {
         dtype data[ar_size];
@@ -37,5 +39,12 @@ namespace cvdf::ctrs
         }
         array(const dtype& val) {fill(val);}
         array(void) {fill(dtype());}
+        template <typename rhs_t> array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        {
+            this->fill(rhs);
+            return *this;
+        }
+        template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
+        template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
     };
 }
