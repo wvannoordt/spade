@@ -66,6 +66,18 @@ namespace cvdf::grid
                     });
                     ++clb;
                 }
+                
+                
+                
+                for (auto i: range(0,total_idx_rank())) idx_coeffs[i[0]] = 1;
+                
+                for (std::size_t i = 0; i < total_idx_rank(); i++)
+                {
+                    for (std::size_t j = 0; j < total_idx_rank(); j++)
+                    {
+                        
+                    }
+                }
             }
             
             ctrs::array<dtype, 3> node_coords(std::size_t i, std::size_t j, std::size_t k, std::size_t lb) const
@@ -127,15 +139,20 @@ namespace cvdf::grid
             array_container::fill_container(data, fill_elem);
         }
         
+        static constexpr std::size_t total_idx_rank(void) {return decltype(this->minor_dims)::rank()+decltype(this->major_dims)::rank()+decltype(this->grid_dims)::rank();}
+        
         template <typename... idxs_t>
         ar_data_t& operator() (idxs_t...)
         {
-            static_assert(sizeof...(idxs_t)==decltype(this->minor_dims)::rank()+decltype(this->major_dims)::rank()+decltype(this->grid_dims)::rank(), "wrong number of indices passed to indexing operator");
+            static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[0];
         }
+        
         minor_dim_t minor_dims;
         dims::dynamic_dims<4> grid_dims;
         major_dim_t major_dims;
         container_t data;
+        std::size_t offset;
+        std::size_t idx_coeffs [total_idx_rank()];
     };
 }
