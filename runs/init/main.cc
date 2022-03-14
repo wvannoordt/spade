@@ -13,7 +13,10 @@ int main(int argc, char** argv)
     bounds.max(1) = 1.0;
     bounds.max(2) = 1.0;
     
-    cvdf::grid::cartesian_grid_t<double> grid(num_blocks, cells_in_block, exchange_cells, bounds);
+    cvdf::coords::identity<double> coords;
+    cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords);
+    std::ofstream myfile("out.vtk");
+    cvdf::output::output_grid(myfile, grid);
     
     return 0;
 }
