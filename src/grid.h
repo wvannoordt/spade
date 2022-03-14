@@ -9,6 +9,9 @@
 #include "range.h"
 #include "static_for.h"
 #include "coord_system.h"
+#include "parallel.h"
+#include "dims.h"
+#include "array_container.h"
 
 namespace cvdf::grid
 {
@@ -18,7 +21,7 @@ namespace cvdf::grid
         { t.node_coords(i, j, k, lb) } -> ctrs::vec_nd<3, typename T::dtype>;
     };
     
-    template <coords::coordinate_system coord_t> class cartesian_grid_t
+    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t> class cartesian_grid_t
     {
         public:
             typedef coord_t::coord_type dtype;
@@ -27,8 +30,10 @@ namespace cvdf::grid
                 const ctrs::array<size_t, cvdf_dim>& cells_in_block_in,
                 const ctrs::array<size_t, cvdf_dim>& exchange_cells_in,
                 const bound_box_t<dtype,  cvdf_dim>& bounds_in,
-                const coord_t& coord_system_in)
+                const coord_t& coord_system_in,
+                par_group_t& group_in)
             {
+                this->grid_group = &group_in;
                 coord_system = coord_system_in;
                 dx = 1.0;
                 num_blocks = 1;
@@ -75,14 +80,62 @@ namespace cvdf::grid
                 return coord_system.map(output);
             }
             
+            const par_group_t& group(void) const
+            {
+                return *grid_group;
+            }
+            const coord_t& coord_sys(void) const {return coord_system;}
+            
+            std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
+            std::size_t get_num_blocks(void)                   const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
+            std::size_t get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
+            std::size_t get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
+            bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
+            ctrs::array<dtype,  3> get_dx(void) const {return dx;}
+            dtype get_dx(const std::size_t& i) const {return dx[i];}
+            
         private:
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
-            ctrs::array<size_t, 3> num_blocks;
-            ctrs::array<size_t, 3> cells_in_block;
-            ctrs::array<size_t, 3> exchange_cells;
+            ctrs::array<std::size_t, 3> num_blocks;
+            ctrs::array<std::size_t, 3> cells_in_block;
+            ctrs::array<std::size_t, 3> exchange_cells;
             bound_box_t<dtype,  3> bounds;
             std::vector<bound_box_t<dtype, 3>> block_boxes;
             size_t total_blocks;
+            par_group_t* grid_group;
+    };
+    
+    template <
+        multiblock_grid grid_t,
+        typename ar_data_t,
+        dims::grid_array_dimension minor_dim_t,
+        dims::grid_array_dimension major_dim_t,
+        array_container::grid_data_container container_t=std::vector<ar_data_t>>
+    struct grid_array
+    {
+        grid_array(const grid_t& grid_in, const ar_data_t& fill_elem, const minor_dim_t& minor_dims_in, const major_dim_t& major_dims_in)
+        {
+            minor_dims = minor_dims_in;
+            major_dims = major_dims_in;
+            grid_dims = dims::dynamic_dims<4>(
+                grid_in.get_num_cells(0)+grid_in.get_num_exchange(0)*2,
+                grid_in.get_num_cells(1)+grid_in.get_num_exchange(1)*2,
+                grid_in.get_num_cells(2)+grid_in.get_num_exchange(2)*2,
+                grid_in.get_num_blocks());
+            array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
+            array_container::fill_container(data, fill_elem);
+        }
+        
+        template <typename... idxs_t>
+        ar_data_t& operator() (idxs_t...)
+        {
+            static_assert(sizeof...(idxs_t)==decltype(this->minor_dims)::rank()+decltype(this->major_dims)::rank()+decltype(this->grid_dims)::rank(), "wrong number of indices passed to indexing operator");
+            return data[0];
+        }
+        minor_dim_t minor_dims;
+        dims::dynamic_dims<4> grid_dims;
+        major_dim_t major_dims;
+        container_t data;
     };
 }

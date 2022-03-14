@@ -2,6 +2,8 @@
 
 int main(int argc, char** argv)
 {
+    cvdf::parallel::mpi_t group(&argc, &argv);
+    
     cvdf::ctrs::array<size_t, cvdf::cvdf_dim> num_blocks(2, 2, 2);
     cvdf::ctrs::array<size_t, cvdf::cvdf_dim> cells_in_block(16, 16, 16);
     cvdf::ctrs::array<size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
@@ -14,7 +16,10 @@ int main(int argc, char** argv)
     bounds.max(2) = 1.0;
     
     cvdf::coords::identity<double> coords;
-    cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords);
+    cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    
+    cvdf::grid::grid_array flow(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::static_dims<2>());
+    
     std::ofstream myfile("out.vtk");
     cvdf::output::output_grid(myfile, grid);
     

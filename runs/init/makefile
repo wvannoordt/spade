@@ -1,7 +1,21 @@
 cvdf   := $(realpath ../../src)
 target := vdf.x
+
+ifndef MPI_ENABLE
+MPI_ENABLE := 1
+endif
+
+ifeq (${MPI_ENABLE},1)
+cc := $(shell which mpicxx)
+else
+cc := $(shell which g++)
+endif
+
+compflags :=
+compflags += -DMPI_ENABLE=${MPI_ENABLE}
+
 main:
-	g++ -std=c++20 -g -O0 -I${cvdf} main.cc -o ${target}
+	${cc} -std=c++20 -g -O3 ${compflags} -I${cvdf} main.cc -o ${target}
 
 run: main
 	./${target}
