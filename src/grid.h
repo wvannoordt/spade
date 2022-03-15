@@ -14,12 +14,42 @@
 #include "array_container.h"
 
 namespace cvdf::grid
-{
+{    
     template <class T> concept multiblock_grid = requires(T t, size_t i, size_t j, size_t k, size_t lb)
     {
         // todo: write this
         { t.node_coords(i, j, k, lb) } -> ctrs::vec_nd<3, typename T::dtype>;
     };
+    
+    enum array_center_e
+    {
+        cell_centered=0,
+        node_centered=1
+    };
+    
+    template <multiblock_grid grid_t> auto get_grid_dims(const grid_t& grid, const array_center_e& center_type)
+    {
+        switch (center_type)
+        {
+            case cell_centered:
+            {
+                return dims::dynamic_dims<4>(
+                    grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
+                    grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
+                    grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
+                    grid.get_num_blocks());
+            }
+            case node_centered:
+            {
+                return dims::dynamic_dims<4>(
+                    1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
+                    1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
+                    1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
+                    grid.get_num_blocks());
+            }
+        }
+        return dims::dynamic_dims<4>(0,0,0,0);
+    }
     
     template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t> class cartesian_grid_t
     {
@@ -104,7 +134,7 @@ namespace cvdf::grid
             std::vector<bound_box_t<dtype, 3>> block_boxes;
             size_t total_blocks;
             par_group_t* grid_group;
-    };
+    };    
     
     template <
         multiblock_grid grid_t,
@@ -114,15 +144,17 @@ namespace cvdf::grid
         array_container::grid_data_container container_t=std::vector<ar_data_t>>
     struct grid_array
     {
-        grid_array(const grid_t& grid_in, const ar_data_t& fill_elem, const minor_dim_t& minor_dims_in, const major_dim_t& major_dims_in)
+        grid_array(
+            const grid_t& grid_in,
+            const ar_data_t& fill_elem,
+            const minor_dim_t& minor_dims_in,
+            const major_dim_t& major_dims_in,
+            const array_center_e& centering_in=cell_centered)
         {
+            this->centering = centering_in;
             minor_dims = minor_dims_in;
             major_dims = major_dims_in;
-            grid_dims = dims::dynamic_dims<4>(
-                grid_in.get_num_cells(0)+grid_in.get_num_exchange(0)*2,
-                grid_in.get_num_cells(1)+grid_in.get_num_exchange(1)*2,
-                grid_in.get_num_cells(2)+grid_in.get_num_exchange(2)*2,
-                grid_in.get_num_blocks());
+            grid_dims = get_grid_dims(grid_in, this->centering_type());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             array_container::fill_container(data, fill_elem);
             std::size_t n = total_idx_rank();
@@ -140,6 +172,8 @@ namespace cvdf::grid
                 offset += grid_in.get_num_exchange(i[0])*idx_coeffs[i[0] + minor_dim_t::rank()];
             }
         }
+        
+        constexpr array_center_e centering_type(void) { return centering; }
         
         std::size_t get_index_extent(std::size_t i)
         {
@@ -184,7 +218,7 @@ namespace cvdf::grid
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
-        
+        array_center_e centering;
         minor_dim_t minor_dims;
         dims::dynamic_dims<4> grid_dims;
         major_dim_t major_dims;

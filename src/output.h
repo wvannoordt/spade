@@ -5,6 +5,7 @@
 
 #include "grid.h"
 #include "print.h"
+#include "algs.h"
 
 namespace cvdf::output
 {
@@ -39,6 +40,18 @@ namespace cvdf::output
         {
             output_serial_header(out_str);
             output_mesh_data(out_str, obj, obj.coord_sys());
+            auto test_node_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::node_centered)?1:0;};
+            auto test_cell_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::cell_centered)?1:0;};
+            std::size_t num_node_centered_arrays = algs::reduce_over_params(test_node_center, arrays...);
+            std::size_t num_cell_centered_arrays = algs::reduce_over_params(test_cell_center, arrays...);
+            if (num_node_centered_arrays>0)
+            {
+                
+            }
+            if (num_cell_centered_arrays>0)
+            {
+                
+            }
         }
     }
     
