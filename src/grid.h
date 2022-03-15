@@ -66,18 +66,6 @@ namespace cvdf::grid
                     });
                     ++clb;
                 }
-                
-                
-                
-                for (auto i: range(0,total_idx_rank())) idx_coeffs[i[0]] = 1;
-                
-                for (std::size_t i = 0; i < total_idx_rank(); i++)
-                {
-                    for (std::size_t j = 0; j < total_idx_rank(); j++)
-                    {
-                        
-                    }
-                }
             }
             
             ctrs::array<dtype, 3> node_coords(std::size_t i, std::size_t j, std::size_t k, std::size_t lb) const
@@ -137,15 +125,64 @@ namespace cvdf::grid
                 grid_in.get_num_blocks());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             array_container::fill_container(data, fill_elem);
+            std::size_t n = total_idx_rank();
+            for (auto i: range(0,n)) idx_coeffs[i[0]] = 1;
+            for (auto i : range(0, n))
+            {
+                for (auto j : range(i[0]+1, n))
+                {
+                    idx_coeffs[j[0]] *= this->get_index_extent(i[0]);
+                }
+            }
+            offset = 0;
+            for (auto i: range(0,dims::dynamic_dims<4>::rank()-1))
+            {
+                offset += grid_in.get_num_exchange(i[0])*idx_coeffs[i[0] + minor_dim_t::rank()];
+            }
         }
         
-        static constexpr std::size_t total_idx_rank(void) {return decltype(this->minor_dims)::rank()+decltype(this->major_dims)::rank()+decltype(this->grid_dims)::rank();}
+        std::size_t get_index_extent(std::size_t i)
+        {
+            if (i < minor_dim_t::rank())
+            {
+                return minor_dims.get_index_extent(i);
+            }
+            else if (i < minor_dim_t::rank()+dims::dynamic_dims<4>::rank())
+            {
+                return grid_dims.get_index_extent(i-minor_dim_t::rank());
+            }
+            else
+            {
+                return major_dims.get_index_extent(i-(minor_dim_t::rank()+dims::dynamic_dims<4>::rank()));
+            }
+        }
+        
+        static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
+        
+        template <typename idx_t> std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
+        {
+            static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
+            return idx_coeffs[lev]*idx;
+        }
+        
+        template <typename idx_t, typename... idxs_t> std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
+        {
+            static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
+            return idx_coeffs[lev]*idx + offst_r(lev+1, idxs...);
+        }
         
         template <typename... idxs_t>
-        ar_data_t& operator() (idxs_t...)
+        ar_data_t& operator() (idxs_t... idxs)
         {
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
-            return data[0];
+            return data[offset + offst_r(0, idxs...)];
+        }
+        
+        template <typename... idxs_t>
+        const ar_data_t& operator() (idxs_t... idxs) const
+        {
+            static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
+            return data[offset + offst_r(0, idxs...)];
         }
         
         minor_dim_t minor_dims;
