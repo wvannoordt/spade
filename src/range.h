@@ -116,6 +116,15 @@ template <typename index_t, const std::size_t range_dim> struct md_range_t
     {
         set_r(0, inits...);
     }
+    std::size_t size(void)
+    {
+        std::size_t output = 1;
+        for (std::size_t i = 0; i < range_dim; ++i)
+        {
+            output *= (end_v[i]>start_v[i])?(end_v[i]-start_v[i]):0;
+        }
+        return output;
+    }
     template <typename init_t_1, typename init_t_2> void set_r(
         const std::size_t& idx, const init_t_1& imin, const init_t_2& imax)
     {

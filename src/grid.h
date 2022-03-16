@@ -27,6 +27,12 @@ namespace cvdf::grid
         node_centered=1
     };
     
+    enum exchange_inclusion_e
+    {
+        exclude_exchanges=0,
+        include_exchanges=1
+    };
+    
     template <multiblock_grid grid_t> auto get_grid_dims(const grid_t& grid, const array_center_e& center_type)
     {
         switch (center_type)
@@ -116,6 +122,32 @@ namespace cvdf::grid
             }
             const coord_t& coord_sys(void) const {return coord_system;}
             
+            md_range_t<int,4> get_range(const array_center_e& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
+            {
+                int iexchg = 0;
+                if (do_guards==include_exchanges) iexchg = 1;
+                switch (centering_in)
+                {
+                    case cell_centered:
+                    {
+                        return md_range_t<int,4>(
+                            -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
+                            -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
+                            -iexchg*exchange_cells[2],cells_in_block[2]+iexchg*exchange_cells[2],
+                            0,num_blocks[0]*num_blocks[1]*num_blocks[2]);
+                    }
+                    case node_centered:
+                    {
+                        return md_range_t<int,4>(
+                            -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
+                            -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
+                            -iexchg*exchange_cells[2],1+cells_in_block[2]+iexchg*exchange_cells[2],
+                            0,num_blocks[0]*num_blocks[1]*num_blocks[2]);
+                    }
+                    default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
+                }
+            }
+            
             std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
             std::size_t get_num_blocks(void)                   const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
             std::size_t get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
@@ -123,7 +155,7 @@ namespace cvdf::grid
             bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
             dtype get_dx(const std::size_t& i) const {return dx[i];}
-            
+            bound_box_t<dtype, 3> get_block_box(const std::size_t& lb) const {return block_boxes[lb];}
         private:
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;

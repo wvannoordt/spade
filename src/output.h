@@ -38,20 +38,39 @@ namespace cvdf::output
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
         void output_grid_serial(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
         {
+            
             output_serial_header(out_str);
             output_mesh_data(out_str, obj, obj.coord_sys());
+            
             auto test_node_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::node_centered)?1:0;};
-            auto test_cell_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::cell_centered)?1:0;};
             std::size_t num_node_centered_arrays = algs::reduce_over_params(test_node_center, arrays...);
+            
+            auto test_cell_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::cell_centered)?1:0;};
             std::size_t num_cell_centered_arrays = algs::reduce_over_params(test_cell_center, arrays...);
-            if (num_node_centered_arrays>0)
+            
+            int ct = 0;
+            auto current_centering = grid::node_centered;
+            auto output_array_data = [&](auto arr) -> void
             {
-                
-            }
-            if (num_cell_centered_arrays>0)
-            {
-                
-            }
+                if (arr.centering==current_centering)
+                {
+                    for (auto i: range(0,5))
+                    {
+                        std::string name = "var" + zfill(ct++, 5);
+                        out_str << "SCALARS " << name << " double\nLOOKUP_TABLE default\n";
+                        for (auto j: obj.get_range(arr.centering, grid::exclude_exchanges))
+                        {
+                            out_str << arr(i[0], j[0], j[1], j[2], j[3]) << "\n";
+                        }
+                    }
+                }
+            };
+            
+            if (num_node_centered_arrays>0) out_str << "POINT_DATA " << obj.get_range(grid::node_centered, grid::exclude_exchanges).size() << "\n";
+            algs::foreach_param(output_array_data, arrays...);
+            current_centering = grid::cell_centered;
+            if (num_cell_centered_arrays>0) out_str << "CELL_DATA "  << obj.get_range(grid::cell_centered, grid::exclude_exchanges).size() << "\n";
+            algs::foreach_param(output_array_data, arrays...);
         }
     }
     
