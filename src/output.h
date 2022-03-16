@@ -53,6 +53,7 @@ namespace cvdf::output
             {
                 if (arr.centering==current_centering)
                 {
+                    print("warning: hardcoded implementation!", __FILE__, __LINE__);
                     for (auto j: range(0,2))
                     {
                         for (auto i: range(0,5))
