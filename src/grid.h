@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <vector>
+#include <type_traits>
 
 #include "ctrs.h"
 #include "typedef.h"
@@ -156,6 +157,10 @@ namespace cvdf::grid
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
             dtype get_dx(const std::size_t& i) const {return dx[i];}
             bound_box_t<dtype, 3> get_block_box(const std::size_t& lb) const {return block_boxes[lb];}
+            std::size_t collapse_block_num(const std::size_t& lb_i, const std::size_t& lb_j, const std::size_t& lb_k) const
+            {
+                return lb_i + lb_j*this->get_num_blocks(0) + lb_k*this->get_num_blocks(0)*this->get_num_blocks(1);
+            }
         private:
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
@@ -250,6 +255,47 @@ namespace cvdf::grid
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
+        
+        template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
+        ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
+        {
+            static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i2_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i3_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i4_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i5_t>::value, "unwrap_idx requires integral arguments");
+            return data[
+                offset +
+                i0*idx_coeffs[0] + 
+                i1*idx_coeffs[minor_dim_t::rank()+0]+
+                i2*idx_coeffs[minor_dim_t::rank()+1]+
+                i3*idx_coeffs[minor_dim_t::rank()+2]+
+                i4*idx_coeffs[minor_dim_t::rank()+3]+
+                i5*idx_coeffs[minor_dim_t::rank()+4]
+            ];
+        }
+        
+        template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
+        const ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
+        {
+            static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i2_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i3_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i4_t>::value, "unwrap_idx requires integral arguments");
+            static_assert(std::is_integral<i5_t>::value, "unwrap_idx requires integral arguments");
+            return data[
+                offset +
+                i0*idx_coeffs[0] + 
+                i1*idx_coeffs[minor_dim_t::rank()+0]+
+                i2*idx_coeffs[minor_dim_t::rank()+1]+
+                i3*idx_coeffs[minor_dim_t::rank()+2]+
+                i4*idx_coeffs[minor_dim_t::rank()+3]+
+                i5*idx_coeffs[minor_dim_t::rank()+4]
+            ];
+        }
+        
         array_center_e centering;
         minor_dim_t minor_dims;
         dims::dynamic_dims<4> grid_dims;

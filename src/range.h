@@ -142,6 +142,11 @@ template <typename index_t, const std::size_t range_dim> struct md_range_t
         set_r(idx+1, inits...);
     }
     
+    md_range_t<index_t, 1> subrange(const std::size_t& i) const
+    {
+        return md_range_t<index_t, 1>(this->start_v[i], this->end_v[i]);
+    }
+    
     template <typename index_r_t, const std::size_t range_dim_r>
     md_range_t<decltype(index_r_t()+index_t()), (range_dim+range_dim_r)>
     operator* (const md_range_t<index_r_t,range_dim_r>& rhs) const

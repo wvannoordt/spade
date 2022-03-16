@@ -22,11 +22,10 @@ namespace cvdf::output
             out_str << "DATASET STRUCTURED_POINTS\nDIMENSIONS ";
             out_str << (1+obj.get_num_blocks(0)*obj.get_num_cells(0)) <<  " ";
             out_str << (1+obj.get_num_blocks(1)*obj.get_num_cells(1)) <<  " ";
-            out_str << (1+obj.get_num_blocks(2)*obj.get_num_cells(2)) << "\n";
+            out_str << ((cvdf_dim==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2)) << "\n";
             auto bnd = obj.get_bounds();
             out_str << "ORIGIN "  << bnd.min(0)    << " " << bnd.min(1)    << " " << bnd.min(2)    << "\n";
-            out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << obj.get_dx(2) << "\n";
-            
+            out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << (cvdf_dim==3)*obj.get_dx(2) << "\n";
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
@@ -54,13 +53,23 @@ namespace cvdf::output
             {
                 if (arr.centering==current_centering)
                 {
-                    for (auto i: range(0,5))
+                    for (auto j: range(0,2))
                     {
-                        std::string name = "var" + zfill(ct++, 5);
-                        out_str << "SCALARS " << name << " double\nLOOKUP_TABLE default\n";
-                        for (auto j: obj.get_range(arr.centering, grid::exclude_exchanges))
+                        for (auto i: range(0,5))
                         {
-                            out_str << arr(i[0], j[0], j[1], j[2], j[3]) << "\n";
+                            std::string name = "var" + zfill(ct++, 5);
+                            out_str << "SCALARS " << name << " double\nLOOKUP_TABLE default\n";
+                            auto grid_range = obj.get_range(arr.centering, grid::exclude_exchanges);
+                            auto r1 = grid_range.subrange(0)*range(0, obj.get_num_blocks(0));
+                            auto r2 = grid_range.subrange(1)*range(0, obj.get_num_blocks(1));
+                            auto r3 = grid_range.subrange(2)*range(0, obj.get_num_blocks(2));
+                            auto total_range = r1*r2*r3;
+                            
+                            for (auto midx: total_range)
+                            {
+                                std::size_t lb = obj.collapse_block_num(midx[1], midx[3], midx[5]);
+                                out_str << arr.unwrap_idx(i[0], midx[0], midx[2], midx[4], lb, j[0]) << "\n";
+                            }
                         }
                     }
                 }
