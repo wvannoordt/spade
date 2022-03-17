@@ -23,53 +23,27 @@ int main(int argc, char** argv)
     typedef typename decltype(grid)::dtype real_t;
     typedef cvdf::ctrs::array<real_t, 3> v3d;
     
+    real_t p_ref = 570.233265072;
+    real_t u_ref = 1202.697;
+    
+    real_t alpha = sqrt(1.0 - 100.0/700.0);
+    real_t beta = 2.0*alpha*((alpha*alpha-1.0)*atanh(alpha) + alpha)/((alpha*alpha*alpha)*(log(abs(1.0+alpha)) - log(abs(1.0-alpha))));
+    
     auto channel_ini = [=](const v3d& xyz) -> cvdf::fluid_state::prim_t<real_t>
     {
         cvdf::fluid_state::prim_t<real_t> output(0.0);
-        output.p() = xyz[1];
-        output.u() = xyz[2];
-        output.v() = xyz[0];
-        output.w() = xyz[1];
-        output.T() = xyz[2];
+        output.p() = p_ref;
+        output.u() = u_ref*(1.0 - xyz[1]*xyz[1]);
+        output.v() = 0;
+        output.w() = 0;
+        output.T() = 700.0 - 600.0*xyz[1]*xyz[1];
         return output;
     };
 
-#define HAND_ROLL 0
-
-    {cvdf::timing::scoped_tmr_t t("fill");
-#if(HAND_ROLL)
-        for (int lb = 0; lb < num_blocks[0]*num_blocks[1]*num_blocks[2]; ++lb)
-        {
-            for (int k = exchange_cells[2]; k < exchange_cells[2]+cells_in_block[2]; ++k)
-            {
-                for (int j = exchange_cells[1]; j < exchange_cells[1]+cells_in_block[1]; ++j)
-                {
-                    for (int i = exchange_cells[0]; i < exchange_cells[0]+cells_in_block[0]; ++i)
-                    {
-                        auto xyz = grid.cell_coords(i, j, k, lb);
-                        // flow(0, i, j, k, lb) = 100.0 + sin(xyz[0]);
-                        // flow(1, i, j, k, lb) = cos(xyz[0])*sin(xyz[1]);
-                        // flow(2, i, j, k, lb) = cos(xyz[1])*sin(xyz[2]);
-                        // flow(3, i, j, k, lb) = 0.0;
-                        // flow(4, i, j, k, lb) = 100.0 + sin(xyz[0]);
-                        
-                        auto p  = channel_ini(xyz);
-                        flow(0, i, j, k, lb) = p[0];
-                        flow(1, i, j, k, lb) = p[1];
-                        flow(2, i, j, k, lb) = p[2];
-                        flow(3, i, j, k, lb) = p[3];
-                        flow(4, i, j, k, lb) = p[4];
-                    }
-                }
-            }
-        }
-#else
-        cvdf::algs::fill_array(flow, channel_ini);
-#endif
-    }
+    cvdf::algs::fill_array(flow, channel_ini);
     
-    // std::ofstream myfile("out.vtk");
-    // cvdf::output::output_vtk(myfile, grid, flow);
+    std::ofstream myfile("out.vtk");
+    cvdf::output::output_vtk(myfile, grid, flow);
     
     return 0;
 }
