@@ -5,12 +5,20 @@
 
 namespace cvdf::ctrs
 {
+    template <class T> concept basic_array = requires(T t, const int& i)
+    {
+        t.size();
+        t[i];
+    };
+    
     template <class T, const size_t size, typename real_type> concept vec_nd = (sizeof(T) == size*sizeof(real_type)) && requires(T t, size_t i)
     {
+        basic_array<T>;
         { t[i] } -> std::common_with<real_type>;
     };
     
     template <class T> concept integral_type = std::is_integral<T>::value;
+    
     
     template<typename dtype, const size_t ar_size> struct array
     {

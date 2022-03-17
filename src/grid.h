@@ -4,6 +4,7 @@
 #include <vector>
 #include <type_traits>
 
+#include "attribs.h"
 #include "ctrs.h"
 #include "typedef.h"
 #include "bounding_box.h"
@@ -22,11 +23,14 @@ namespace cvdf::grid
         { t.node_coords(i, j, k, lb) } -> ctrs::vec_nd<3, typename T::dtype>;
     };
     
+    
     enum array_center_e
     {
         cell_centered=0,
         node_centered=1
     };
+    
+    template <class T, const array_center_e ct> concept has_centering_type = (T::centering_type() == ct);
     
     enum exchange_inclusion_e
     {
@@ -105,14 +109,26 @@ namespace cvdf::grid
                 }
             }
             
-            ctrs::array<dtype, 3> node_coords(std::size_t i, std::size_t j, std::size_t k, std::size_t lb) const
+            _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
             {
                 ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<std::size_t, 3> ijk(i, j, k);
+                ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
                 for (size_t idir = 0; idir < cvdf_dim; idir++)
                 {
                     output[idir] = box.min(idir) + ijk[idir]*dx[idir];
+                }
+                return coord_system.map(output);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> cell_coords(const int& i, const int& j, const int& k, const int& lb) const
+            {
+                ctrs::array<dtype, 3> output(0, 0, 0);
+                ctrs::array<int, 3> ijk(i, j, k);
+                auto& box = block_boxes[lb];
+                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                {
+                    output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
                 }
                 return coord_system.map(output);
             }
@@ -178,6 +194,7 @@ namespace cvdf::grid
         typename ar_data_t,
         dims::grid_array_dimension minor_dim_t,
         dims::grid_array_dimension major_dim_t,
+        const array_center_e centering=cell_centered,
         array_container::grid_data_container container_t=std::vector<ar_data_t>>
     struct grid_array
     {
@@ -185,10 +202,9 @@ namespace cvdf::grid
             const grid_t& grid_in,
             const ar_data_t& fill_elem,
             const minor_dim_t& minor_dims_in,
-            const major_dim_t& major_dims_in,
-            const array_center_e& centering_in=cell_centered)
+            const major_dim_t& major_dims_in)
         {
-            this->centering = centering_in;
+            grid = &grid_in;
             minor_dims = minor_dims_in;
             major_dims = major_dims_in;
             grid_dims = get_grid_dims(grid_in, this->centering_type());
@@ -210,7 +226,9 @@ namespace cvdf::grid
             }
         }
         
-        constexpr array_center_e centering_type(void) { return centering; }
+        typedef grid_t grid_type;
+        
+        constexpr static array_center_e centering_type(void) { return centering; }
         
         std::size_t get_index_extent(std::size_t i)
         {
@@ -230,34 +248,34 @@ namespace cvdf::grid
         
         static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
         
-        template <typename idx_t> std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
+        template <typename idx_t> _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
         {
             static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
             return idx_coeffs[lev]*idx;
         }
         
-        template <typename idx_t, typename... idxs_t> std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
+        template <typename idx_t, typename... idxs_t> _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
         {
             static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
             return idx_coeffs[lev]*idx + offst_r(lev+1, idxs...);
         }
         
         template <typename... idxs_t>
-        ar_data_t& operator() (idxs_t... idxs)
+        _finline_ ar_data_t& operator() (idxs_t... idxs)
         {
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
         
         template <typename... idxs_t>
-        const ar_data_t& operator() (idxs_t... idxs) const
+        _finline_ const ar_data_t& operator() (idxs_t... idxs) const
         {
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
-        ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
+        _finline_ ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
         {
             static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
             static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
@@ -277,7 +295,7 @@ namespace cvdf::grid
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
-        const ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
+        _finline_ const ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
         {
             static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
             static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
@@ -296,7 +314,11 @@ namespace cvdf::grid
             ];
         }
         
-        array_center_e centering;
+        minor_dim_t get_minor_dims(void) const {return minor_dims;}
+        major_dim_t get_major_dims(void) const {return major_dims;}
+        const grid_t& get_grid(void) const {return *grid;}
+        
+        const grid_t* grid;
         minor_dim_t minor_dims;
         dims::dynamic_dims<4> grid_dims;
         major_dim_t major_dims;

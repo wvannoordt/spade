@@ -5,7 +5,7 @@
 
 #include "grid.h"
 #include "print.h"
-#include "algs.h"
+#include "utils.h"
 
 namespace cvdf::output
 {
@@ -42,25 +42,24 @@ namespace cvdf::output
             output_mesh_data(out_str, obj, obj.coord_sys());
             
             auto test_node_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::node_centered)?1:0;};
-            std::size_t num_node_centered_arrays = algs::reduce_over_params(test_node_center, arrays...);
+            std::size_t num_node_centered_arrays = utils::reduce_over_params(test_node_center, arrays...);
             
             auto test_cell_center = [](auto i) -> std::size_t {return (i.centering_type()==grid::cell_centered)?1:0;};
-            std::size_t num_cell_centered_arrays = algs::reduce_over_params(test_cell_center, arrays...);
+            std::size_t num_cell_centered_arrays = utils::reduce_over_params(test_cell_center, arrays...);
             
             int ct = 0;
             auto current_centering = grid::node_centered;
             auto output_array_data = [&](auto arr) -> void
             {
-                if (arr.centering==current_centering)
+                if (arr.centering_type()==current_centering)
                 {
-                    print("warning: hardcoded implementation!", __FILE__, __LINE__);
-                    for (auto j: range(0,2))
+                    for (auto j: range(0,arr.get_major_dims().total_size()))
                     {
-                        for (auto i: range(0,5))
+                        for (auto i: range(0,arr.get_minor_dims().total_size()))
                         {
                             std::string name = "var" + zfill(ct++, 5);
                             out_str << "SCALARS " << name << " double\nLOOKUP_TABLE default\n";
-                            auto grid_range = obj.get_range(arr.centering, grid::exclude_exchanges);
+                            auto grid_range = obj.get_range(arr.centering_type(), grid::exclude_exchanges);
                             auto r1 = grid_range.subrange(0)*range(0, obj.get_num_blocks(0));
                             auto r2 = grid_range.subrange(1)*range(0, obj.get_num_blocks(1));
                             auto r3 = grid_range.subrange(2)*range(0, obj.get_num_blocks(2));
@@ -77,15 +76,15 @@ namespace cvdf::output
             };
             
             if (num_node_centered_arrays>0) out_str << "POINT_DATA " << obj.get_range(grid::node_centered, grid::exclude_exchanges).size() << "\n";
-            algs::foreach_param(output_array_data, arrays...);
+            utils::foreach_param(output_array_data, arrays...);
             current_centering = grid::cell_centered;
             if (num_cell_centered_arrays>0) out_str << "CELL_DATA "  << obj.get_range(grid::cell_centered, grid::exclude_exchanges).size() << "\n";
-            algs::foreach_param(output_array_data, arrays...);
+            utils::foreach_param(output_array_data, arrays...);
         }
     }
     
     template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
-    void output_grid(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
+    void output_vtk(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
     {
         if (obj.group().size()>1)
         {

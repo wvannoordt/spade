@@ -1,9 +1,7 @@
 #pragma once
 #include <chrono>
 #include <string>
-#include "cmf.h"
-using cmf::print;
-namespace timing
+namespace cvdf::timing
 {
     class scoped_tmr_t
     {

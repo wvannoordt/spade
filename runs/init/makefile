@@ -14,8 +14,10 @@ endif
 compflags :=
 compflags += -DMPI_ENABLE=${MPI_ENABLE}
 
+flags :=
+
 main:
-	${cc} -std=c++20 -g -O3 ${compflags} -I${cvdf} main.cc -o ${target}
+	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
 
 run: main
 	./${target}

@@ -6,3 +6,6 @@
 #include "grid.h"
 #include "output.h"
 #include "parallel.h"
+#include "algs.h"
+#include "timing.h"
+#include <cmath>

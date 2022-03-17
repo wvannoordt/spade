@@ -17,12 +17,22 @@ namespace cvdf::fluid_state
     {
         static constexpr size_t size(void) noexcept {return 5;}
         rtype data[size()];
-        rtype& p() {return data[0];}
-        rtype& T() {return data[1];}
-        rtype& u() {return data[2];}
-        rtype& v() {return data[3];}
-        rtype& w() {return data[4];}
+        prim_t(void){}
+        prim_t(const rtype& vl){for (std::size_t i = 0; i < size(); i++) data[i]=vl;}
+        rtype& p(void) {return data[0];}
+        rtype& T(void) {return data[1];}
+        rtype& u(void) {return data[2];}
+        rtype& v(void) {return data[3];}
+        rtype& w(void) {return data[4];}
         rtype& operator [] (uint idx) {return data[idx];}
+        
+        const rtype& p(void) const {return data[0];}
+        const rtype& T(void) const {return data[1];}
+        const rtype& u(void) const {return data[2];}
+        const rtype& v(void) const {return data[3];}
+        const rtype& w(void) const {return data[4];}
+        const rtype& operator [] (uint idx) const {return data[idx];}
+        
         std::string name(uint idx) const
         {
             ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
@@ -34,12 +44,22 @@ namespace cvdf::fluid_state
     {
         static constexpr size_t size(void) noexcept {return 5;}
         rtype data[size()];
-        rtype& rho  () {return data[0];}
-        rtype& rho_H() {return data[1];}
-        rtype& rho_u() {return data[2];}
-        rtype& rho_v() {return data[3];}
-        rtype& rho_w() {return data[4];}
+        cons_t(void){}
+        cons_t(const rtype& vl){for (std::size_t i = 0; i < size(); i++) data[i]=vl;}
+        rtype& rho  (void) {return data[0];}
+        rtype& rho_H(void) {return data[1];}
+        rtype& rho_u(void) {return data[2];}
+        rtype& rho_v(void) {return data[3];}
+        rtype& rho_w(void) {return data[4];}
         rtype& operator [] (uint idx) {return data[idx];}
+        
+        const rtype& rho  (void) const {return data[0];}
+        const rtype& rho_H(void) const {return data[1];}
+        const rtype& rho_u(void) const {return data[2];}
+        const rtype& rho_v(void) const {return data[3];}
+        const rtype& rho_w(void) const {return data[4];}
+        const rtype& operator [] (uint idx) const {return data[idx];}
+        
         std::string name(uint idx) const
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
