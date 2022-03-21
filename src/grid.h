@@ -32,13 +32,22 @@ namespace cvdf::grid
     
     template <class T, const array_center_e ct> concept has_centering_type = (T::centering_type() == ct);
     
+    template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)
+    {
+        { t.get_major_dims() } -> dims::grid_array_dimension;
+        { t.get_minor_dims() } -> dims::grid_array_dimension;
+        { t.get_grid_dims()  } -> dims::grid_array_dimension;
+        t.get_grid();
+        t.unwrap_idx(a, i, j, k, lb, b);
+    };
+    
     enum exchange_inclusion_e
     {
         exclude_exchanges=0,
         include_exchanges=1
     };
     
-    template <multiblock_grid grid_t> auto get_grid_dims(const grid_t& grid, const array_center_e& center_type)
+    template <multiblock_grid grid_t> auto create_grid_dims(const grid_t& grid, const array_center_e& center_type)
     {
         switch (center_type)
         {
@@ -177,6 +186,12 @@ namespace cvdf::grid
             {
                 return lb_i + lb_j*this->get_num_blocks(0) + lb_k*this->get_num_blocks(0)*this->get_num_blocks(1);
             }
+            
+            template <grid::multiblock_array array_t> void exchange_array(array_t& array) const
+            {
+                
+            }
+            
         private:
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
@@ -207,7 +222,7 @@ namespace cvdf::grid
             grid = &grid_in;
             minor_dims = minor_dims_in;
             major_dims = major_dims_in;
-            grid_dims = get_grid_dims(grid_in, this->centering_type());
+            grid_dims = create_grid_dims(grid_in, this->centering_type());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             array_container::fill_container(data, fill_elem);
             std::size_t n = total_idx_rank();
@@ -316,6 +331,7 @@ namespace cvdf::grid
         
         minor_dim_t get_minor_dims(void) const {return minor_dims;}
         major_dim_t get_major_dims(void) const {return major_dims;}
+        major_dim_t get_grid_dims (void) const {return grid_dims; }
         const grid_t& get_grid(void) const {return *grid;}
         
         const grid_t* grid;
