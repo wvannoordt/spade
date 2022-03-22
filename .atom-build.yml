@@ -1,1 +1,1 @@
-cmd: 'cd ./runs/init/ && make run'
+cmd: 'cd ./runs/init/ && make && mpirun -np 7 ./vdf.x'

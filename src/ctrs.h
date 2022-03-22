@@ -2,7 +2,7 @@
 
 #include <type_traits>
 #include <concepts>
-
+#include "utils.h"
 namespace cvdf::ctrs
 {
     template <class T> concept basic_array = requires(T t, const int& i)
@@ -18,6 +18,13 @@ namespace cvdf::ctrs
     };
     
     template <class T> concept integral_type = std::is_integral<T>::value;
+
+
+    template <basic_array a1_t, basic_array a2_t> void copy_array(const a1_t& src, a2_t& dest)
+    {
+        std::size_t tsize = utils::min(src.size(), dest.size());
+        for (std::size_t i = 0; i < tsize; ++i) dest[i] = src[i];
+    }
     
     
     template<typename dtype, const size_t ar_size> struct array

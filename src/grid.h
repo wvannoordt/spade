@@ -14,6 +14,7 @@
 #include "parallel.h"
 #include "dims.h"
 #include "array_container.h"
+#include "partition.h"
 
 namespace cvdf::grid
 {    
@@ -76,9 +77,9 @@ namespace cvdf::grid
         public:
             typedef coord_t::coord_type dtype;
             cartesian_grid_t(
-                const ctrs::array<size_t, cvdf_dim>& num_blocks_in,
-                const ctrs::array<size_t, cvdf_dim>& cells_in_block_in,
-                const ctrs::array<size_t, cvdf_dim>& exchange_cells_in,
+                const ctrs::array<std::size_t, cvdf_dim>& num_blocks_in,
+                const ctrs::array<std::size_t, cvdf_dim>& cells_in_block_in,
+                const ctrs::array<std::size_t, cvdf_dim>& exchange_cells_in,
                 const bound_box_t<dtype,  cvdf_dim>& bounds_in,
                 const coord_t& coord_system_in,
                 par_group_t& group_in)
@@ -116,6 +117,7 @@ namespace cvdf::grid
                     });
                     ++clb;
                 }
+                grid_partition = partition::block_partition_t(num_blocks, &group_in);
             }
             
             _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
@@ -193,6 +195,7 @@ namespace cvdf::grid
             }
             
         private:
+            partition::block_partition_t grid_partition;
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
             ctrs::array<std::size_t, 3> num_blocks;

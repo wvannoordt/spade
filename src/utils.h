@@ -39,4 +39,26 @@ namespace cvdf::utils
         func(param);
         foreach_param(params...);
     }
+    
+    
+    
+    template <typename tp1_t, typename tp2_t> auto max(const tp1_t& t1, const tp2_t& t2)
+    {
+        return t1<t2?t2:t1;
+    }
+    
+    template <typename tp_t, typename... tps_t> auto max(const tp_t& t, tps_t... ts)
+    {
+        return max(t, max(ts...));
+    }
+    
+    template <typename tp1_t, typename tp2_t> auto min(const tp1_t& t1, const tp2_t& t2)
+    {
+        return t1<t2?t1:t2;
+    }
+    
+    template <typename tp_t, typename... tps_t> auto min(const tp_t& t, tps_t... ts)
+    {
+        return min(t, min(ts...));
+    }
 }

@@ -29,6 +29,9 @@ int main(int argc, char** argv)
     
     real_t p_ref = 570.233265072;
     real_t u_ref = 1202.697;
+    real_t t_max = 700.0;
+    real_t t_wall = 100.0;
+    real_t delta  = 1.0;
     
     real_t alpha = sqrt(1.0 - 100.0/700.0);
     real_t beta = 2.0*alpha*((alpha*alpha-1.0)*atanh(alpha) + alpha)/((alpha*alpha*alpha)*(log(abs(1.0+alpha)) - log(abs(1.0-alpha))));
@@ -37,10 +40,10 @@ int main(int argc, char** argv)
     {
         cvdf::fluid_state::prim_t<real_t> output(0.0);
         output.p() = p_ref;
-        output.u() = u_ref*(1.0 - xyz[1]*xyz[1]);
+        output.u() = u_ref*(1.0 - xyz[1]*xyz[1]/(delta*delta));
         output.v() = 0;
         output.w() = 0;
-        output.T() = 700.0 - 600.0*xyz[1]*xyz[1];
+        output.T() = t_max - (t_max - t_wall)*xyz[1]*xyz[1]/(delta*delta);
         return output;
     };
 
