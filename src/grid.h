@@ -90,6 +90,7 @@ namespace cvdf::grid
                 num_blocks = 1;
                 cells_in_block = 1;
                 total_blocks = 1;
+                is3d = (cvdf_dim==3);
                 bounds.min(2) = 0.0;
                 bounds.max(2) = 1.0;
                 
@@ -184,6 +185,7 @@ namespace cvdf::grid
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
             dtype get_dx(const std::size_t& i) const {return dx[i];}
             bound_box_t<dtype, 3> get_block_box(const std::size_t& lb) const {return block_boxes[lb];}
+            bool is_3d(void) const {return this->is3d;}
             std::size_t collapse_block_num(const std::size_t& lb_i, const std::size_t& lb_j, const std::size_t& lb_k) const
             {
                 return lb_i + lb_j*this->get_num_blocks(0) + lb_k*this->get_num_blocks(0)*this->get_num_blocks(1);
@@ -197,6 +199,7 @@ namespace cvdf::grid
             const partition::block_partition_t& get_partition(void) const { return grid_partition; }
         private:
             partition::block_partition_t grid_partition;
+            bool is3d;
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
             ctrs::array<std::size_t, 3> num_blocks;
@@ -246,6 +249,7 @@ namespace cvdf::grid
         }
         
         typedef grid_t grid_type;
+        typedef ar_data_t value_type;
         
         constexpr static array_center_e centering_type(void) { return centering; }
         

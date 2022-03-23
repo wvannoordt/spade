@@ -32,7 +32,7 @@ namespace cvdf::output
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
         void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
         {
-            print("NOT IMPLEMENTED!", __FILE__, __LINE__);
+            print("NOT IMPLEMENTED: output_mesh_data (diag)!", __FILE__, __LINE__);
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
@@ -107,9 +107,87 @@ namespace cvdf::output
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
-        void output_parralel_block_file(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
+        void output_parralel_block_file(output_stream_t& out_str, const std::size_t& lb_loc, const grid_output_t& obj, arrays_t... arrays)
         {
-            out_str << "hello\n";
+            out_str << "<?xml version=\"1.0\"?>\n";
+            out_str << "<VTKFile type=\"RectilinearGrid\" version=\"0.1\" byte_order=\"" << (utils::is_big_endian()?"BigEndian":"LittleEndian") << "\" header_type=\"UInt32\">\n";
+            std::size_t n_total_i = obj.get_num_cells(0)+2*obj.get_num_exchange(0);
+            std::size_t n_total_j = obj.get_num_cells(1)+2*obj.get_num_exchange(1);
+            std::size_t n_total_k = obj.get_num_cells(2)+2*obj.get_num_exchange(2);
+            std::size_t n_cells_i = obj.get_num_cells(0);
+            std::size_t n_cells_j = obj.get_num_cells(1);
+            std::size_t n_cells_k = obj.get_num_cells(2);
+            std::size_t n_guard_i = obj.get_num_exchange(0);
+            std::size_t n_guard_j = obj.get_num_exchange(1);
+            std::size_t n_guard_k = obj.get_num_exchange(2);
+            auto box = obj.get_block_box(lb_loc);
+            out_str << ntab(1) << utils::strformat("<RectilinearGrid WholeExtent=\"0 {} 0 {} 0 {}\">", n_total_i, n_total_j, n_total_k) << std::endl;
+            out_str << ntab(2) << "<FieldData>" << std::endl;
+            out_str << ntab(3) << "<DataArray type=\"Int32\" Name=\"avtRealDims\" NumberOfTuples=\"6\" format=\"ascii\">" << std::endl;
+            out_str << ntab(4) << utils::strformat("{} {} {} {} {} {}", n_guard_i, n_guard_i+n_cells_i, n_guard_j, n_guard_j+n_cells_j, n_guard_k, obj.is_3d()?(n_guard_k+n_cells_k):0) << std::endl;
+            out_str << ntab(3) << "</DataArray>" << std::endl;
+            out_str << ntab(3) << "<DataArray type=\"Float64\" Name=\"avtOriginalBounds\" NumberOfTuples=\"6\" format=\"ascii\">" << std::endl;
+            out_str << ntab(4) << utils::strformat("{} {} {} {} {} {}", box.min(0), box.max(0), box.min(1), box.max(1), box.min(2), box.max(2)) << std::endl;
+            out_str << ntab(3) << "</DataArray>" << std::endl;
+            out_str << ntab(2) << "</FieldData>" << std::endl;
+            out_str << ntab(2) << utils::strformat("<Piece Extent=\"0 {} 0 {} 0 {}\">", n_total_i, n_total_j, n_total_k) << std::endl;
+            
+            std::string vars_string = "";
+            std::size_t idx = 0;
+            auto get_arr_name = [&](auto& arr, const std::size_t& inline_minor, const std::size_t& inline_major) -> std::string
+            {
+                std::size_t idx = inline_minor + inline_major*arr.get_minor_dims().total_size();
+                return "var" + zfill(idx, 5);
+            };
+            auto add_name = [&](auto& i) -> void
+            {
+                for (auto i1:range(0,i.get_minor_dims().total_size()))
+                {
+                    for (auto i2:range(0,i.get_major_dims().total_size()))
+                    {
+                        if (idx>0) vars_string+=",";
+                        vars_string += get_arr_name(i, i1[0], i2[0]);
+                        ++idx;
+                    }
+                }
+            };
+            utils::foreach_param(add_name, arrays...);
+            out_str << ntab(3) << "<CellData Scalars=\"" << vars_string << "\">" << std::endl;
+            
+            auto write_data = [&](auto& arr) -> void
+            {
+                if (arr.centering_type()!=grid::cell_centered) throw std::runtime_error("parallel output not currently supporting anythong other than cell data!");
+                std::vector<typename decltype(arr)::value_type> compressed_data;
+                auto gdims = arr.get_grid_dims();
+                std::size_t total_temp_size = gdims.get_index_extent(0)*gdims.get_index_extent(1)*gdims.get_index_extent(2);
+                compressed_data.resize(total_temp_size);
+                auto block_grid_range = range(-n)*range()*range();
+                for (auto i1:range(0,arr.get_minor_dims().total_size()))
+                {
+                    for (auto i2:range(0,arr.get_major_dims().total_size()))
+                    {
+                        out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_arr_name(arr, i1[0], i2[0]) << "\" format=\"binary\">\n";
+                        //data here
+                        // here here here
+                        //do this bit right now
+                        out_str << ntab(4) << "</DataArray>\n";
+                    }
+                }
+            };
+            utils::foreach_param(write_data, arrays...);
+            out_str << ntab(4) << "<DataArray type=\"UInt8\" Name=\"avtGhostZones\" format=\"ascii\">\n";
+            auto isGhost = [&](int i, int j, int k) -> bool
+            {
+                return (i<n_guard_i)||(i>=n_total_i-n_guard_i)||(j<n_guard_j)||(j>=n_total_j-n_guard_j)||(k<n_guard_k)||(k>=n_total_k-n_guard_k);
+            };
+            std::string csp20 = ntab(5);
+            for (auto ijk: range(0,n_total_i)*range(0,n_total_j)*range(0,n_total_k))
+            {
+                out_str << csp20 << (isGhost(ijk[0], ijk[1], ijk[2])?16:0) << "\n";
+            }
+            out_str << ntab(4) << "</DataArray>\n";
+            out_str << ntab(3) << "</CellData>\n";
+            out_str << ntab(3) << "<Coordinates>\n";
         }
         
         template <grid::multiblock_grid grid_output_t, typename... arrays_t>
@@ -137,7 +215,7 @@ namespace cvdf::output
             {
                 std::string block_file_name = utils::strformat(block_template, zfill(obj.get_partition().get_global_block(i[0]), numzeros));
                 std::ofstream block_file_strm(block_file_name);
-                output_parralel_block_file(block_file_strm, obj, arrays...);
+                output_parralel_block_file(block_file_strm, i[0], obj, arrays...);
             }
             return header_filename;
         }

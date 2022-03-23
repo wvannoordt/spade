@@ -137,4 +137,10 @@ namespace cvdf::utils
         while (output.length() < num_zeros) output = "0"+output;
         return output;
     }
+    
+    static inline bool is_big_endian()
+    {
+        int num = 1;
+        return (! ( *(char *)&num == 1 ));
+    }
 }
