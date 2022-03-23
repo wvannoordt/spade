@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include "grid.h"
 #include "print.h"
@@ -81,18 +82,83 @@ namespace cvdf::output
             if (num_cell_centered_arrays>0) out_str << "CELL_DATA "  << obj.get_range(grid::cell_centered, grid::exclude_exchanges).size() << "\n";
             utils::foreach_param(output_array_data, arrays...);
         }
+        
+        std::string ntab(const std::size_t& n, const std::size_t& tab_size = 4) { return std::string(tab_size*n, ' '); }
+        
+        template <class output_stream_t, grid::multiblock_grid grid_output_t>
+        void output_parallel_header_file(
+            output_stream_t& out_str,
+            const std::string& block_proto_string,
+            const std::size_t& num_zeros,
+            const grid_output_t& obj)
+        {
+            out_str << "<?xml version=\"1.0\"?>\n";
+            out_str << "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\">\n";
+            out_str << ntab(1) << "<vtkMultiBlockDataSet>\n";
+            out_str << ntab(2) << "<Block index =\"0\">\n";
+            // <DataSet index="100" file="flow/lev000/flow_bk0000100.vtr"/>
+            for (auto i: range(0, obj.get_num_global_blocks()))
+            {
+                out_str << ntab(3) << utils::strformat("<DataSet index=\"{}\" file=\"{}\"/>\n", i[0], utils::strformat(block_proto_string, utils::zfill(i[0],num_zeros)));
+            }
+            out_str << ntab(2) << "</Block>\n";
+            out_str << ntab(1) << "</vtkMultiBlockDataSet>\n";
+            out_str << "</VTKFile>\n";
+        }
+        
+        template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
+        void output_parralel_block_file(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
+        {
+            out_str << "hello\n";
+        }
+        
+        template <grid::multiblock_grid grid_output_t, typename... arrays_t>
+        std::string output_grid_parallel(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
+        {
+            std::filesystem::path out_path(out_dir);
+            if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
+            std::filesystem::path header_filename(out_dir);
+            header_filename /= (out_name_no_extension + ".vtm");
+            std::size_t numzeros = 7;
+            
+            std::filesystem::path block_pth(out_dir);
+            block_pth /= ("data_" + out_name_no_extension);
+            if (!std::filesystem::is_directory(block_pth)) std::filesystem::create_directory(block_pth);
+            block_pth /= "block{}.vtr";
+            std::string block_template = block_pth;
+            
+            if (obj.group().isroot())
+            {
+                std::ofstream header_file_strm(header_filename);
+                
+                output_parallel_header_file(header_file_strm, block_template, numzeros, obj);
+            }
+            for (auto i: range(0, obj.get_num_local_blocks()))
+            {
+                std::string block_file_name = utils::strformat(block_template, zfill(obj.get_partition().get_global_block(i[0]), numzeros));
+                std::ofstream block_file_strm(block_file_name);
+                output_parralel_block_file(block_file_strm, obj, arrays...);
+            }
+            return header_filename;
+        }
     }
     
-    template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
-    void output_vtk(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
+    template <grid::multiblock_grid grid_output_t, typename... arrays_t>
+    std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
     {
         if (obj.group().size()>1)
         {
-            print("NOT IMPLEMENTED!", __FILE__, __LINE__);
+            return detail::output_grid_parallel(out_dir, out_name_no_extension, obj, arrays...);
         }
         else
         {
+            std::filesystem::path out_path(out_dir);
+            if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
+            out_path /= (out_name_no_extension + ".vtk");
+            std::string total_filename = out_path;
+            std::ofstream out_str(total_filename);
             detail::output_grid_serial(out_str, obj, arrays...);
+            return total_filename;
         }
     }
 }

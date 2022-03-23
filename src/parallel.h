@@ -37,8 +37,9 @@ namespace cvdf::parallel
 #endif
             }
             
-            int rank(void) const {return g_rank;}
-            int size(void) const {return g_size;}
+            int    rank(void) const {return g_rank;}
+            int    size(void) const {return g_size;}
+            bool isroot(void) const {return g_rank==0;}
             mpi_t& sync(void)
             {
                 MPI_CHECK(MPI_Barrier(this->channel));

@@ -49,8 +49,12 @@ int main(int argc, char** argv)
 
     cvdf::algs::fill_array(flow, channel_ini);
     
-    // std::ofstream myfile("out.vtk");
-    // cvdf::output::output_vtk(myfile, grid, flow);
+    bool output = true;
+    if (output)
+    {
+        std::string main_filename = cvdf::output::output_vtk("output", "flow", grid, flow);
+        if (group.isroot()) print("Exported", main_filename);
+    }
     
     grid.exchange_array(flow);
     

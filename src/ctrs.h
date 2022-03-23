@@ -15,6 +15,7 @@ namespace cvdf::ctrs
     {
         basic_array<T>;
         { t[i] } -> std::common_with<real_type>;
+        typename T::value_type;
     };
     
     template <class T> concept integral_type = std::is_integral<T>::value;
@@ -29,6 +30,7 @@ namespace cvdf::ctrs
     
     template<typename dtype, const size_t ar_size> struct array
     {
+        typedef dtype value_type;
         dtype data[ar_size];
         dtype& operator [] (size_t idx) {return data[idx];}
         dtype* begin() noexcept {return &data[0];}
@@ -62,4 +64,36 @@ namespace cvdf::ctrs
         template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
         template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
     };
+    
+    template <basic_array arr_l_t, basic_array arr_r_t> auto collapse_index(const arr_l_t& idx, const arr_r_t& dims)
+    {
+        static_assert(std::is_integral<typename arr_l_t::value_type>::value, "collapse_index requires integral arrays");
+        static_assert(std::is_integral<typename arr_r_t::value_type>::value, "collapse_index requires integral arrays");
+        typename arr_l_t::value_type coeff = 1;
+        typename arr_l_t::value_type output = 0;
+        for (auto i: range(0, dims.size()))
+        {
+            output += coeff*idx[i[0]];
+            coeff*=dims[i[0]];
+        }
+        return output;
+    }
+    
+    template <typename idx_t, basic_array arr_t> auto expand_index(const idx_t& idx, const arr_t& dims)
+    {
+        static_assert(std::is_integral<typename arr_t::value_type>::value, "collapse_index requires integral arrays");
+        typename arr_t::value_type coeff = 1;
+        typename arr_t::value_type modcoeff = 1;
+        arr_t output;
+        idx_t temp_idx = idx;
+        idx_t sum = 0;
+        for (auto i: range(0, dims.size()))
+        {
+            modcoeff *= dims[i[0]];
+            output[i[0]] = ((temp_idx-sum) % modcoeff) / coeff;
+            sum += output[i[0]]*coeff;
+            coeff *= dims[i[0]];
+        }
+        return output;
+    }
 }

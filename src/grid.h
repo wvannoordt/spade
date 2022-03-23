@@ -58,7 +58,7 @@ namespace cvdf::grid
                     grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
                     grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
                     grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-                    grid.get_num_blocks());
+                    grid.get_num_local_blocks());
             }
             case node_centered:
             {
@@ -66,7 +66,7 @@ namespace cvdf::grid
                     1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
                     1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
                     1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-                    grid.get_num_blocks());
+                    grid.get_num_local_blocks());
             }
         }
         return dims::dynamic_dims<4>(0,0,0,0);
@@ -103,21 +103,20 @@ namespace cvdf::grid
                     exchange_cells[i] = exchange_cells_in[i];
                     total_blocks *= num_blocks[i];
                 }
-                block_boxes.resize(total_blocks);
-                std::size_t clb = 0;
-                for (auto lb: range(0,num_blocks[0])*range(0,num_blocks[1])*range(0,num_blocks[2]))
+                
+                grid_partition = partition::block_partition_t(num_blocks, &group_in);
+                
+                block_boxes.resize(grid_partition.get_num_local_blocks());
+                for (auto lb: range(0,grid_partition.get_num_local_blocks()))
                 {
-                    auto& box = block_boxes[clb];
-                    ctrs::array<dtype, 3> lower;
-                    ctrs::array<dtype, 3> upper;
+                    auto& box = block_boxes[lb[0]];
+                    ctrs::array<std::size_t, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb[0]), num_blocks);
                     static_for<0,3>([&](auto i)
                     {
-                        box.min(i.value) = bounds.min(i.value) + (lb[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
-                        box.max(i.value) = bounds.min(i.value) + (lb[i.value]+1)*bounds.size(i.value)/num_blocks[i.value];
+                        box.min(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
+                        box.max(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+1)*bounds.size(i.value)/num_blocks[i.value];
                     });
-                    ++clb;
                 }
-                grid_partition = partition::block_partition_t(num_blocks, &group_in);
             }
             
             _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
@@ -162,7 +161,7 @@ namespace cvdf::grid
                             -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
                             -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
                             -iexchg*exchange_cells[2],cells_in_block[2]+iexchg*exchange_cells[2],
-                            0,num_blocks[0]*num_blocks[1]*num_blocks[2]);
+                            0,grid_partition.get_num_local_blocks());
                     }
                     case node_centered:
                     {
@@ -170,14 +169,15 @@ namespace cvdf::grid
                             -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
                             -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
                             -iexchg*exchange_cells[2],1+cells_in_block[2]+iexchg*exchange_cells[2],
-                            0,num_blocks[0]*num_blocks[1]*num_blocks[2]);
+                            0,grid_partition.get_num_local_blocks());
                     }
                     default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
                 }
             }
             
             std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
-            std::size_t get_num_blocks(void)                   const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
+            std::size_t  get_num_local_blocks(void) const {return grid_partition.get_num_local_blocks();}
+            std::size_t get_num_global_blocks(void) const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
             std::size_t get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
             std::size_t get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
             bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
@@ -194,6 +194,7 @@ namespace cvdf::grid
                 
             }
             
+            const partition::block_partition_t& get_partition(void) const { return grid_partition; }
         private:
             partition::block_partition_t grid_partition;
             coord_t coord_system;
