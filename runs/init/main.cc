@@ -5,9 +5,14 @@ int main(int argc, char** argv)
     cvdf::parallel::mpi_t group(&argc, &argv);
     
     // cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(16, 4, 3);
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(8, 4, 2);
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(32, 32, 48);
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
+    // cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(8, 4, 2);
+    // cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(32, 32, 48);
+    // cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
+    
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(1, 2, 1);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(4, 4, 4);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(1, 1, 1);
+    
     cvdf::bound_box_t<double, cvdf::cvdf_dim> bounds;
     
     bounds.min(0) =  0.0;
@@ -39,11 +44,18 @@ int main(int argc, char** argv)
     auto channel_ini = [=](const v3d& xyz) -> cvdf::fluid_state::prim_t<real_t>
     {
         cvdf::fluid_state::prim_t<real_t> output(0.0);
-        output.p() = p_ref;
-        output.u() = u_ref*(1.0 - xyz[1]*xyz[1]/(delta*delta));
-        output.v() = 0;
-        output.w() = 0;
-        output.T() = t_max - (t_max - t_wall)*xyz[1]*xyz[1]/(delta*delta);
+        // output.p() = p_ref;
+        // output.u() = u_ref*(1.0 - xyz[1]*xyz[1]/(delta*delta));
+        // output.v() = 0;
+        // output.w() = 0;
+        // output.T() = t_max - (t_max - t_wall)*xyz[1]*xyz[1]/(delta*delta);
+        
+        output.p() = 0.0;
+        output.u() = 0.0;
+        output.v() = 0.0;
+        output.w() = 0.0;
+        output.T() = 0.0;
+        
         return output;
     };
 
