@@ -14,6 +14,11 @@ namespace cvdf::parallel
         t.sync();
     };
     
+    static mpi_data_t get_data_type(double d)   { return MPI_DOUBLE; }
+    static mpi_data_t get_data_type(char d)     { return MPI_CHAR; }
+    static mpi_data_t get_data_type(float d)    { return MPI_FLOAT; }
+    static mpi_data_t get_data_type(int d)      { return MPI_INT; }
+    
     class mpi_t
     {
         public:
@@ -45,6 +50,26 @@ namespace cvdf::parallel
                 MPI_CHECK(MPI_Barrier(this->channel));
                 return *this;
             }
+            
+            template <typename data_t> request_t async_recv(data_t* buf, int count, int source)
+            {
+                auto dtype = get_data_type(data_t());
+                request_t p;
+                MPI_CHECK(MPI_Irecv(buf, count, dtype, source, 1, this->channel, &p));
+                return p;
+            }
+            
+            template <typename data_t> void sync_send(const data_t* buf, int count, int dest)
+            {
+                auto dtype = get_data_type(data_t());
+                MPI_CHECK(MPI_Ssend(buf, count, dtype, dest, 1, this->channel));
+            }
+            
+            void await_all(int count, request_t reqs[], status_t stats[])
+            {
+                MPI_CHECK(MPI_Waitall(count, reqs, stats));
+            }
+            
         private:
             int g_rank, g_size;
             mpi_comm_t channel;

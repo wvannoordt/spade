@@ -4,9 +4,9 @@ int main(int argc, char** argv)
 {
     cvdf::parallel::mpi_t group(&argc, &argv);
     
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(3, 3, 3);
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(8, 8, 8);
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(1, 3, 1);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(2, 2, 2);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(1, 1, 1);
     cvdf::bound_box_t<double, cvdf::cvdf_dim> bounds;
     bounds.min(0) = -1.0;
     bounds.max(0) =  1.0;
