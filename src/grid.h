@@ -15,6 +15,7 @@
 #include "dims.h"
 #include "array_container.h"
 #include "partition.h"
+#include "static_math.h"
 
 namespace cvdf::grid
 {    
@@ -72,6 +73,13 @@ namespace cvdf::grid
         return dims::dynamic_dims<4>(0,0,0,0);
     }
     
+    struct neighbor_relationship_t
+    {
+        ctrs::array<int, 3> edge_vec;
+        int rank;
+        int lb_glob;
+    };
+    
     template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t> class cartesian_grid_t
     {
         public:
@@ -84,6 +92,7 @@ namespace cvdf::grid
                 const coord_t& coord_system_in,
                 par_group_t& group_in)
             {
+                //Initialize class members
                 this->grid_group = &group_in;
                 coord_system = coord_system_in;
                 dx = 1.0;
@@ -94,6 +103,7 @@ namespace cvdf::grid
                 bounds.min(2) = 0.0;
                 bounds.max(2) = 1.0;
                 
+                //copy constructor arguments, compute domain bounding blox
                 for (std::size_t i = 0; i < cvdf_dim; i++)
                 {
                     bounds.max(i) = bounds_in.max(i);
@@ -105,8 +115,10 @@ namespace cvdf::grid
                     total_blocks *= num_blocks[i];
                 }
                 
+                //partition the domain
                 grid_partition = partition::block_partition_t(num_blocks, &group_in);
                 
+                //compute individual block bounding boxes
                 block_boxes.resize(grid_partition.get_num_local_blocks());
                 for (auto lb: range(0,grid_partition.get_num_local_blocks()))
                 {
@@ -118,6 +130,39 @@ namespace cvdf::grid
                         box.max(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+1)*bounds.size(i.value)/num_blocks[i.value];
                     });
                 }
+                
+                //compute neighbor relationships
+                neighbors.resize(this->get_num_local_blocks());
+                for (auto lb: range(0, this->get_num_local_blocks()))
+                {
+                    std::size_t lb_loc = lb[0];
+                    auto& block_neighbors = neighbors[lb_loc];
+                    ctrs::array<int, 3> delta_lb = 0;
+                    int i3d = this->is_3d()?1:0;
+                    auto delta_lb_range = range(-1, 2)*range(-1, 2)*range(-i3d, 1+i3d);
+                    for (auto dlb: delta_lb_range)
+                    {
+                        ctrs::copy_array(dlb, delta_lb);
+                        ctrs::array<int, 3> lb_nd;
+                        ctrs::copy_array(expand_index(grid_partition.get_global_block(lb_loc), this->num_blocks), lb_nd);
+                        lb_nd += delta_lb;
+                        lb_nd += this->num_blocks;
+                        lb_nd %= this->num_blocks;
+                        std::size_t lb_glob_neigh = ctrs::collapse_index(lb_nd, this->num_blocks);
+                        std::size_t rank_neigh = grid_partition.get_global_rank(lb_glob_neigh);
+                        delta_lb += 1;
+                        
+                        neighbor_relationship_t& neighbor_relationship = block_neighbors[ctrs::collapse_index(delta_lb, ctrs::array<int,3>(3, 3, 3))];
+                        delta_lb -= 1;
+
+                        neighbor_relationship.edge_vec = delta_lb;
+                        neighbor_relationship.rank     = rank_neigh;
+                        neighbor_relationship.lb_glob  = lb_glob_neigh;
+                    }
+                }
+                
+                send_bufs.resize(group_in.size());
+                recv_bufs.resize(group_in.size());
             }
             
             _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
@@ -148,6 +193,7 @@ namespace cvdf::grid
             {
                 return *grid_group;
             }
+            
             const coord_t& coord_sys(void) const {return coord_system;}
             
             md_range_t<int,4> get_range(const array_center_e& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
@@ -190,10 +236,68 @@ namespace cvdf::grid
             {
                 return lb_i + lb_j*this->get_num_blocks(0) + lb_k*this->get_num_blocks(0)*this->get_num_blocks(1);
             }
+            //lb + edge_vec = lb_neigh (edge_vec points towards neighbor)
+            bound_box_t<int, 3> get_recv_index_bounds(const ctrs::array<int, 3>& edge_vec) const
+            {
+                bound_box_t<int, 3> output;
+                output.min(0) = 0; output.max(0) = 1;
+                output.min(1) = 0; output.max(1) = 1;
+                output.min(2) = 0; output.max(2) = 1;
+                for (int i = 0; i < cvdf_dim; i++)
+                {
+                    ctrs::array<int, 3> recv_start(
+                        -((int)exchange_cells[i]),
+                        0,
+                        (int)cells_in_block[i]);
+                    ctrs::array<int, 3> recv_end(
+                        0,
+                        (int)cells_in_block[i],
+                        (int)(cells_in_block[i] + exchange_cells[i]));
+                    output.min(i) = recv_start[1+edge_vec[i]];
+                    output.max(i) = recv_end  [1+edge_vec[i]];
+                }
+                return output;
+            }
+            
+            bound_box_t<int, 3> get_send_index_bounds(const ctrs::array<int, 3>& edge_vec) const
+            {
+                bound_box_t<int, 3> output;
+                output.min(0) = 0; output.max(0) = 1;
+                output.min(1) = 0; output.max(1) = 1;
+                output.min(2) = 0; output.max(2) = 1;
+                for (int i = 0; i < cvdf_dim; i++)
+                {
+                    ctrs::array<int, 3> send_start(
+                        0,
+                        0,
+                        (int)cells_in_block[i]-(int)exchange_cells[i]);
+                    ctrs::array<int, 3> send_end(
+                        (int)exchange_cells[i],
+                        (int)cells_in_block[i],
+                        (int)cells_in_block[i]);
+                    output.min(i) = send_start[1+edge_vec[i]];
+                    output.max(i) = send_end  [1+edge_vec[i]];
+                }
+                return output;
+            }
             
             template <grid::multiblock_array array_t> void exchange_array(array_t& array) const
             {
+                const std::size_t num_neighs = static_math::pow<3,cvdf_dim>::value;
                 
+                std::vector<std::size_t> num_send_bytes(grid_group->size(), 0);
+                std::vector<std::size_t> num_recv_bytes(grid_group->size(), 0);
+                
+                for (auto idx: range(0, num_neighs)*range(0, this->get_num_local_blocks()))
+                {
+                    auto& neigh = neighbors[idx[1]][idx[0]];
+                    if (neigh.edge_vec[0] != 0 || neigh.edge_vec[1] != 0 || neigh.edge_vec[2] != 0)
+                    {
+                        const auto send = this->get_send_index_bounds(neigh.edge_vec);
+                        const auto recv = this->get_recv_index_bounds(neigh.edge_vec);
+                        
+                    }
+                }
             }
             
             const partition::block_partition_t& get_partition(void) const { return grid_partition; }
@@ -209,7 +313,11 @@ namespace cvdf::grid
             std::vector<bound_box_t<dtype, 3>> block_boxes;
             size_t total_blocks;
             par_group_t* grid_group;
-    };    
+            std::vector<ctrs::array<neighbor_relationship_t, static_math::pow<3,cvdf_dim>::value>> neighbors;
+            
+            std::vector<std::vector<char>> send_bufs;
+            std::vector<std::vector<char>> recv_bufs;
+    };
     
     template <
         multiblock_grid grid_t,

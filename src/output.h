@@ -162,7 +162,7 @@ namespace cvdf::output
                 
                 if (arr.centering_type()!=grid::cell_centered) throw std::runtime_error("parallel output not currently supporting anythong other than cell data!");
                 std::size_t total_temp_size = (n_cells_i+2*n_guard_i)*(n_cells_j+2*n_guard_j)*(n_cells_k+2*n_guard_k);
-                unsigned int total_temp_size_ui = (unsigned int)total_temp_size;
+                unsigned int total_bytes_size = sizeof(data_t)*(unsigned int)total_temp_size;
                 std::vector<data_t> compressed_data(total_temp_size);
                 auto block_grid_range = range(-n_guard_i, n_cells_i + n_guard_i)*range(-n_guard_j, n_cells_j + n_guard_j)*range(-n_guard_k, n_cells_k + n_guard_k);
                 for (auto i2:range(0,arr.get_major_dims().total_size()))
@@ -177,7 +177,7 @@ namespace cvdf::output
                         out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_arr_name(arr, i1[0], i2[0]) << "\" format=\"binary\">\n";
                         //data here
                         // here here he
-                        cvdf::detail::stream_base_64(out_str, &total_temp_size_ui, 1);
+                        cvdf::detail::stream_base_64(out_str, &total_bytes_size, 1);
                         cvdf::detail::stream_base_64(out_str, &compressed_data[0], compressed_data.size());
                         //do this bit right now
                         out_str << "\n" << ntab(4) << "</DataArray>\n";
@@ -209,23 +209,32 @@ namespace cvdf::output
             });
             
             out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(0), box_tmp.max(0)) << std::endl;
-            for (int i = -n_guard_i; i <=n_cells_i+n_guard_i; i++)
+            int i,j,k;
+            j = 0;
+            k = 0;
+            for (i = -n_guard_i; i <=n_cells_i+n_guard_i; i++)
             {
-                xyz[0] = obj.get_block_box(lb_loc).min(0) + i*obj.get_dx(0);
+                xyz = obj.node_coords(i, j, k, lb_loc);
                 out_str << csp20 << xyz[0] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
             out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(1), box_tmp.max(1)) << std::endl;
-            for (int j = -n_guard_j; j <=n_cells_j+n_guard_j; j++)
+            
+            i = 0;
+            k = 0;
+            for (j = -n_guard_j; j <=n_cells_j+n_guard_j; j++)
             {
-                xyz[1] = obj.get_block_box(lb_loc).min(1) + j*obj.get_dx(1);
+                xyz = obj.node_coords(i, j, k, lb_loc);
                 out_str << csp20 << xyz[1] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
             out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(2), box_tmp.max(2)) << std::endl;
-            for (int k = -n_guard_k; k <=n_cells_k+n_guard_k; k++)
+            
+            i = 0;
+            j = 0;
+            for (k = -n_guard_k; k <=n_cells_k+n_guard_k; k++)
             {
-                xyz[2] = obj.get_block_box(lb_loc).min(2) + k*obj.get_dx(2);
+                xyz = obj.node_coords(i, j, k, lb_loc);
                 out_str << csp20 << xyz[2] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
@@ -243,23 +252,28 @@ namespace cvdf::output
             std::filesystem::path header_filename(out_dir);
             header_filename /= (out_name_no_extension + ".vtm");
             std::size_t numzeros = 7;
-            
-            std::filesystem::path block_pth(out_dir);
-            block_pth /= ("data_" + out_name_no_extension);
-            if (!std::filesystem::is_directory(block_pth)) std::filesystem::create_directory(block_pth);
-            block_pth /= "block{}.vtr";
-            std::string block_template = block_pth;
-            
+            std::string blocks_dir_name = ("data_" + out_name_no_extension);
+            std::string blocks_file_name_template = "block{}.vtr";
             if (obj.group().isroot())
             {
+                std::filesystem::path blocks_directory(out_dir);
+                blocks_directory /= blocks_dir_name;
+                if (!std::filesystem::is_directory(blocks_directory)) std::filesystem::create_directory(blocks_directory);
+                
+                std::filesystem::path block_file_rel_template(blocks_dir_name);
+                block_file_rel_template /= blocks_file_name_template;
+                std::string block_template_str = block_file_rel_template;
                 std::ofstream header_file_strm(header_filename);
                 
-                output_parallel_header_file(header_file_strm, block_template, numzeros, obj);
+                output_parallel_header_file(header_file_strm, block_template_str, numzeros, obj);
             }
             for (auto i: range(0, obj.get_num_local_blocks()))
             {
-                std::string block_file_name = utils::strformat(block_template, zfill(obj.get_partition().get_global_block(i[0]), numzeros));
-                std::ofstream block_file_strm(block_file_name);
+                std::filesystem::path block_abs_path(out_dir);
+                block_abs_path /= blocks_dir_name;
+                block_abs_path /= blocks_file_name_template;
+                std::string block_abs_path_str = utils::strformat(block_abs_path, utils::zfill(obj.get_partition().get_global_block(i[0]), numzeros));
+                std::ofstream block_file_strm(block_abs_path_str);
                 output_parralel_block_file(block_file_strm, i[0], obj, arrays...);
             }
             return header_filename;

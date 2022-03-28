@@ -3,7 +3,8 @@
 #include <array>
 template <typename index_t, const std::size_t idx_dim> struct md_iterator
 {
-    index_t idx_v, start_v, end_v;    
+    constexpr size_t size(void) const noexcept {return idx_dim;}
+    index_t idx_v, start_v, end_v;
     typedef std::size_t base_type_t;
     typename std::conditional<(idx_dim<=1), base_type_t, md_iterator<index_t,idx_dim-1>>::type next;
     template <typename... idxs_t> static void set_start_r(std::size_t& base){base = 0;}
@@ -17,7 +18,7 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
     {
         arg.idx_v = arg.start_v;
         set_end_r(arg.next);
-    } 
+    }
     md_iterator& set_start(void)
     {
         set_start_r(*this);
@@ -41,12 +42,14 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
         end_v   = i1;
         call_set_val_r(this->next, idxs...);
     }
+    
     md_iterator(void) {}
     template <typename... idxs_t> md_iterator(idxs_t... idxs)
     {
         static_assert(sizeof...(idxs_t)==2*idx_dim, "md_iterator of size N requires 2N integral arguments!");
         set_val_r(idxs...);
     }
+    
     md_iterator& operator ++ (void)
     {
         ++idx_v;

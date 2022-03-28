@@ -38,7 +38,8 @@ namespace cvdf::partition
             }
             
             std::size_t get_num_local_blocks(void) const { return num_local_blocks; }
-            std::size_t get_global_block(const std::size_t& lb_loc) const { return local_block_to_global_block[lb_loc]; }
+            std::size_t get_global_block(const std::size_t& lb_loc)  const { return local_block_to_global_block[lb_loc]; }
+            std::size_t get_global_rank (const std::size_t& lb_glob) const { return global_block_to_rank[lb_glob]; }
             
         private:
             ctrs::array<std::size_t, 3> num_blocks;

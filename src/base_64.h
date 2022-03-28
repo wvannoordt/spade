@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <cstring>
+#include "print.h"
 
 namespace cvdf::detail
 {

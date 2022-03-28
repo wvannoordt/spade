@@ -63,6 +63,36 @@ namespace cvdf::ctrs
         }
         template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
         template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
+        
+        template <basic_array arr_t> auto& operator += (const arr_t& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs[i];
+            return *this;
+        }
+        
+        template <basic_array arr_t> auto& operator -= (const arr_t& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs[i];
+            return *this;
+        }
+        
+        auto& operator += (const dtype& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs;
+            return *this;
+        }
+        
+        auto& operator -= (const dtype& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs;
+            return *this;
+        }
+        
+        template <basic_array arr_t> auto& operator %= (const arr_t& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] %= rhs[i];
+            return *this;
+        }
     };
     
     template <basic_array arr_l_t, basic_array arr_r_t> auto collapse_index(const arr_l_t& idx, const arr_r_t& dims)
