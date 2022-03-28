@@ -137,6 +137,9 @@ namespace cvdf::grid
                 send_bufs.resize(group_in.size());
                 recv_bufs.resize(group_in.size());
                 
+                requests.resize(group_in.size());
+                statuses.resize(group_in.size());
+                
                 //compute neighbor relationships
                 for (auto lb: range(0, this->get_num_global_blocks()))
                 {
@@ -181,12 +184,6 @@ namespace cvdf::grid
                         }
                     }
                 }
-                
-                print("config: send");
-                for (auto p:send_size_elems) print(p);
-                print("config: recv");
-                for (auto p:recv_size_elems) print(p);
-                print("/config");
             }
             
             _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
@@ -270,13 +267,13 @@ namespace cvdf::grid
                 for (int i = 0; i < cvdf_dim; i++)
                 {
                     ctrs::array<int, 3> recv_start(
-                        -((int)exchange_cells[i]),
-                        0,
-                        (int)cells_in_block[i]);
-                    ctrs::array<int, 3> recv_end(
-                        0,
                         (int)cells_in_block[i],
-                        (int)(cells_in_block[i] + exchange_cells[i]));
+                        0,
+                        -((int)exchange_cells[i]));
+                    ctrs::array<int, 3> recv_end(
+                        (int)(cells_in_block[i] + exchange_cells[i]),
+                        (int)cells_in_block[i],
+                        0);
                     output.min(i) = recv_start[1+edge_vec[i]];
                     output.max(i) = recv_end  [1+edge_vec[i]];
                 }
@@ -337,10 +334,10 @@ namespace cvdf::grid
                             std::size_t& send_offset_loc = offsets[neigh_edge.rank_end];
                             std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_start);
                             auto bounds = this->get_send_index_bounds(neigh_edge.edge_vec);
-                            std::size_t copy_size = bounds.size(0)*cell_elem_size;
-                            for (std::size_t k = bounds.min(2); k < bounds.max(2); ++k)
+                            std::size_t copy_size = bounds.size(0)*cell_elem_size;                            
+                            for (int k = bounds.min(2); k < bounds.max(2); ++k)
                             {
-                                for (std::size_t j = bounds.min(1); j < bounds.max(1); ++j)
+                                for (int j = bounds.min(1); j < bounds.max(1); ++j)
                                 {
                                     std::copy(
                                         (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj[0])),
@@ -354,11 +351,18 @@ namespace cvdf::grid
                     }
                 }
                 
-                print("=====SEND=====");
-                for (int i = 0; i < grid_group->size(); ++i)
+                for (std::size_t p = 0; p < grid_group->size(); ++p)
                 {
-                    print(offsets[i], send_size_elems[i]*sizeof(double)*5);
+                    request_t r = grid_group->async_recv(&recv_bufs[p][0], recv_bufs[p].size(), p);
+                    requests[p] = r;
                 }
+                for (std::size_t p = 0; p < grid_group->size(); ++p)
+                {
+                    grid_group->sync_send(&send_bufs[p][0], send_bufs[p].size(), p);
+                }
+                
+                //might be a bottleneck
+                grid_group->await_all(statuses.size(), requests.data(), statuses.data());
                 
                 //reset offsets
                 for (auto& offset: offsets) offset = 0;
@@ -375,9 +379,9 @@ namespace cvdf::grid
                             std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_end);
                             auto bounds = this->get_recv_index_bounds(neigh_edge.edge_vec);
                             std::size_t copy_size = bounds.size(0)*cell_elem_size;
-                            for (std::size_t k = bounds.min(2); k < bounds.max(2); ++k)
+                            for (int k = bounds.min(2); k < bounds.max(2); ++k)
                             {
-                                for (std::size_t j = bounds.min(1); j < bounds.max(1); ++j)
+                                for (int j = bounds.min(1); j < bounds.max(1); ++j)
                                 {
                                     std::copy(
                                         (char*)(&(recv_buf_loc[recv_offset_loc])),
@@ -389,12 +393,6 @@ namespace cvdf::grid
                             }
                         }
                     }
-                }
-                
-                print("=====RECV=====");
-                for (int i = 0; i < grid_group->size(); ++i)
-                {
-                    print(offsets[i], recv_size_elems[i]*sizeof(double)*5);
                 }
             }
             
@@ -417,6 +415,8 @@ namespace cvdf::grid
             std::vector<std::size_t> recv_size_elems;
             std::vector<std::vector<char>> send_bufs;
             std::vector<std::vector<char>> recv_bufs;
+            std::vector<request_t> requests;
+            std::vector<status_t>  statuses;
     };
     
     template <
@@ -545,9 +545,10 @@ namespace cvdf::grid
             ];
         }
         
-        minor_dim_t get_minor_dims(void) const {return minor_dims;}
-        major_dim_t get_major_dims(void) const {return major_dims;}
-        major_dim_t get_grid_dims (void) const {return grid_dims; }
+        minor_dim_t get_minor_dims(void) const { return minor_dims; }
+        major_dim_t get_major_dims(void) const { return major_dims; }
+        major_dim_t get_grid_dims (void) const { return grid_dims;  }
+        auto get_total_dims(void)        const { return minor_dims*grid_dims*major_dims; }
         const grid_t& get_grid(void) const {return *grid;}
         
         const grid_t* grid;

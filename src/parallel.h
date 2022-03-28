@@ -70,6 +70,15 @@ namespace cvdf::parallel
                 MPI_CHECK(MPI_Waitall(count, reqs, stats));
             }
             
+            template <typename... data_t> auto sum(data_t... datas)
+            {
+                auto sum_loc = (... + datas);
+                decltype(sum_loc) sum_glob;
+                auto dtype = get_data_type(sum_loc);
+                MPI_CHECK(MPI_Allreduce(&sum_loc, &sum_glob, 1, dtype, MPI_SUM, this->channel));
+                return sum_glob;
+            }
+            
         private:
             int g_rank, g_size;
             mpi_comm_t channel;
