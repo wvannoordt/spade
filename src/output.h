@@ -30,6 +30,20 @@ namespace cvdf::output
             out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << (cvdf_dim==3)*obj.get_dx(2) << "\n";
         }
         
+        template <
+            class output_stream_t,
+            grid::multiblock_grid grid_output_t,
+            coords::coord_mapping_1D x_t,
+            coords::coord_mapping_1D y_t,
+            coords::coord_mapping_1D z_t>
+        void output_mesh_data(
+            output_stream_t& out_str,
+            const grid_output_t& obj,
+            const coords::diagonal_coords<x_t, y_t, z_t>& coord_sys)
+        {
+            print("NOT YET IMPLEMENTED", __FILE__, __LINE__);
+        }
+        
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
         void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
         {

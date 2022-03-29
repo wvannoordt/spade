@@ -1,1 +1,1 @@
-cmd: 'cd ./runs/exchange/ && make && mpirun -np 5 ./vdf.x'
+cmd: 'cd ./runs/diagcoord/ && make && mpirun -np 5 ./vdf.x'
