@@ -4,10 +4,10 @@
 #include <fstream>
 #include <filesystem>
 
-#include "grid.h"
-#include "print.h"
-#include "utils.h"
-#include "base_64.h"
+#include "core/grid.h"
+#include "core/print.h"
+#include "core/utils.h"
+#include "core/base_64.h"
 
 namespace cvdf::output
 {

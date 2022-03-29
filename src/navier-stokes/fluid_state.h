@@ -2,7 +2,8 @@
 #include <string>
 #include <concepts>
 
-#include "ctrs.h"
+#include "core/ctrs.h"
+
 namespace cvdf::fluid_state
 {
     
@@ -11,10 +12,12 @@ namespace cvdf::fluid_state
         t[idx];
         T::size();
         t.name(0);
+        typename T::value_type;
     };
     
     template <typename rtype> struct prim_t
     {
+        typedef rtype value_type;
         static constexpr size_t size(void) noexcept {return 5;}
         rtype data[size()];
         prim_t(void){}
@@ -42,6 +45,7 @@ namespace cvdf::fluid_state
 
     template <typename rtype> struct cons_t
     {
+        typedef rtype value_type;
         static constexpr size_t size(void) noexcept {return 5;}
         rtype data[size()];
         cons_t(void){}
@@ -67,6 +71,20 @@ namespace cvdf::fluid_state
         }
     };
     
+    template <class T> concept state_dependent_gas = requires(T t, prim_t<typename T::value_type> s)
+    {
+        t.get_R(s);
+        t.get_gamma(s);
+    };
+    
+    template <typename dtype> struct perfect_gas_t
+    {
+        typedef dtype value_type;
+        dtype R, gamma;
+        template <is_state_type state_t> dtype get_R(const state_t& state)     const {return this->R;}
+        template <is_state_type state_t> dtype get_gamma(const state_t& state) const {return this->gamma;}
+    };
+    
     template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
     {
        os << "{";
@@ -79,11 +97,11 @@ namespace cvdf::fluid_state
        return os;
     }
 
-    template<typename ptype, typename ctype, class gastype> void convert_state(prim_t<ptype>& prim, cons_t<ctype>& cons, const gastype& gas)
+    template<typename ptype, typename ctype, class gas_t> void convert_state(prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
     {
-        ptype rho = prim.p() / (gas.R*prim.T());
+        ptype rho = prim.p() / (gas.get_R(prim)*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
-        ptype rhoE = 0.5*rhoU2 + (prim.p()/((gas.gamma - 1.0)));
+        ptype rhoE = 0.5*rhoU2 + (prim.p()/((gas.get_gamma(prim) - 1.0)));
         ptype rhoU = rho*prim.u();
         ptype rhoV = rho*prim.v();
         ptype rhoW = rho*prim.w();
@@ -94,7 +112,7 @@ namespace cvdf::fluid_state
         cons.rho_w()  = rhoW;
     }
 
-    template<typename ptype, typename ctype, class gastype> void convert_state(cons_t<ctype>& cons, prim_t<ptype>& prim, const gastype& gas)
+    template<typename ptype, typename ctype, class gas_t> void convert_state(cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
     {
         ptype rho = cons.rho();
         ptype invrho = 1.0/rho;
@@ -102,8 +120,8 @@ namespace cvdf::fluid_state
         ptype v = invrho*cons.rho_v();
         ptype w = invrho*cons.rho_w();
         ptype rhoU2 = rho*(u*u+v*v+w*w);
-        ptype p = (gas.gamma - 1.0)*(cons.rho_H() - 0.5*rhoU2);
-        ptype T = p/(gas.R*rho);
+        ptype p = (gas.get_gamma(prim) - 1.0)*(cons.rho_H() - 0.5*rhoU2);
+        ptype T = p/(gas.get_R(prim)*rho);
         prim.p() = p;
         prim.T() = T;
         prim.u() = u;

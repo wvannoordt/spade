@@ -2,8 +2,8 @@
 
 #include <type_traits>
 #include <concepts>
-#include "attribs.h"
-#include "grid.h"
+#include "core/attribs.h"
+#include "core/grid.h"
 
 namespace cvdf::algs
 {

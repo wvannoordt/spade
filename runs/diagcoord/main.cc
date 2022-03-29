@@ -41,34 +41,28 @@ int main(int argc, char** argv)
     cvdf::coords::diagonal_coords coords(xc, yc, zc);
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
-    cvdf::grid::grid_array flow(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array cons(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
     typedef typename decltype(grid)::dtype real_t;
     typedef cvdf::ctrs::array<real_t, 3> v3d;
     
-    const double pi = 3.14159265359;
-    
-    auto rank_data = [=](const v3d& xyz) -> cvdf::fluid_state::prim_t<real_t>
+    auto channel_ini = [=](const v3d& xyz) -> cvdf::fluid_state::cons_t<real_t>
     {
-        cvdf::fluid_state::prim_t<real_t> output(0.0);
-        double val = sin(2.0*pi*xyz[0])+2.0*cos(8.0*pi*xyz[1])*sin(4.0*pi*xyz[2]);
-        output[0] = val;
-        output[1] = val;
-        output[2] = val;
-        output[3] = val;
-        output[4] = val;
+        cvdf::fluid_state::cons_t<real_t> output(0.0);
         return output;
     };
 
-    cvdf::algs::fill_array(flow, rank_data, cvdf::grid::exclude_exchanges);
-    grid.exchange_array(flow);
+    cvdf::algs::fill_array(cons, channel_ini, cvdf::grid::include_exchanges);
     
-    bool output = true;
+    bool output = false;
     if (output)
     {
-        std::string main_filename = cvdf::output::output_vtk("output", "flow", grid, flow);
+        std::string main_filename = cvdf::output::output_vtk("output", "ini", grid, cons);
         if (group.isroot()) print("Exported", main_filename);
     }
+    
+    // cvdf::time_integration::time_integrator(flow)
+    // cvdf::navier_stokes::convective_operator<>
     
     return 0;
 }

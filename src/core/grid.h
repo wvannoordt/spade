@@ -4,18 +4,18 @@
 #include <vector>
 #include <type_traits>
 
-#include "attribs.h"
-#include "ctrs.h"
-#include "typedef.h"
-#include "bounding_box.h"
-#include "range.h"
-#include "static_for.h"
-#include "coord_system.h"
-#include "parallel.h"
-#include "dims.h"
-#include "array_container.h"
-#include "partition.h"
-#include "static_math.h"
+#include "core/attribs.h"
+#include "core/ctrs.h"
+#include "core/typedef.h"
+#include "core/bounding_box.h"
+#include "core/range.h"
+#include "core/static_for.h"
+#include "core/coord_system.h"
+#include "core/parallel.h"
+#include "core/dims.h"
+#include "core/array_container.h"
+#include "core/partition.h"
+#include "core/static_math.h"
 
 namespace cvdf::grid
 {    

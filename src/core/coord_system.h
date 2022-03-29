@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <functional>
 #include <concepts>
-#include "ctrs.h"
+#include "core/ctrs.h"
 
 namespace cvdf::coords
 {
@@ -74,5 +74,40 @@ namespace cvdf::coords
         analytical_1D(const callable_t& func_in) {func = &func_in;}
         dtype map(const dtype& coord) const {return (*func)(coord);}
         const callable_t* func;
+    };
+    
+    template <typename dtype> struct integrated_tanh_1D
+    {
+        typedef dtype coord_type;
+        integrated_tanh_1D(void){}
+        integrated_tanh_1D(const dtype& y0, const dtype& y1, const dtype& inflation, const dtype& rate)
+        {
+            eta1 = y0;
+            eta0 = y1;
+            deta = eta1 - eta0;
+            const dtype k = rate;
+            const dtype strch = inflation;
+            alpha0 = k/deta;
+            alpha1 = -k/deta;
+            beta0  =  alpha0*(strch*deta-eta0);
+            beta1  =  alpha0*(eta1+strch*deta);
+            auto abs = [](const dtype& d) -> dtype {return d<0?-d:d;};
+            auto func = [&](const dtype& eta) -> dtype
+            {
+                return  log(abs(cosh(alpha0*eta+beta0)))/alpha0  +  log(abs(cosh(alpha1*eta+beta1)))/alpha1 - eta;
+            };
+            f0 = func(eta0);
+            norm = func(eta1)-f0;
+        }
+        dtype map(const dtype& coord) const
+        {
+            auto abs = [](const dtype& d) -> dtype {return d<0?-d:d;};
+            auto func = [&](const dtype& eta) -> dtype
+            {
+                return  log(abs(cosh(alpha0*eta+beta0)))/alpha0  +  log(abs(cosh(alpha1*eta+beta1)))/alpha1 - eta;
+            };
+            return eta0 + deta*(func(coord) - f0)/norm;
+        }
+        dtype eta0, eta1, deta, f0, norm, alpha0, alpha1, beta0, beta1;
     };
 }

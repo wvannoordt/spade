@@ -3,7 +3,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include "mpi_flags.h"
+#include "core/mpi_flags.h"
 
 namespace cvdf::parallel
 {

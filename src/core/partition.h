@@ -1,8 +1,8 @@
 #pragma once
 
-#include "print.h"
-#include "ctrs.h"
-#include "parallel.h"
+#include "core/print.h"
+#include "core/ctrs.h"
+#include "core/parallel.h"
 
 namespace cvdf::partition
 {
