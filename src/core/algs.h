@@ -99,7 +99,6 @@ namespace cvdf::algs
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>
     requires std::invocable<callable_t, typename array_t::unwrapped_minor_type>
     auto transform_reduce(const array_t& arr, const callable_t& func, reduce_t& reduce_oper, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
-    // auto transform_reduce(const array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
     {
         const auto& grid = arr.get_grid();
         auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
@@ -113,8 +112,6 @@ namespace cvdf::algs
                 typename array_t::unwrapped_minor_type data;
                 detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
                 reduce_oper.reduce_elem(func(data));
-                // print(reduce_oper.value, arr.unwrap_idx(1, i[0], i[1], i[2], i[3], maj[0]));
-                // if (reduce_oper.value>500) return 0.0;
             }
         }
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
