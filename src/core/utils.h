@@ -8,7 +8,7 @@
 #include <iostream>
 namespace cvdf::utils
 {
-    template <class ltype, class rtype> void sum_reduce(ltype& total, const rtype& r)
+    template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
     {
         total += r;
     }
@@ -48,22 +48,22 @@ namespace cvdf::utils
     
     
     
-    template <typename tp1_t, typename tp2_t> auto max(const tp1_t& t1, const tp2_t& t2)
+    template <typename tp1_t, typename tp2_t> static auto max(const tp1_t& t1, const tp2_t& t2)
     {
         return t1<t2?t2:t1;
     }
     
-    template <typename tp_t, typename... tps_t> auto max(const tp_t& t, tps_t... ts)
+    template <typename tp_t, typename... tps_t> static auto max(const tp_t& t, tps_t... ts)
     {
         return max(t, max(ts...));
     }
     
-    template <typename tp1_t, typename tp2_t> auto min(const tp1_t& t1, const tp2_t& t2)
+    template <typename tp1_t, typename tp2_t> static auto min(const tp1_t& t1, const tp2_t& t2)
     {
         return t1<t2?t1:t2;
     }
     
-    template <typename tp_t, typename... tps_t> auto min(const tp_t& t, tps_t... ts)
+    template <typename tp_t, typename... tps_t> static auto min(const tp_t& t, tps_t... ts)
     {
         return min(t, min(ts...));
     }
@@ -131,7 +131,7 @@ namespace cvdf::utils
         return strstream.str();
     }
     
-    template <class data_t> std::string zfill(const data_t& data, const std::size_t num_zeros)
+    template <class data_t> static std::string zfill(const data_t& data, const std::size_t num_zeros)
     {
         std::string output = std::to_string(data);
         while (output.length() < num_zeros) output = "0"+output;

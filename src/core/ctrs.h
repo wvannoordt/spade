@@ -11,9 +11,13 @@ namespace cvdf::ctrs
         t[i];
     };
     
-    template <class T, const size_t size, typename real_type> concept vec_nd = (sizeof(T) == size*sizeof(real_type)) && requires(T t, size_t i)
+    template <class T, typename data_t> concept basic_array_of_type = basic_array<T> && requires(T t, const int& i)
     {
-        basic_array<T>;
+        {t[i]}-> std::convertible_to<data_t>;
+    };
+    
+    template <class T, const size_t size, typename real_type> concept vec_nd = basic_array<T> && (sizeof(T) == size*sizeof(real_type)) && requires(T t, size_t i)
+    {
         { t[i] } -> std::common_with<real_type>;
         typename T::value_type;
     };
@@ -21,7 +25,7 @@ namespace cvdf::ctrs
     template <class T> concept integral_type = std::is_integral<T>::value;
 
 
-    template <basic_array a1_t, basic_array a2_t> void copy_array(const a1_t& src, a2_t& dest)
+    template <basic_array a1_t, basic_array a2_t> static void copy_array(const a1_t& src, a2_t& dest)
     {
         std::size_t tsize = utils::min(src.size(), dest.size());
         for (std::size_t i = 0; i < tsize; ++i) dest[i] = src[i];
@@ -93,9 +97,28 @@ namespace cvdf::ctrs
             for (std::size_t i = 0; i < this->size(); i++) data[i] %= rhs[i];
             return *this;
         }
+        
+        bool operator == (const array<dtype,ar_size>& rhs) const
+        {
+            bool output = true;
+            for (std::size_t i = 0; i < this->size(); i++) output = (output&&(data[i]==rhs[i]));
+            return output;
+        }
     };
     
-    template <basic_array arr_l_t, basic_array arr_r_t> auto collapse_index(const arr_l_t& idx, const arr_r_t& dims)
+    template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const array<dtype, ar_size>& arr)
+    {
+       os << "[";
+       for (size_t i = 0; i < arr.size(); i++)
+       {
+           os << arr.data[i];
+           if (i< arr.size()-1) os << ", ";
+       }
+       os << "]";
+       return os;
+    }
+    
+    template <basic_array arr_l_t, basic_array arr_r_t> static auto collapse_index(const arr_l_t& idx, const arr_r_t& dims)
     {
         static_assert(std::is_integral<typename arr_l_t::value_type>::value, "collapse_index requires integral arrays");
         static_assert(std::is_integral<typename arr_r_t::value_type>::value, "collapse_index requires integral arrays");
@@ -109,7 +132,7 @@ namespace cvdf::ctrs
         return output;
     }
     
-    template <typename idx_t, basic_array arr_t> auto expand_index(const idx_t& idx, const arr_t& dims)
+    template <typename idx_t, basic_array arr_t> static auto expand_index(const idx_t& idx, const arr_t& dims)
     {
         static_assert(std::is_integral<typename arr_t::value_type>::value, "collapse_index requires integral arrays");
         typename arr_t::value_type coeff = 1;

@@ -3,23 +3,28 @@
 #include <iostream>
 #include <ostream>
 
-template <typename T> void print_recursive(std::ostream& stm, T t)
+template <typename T> static void print_recursive(std::ostream& stm, T t)
 {
     stm << t << std::endl;
 }
 
-template <typename T, typename... Ts> void print_recursive(std::ostream& stm, T t, Ts... ts)
+template <typename T, typename... Ts> static  void print_recursive(std::ostream& stm, T t, Ts... ts)
 {
     stm << t << " ";
     print_recursive(stm, ts...);
 }
 
-template <typename... Ts> void print(Ts... ts)
+template <typename T, typename... Ts> static void print(const T& t, Ts... ts)
 {
-    print_recursive(std::cout, ts...);
+    print_recursive(std::cout, t, ts...);
 }
 
-template <typename... Ts> void PrintToStream(std::ostream& stm, Ts... ts)
+static void print(void)
+{
+    std::cout << std::endl;
+}
+
+template <typename... Ts> static void PrintToStream(std::ostream& stm, Ts... ts)
 {
     print_recursive(stm, ts...);
 }

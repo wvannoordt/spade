@@ -13,13 +13,13 @@ namespace cvdf::output
 {
     namespace detail
     {
-        template <class output_stream_t> void output_serial_header(output_stream_t& out_str)
+        template <class output_stream_t> static void output_serial_header(output_stream_t& out_str)
         {
             out_str << "# vtk DataFile Version 2.0\ncvdf output\nASCII\n";
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t>
-        void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const coords::identity<typename grid_output_t::dtype>& coord_sys)
+        static void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const coords::identity<typename grid_output_t::dtype>& coord_sys)
         {
             out_str << "DATASET STRUCTURED_POINTS\nDIMENSIONS ";
             out_str << (1+obj.get_num_blocks(0)*obj.get_num_cells(0)) <<  " ";
@@ -36,7 +36,7 @@ namespace cvdf::output
             coords::coord_mapping_1D x_t,
             coords::coord_mapping_1D y_t,
             coords::coord_mapping_1D z_t>
-        void output_mesh_data(
+        static void output_mesh_data(
             output_stream_t& out_str,
             const grid_output_t& obj,
             const coords::diagonal_coords<x_t, y_t, z_t>& coord_sys)
@@ -45,13 +45,13 @@ namespace cvdf::output
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
-        void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
+        static void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
         {
             print("NOT IMPLEMENTED: output_mesh_data (diag)!", __FILE__, __LINE__);
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
-        void output_grid_serial(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
+        static void output_grid_serial(output_stream_t& out_str, const grid_output_t& obj, arrays_t... arrays)
         {
             
             output_serial_header(out_str);
@@ -99,10 +99,10 @@ namespace cvdf::output
             utils::foreach_param(output_array_data, arrays...);
         }
         
-        std::string ntab(const std::size_t& n, const std::size_t& tab_size = 4) { return std::string(tab_size*n, ' '); }
+        static std::string ntab(const std::size_t& n, const std::size_t& tab_size = 4) { return std::string(tab_size*n, ' '); }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t>
-        void output_parallel_header_file(
+        static void output_parallel_header_file(
             output_stream_t& out_str,
             const std::string& block_proto_string,
             const std::size_t& num_zeros,
@@ -123,7 +123,7 @@ namespace cvdf::output
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
-        void output_parralel_block_file(output_stream_t& out_str, const std::size_t& lb_loc, const grid_output_t& obj, arrays_t... arrays)
+        static void output_parralel_block_file(output_stream_t& out_str, const std::size_t& lb_loc, const grid_output_t& obj, arrays_t... arrays)
         {
             out_str << "<?xml version=\"1.0\"?>\n";
             out_str << "<VTKFile type=\"RectilinearGrid\" version=\"0.1\" byte_order=\"" << (utils::is_big_endian()?"BigEndian":"LittleEndian") << "\" header_type=\"UInt32\">\n";
@@ -259,7 +259,7 @@ namespace cvdf::output
         }
         
         template <grid::multiblock_grid grid_output_t, typename... arrays_t>
-        std::string output_grid_parallel(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
+        static std::string output_grid_parallel(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
         {
             std::filesystem::path out_path(out_dir);
             if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
@@ -295,7 +295,7 @@ namespace cvdf::output
     }
     
     template <grid::multiblock_grid grid_output_t, typename... arrays_t>
-    std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
+    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
     {
         if (obj.group().size()>1)
         {

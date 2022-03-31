@@ -26,8 +26,8 @@ namespace cvdf::dims
         static constexpr std::size_t rank(void) {return sizeof...(s_dims_t);};
         // std::size_t prod_r(void) const {return 1;}
         // template <const std::size_t p_dim_t> std::size_t prod_r(std::size_t d) const {return d;}
-        template <typename... p_dims_t> std::size_t prod(p_dims_t... dims_in) const {return (... * dims_in);}
-        std::size_t total_size(void) const {return prod(s_dims_t...);}
+        template <typename... p_dims_t> constexpr static std::size_t prod(p_dims_t... dims_in) {return (... * dims_in);}
+        constexpr static std::size_t total_size(void) {return prod(s_dims_t...);}
         template <typename p_dim_t> std::size_t get_elem_r(std::size_t i_cur, std::size_t i_target, p_dim_t dim_in)
         {
             if (i_cur == i_target) return dim_in;
@@ -72,5 +72,10 @@ namespace cvdf::dims
             for (std::size_t i = 0; i < size_dim; i++) output*= dim_data[i];
             return output;
         }
+    };
+    
+    template <grid_array_dimension dim_t> struct rank_eval
+    {
+        const static std::size_t value = dim_t::rank();
     };
 }

@@ -14,10 +14,11 @@ namespace cvdf::parallel
         t.sync();
     };
     
-    static mpi_data_t get_data_type(double d)   { return MPI_DOUBLE; }
-    static mpi_data_t get_data_type(char d)     { return MPI_CHAR; }
-    static mpi_data_t get_data_type(float d)    { return MPI_FLOAT; }
-    static mpi_data_t get_data_type(int d)      { return MPI_INT; }
+    static mpi_data_t get_data_type(double d)      { return MPI_DOUBLE; }
+    static mpi_data_t get_data_type(char d)        { return MPI_CHAR; }
+    static mpi_data_t get_data_type(float d)       { return MPI_FLOAT; }
+    static mpi_data_t get_data_type(int d)         { return MPI_INT; }
+    static mpi_data_t get_data_type(std::size_t d) { return MPI_UINT64_T; }
     
     class mpi_t
     {
@@ -45,7 +46,7 @@ namespace cvdf::parallel
             int    rank(void) const {return g_rank;}
             int    size(void) const {return g_size;}
             bool isroot(void) const {return g_rank==0;}
-            mpi_t& sync(void)
+            const mpi_t& sync(void) const
             {
                 MPI_CHECK(MPI_Barrier(this->channel));
                 return *this;
@@ -70,13 +71,22 @@ namespace cvdf::parallel
                 MPI_CHECK(MPI_Waitall(count, reqs, stats));
             }
             
-            template <typename... data_t> auto sum(data_t... datas)
+            template <typename... data_t> auto sum(data_t... datas) const
             {
                 auto sum_loc = (... + datas);
                 decltype(sum_loc) sum_glob;
                 auto dtype = get_data_type(sum_loc);
                 MPI_CHECK(MPI_Allreduce(&sum_loc, &sum_glob, 1, dtype, MPI_SUM, this->channel));
                 return sum_glob;
+            }
+            
+            template <typename data_t> auto reduce(const data_t& data, mpi_op_t op) const
+            {
+                data_t data_loc = data;
+                auto dtype = get_data_type(data);
+                data_t red_glob;
+                MPI_CHECK(MPI_Allreduce(&data_loc, &red_glob, 1, dtype, op, this->channel));
+                return red_glob;
             }
             
         private:

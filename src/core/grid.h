@@ -49,7 +49,7 @@ namespace cvdf::grid
         include_exchanges=1
     };
     
-    template <multiblock_grid grid_t> auto create_grid_dims(const grid_t& grid, const array_center_e& center_type)
+    template <multiblock_grid grid_t> static auto create_grid_dims(const grid_t& grid, const array_center_e& center_type)
     {
         switch (center_type)
         {
@@ -242,6 +242,8 @@ namespace cvdf::grid
                     default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
                 }
             }
+            
+            std::size_t get_num_interior_cells(void) const {return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_local_blocks();}
             
             std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
             std::size_t  get_num_local_blocks(void) const {return grid_partition.get_num_local_blocks();}
@@ -458,6 +460,10 @@ namespace cvdf::grid
         
         typedef grid_t grid_type;
         typedef ar_data_t value_type;
+        typedef minor_dim_t array_minor_dim_t;
+        typedef major_dim_t array_major_dim_t;
+        
+        typedef std::conditional<minor_dim_t::rank()==0, ar_data_t, ctrs::array<ar_data_t, minor_dim_t::total_size()>>::type unwrapped_minor_type;
         
         constexpr static array_center_e centering_type(void) { return centering; }
         
@@ -543,6 +549,30 @@ namespace cvdf::grid
                 i4*idx_coeffs[minor_dim_t::rank()+3]+
                 i5*idx_coeffs[minor_dim_t::rank()+4]
             ];
+        }
+        
+        grid_array& operator -= (const grid_array& rhs)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] -= rhs.data[i];
+            return *this;
+        }
+        
+        grid_array& operator += (const grid_array& rhs)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] += rhs.data[i];
+            return *this;
+        }
+        
+        grid_array& operator *= (const grid_array& rhs)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs.data[i];
+            return *this;
+        }
+        
+        grid_array& operator /= (const grid_array& rhs)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs.data[i];
+            return *this;
         }
         
         minor_dim_t get_minor_dims(void) const { return minor_dims; }

@@ -13,6 +13,12 @@ typedef MPI_Op        mpi_op_t;
 typedef MPI_Request   request_t;
 typedef MPI_Status    status_t;
 #define MPI_CHECK(mycode) {mycode ;}
+
+namespace cvdf::parallel
+{
+    static const mpi_op_t par_sum = MPI_SUM;
+    static const mpi_op_t par_max = MPI_MAX;
+}
 #else
 typedef unsigned long mpi_comm_t;
 typedef unsigned long mpi_data_t;
@@ -20,4 +26,10 @@ typedef unsigned long mpi_op_t;
 typedef unsigned long request_t;
 typedef unsigned long status_t;
 #define MPI_CHECK(mycode) ;
+
+namespace cvdf::parallel
+{
+    static const mpi_op_t par_sum = 0;
+    static const mpi_op_t par_max = 1;
+}
 #endif

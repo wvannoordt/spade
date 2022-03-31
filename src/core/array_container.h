@@ -4,18 +4,20 @@
 #include "core/print.h"
 namespace cvdf::array_container
 {
-    template <class T> concept grid_data_container = requires(T t)
+    template <class T> concept grid_data_container = requires(T t, std::size_t i)
     {
+        t[i];
+        t.size();
         typename T::value_type;
     };
     
     template <grid_data_container container_t, typename data_t>
-    void fill_container(container_t& container, const data_t& data)
+    static void fill_container(container_t& container, const data_t& data)
     {
         //todo
     }
     
-    template <typename data_t> void fill_container(std::vector<data_t>& container, const data_t& data)
+    template <typename data_t> static void fill_container(std::vector<data_t>& container, const data_t& data)
     {
         for (auto& d:container) d = data;
     }
@@ -26,7 +28,7 @@ namespace cvdf::array_container
         //todo
     }
     
-    template <typename data_t> void resize_container(std::vector<data_t>& container, const std::size_t& new_size)
+    template <typename data_t> static void resize_container(std::vector<data_t>& container, const std::size_t& new_size)
     {
         container.resize(new_size);
     }
