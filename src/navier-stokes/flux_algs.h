@@ -32,15 +32,6 @@ namespace cvdf::flux_algs
             for (int n = 0; n < ql.size(); ++n) ql[n] = prims(n, il[0], il[1], il[2], il[3]);
             for (int n = 0; n < qr.size(); ++n) qr[n] = prims(n, ir[0], ir[1], ir[2], ir[3]);
             fluid_state::flux_t<real_type> flux = flux_func.calc_flux(ql, qr, nvec);
-            // if (group.isroot() && (il==ctrs::array<int,4>(3, 3, 3, 0) || ir==ctrs::array<int,4>(3, 3, 3, 0)) && idir==1)
-            // {
-            //     print("il", il);
-            //     print("ir", ir);
-            //     print("ql", ql);
-            //     print("qr", qr);
-            //     print("flux", flux);
-            //     if(ct++ == 2) group.sync();
-            // }
             const real_type dx = ar_grid.get_dx(idir);
             for (int n = 0; n < flux.size(); ++n)
             {
