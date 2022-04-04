@@ -36,16 +36,21 @@ int main(int argc, char** argv)
     };
     
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
-    bounds.min(0) = -1.0;
+    bounds.min(0) =  0.0;
     bounds.max(0) =  1.0;
-    bounds.min(1) = -1.0;
+    bounds.min(1) =  0.0;
     bounds.max(1) =  1.0;
-    bounds.min(2) = -1.0;
+    bounds.min(2) =  0.0;
     bounds.max(2) =  1.0;
     
-    cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(1), bounds.max(1), 0.1, 1.3);
-    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
-    cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    // cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(0), bounds.max(0), 0.1, 1.3);
+    // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    // cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(2), bounds.max(2), 0.1, 1.3);
+    
+    cvdf::coords::quad_stretch_1d<real_t> xc(bounds.min(0), bounds.max(0));
+    cvdf::coords::quad_stretch_1d<real_t> yc(bounds.min(1), bounds.max(1));
+    cvdf::coords::quad_stretch_1d<real_t> zc(bounds.min(2), bounds.max(2));
+    
     // cvdf::coords::identity_1D<real_t> xc;
     // cvdf::coords::identity_1D<real_t> zc;
     cvdf::coords::diagonal_coords coords(xc, yc, zc);
@@ -56,7 +61,7 @@ int main(int argc, char** argv)
     
     cvdf::convective::totani_lr tscheme(air);
     
-    std::vector<int> numcells = {8, 12, 16, 24};
+    std::vector<int> numcells = {8, 12, 16, 24, 32, 38, 46, 54, 64};
     
     std::vector<real_t> err_0_linf(numcells.size());
     std::vector<real_t> err_1_linf(numcells.size());
@@ -113,7 +118,7 @@ int main(int argc, char** argv)
         if (group.isroot()) print("LInf:", err_0_linf[n], err_1_linf[n], err_2_linf[n], err_3_linf[n], err_4_linf[n]);
         if (group.isroot()) print();
         
-        bool output = true;
+        bool output = false;
         if (output)
         {
             std::string filename = "err" + std::to_string(n);

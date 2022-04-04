@@ -15,17 +15,22 @@ namespace cvdf::coords
         { t.map(x) } -> ctrs::vec_nd<3,typename T::coord_type>;
     };
     
-    template <class T> concept diagonal_coordinate_system = coordinate_system<T> && requires(T t)
+    template <class T> concept coord_mapping_1D = requires(T t, typename T::coord_type dat)
     {
         t;
+        dat = t.map(dat);
+        dat = t.coord_deriv(dat);
+    };
+    
+    template <class T> concept diagonal_coordinate_system = coordinate_system<T>
+    && coord_mapping_1D<typename T::xcoord_type>
+    && coord_mapping_1D<typename T::ycoord_type>
+    && coord_mapping_1D<typename T::zcoord_type>
+    && requires(T t)
+    {
         t.xcoord;
         t.ycoord;
         t.zcoord;
-    };
-    
-    template <class T> concept coord_mapping_1D = requires(T t, typename T::coord_type dat)
-    {
-        dat = t.map(dat);
     };
     
     template <class T> concept coord_mapping_callable_1D = requires(T t)
@@ -52,6 +57,9 @@ namespace cvdf::coords
     struct diagonal_coords
     {
         typedef decltype(typename xcoord_t::coord_type() + typename ycoord_t::coord_type() + typename zcoord_t::coord_type()) coord_type;
+        typedef xcoord_t xcoord_type;
+        typedef ycoord_t ycoord_type;
+        typedef zcoord_t zcoord_type;
         diagonal_coords(void){}
         diagonal_coords(const xcoord_t& xcoord_in, const ycoord_t& ycoord_in, const zcoord_t& zcoord_in)
         {
@@ -100,7 +108,7 @@ namespace cvdf::coords
                 return  log(abs(cosh(alpha0*eta+beta0)))/alpha0  +  log(abs(cosh(alpha1*eta+beta1)))/alpha1 - eta;
             };
             f0 = func(eta0);
-            norm = func(eta1)-f0;
+            normInv = 1.0/(func(eta1)-f0);
         }
         dtype map(const dtype& coord) const
         {
@@ -109,13 +117,34 @@ namespace cvdf::coords
             {
                 return  log(abs(cosh(alpha0*eta+beta0)))/alpha0  +  log(abs(cosh(alpha1*eta+beta1)))/alpha1 - eta;
             };
-            return eta0 + deta*(func(coord) - f0)/norm;
+            return eta0 + deta*(func(coord) - f0)*normInv;
         }
-        dtype metric(const dtype& coord) const
+        dtype coord_deriv(const dtype& coord) const
         {
-            return norm/(deta*(tanh(alpha0*coord+beta0) + tanh(alpha1*coord+beta1) - 1.0));
+            return (deta*(tanh(alpha0*coord+beta0) + tanh(alpha1*coord+beta1) - 1.0))*normInv;
         }
-        dtype eta0, eta1, deta, f0, norm, alpha0, alpha1, beta0, beta1;
+        dtype eta0, eta1, deta, f0, normInv, alpha0, alpha1, beta0, beta1;
+    };
+    
+    //used for testing only
+    template <typename dtype> struct quad_stretch_1d
+    {
+        typedef dtype coord_type;
+        quad_stretch_1d(void){}
+        quad_stretch_1d(const dtype& y0_in, const dtype& y1_in)
+        {
+            y0 = y0_in;
+            y1 = y1_in;
+        }
+        dtype map(const dtype& coord) const
+        {
+            return coord + (coord-y0)*(coord-y0);
+        }
+        dtype coord_deriv(const dtype& coord) const
+        {
+            return 1.0 + 2.0*(coord-y0);
+        }
+        dtype y0, y1;
     };
     
     template <typename dtype, typename integral_t>
@@ -149,9 +178,9 @@ namespace cvdf::coords
         ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
         output[idir] = 1.0;
         
-        output[0]*=coord.xcoord.metric(coords[0]);
-        output[1]*=coord.ycoord.metric(coords[1]);
-        output[2]*=coord.zcoord.metric(coords[2]);
+        output[0]/=coord.xcoord.coord_deriv(coords[0]);
+        output[1]/=coord.ycoord.coord_deriv(coords[1]);
+        output[2]/=coord.zcoord.coord_deriv(coords[2]);
         return output;
     }
     
@@ -161,6 +190,6 @@ namespace cvdf::coords
         const ctrs::array<typename coord_t::coord_type, 3>& coords,
         const ctrs::array<grid::cell_t<integral_t>, 4>& i)
     {
-        return coord.xcoord.metric(coords[0])*coord.ycoord.metric(coords[1])*coord.zcoord.metric(coords[2]);
+        return 1.0/(coord.xcoord.coord_deriv(coords[0])*coord.ycoord.coord_deriv(coords[1])*coord.zcoord.coord_deriv(coords[2]));
     }
 }
