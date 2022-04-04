@@ -80,6 +80,18 @@ namespace cvdf::ctrs
             return *this;
         }
         
+        template <typename data_t> auto& operator *= (const data_t& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] *= rhs;
+            return *this;
+        }
+        
+        template <typename data_t> auto& operator /= (const data_t& rhs)
+        {
+            for (std::size_t i = 0; i < this->size(); i++) data[i] /= rhs;
+            return *this;
+        }
+        
         auto& operator += (const dtype& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs;
@@ -149,4 +161,23 @@ namespace cvdf::ctrs
         }
         return output;
     }
+    
+    template <typename data_t, const std::size_t ar_size> struct static_stack
+    {
+        data_t data[ar_size];
+        int next = 0;
+        void push(const data_t& new_data)
+        {
+            data[next++] = new_data;
+            next -= (next==ar_size)*ar_size;
+        }
+        const data_t& operator[] (const uint i) const
+        {
+            return data[(i+next)%ar_size];
+        }
+        data_t& operator[] (const uint i)
+        {
+            return data[(i+next)%ar_size];
+        }
+    };
 }

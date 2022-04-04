@@ -4,7 +4,7 @@
 
 namespace cvdf::navier_stokes_mms
 {
-    template <fluid_state::state_independent_gas gas_t, viscous_laws::state_independent_viscosity visc_t> struct cns_pergectgas_mms_t
+    template <fluid_state::state_independent_gas gas_t, viscous_laws::state_independent_viscosity visc_t> struct cns_perfectgas_mms_t
     {
         typedef typename gas_t::value_type dtype; 
         gas_t gas;
@@ -12,7 +12,7 @@ namespace cvdf::navier_stokes_mms
         const dtype pi = 3.1415926535;
         const dtype two_pi = 2.0*pi;
         
-        cns_pergectgas_mms_t(const gas_t& gas_in, const visc_t& vlaw_in)
+        cns_perfectgas_mms_t(const gas_t& gas_in, const visc_t& vlaw_in)
         {
             gas  = gas_in;
             visc = vlaw_in;

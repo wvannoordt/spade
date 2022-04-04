@@ -1,5 +1,15 @@
 #include "cvdf.h"
 
+void printi(const int& i)
+{
+    print(i);
+}
+
+void printc(const cvdf::grid::cell_t<int>& i)
+{
+    print(i.val);
+}
+
 int main(int argc, char** argv)
 {
     typedef double real_t;
@@ -14,27 +24,7 @@ int main(int argc, char** argv)
     air.R = 287.15;
     air.gamma = 1.4;
     
-    const real_t p_ref = 570.233265072;
-    const real_t u_ref = 1202.697;
-    const real_t t_max = 700.0;
-    const real_t t_wall = 100.0;
-    const real_t delta  = 1.0;
-    
-    const real_t alpha = sqrt(1.0 - 100.0/700.0);
-    const real_t beta = 2.0*alpha*((alpha*alpha-1.0)*atanh(alpha) + alpha)/((alpha*alpha*alpha)*(log(abs(1.0+alpha)) - log(abs(1.0-alpha))));
-    
-    auto channel_ini = [=](const v3d& xyz) -> cvdf::fluid_state::prim_t<real_t>
-    {
-        cvdf::fluid_state::prim_t<real_t> temp;
-        temp.p() = p_ref;
-        temp.u() = u_ref*(1.0 - xyz[1]*xyz[1]/(delta*delta));
-        temp.v() = 0;
-        temp.w() = 0;
-        temp.T() = t_max - (t_max - t_wall)*xyz[1]*xyz[1]/(delta*delta);
-        return temp;
-    };
-    
-    cvdf::navier_stokes_mms::cns_pergectgas_mms_t mms(air, visc_law);
+    cvdf::navier_stokes_mms::cns_perfectgas_mms_t mms(air, visc_law);
     auto mms_test_func = [&](const v3d& xyz) -> cvdf::fluid_state::prim_t<real_t>
     {
         return mms.test_fcn(xyz);
@@ -53,18 +43,20 @@ int main(int argc, char** argv)
     bounds.min(2) = -1.0;
     bounds.max(2) =  1.0;
     
-    // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(1), bounds.max(1), 0.1, 1.3);
     // cvdf::coords::identity_1D<real_t> xc;
     // cvdf::coords::identity_1D<real_t> zc;
-    // cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    cvdf::coords::diagonal_coords coords(xc, yc, zc);
     
-    cvdf::coords::identity<real_t> coords;
+    // cvdf::coords::identity<real_t> coords;
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(4, 4, 4);
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     
     cvdf::convective::totani_lr tscheme(air);
     
-    std::vector<int> numcells = {12, 24, 36, 48};
+    std::vector<int> numcells = {8, 12, 16, 24};
     
     std::vector<real_t> err_0_linf(numcells.size());
     std::vector<real_t> err_1_linf(numcells.size());
@@ -77,7 +69,7 @@ int main(int argc, char** argv)
     std::vector<real_t> err_2_l2  (numcells.size());
     std::vector<real_t> err_3_l2  (numcells.size());
     std::vector<real_t> err_4_l2  (numcells.size());
-    std::vector<real_t> dxs;
+    std::vector<real_t> dxs;    
     
     for (int n = 0; n < numcells.size(); ++n)
     {
@@ -90,7 +82,7 @@ int main(int argc, char** argv)
         std::size_t num_dof = grid.get_num_interior_cells();
         num_dof = group.sum(num_dof);
         
-        if (group.isroot()) print("Grid level (cells):", n, num_dof);
+        if (group.isroot()) print("Grid level / cells:           ", n, "/", num_dof);
         
         cvdf::grid::grid_array prim    (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
         cvdf::grid::grid_array rhs     (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
@@ -100,9 +92,7 @@ int main(int argc, char** argv)
         cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        rhs -= rhs_test;
-        
-        
+        rhs -= rhs_test;        
         
         cvdf::reduce_ops::reduce_sum<real_t> sum;
         cvdf::reduce_ops::reduce_max<real_t> max;
@@ -122,6 +112,14 @@ int main(int argc, char** argv)
         if (group.isroot()) print("L2:  ", err_0_l2  [n], err_1_l2  [n], err_2_l2  [n], err_3_l2  [n], err_4_l2  [n]);
         if (group.isroot()) print("LInf:", err_0_linf[n], err_1_linf[n], err_2_linf[n], err_3_linf[n], err_4_linf[n]);
         if (group.isroot()) print();
+        
+        bool output = true;
+        if (output)
+        {
+            std::string filename = "err" + std::to_string(n);
+            std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
+            if (group.isroot()) print("Exported", out_file);
+        }
     }
     auto err_report = [](const std::string& title, const std::vector<real_t>& errs, const std::vector<real_t>& dx) -> void
     {

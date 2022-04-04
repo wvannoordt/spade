@@ -4,6 +4,7 @@
 #include <functional>
 #include <concepts>
 #include "core/ctrs.h"
+#include "core/grid_index_types.h"
 
 namespace cvdf::coords
 {
@@ -17,7 +18,9 @@ namespace cvdf::coords
     template <class T> concept diagonal_coordinate_system = coordinate_system<T> && requires(T t)
     {
         t;
-        t.bad();
+        t.xcoord;
+        t.ycoord;
+        t.zcoord;
     };
     
     template <class T> concept coord_mapping_1D = requires(T t, typename T::coord_type dat)
@@ -108,6 +111,56 @@ namespace cvdf::coords
             };
             return eta0 + deta*(func(coord) - f0)/norm;
         }
+        dtype metric(const dtype& coord) const
+        {
+            return norm/(deta*(tanh(alpha0*coord+beta0) + tanh(alpha1*coord+beta1) - 1.0));
+        }
         dtype eta0, eta1, deta, f0, norm, alpha0, alpha1, beta0, beta1;
     };
+    
+    template <typename dtype, typename integral_t>
+    ctrs::array<dtype, 3> calc_normal_vector(
+        const identity<dtype>& coord,
+        const ctrs::array<dtype, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i,
+        const integral_t& idir)
+    {
+        ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
+        output[idir]=1.0;
+        return output;
+    }
+    
+    template <typename dtype, typename integral_t>
+    dtype calc_jacobian(
+        const identity<dtype>& coord,
+        const ctrs::array<dtype, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
+    {
+        return 1.0;
+    }
+    
+    template <diagonal_coordinate_system coord_t, typename integral_t>
+    ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
+        const coord_t& coord,
+        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i,
+        const integral_t& idir)
+    {
+        ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
+        output[idir] = 1.0;
+        
+        output[0]*=coord.xcoord.metric(coords[0]);
+        output[1]*=coord.ycoord.metric(coords[1]);
+        output[2]*=coord.zcoord.metric(coords[2]);
+        return output;
+    }
+    
+    template <diagonal_coordinate_system coord_t, typename integral_t>
+    typename coord_t::coord_type calc_jacobian(
+        const coord_t& coord,
+        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
+    {
+        return coord.xcoord.metric(coords[0])*coord.ycoord.metric(coords[1])*coord.zcoord.metric(coords[2]);
+    }
 }

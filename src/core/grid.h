@@ -16,6 +16,7 @@
 #include "core/array_container.h"
 #include "core/partition.h"
 #include "core/static_math.h"
+#include "core/grid_index_types.h"
 
 namespace cvdf::grid
 {    
@@ -208,6 +209,47 @@ namespace cvdf::grid
                     output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
                 }
                 return coord_system.map(output);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> face_coords(const int& idir, const int& i, const int& j, const int& k, const int& lb) const
+            {
+                ctrs::array<dtype, 3> output(0, 0, 0);
+                ctrs::array<int, 3> ijk(i, j, k);
+                auto& box = block_boxes[lb];
+                for (size_t d = 0; d < cvdf_dim; ++d)
+                {
+                    output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
+                }
+                output[idir] -= 0.5*dx[idir];
+                return coord_system.map(output);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_coords(
+                const int& idir,
+                const face_t<int>& i,
+                const face_t<int>& j,
+                const face_t<int>& k,
+                const face_t<int>& lb) const
+            {
+                return this->face_coords(idir, i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_coords(
+                const node_t<int>& i,
+                const node_t<int>& j,
+                const node_t<int>& k,
+                const node_t<int>& lb) const
+            {
+                return this->node_coords(i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_coords(
+                const cell_t<int>& i,
+                const cell_t<int>& j,
+                const cell_t<int>& k,
+                const cell_t<int>& lb) const
+            {
+                return this->cell_coords(i, j, k, lb);
             }
             
             const par_group_t& group(void) const
@@ -485,15 +527,17 @@ namespace cvdf::grid
         
         static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
         
-        template <typename idx_t> _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
+        template <typename idx_t>
+        requires std::convertible_to<idx_t, int>
+         _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
         {
-            static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
             return idx_coeffs[lev]*idx;
         }
         
-        template <typename idx_t, typename... idxs_t> _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
+        template <typename idx_t, typename... idxs_t>
+        requires std::convertible_to<idx_t, int>
+        _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
         {
-            static_assert(std::is_integral<idx_t>::value, "integral type required for array indexing");
             return idx_coeffs[lev]*idx + offst_r(lev+1, idxs...);
         }
         
@@ -512,14 +556,14 @@ namespace cvdf::grid
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
+        requires std::convertible_to<i0_t, int> &&
+        std::convertible_to<i1_t, int> &&
+        std::convertible_to<i2_t, int> &&
+        std::convertible_to<i3_t, int> &&
+        std::convertible_to<i4_t, int> &&
+        std::convertible_to<i5_t, int>
         _finline_ ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
         {
-            static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i2_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i3_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i4_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i5_t>::value, "unwrap_idx requires integral arguments");
             return data[
                 offset +
                 i0*idx_coeffs[0] + 

@@ -8,9 +8,14 @@ namespace cvdf::convective
 {
     template <class T, class state_t>
     concept lr_conv_flux_function = fluid_state::is_state_type<state_t> && 
-    requires(T t, state_t ql, state_t qr, const ctrs::array<typename state_t::value_type,3>& normal)
+    requires(
+        T t,
+        state_t ql,
+        state_t qr,
+        const ctrs::array<typename state_t::value_type,3>& normal_l,
+        const ctrs::array<typename state_t::value_type,3>& normal_r)
     {
-        { t.calc_flux(ql, qr, normal) } -> cvdf::ctrs::basic_array;
+        { t.calc_flux(ql, qr, normal_l, normal_r) } -> cvdf::ctrs::basic_array;
     };
     
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
@@ -20,11 +25,12 @@ namespace cvdf::convective
         calc_flux(
             const fluid_state::prim_t<dtype>& ql,
             const fluid_state::prim_t<dtype>& qr,
-            const ctrs::array<dtype,3>& normal) const
+            const ctrs::array<dtype,3>& normal_l,
+            const ctrs::array<dtype,3>& normal_r) const
         {
             fluid_state::flux_t<dtype> output;
-            dtype un_l = normal[0]*ql.u()+normal[1]*ql.v()+normal[2]*ql.w();
-            dtype un_r = normal[0]*qr.u()+normal[1]*qr.v()+normal[2]*qr.w();
+            dtype un_l = normal_l[0]*ql.u()+normal_l[1]*ql.v()+normal_l[2]*ql.w();
+            dtype un_r = normal_r[0]*qr.u()+normal_r[1]*qr.v()+normal_r[2]*qr.w();
             
             dtype rho_l = ql.p()/(gas->get_R(ql)*ql.T());
             dtype rho_r = qr.p()/(gas->get_R(qr)*qr.T());
@@ -33,12 +39,11 @@ namespace cvdf::convective
             dtype e_r = qr.p()/(rho_r*(gas->get_gamma(qr)-1.0));
             
             dtype c = 0.25*(rho_l+rho_r)*(un_l+un_r);
-            dtype pm = 0.5*(ql.p() + qr.p());
             output.continuity() = c;
             output.energy()     = 0.5*c*(e_l + e_r + ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w()) + 0.5*(un_l*qr.p() + un_r*ql.p());
-            output.x_momentum() = 0.5*c*(ql.u()+qr.u()) + normal[0]*pm;
-            output.y_momentum() = 0.5*c*(ql.v()+qr.v()) + normal[1]*pm;
-            output.z_momentum() = 0.5*c*(ql.w()+qr.w()) + normal[2]*pm;
+            output.x_momentum() = 0.5*c*(ql.u()+qr.u()) + 0.5*(normal_l[0]*ql.p()+normal_r[0]*qr.p());
+            output.y_momentum() = 0.5*c*(ql.v()+qr.v()) + 0.5*(normal_l[1]*ql.p()+normal_r[1]*qr.p());
+            output.z_momentum() = 0.5*c*(ql.w()+qr.w()) + 0.5*(normal_l[2]*ql.p()+normal_r[2]*qr.p());
             return output;
         }
         
