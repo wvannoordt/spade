@@ -10,7 +10,7 @@ namespace cvdf::navier_stokes_mms
         gas_t gas;
         visc_t visc;
         const dtype pi = 3.1415926535;
-        const dtype two_pi = 2.0*pi;
+        const dtype alpha = 0.2*pi;
         
         cns_perfectgas_mms_t(const gas_t& gas_in, const visc_t& vlaw_in)
         {
@@ -19,73 +19,73 @@ namespace cvdf::navier_stokes_mms
         }
         
         //P and derivatives
-        dtype  P(const dtype& x, const dtype& y, const dtype& z)    const {return 5.0+2.0*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)+sin(4.0*two_pi*z);}
-        dtype dP_dx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y);}
-        dtype dP_dy(const dtype& x, const dtype& y, const dtype& z) const {return 2.0*2.0*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y);}
-        dtype dP_dz(const dtype& x, const dtype& y, const dtype& z) const {return 4.0*two_pi*cos(4.0*two_pi*z);}
+        dtype  P(const dtype& x, const dtype& y, const dtype& z)    const {return 5.0+2.0*cos(3.0*alpha*x)*sin(2.0*alpha*y)+sin(4.0*alpha*z);}
+        dtype dP_dx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y);}
+        dtype dP_dy(const dtype& x, const dtype& y, const dtype& z) const {return 2.0*2.0*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y);}
+        dtype dP_dz(const dtype& x, const dtype& y, const dtype& z) const {return 4.0*alpha*cos(4.0*alpha*z);}
 
         //T and derivatives
-        dtype  T(const dtype& x, const dtype& y, const dtype& z)    const {return 10.0+2.0*cos(2.0*two_pi*x)*sin(3.0*two_pi*y)+sin(4.0*two_pi*z);}
-        dtype dT_dx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*two_pi*sin(2.0*two_pi*x)*sin(3.0*two_pi*y);}
-        dtype dT_dy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*two_pi*cos(2.0*two_pi*x)*cos(3.0*two_pi*y);}
-        dtype dT_dz(const dtype& x, const dtype& y, const dtype& z) const {return  4.0*two_pi*cos(4.0*two_pi*z);}
-        dtype d2T_dx2(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*2.0*two_pi*two_pi*cos(2.0*two_pi*x)*sin(3.0*two_pi*y);}
-        dtype d2T_dy2(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*3.0*3.0*two_pi*two_pi*cos(2.0*two_pi*x)*sin(3.0*two_pi*y);}
-        dtype d2T_dz2(const dtype& x, const dtype& y, const dtype& z) const {return  -4.0*4.0*two_pi*two_pi*sin(4.0*two_pi*z);}
+        dtype  T(const dtype& x, const dtype& y, const dtype& z)    const {return 10.0+2.0*cos(2.0*alpha*x)*sin(3.0*alpha*y)+sin(4.0*alpha*z);}
+        dtype dT_dx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*alpha*sin(2.0*alpha*x)*sin(3.0*alpha*y);}
+        dtype dT_dy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*alpha*cos(2.0*alpha*x)*cos(3.0*alpha*y);}
+        dtype dT_dz(const dtype& x, const dtype& y, const dtype& z) const {return  4.0*alpha*cos(4.0*alpha*z);}
+        dtype d2T_dx2(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*2.0*alpha*alpha*cos(2.0*alpha*x)*sin(3.0*alpha*y);}
+        dtype d2T_dy2(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*3.0*3.0*alpha*alpha*cos(2.0*alpha*x)*sin(3.0*alpha*y);}
+        dtype d2T_dz2(const dtype& x, const dtype& y, const dtype& z) const {return  -4.0*4.0*alpha*alpha*sin(4.0*alpha*z);}
         
         //U and derivatives
-        dtype  U(const dtype& x, const dtype& y, const dtype& z)    const {return sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype dU_dx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype dU_dy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype dU_dz(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(2.0*two_pi*z);}
+        dtype  U(const dtype& x, const dtype& y, const dtype& z)    const {return sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype dU_dx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype dU_dy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype dU_dz(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*sin(2.0*alpha*z);}
         
-        dtype d2U_dxx(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*3.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype d2U_dxy(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*2.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype d2U_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*2.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(2.0*two_pi*z);}
+        dtype d2U_dxx(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*3.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype d2U_dxy(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*2.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype d2U_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*2.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*sin(2.0*alpha*z);}
         
-        dtype d2U_dyx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype d2U_dyy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(2.0*two_pi*z);}
-        dtype d2U_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(2.0*two_pi*z);}
+        dtype d2U_dyx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype d2U_dyy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(2.0*alpha*z);}
+        dtype d2U_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*2.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*sin(2.0*alpha*z);}
         
-        dtype d2U_dzx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(2.0*two_pi*z);}
-        dtype d2U_dzy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(2.0*two_pi*z);}
-        dtype d2U_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(2.0*two_pi*z);}
+        dtype d2U_dzx(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*3.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*sin(2.0*alpha*z);}
+        dtype d2U_dzy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*2.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*sin(2.0*alpha*z);}
+        dtype d2U_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(2.0*alpha*z);}
         
         //V and derivatives
-        dtype  V(const dtype& x, const dtype& y, const dtype& z)    const {return cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype dV_dx(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype dV_dy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype dV_dz(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(3.0*two_pi*z);}
+        dtype  V(const dtype& x, const dtype& y, const dtype& z)    const {return cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype dV_dx(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype dV_dy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype dV_dz(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*sin(3.0*alpha*z);}
         
-        dtype d2V_dxx(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype d2V_dxy(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype d2V_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*3.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(3.0*two_pi*z);}
+        dtype d2V_dxx(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*3.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype d2V_dxy(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*2.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype d2V_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*3.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*sin(3.0*alpha*z);}
         
-        dtype d2V_dyx(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype d2V_dyy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(3.0*two_pi*z);}
-        dtype d2V_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(3.0*two_pi*z);}
+        dtype d2V_dyx(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype d2V_dyy(const dtype& x, const dtype& y, const dtype& z) const {return -2.0*2.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(3.0*alpha*z);}
+        dtype d2V_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*3.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*sin(3.0*alpha*z);}
         
-        dtype d2V_dzx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*3.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(3.0*two_pi*z);}
-        dtype d2V_dzy(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*2.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(3.0*two_pi*z);}
-        dtype d2V_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(3.0*two_pi*z);}
+        dtype d2V_dzx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*3.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*sin(3.0*alpha*z);}
+        dtype d2V_dzy(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*2.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*sin(3.0*alpha*z);}
+        dtype d2V_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -3.0*3.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(3.0*alpha*z);}
         
         //W and derivatives
-        dtype  W(const dtype& x, const dtype& y, const dtype& z)    const {return sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype dW_dx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype dW_dy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype dW_dz(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(4.0*two_pi*z);}
+        dtype  W(const dtype& x, const dtype& y, const dtype& z)    const {return sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype dW_dx(const dtype& x, const dtype& y, const dtype& z) const {return  3.0*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype dW_dy(const dtype& x, const dtype& y, const dtype& z) const {return  2.0*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype dW_dz(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*sin(4.0*alpha*z);}
         
-        dtype d2W_dxx(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*3.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype d2W_dxy(const dtype& x, const dtype& y, const dtype& z) const {return   3.0*2.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype d2W_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*4.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(4.0*two_pi*z);}
+        dtype d2W_dxx(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*3.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype d2W_dxy(const dtype& x, const dtype& y, const dtype& z) const {return   3.0*2.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype d2W_dxz(const dtype& x, const dtype& y, const dtype& z) const {return  -3.0*4.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*sin(4.0*alpha*z);}
         
-        dtype d2W_dyx(const dtype& x, const dtype& y, const dtype& z) const {return   2.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*cos(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype d2W_dyy(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(4.0*two_pi*z);}
-        dtype d2W_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*4.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(4.0*two_pi*z);}
+        dtype d2W_dyx(const dtype& x, const dtype& y, const dtype& z) const {return   2.0*3.0*alpha*alpha*cos(3.0*alpha*x)*cos(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype d2W_dyy(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*2.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(4.0*alpha*z);}
+        dtype d2W_dyz(const dtype& x, const dtype& y, const dtype& z) const {return  -2.0*4.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*sin(4.0*alpha*z);}
         
-        dtype d2W_dzx(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*3.0*two_pi*two_pi*cos(3.0*two_pi*x)*sin(2.0*two_pi*y)*sin(4.0*two_pi*z);}
-        dtype d2W_dzy(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*2.0*two_pi*two_pi*sin(3.0*two_pi*x)*cos(2.0*two_pi*y)*sin(4.0*two_pi*z);}
-        dtype d2W_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*4.0*two_pi*two_pi*sin(3.0*two_pi*x)*sin(2.0*two_pi*y)*cos(4.0*two_pi*z);}
+        dtype d2W_dzx(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*3.0*alpha*alpha*cos(3.0*alpha*x)*sin(2.0*alpha*y)*sin(4.0*alpha*z);}
+        dtype d2W_dzy(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*2.0*alpha*alpha*sin(3.0*alpha*x)*cos(2.0*alpha*y)*sin(4.0*alpha*z);}
+        dtype d2W_dzz(const dtype& x, const dtype& y, const dtype& z) const {return -4.0*4.0*alpha*alpha*sin(3.0*alpha*x)*sin(2.0*alpha*y)*cos(4.0*alpha*z);}
         
         dtype  Rho(const dtype& x, const dtype& y, const dtype& z) const {return P(x,y,z)/(gas.get_R()*T(x,y,z));}
         dtype dRho_dx(const dtype& x, const dtype& y, const dtype& z) const

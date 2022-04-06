@@ -48,6 +48,7 @@ namespace cvdf::coords
     {
         typedef dtype coord_type;
         dtype map(const dtype& coord) const {return coord;}
+        dtype coord_deriv(const dtype& coord) const { return 1.0; }
     };
     
     template <
@@ -127,24 +128,18 @@ namespace cvdf::coords
     };
     
     //used for testing only
-    template <typename dtype> struct quad_stretch_1d
+    template <typename dtype> struct debug_quad_1D
     {
         typedef dtype coord_type;
-        quad_stretch_1d(void){}
-        quad_stretch_1d(const dtype& y0_in, const dtype& y1_in)
-        {
-            y0 = y0_in;
-            y1 = y1_in;
-        }
+        debug_quad_1D(void){}
         dtype map(const dtype& coord) const
         {
-            return coord + (coord-y0)*(coord-y0);
+            return coord*coord*coord;
         }
         dtype coord_deriv(const dtype& coord) const
         {
-            return 1.0 + 2.0*(coord-y0);
+            return 3.0*coord*coord;
         }
-        dtype y0, y1;
     };
     
     template <typename dtype, typename integral_t>
@@ -177,7 +172,6 @@ namespace cvdf::coords
     {
         ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
         output[idir] = 1.0;
-        
         output[0]/=coord.xcoord.coord_deriv(coords[0]);
         output[1]/=coord.ycoord.coord_deriv(coords[1]);
         output[2]/=coord.zcoord.coord_deriv(coords[2]);
