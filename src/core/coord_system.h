@@ -5,6 +5,7 @@
 #include <concepts>
 #include "core/ctrs.h"
 #include "core/grid_index_types.h"
+#include "core/linear_algebra.h"
 
 namespace cvdf::coords
 {
@@ -31,6 +32,12 @@ namespace cvdf::coords
         t.xcoord;
         t.ycoord;
         t.zcoord;
+    };
+    
+    template <class T> concept dense_coordinate_system = coordinate_system<T>
+    && requires (T t, ctrs::array<typename T::coord_type,3> x)
+    {
+        { t.coord_deriv(x) } -> linear_algebra::mat_nd<3,typename T::coord_type>;
     };
     
     template <class T> concept coord_mapping_callable_1D = requires(T t)
@@ -127,6 +134,32 @@ namespace cvdf::coords
         dtype eta0, eta1, deta, f0, normInv, alpha0, alpha1, beta0, beta1;
     };
     
+    template <typename dtype> struct cyl_coords
+    {
+        typedef dtype coord_type;
+        cyl_coords(void){}
+        ctrs::array<dtype, 3> map(const ctrs::array<dtype, 3>& x) const
+        {
+            return ctrs::array<dtype, 3>(x[0], x[1]*cos(x[2]), x[1]*sin(x[2]));
+        }
+        
+        linear_algebra::dense_mat<dtype, 3>
+        coord_deriv(const ctrs::array<dtype, 3>& x) const
+        {
+            linear_algebra::dense_mat<dtype, 3> output;
+            output(0,0) = 1.0;
+            output(0,1) = 0.0;
+            output(0,2) = 0.0;
+            output(1,0) = 0.0;
+            output(1,1) = cos(x[2]);
+            output(1,2) = -x[1]*sin(x[2]);
+            output(2,0) = 0.0;
+            output(2,1) = sin(x[2]);
+            output(2,2) = x[1]*cos(x[2]);
+            return output;
+        }
+    };
+    
     //used for testing only
     template <typename dtype> struct debug_quad_1D
     {
@@ -185,5 +218,30 @@ namespace cvdf::coords
         const ctrs::array<grid::cell_t<integral_t>, 4>& i)
     {
         return 1.0/(coord.xcoord.coord_deriv(coords[0])*coord.ycoord.coord_deriv(coords[1])*coord.zcoord.coord_deriv(coords[2]));
+    }
+    
+    template <dense_coordinate_system coord_t, typename integral_t>
+    ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
+        const coord_t& coord,
+        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i,
+        const integral_t& idir)
+    {
+        ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
+        const auto jac = coord.coord_deriv(coords);
+        output[0] = jac(idir, 0);
+        output[1] = jac(idir, 1);
+        output[2] = jac(idir, 2);
+        return output;
+    }
+    
+    template <dense_coordinate_system coord_t, typename integral_t>
+    typename coord_t::coord_type calc_jacobian(
+        const coord_t& coord,
+        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
+    {
+        const auto jac = coord.coord_deriv(coords);
+        return 1.0/(jac.det());
     }
 }

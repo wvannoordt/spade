@@ -30,24 +30,63 @@ namespace cvdf::output
             out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << (cvdf_dim==3)*obj.get_dx(2) << "\n";
         }
         
-        template <
-            class output_stream_t,
-            grid::multiblock_grid grid_output_t,
-            coords::coord_mapping_1D x_t,
-            coords::coord_mapping_1D y_t,
-            coords::coord_mapping_1D z_t>
-        static void output_mesh_data(
-            output_stream_t& out_str,
-            const grid_output_t& obj,
-            const coords::diagonal_coords<x_t, y_t, z_t>& coord_sys)
-        {
-            print("NOT YET IMPLEMENTED", __FILE__, __LINE__);
-        }
-        
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
         static void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
         {
             print("NOT IMPLEMENTED: output_mesh_data (diag)!", __FILE__, __LINE__);
+        }
+        
+        template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::dense_coordinate_system dense_coord_sys_t>
+        static void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const dense_coord_sys_t& coord_sys)
+        {
+            out_str << "DATASET STRUCTURED_GRID\nDIMENSIONS ";
+            ctrs::array<int, 3> dims(
+                1+obj.get_num_blocks(0)*obj.get_num_cells(0),
+                1+obj.get_num_blocks(1)*obj.get_num_cells(1),
+                (cvdf_dim==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2));
+            out_str << dims[0] <<  " ";
+            out_str << dims[1] <<  " ";
+            out_str << dims[2] << "\n";
+            out_str << "POINTS " << dims[0]*dims[1]*dims[2] << " double\n";
+            
+            auto r0 = range(0,obj.get_num_cells(0))*range(0, obj.get_num_blocks(0));
+            auto r1 = range(0,obj.get_num_cells(1))*range(0, obj.get_num_blocks(1));
+            auto r2 = range(0,obj.get_num_cells(2))*range(0, obj.get_num_blocks(2));
+
+            typedef grid::node_t<int> gnt;
+            int i, j, k, lbi, lbj, lbk, lb;
+            int nlbi = obj.get_num_blocks(0);
+            int nlbj = obj.get_num_blocks(1);
+            int nlbk = obj.get_num_blocks(2);
+            lbj = 0;
+            lbk = 0;
+            j = 0;
+            k = 0;
+            std::size_t ct = 0;
+            ctrs::array<typename dense_coord_sys_t::coord_type, 3> x;
+            for (lbk = 0; lbk < obj.get_num_blocks(2); ++lbk)
+            {
+                for (k = 0; k < obj.get_num_cells(2)+((lbk==(nlbk-1))?(1):(0)); ++k)
+                {
+                    for (lbj = 0; lbj < obj.get_num_blocks(1); ++lbj)
+                    {
+                        for (j = 0; j < obj.get_num_cells(1)+((lbj==(nlbj-1))?(1):(0)); ++j)
+                        {
+                            for (lbi = 0; lbi < obj.get_num_blocks(0); ++lbi)
+                            {
+                                lb = obj.collapse_block_num(lbi,lbj,lbk);
+                                for (i = 0; i < obj.get_num_cells(0)+((lbi==(nlbi-1))?(1):(0)); ++i)
+                                {
+                                    x = obj.get_coords((gnt)i,(gnt)j,(gnt)k,(gnt)lb);
+                                    out_str << x[0] << " " << x[1] << " " << x[2] << "\n";
+                                    ct++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            print(ct);
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>

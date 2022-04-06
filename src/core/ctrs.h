@@ -16,7 +16,9 @@ namespace cvdf::ctrs
         {t[i]}-> std::convertible_to<data_t>;
     };
     
-    template <class T, const size_t size, typename real_type> concept vec_nd = basic_array<T> && (sizeof(T) == size*sizeof(real_type)) && requires(T t, size_t i)
+    template <class T, const size_t size, typename real_type> concept vec_nd = basic_array<T>
+    && (sizeof(T) == size*sizeof(real_type))
+    && requires(T t, size_t i)
     {
         { t[i] } -> std::common_with<real_type>;
         typename T::value_type;

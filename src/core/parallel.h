@@ -2,7 +2,10 @@
 
 #include <concepts>
 #include <type_traits>
+#include <source_location>
 
+
+#include "print.h"
 #include "core/mpi_flags.h"
 
 namespace cvdf::parallel
@@ -50,6 +53,20 @@ namespace cvdf::parallel
             {
                 MPI_CHECK(MPI_Barrier(this->channel));
                 return *this;
+            }
+            
+            const mpi_t& pause(const std::source_location location = std::source_location::current()) const
+            {
+                if (isroot())
+                {
+                    print("Parallel group", (void*)this, " paused at:");
+                    print(location.file_name());
+                    print(location.line());
+                    print("Awaiting input...");
+                    std::cin.get();
+                }
+                sync();
+                return (*this);
             }
             
             template <typename data_t> request_t async_recv(data_t* buf, int count, int source)

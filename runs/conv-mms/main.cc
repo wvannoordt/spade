@@ -36,33 +36,34 @@ int main(int argc, char** argv)
     };
     
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
-    bounds.min(0) =  1.0;
-    bounds.max(0) =  1.5;
-    bounds.min(1) =  1.0;
-    bounds.max(1) =  1.5;
-    bounds.min(2) =  1.0;
-    bounds.max(2) =  1.5;
+    bounds.min(0) = -0.5;
+    bounds.max(0) =  0.5;
+    bounds.min(1) =  1.5;
+    bounds.max(1) =  2.5;
+    bounds.min(2) = -0.5;
+    bounds.max(2) =  0.5;
     
     // cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(0), bounds.max(0), 0.1, 1.3);
     // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
     // cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(2), bounds.max(2), 0.1, 1.3);
     
-    cvdf::coords::debug_quad_1D<real_t> xc;
+    // cvdf::coords::debug_quad_1D<real_t> xc;
     // cvdf::coords::debug_quad_1D<real_t> yc;
     // cvdf::coords::debug_quad_1D<real_t> zc;
     
     // cvdf::coords::identity_1D<real_t> xc;
-    cvdf::coords::identity_1D<real_t> yc;
-    cvdf::coords::identity_1D<real_t> zc;
-    cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    // cvdf::coords::identity_1D<real_t> yc;
+    // cvdf::coords::identity_1D<real_t> zc;
+    // cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    cvdf::coords::cyl_coords<real_t> coords;
     
     // cvdf::coords::identity<real_t> coords;
-    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(4, 4, 4);
+    cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(2, 2, 2);
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     
     cvdf::convective::totani_lr tscheme(air);
     
-    std::vector<int> numcells = {8, 12, 16};
+    std::vector<int> numcells = {24, 26};
     // std::vector<int> numcells = {8, 12, 16, 24, 32, 48};
     
     std::vector<real_t> err_0_linf(numcells.size());
@@ -96,7 +97,7 @@ int main(int argc, char** argv)
         cvdf::grid::grid_array rhs_test(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
         
         cvdf::algs::fill_array(prim,     mms_test_func, cvdf::grid::include_exchanges);
-        cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);
+        cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);        
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
         bool output = true;

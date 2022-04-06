@@ -34,7 +34,7 @@ namespace cvdf::flux_algs
             const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_r, ir);
             nvec_l /= jac_l;
             nvec_r /= jac_r;
-            if (group.isroot())
+            if (il == ctrs::array<grid::cell_t<int>, 4>(2, 2, 2, 1))
             {
                 print("===================================");
                 print(il[0],     il[1],     il[2]);
@@ -47,7 +47,7 @@ namespace cvdf::flux_algs
                 print(nvec_r[0], nvec_r[1], nvec_r[2]);
                 print(jac_r);
                 print("===================================");
-                group.sync();
+                group.pause();
             }
             fluid_state::prim_t<real_type> ql, qr;
             for (int n = 0; n < ql.size(); ++n) ql[n] = prims(n, il[0], il[1], il[2], il[3]);
