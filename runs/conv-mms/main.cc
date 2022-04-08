@@ -63,8 +63,8 @@ int main(int argc, char** argv)
     
     cvdf::convective::totani_lr tscheme(air);
     
-    std::vector<int> numcells = {24, 26};
-    // std::vector<int> numcells = {8, 12, 16, 24, 32, 48};
+    // std::vector<int> numcells = {24, 26};
+    std::vector<int> numcells = {8, 12, 16, 24, 32, 48};
     
     std::vector<real_t> err_0_linf(numcells.size());
     std::vector<real_t> err_1_linf(numcells.size());
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
         cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);        
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        bool output = true;
+        bool output = false;
         // if (output)
         // {
         //     std::string filename = "rhs_ana" + std::to_string(n);

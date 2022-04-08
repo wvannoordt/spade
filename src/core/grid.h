@@ -224,32 +224,71 @@ namespace cvdf::grid
                 return coord_system.map(output);
             }
             
-            _finline_ ctrs::array<dtype, 3> get_coords(
-                const int& idir,
-                const face_t<int>& i,
-                const face_t<int>& j,
-                const face_t<int>& k,
-                const face_t<int>& lb) const
+            _finline_ ctrs::array<dtype, 3> node_comp_coords(const int& i, const int& j, const int& k, const int& lb) const
+            {
+                ctrs::array<dtype, 3> output(0, 0, 0);
+                ctrs::array<int, 3> ijk(i, j, k);
+                auto& box = block_boxes[lb];
+                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                {
+                    output[idir] = box.min(idir) + ijk[idir]*dx[idir];
+                }
+                return output;
+            }
+            
+            _finline_ ctrs::array<dtype, 3> cell_comp_coords(const int& i, const int& j, const int& k, const int& lb) const
+            {
+                ctrs::array<dtype, 3> output(0, 0, 0);
+                ctrs::array<int, 3> ijk(i, j, k);
+                auto& box = block_boxes[lb];
+                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                {
+                    output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
+                }
+                return output;
+            }
+            
+            _finline_ ctrs::array<dtype, 3> face_comp_coords(const int& idir, const int& i, const int& j, const int& k, const int& lb) const
+            {
+                ctrs::array<dtype, 3> output(0, 0, 0);
+                ctrs::array<int, 3> ijk(i, j, k);
+                auto& box = block_boxes[lb];
+                for (size_t d = 0; d < cvdf_dim; ++d)
+                {
+                    output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
+                }
+                output[idir] -= 0.5*dx[idir];
+                return output;
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
             {
                 return this->face_coords(idir, i, j, k, lb);
             }
             
-            _finline_ ctrs::array<dtype, 3> get_coords(
-                const node_t<int>& i,
-                const node_t<int>& j,
-                const node_t<int>& k,
-                const node_t<int>& lb) const
+            _finline_ ctrs::array<dtype, 3> get_coords(const node_t<int>& i, const node_t<int>& j, const node_t<int>& k, const node_t<int>& lb) const
             {
                 return this->node_coords(i, j, k, lb);
             }
             
-            _finline_ ctrs::array<dtype, 3> get_coords(
-                const cell_t<int>& i,
-                const cell_t<int>& j,
-                const cell_t<int>& k,
-                const cell_t<int>& lb) const
+            _finline_ ctrs::array<dtype, 3> get_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const
             {
                 return this->cell_coords(i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
+            {
+                return this->face_comp_coords(idir, i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const node_t<int>& i, const node_t<int>& j, const node_t<int>& k, const node_t<int>& lb) const
+            {
+                return this->node_comp_coords(i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const
+            {
+                return this->cell_comp_coords(i, j, k, lb);
             }
             
             const par_group_t& group(void) const
