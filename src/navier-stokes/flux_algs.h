@@ -40,7 +40,8 @@ namespace cvdf::flux_algs
                 print(il[0],     il[1],     il[2]);
                 print(xyz_l[0],  xyz_l[1],  xyz_l[2]);
                 print(nvec_l[0], nvec_l[1], nvec_l[2]);
-                print(jac_l);
+                print(jac_l, 1.0/(sqrt(xyz_l[1]*xyz_l[1] + xyz_l[2]*xyz_l[2])));
+                print(jac_r, 1.0/(sqrt(xyz_r[1]*xyz_r[1] + xyz_r[2]*xyz_r[2])));
                 print("===================================");
                 print(ir[0],     ir[1],     ir[2]);
                 print(xyz_r[0],  xyz_r[1],  xyz_r[2]);
