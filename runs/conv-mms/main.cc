@@ -100,7 +100,7 @@ int main(int argc, char** argv)
         cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);        
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        bool output = true;
+        bool output = false;
         // if (output)
         // {
         //     std::string filename = "rhs_ana" + std::to_string(n);
@@ -115,6 +115,8 @@ int main(int argc, char** argv)
             std::string filename = "err" + std::to_string(n);
             std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
             if (group.isroot()) print("Exported", out_file);
+            std::string filename2 = "prim" + std::to_string(n);
+            std::string out_file2 = cvdf::output::output_vtk("output", filename2, grid, prim);
         }
         
         cvdf::reduce_ops::reduce_sum<real_t> sum;
