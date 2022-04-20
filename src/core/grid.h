@@ -543,6 +543,7 @@ namespace cvdf::grid
         typedef ar_data_t value_type;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
+        typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
         
         typedef std::conditional<minor_dim_t::rank()==0, ar_data_t, ctrs::array<ar_data_t, minor_dim_t::total_size()>>::type unwrapped_minor_type;
         

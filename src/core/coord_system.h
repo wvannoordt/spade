@@ -146,32 +146,21 @@ namespace cvdf::coords
         linear_algebra::dense_mat<dtype, 3>
         coord_deriv(const ctrs::array<dtype, 3>& x) const
         {
+            // x = x
+            // y = r*cos(q)
+            // z = r*sin(q)
+            // 
             linear_algebra::dense_mat<dtype, 3> output;
-            output(0,0) = 1.0;
-            output(0,1) = 0.0;
-            output(0,2) = 0.0;
-            output(1,0) = 0.0;
-            output(1,1) = cos(x[2]);
-            output(1,2) = -x[1]*sin(x[2]);
-            output(2,0) = 0.0;
-            output(2,1) = sin(x[2]);
-            output(2,2) = x[1]*cos(x[2]);
+            output(0,0) = 1.0;             //dx/dx
+            output(0,1) = 0.0;             //dx/dr
+            output(0,2) = 0.0;             //dx/dq
+            output(1,0) = 0.0;             //dy/dx
+            output(1,1) = cos(x[2]);       //dy/dr
+            output(1,2) = -x[1]*sin(x[2]); //dy/dq
+            output(2,0) = 0.0;             //dz/dx
+            output(2,1) = sin(x[2]);       //dz/dr
+            output(2,2) = x[1]*cos(x[2]);  //dz/dq
             return output;
-        }
-    };
-    
-    //used for testing only
-    template <typename dtype> struct debug_quad_1D
-    {
-        typedef dtype coord_type;
-        debug_quad_1D(void){}
-        dtype map(const dtype& coord) const
-        {
-            return coord*coord*coord;
-        }
-        dtype coord_deriv(const dtype& coord) const
-        {
-            return 3.0*coord*coord;
         }
     };
     
@@ -205,19 +194,14 @@ namespace cvdf::coords
     {
         ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
         output[idir] = 1.0;
-        output[0]/=coord.xcoord.coord_deriv(coords[0]);
-        output[1]/=coord.ycoord.coord_deriv(coords[1]);
-        output[2]/=coord.zcoord.coord_deriv(coords[2]);
+        const auto m0 = coord.xcoord.coord_deriv(coords[0]);
+        const auto m1 = coord.ycoord.coord_deriv(coords[1]);
+        const auto m2 = coord.zcoord.coord_deriv(coords[2]);
+        const auto jac = 1.0/(m0*m1*m2);
+        output[0] /= m0*jac;
+        output[1] /= m1*jac;
+        output[2] /= m2*jac;
         return output;
-    }
-    
-    template <diagonal_coordinate_system coord_t, typename integral_t>
-    typename coord_t::coord_type calc_jacobian(
-        const coord_t& coord,
-        const ctrs::array<typename coord_t::coord_type, 3>& coords,
-        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
-    {
-        return 1.0/(coord.xcoord.coord_deriv(coords[0])*coord.ycoord.coord_deriv(coords[1])*coord.zcoord.coord_deriv(coords[2]));
     }
     
     template <dense_coordinate_system coord_t, typename integral_t>
@@ -226,13 +210,32 @@ namespace cvdf::coords
         const ctrs::array<typename coord_t::coord_type, 3>& coords,
         const ctrs::array<grid::cell_t<integral_t>, 4>& i,
         const integral_t& idir)
+        {
+            integral_t los[3] = {1,0,0};
+            integral_t his[3] = {2,2,1};
+            ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
+            const auto jac = coord.coord_deriv(coords);
+            const auto det = 1.0/jac.det();
+            const auto hi = his[idir];
+            const auto lo = los[idir];
+            auto sgn =[](const integral_t& i1, const integral_t& i2) -> int
+            {
+                return 1-2*((i1+i2) % 2);
+            };
+            output[0] = sgn(0,idir)*(jac(1,lo)*jac(2,hi) - jac(2,lo)*jac(1,hi));
+            output[1] = sgn(1,idir)*(jac(0,lo)*jac(2,hi) - jac(2,lo)*jac(0,hi));
+            output[2] = sgn(2,idir)*(jac(0,lo)*jac(1,hi) - jac(1,lo)*jac(0,hi));
+            
+            return output;
+        }
+    
+    template <diagonal_coordinate_system coord_t, typename integral_t>
+    typename coord_t::coord_type calc_jacobian(
+        const coord_t& coord,
+        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
     {
-        ctrs::array<typename coord_t::coord_type, 3> output(0.0, 0.0, 0.0);
-        const auto jac = coord.coord_deriv(coords);
-        output[0] = jac(idir, 0);
-        output[1] = jac(idir, 1);
-        output[2] = jac(idir, 2);
-        return output;
+        return 1.0/(coord.xcoord.coord_deriv(coords[0])*coord.ycoord.coord_deriv(coords[1])*coord.zcoord.coord_deriv(coords[2]));
     }
     
     template <dense_coordinate_system coord_t, typename integral_t>
