@@ -36,32 +36,6 @@ namespace cvdf::flux_algs
             const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
             nvec_l /= jac_l;
             nvec_r /= jac_r;
-            // if (il == ctrs::array<grid::cell_t<int>, 4>(2, 2, 2, 1))
-            // {
-            //     const auto jac = ar_grid.coord_sys().coord_deriv(xyz_comp_l);
-            //     print("----jacl------ at ", xyz_comp_l[0],  xyz_comp_l[1],  xyz_comp_l[2]);
-            //     print("phys. ", xyz_l[0],  xyz_l[1],  xyz_l[2]);
-            //     print(jac(0,0), jac(0,1), jac(0,2));
-            //     print(jac(1,0), jac(1,1), jac(1,2));
-            //     print(jac(2,0), jac(2,1), jac(2,2));
-            //     print("jac is", jac_l);
-            //     print("===================================");
-            //     print(il[0],     il[1],     il[2]);
-            //     print(xyz_l[0],  xyz_l[1],  xyz_l[2]);
-            //     print(xyz_comp_l[0],  xyz_comp_l[1],  xyz_comp_l[2]);
-            //     print(nvec_l[0], nvec_l[1], nvec_l[2]);
-            //     print(jac_l);
-            //     print(1.0/xyz_l[1]);
-            //     print("===================================");
-            //     print(ir[0],     ir[1],     ir[2]);
-            //     print(xyz_r[0],  xyz_r[1],  xyz_r[2]);
-            //     print(xyz_comp_r[0],  xyz_comp_r[1],  xyz_comp_r[2]);
-            //     print(nvec_r[0], nvec_r[1], nvec_r[2]);
-            //     print(jac_r);
-            //     print(1.0/xyz_r[1]);
-            //     print("===================================");
-            //     group.pause();
-            // }
             fluid_state::prim_t<real_type> ql, qr;
             for (int n = 0; n < ql.size(); ++n) ql[n] = prims(n, il[0], il[1], il[2], il[3]);
             for (int n = 0; n < qr.size(); ++n) qr[n] = prims(n, ir[0], ir[1], ir[2], ir[3]);
