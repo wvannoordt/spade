@@ -60,8 +60,8 @@ namespace cvdf::parallel
                 if (isroot())
                 {
                     print("Parallel group", (void*)this, " paused at:");
-                    print(location.file_name());
-                    print(location.line());
+                    print("File:", location.file_name());
+                    print("Line:", location.line());
                     print("Awaiting input...");
                     std::cin.get();
                 }

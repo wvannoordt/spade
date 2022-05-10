@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     visc_law.prandtl = 0.72;
     
     cvdf::fluid_state::perfect_gas_t<real_t> air;
-    air.R = 287.15;
+    air.R = 287.14285714285705;
     air.gamma = 1.4;
     
     cvdf::navier_stokes_mms::cns_perfectgas_mms_t mms(air, visc_law);
@@ -37,18 +37,14 @@ int main(int argc, char** argv)
     bounds.max(2) =  0.5;
     
     // cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(0), bounds.max(0), 0.1, 1.3);
-    // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
     // cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(2), bounds.max(2), 0.1, 1.3);
     
-    // cvdf::coords::debug_quad_1D<real_t> xc;
-    // cvdf::coords::debug_quad_1D<real_t> yc;
-    // cvdf::coords::debug_quad_1D<real_t> zc;
-    
-    // cvdf::coords::identity_1D<real_t> xc;
+    cvdf::coords::identity_1D<real_t> xc;
     // cvdf::coords::identity_1D<real_t> yc;
-    // cvdf::coords::identity_1D<real_t> zc;
-    // cvdf::coords::diagonal_coords coords(xc, yc, zc);
-    cvdf::coords::cyl_coords<real_t> coords;
+    cvdf::coords::identity_1D<real_t> zc;
+    cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    // cvdf::coords::cyl_coords<real_t> coords;
     
     // cvdf::coords::identity<real_t> coords;
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(2, 2, 2);
@@ -57,7 +53,7 @@ int main(int argc, char** argv)
     cvdf::convective::totani_lr tscheme(air);
     
     // std::vector<int> numcells = {24, 26};
-    std::vector<int> numcells = {8, 12, 16, 24, 32, 48};
+    std::vector<int> numcells = {8, 12, 16, 24};
     
     std::vector<real_t> err_0_linf(numcells.size());
     std::vector<real_t> err_1_linf(numcells.size());
@@ -93,22 +89,14 @@ int main(int argc, char** argv)
         cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);        
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        bool output = false;
-        // if (output)
-        // {
-        //     std::string filename = "rhs_ana" + std::to_string(n);
-        //     std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs_test);
-        //     filename = "rhs_num" + std::to_string(n);
-        //     out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
-        //     if (group.isroot()) print("Exported", out_file);
-        // }
-        rhs -= rhs_test;
+        
+        bool output = true;
         if (output)
         {
-            std::string filename = "err" + std::to_string(n);
+            std::string filename = "rhs" + std::to_string(n);
             std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
-            if (group.isroot()) print("Exported", out_file);
         }
+        rhs -= rhs_test;
         
         cvdf::reduce_ops::reduce_sum<real_t> sum;
         cvdf::reduce_ops::reduce_max<real_t> max;

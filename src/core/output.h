@@ -86,7 +86,6 @@ namespace cvdf::output
                     }
                 }
             }
-            print(ct);
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, typename... arrays_t>
