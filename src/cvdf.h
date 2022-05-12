@@ -1,6 +1,8 @@
 #pragma once
 #include <cmath>
 
+#include "core/typedef.h"
+#include "core/consts.h"
 #include "core/print.h"
 #include "core/range.h"
 #include "core/typedef.h"

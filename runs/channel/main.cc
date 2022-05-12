@@ -1,6 +1,21 @@
 #include "cvdf.h"
 
-
+void set_channel_noslip(auto& prims)
+{
+    const auto& grid = prims.get_grid();
+    for (auto lb: range(0, grid.get_num_local_blocks()))
+    {
+        const auto& lb_glob = grid.get_partition().get_global_block(lb[0]);
+        for (int dir = 2; dir <= 3; ++dir)
+        {
+            if (grid.is_domain_boundary(lb_glob, dir))
+            {
+                const auto lb_idx = cvdf::ctrs::expand_index(lb_glob, grid.get_num_blocks());
+                print(lb_idx, dir, lb_glob);
+            }
+        }
+    }
+}
 
 int main(int argc, char** argv)
 {
@@ -15,17 +30,12 @@ int main(int argc, char** argv)
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
-    // bounds.min(0) = -delta;
-    // bounds.max(0) =  delta;
-    // bounds.min(1) =  0.0;
-    // bounds.max(1) =  4.0*cvdf::consts::pi*delta;
-    // bounds.min(2) =  0.0;
-    // bounds.max(2) =  4.0*cvdf::consts::pi*delta/3.0;
-    
-    // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
-    // cvdf::coords::identity_1D<real_t> xc;
-    // cvdf::coords::identity_1D<real_t> zc;
-    // cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    bounds.min(0) = -delta;
+    bounds.max(0) =  delta;
+    bounds.min(1) =  0.0;
+    bounds.max(1) =  4.0*cvdf::consts::pi*delta;
+    bounds.min(2) =  0.0;
+    bounds.max(2) =  4.0*cvdf::consts::pi*delta/3.0;
     
     cvdf::coords::identity<real_t> coords;
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
@@ -43,6 +53,8 @@ int main(int argc, char** argv)
     // cvdf::convective::totani_lr tscheme(air);
     
     // cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
+    
+    set_channel_noslip(prim);
     
     return 0;
 }

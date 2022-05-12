@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <array>
+
 template <typename index_t, const std::size_t idx_dim> struct md_iterator
 {
     constexpr size_t size(void) const noexcept {return idx_dim;}

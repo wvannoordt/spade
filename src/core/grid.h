@@ -132,6 +132,28 @@ namespace cvdf::grid
                     });
                 }
                 
+                block_is_domain_boundary.resize(this->get_num_global_blocks());
+                for (auto lb: range(0,this->get_num_global_blocks()))
+                {
+                    const auto& lbi = lb[0];
+                    auto& data = block_is_domain_boundary[lbi];
+                    const auto lb_idx = ctrs::expand_index(lbi, num_blocks);
+                    for (auto& val: data) val = false;
+                    for (auto d: range(0,cvdf_dim))
+                    {
+                        data[2*d[0]+0] = (lb_idx[d[0]]==0);
+                        data[2*d[0]+1] = (lb_idx[d[0]]==num_blocks[d[0]]-1);
+                    }
+                    if (data[2])
+                    {
+                        print("lower:", lb_idx, lbi);
+                    }
+                    if (data[3])
+                    {
+                        print("upper:", lb_idx, lbi);
+                    }
+                }
+                
                 send_size_elems.resize(group_in.size(), 0);
                 recv_size_elems.resize(group_in.size(), 0);
                 
@@ -327,10 +349,12 @@ namespace cvdf::grid
             std::size_t get_num_interior_cells(void) const {return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_local_blocks();}
             
             std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
+            ctrs::array<std::size_t, 3> get_num_blocks(void)   const {return num_blocks;}
             std::size_t  get_num_local_blocks(void) const {return grid_partition.get_num_local_blocks();}
             std::size_t get_num_global_blocks(void) const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
             std::size_t get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
             std::size_t get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
+            bool is_domain_boundary(const std::size_t& lb_glob, const std::size_t& dir) const {return block_is_domain_boundary[lb_glob][dir];}
             bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
             dtype get_dx(const std::size_t& i) const {return dx[i];}
@@ -493,7 +517,7 @@ namespace cvdf::grid
             size_t total_blocks;
             par_group_t* grid_group;
             std::vector<neighbor_relationship_t> neighbors;
-            
+            std::vector<ctrs::array<bool, 3>> block_is_domain_boundary;
             std::vector<std::size_t> send_size_elems;
             std::vector<std::size_t> recv_size_elems;
             std::vector<std::vector<char>> send_bufs;
