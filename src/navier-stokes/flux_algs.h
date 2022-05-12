@@ -26,10 +26,9 @@ namespace cvdf::flux_algs
             ctrs::array<grid::cell_t<int>, 4> il(idx[0], idx[1], idx[2], idx[3]);
             ctrs::array<grid::cell_t<int>, 4> ir(idx[0], idx[1], idx[2], idx[3]);
             ir[idir] += 1;
+            // auto flux_data = detail::buffer_flux_data(prims, );
             const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il[0], il[1], il[2], il[3]);
             const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir[0], ir[1], ir[2], ir[3]);
-            const ctrs::array<real_type,3> xyz_l = ar_grid.get_coords(il[0], il[1], il[2], il[3]);
-            const ctrs::array<real_type,3> xyz_r = ar_grid.get_coords(ir[0], ir[1], ir[2], ir[3]);
             ctrs::array<real_type,3> nvec_l = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_comp_l, il, idir);
             ctrs::array<real_type,3> nvec_r = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_comp_r, ir, idir);
             const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
