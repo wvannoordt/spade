@@ -1,19 +1,12 @@
 #include "cvdf.h"
 
-void printi(const int& i)
-{
-    print(i);
-}
-
-void printc(const cvdf::grid::cell_t<int>& i)
-{
-    print(i.val);
-}
-
 int main(int argc, char** argv)
 {
     typedef double real_t;
     typedef cvdf::ctrs::array<real_t, 3> v3d;
+    
+    
+    
     
     cvdf::parallel::mpi_t group(&argc, &argv);
     

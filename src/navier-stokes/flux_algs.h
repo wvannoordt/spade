@@ -17,7 +17,6 @@ namespace cvdf::flux_algs
     {
         typedef typename array_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
-        const parallel::parallel_group auto& group = ar_grid.group();
         auto grid_range = range(-1,ar_grid.get_num_cells(0))*range(-1,ar_grid.get_num_cells(1))*range(-1,ar_grid.get_num_cells(2))*range(0,ar_grid.get_num_local_blocks());
         int ct = 0;
         for (auto idx: grid_range*range(0, cvdf_dim))
