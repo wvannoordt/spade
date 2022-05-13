@@ -86,9 +86,9 @@ namespace cvdf::grid
         public:
             typedef coord_t::coord_type dtype;
             cartesian_grid_t(
-                const ctrs::array<std::size_t, cvdf_dim>& num_blocks_in,
-                const ctrs::array<std::size_t, cvdf_dim>& cells_in_block_in,
-                const ctrs::array<std::size_t, cvdf_dim>& exchange_cells_in,
+                const ctrs::array<int, cvdf_dim>& num_blocks_in,
+                const ctrs::array<int, cvdf_dim>& cells_in_block_in,
+                const ctrs::array<int, cvdf_dim>& exchange_cells_in,
                 const bound_box_t<dtype,  cvdf_dim>& bounds_in,
                 const coord_t& coord_system_in,
                 par_group_t& group_in)
@@ -142,15 +142,7 @@ namespace cvdf::grid
                     for (auto d: range(0,cvdf_dim))
                     {
                         data[2*d[0]+0] = (lb_idx[d[0]]==0);
-                        data[2*d[0]+1] = (lb_idx[d[0]]==num_blocks[d[0]]-1);
-                    }
-                    if (data[2])
-                    {
-                        print("lower:", lb_idx, lbi);
-                    }
-                    if (data[3])
-                    {
-                        print("upper:", lb_idx, lbi);
+                        data[2*d[0]+1] = (lb_idx[d[0]]==(num_blocks[d[0]]-1));
                     }
                 }
                 
@@ -352,8 +344,8 @@ namespace cvdf::grid
             ctrs::array<std::size_t, 3> get_num_blocks(void)   const {return num_blocks;}
             std::size_t  get_num_local_blocks(void) const {return grid_partition.get_num_local_blocks();}
             std::size_t get_num_global_blocks(void) const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
-            std::size_t get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
-            std::size_t get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
+            int get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
+            int get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
             bool is_domain_boundary(const std::size_t& lb_glob, const std::size_t& dir) const {return block_is_domain_boundary[lb_glob][dir];}
             bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
@@ -509,15 +501,15 @@ namespace cvdf::grid
             bool is3d;
             coord_t coord_system;
             ctrs::array<dtype,  3> dx;
-            ctrs::array<std::size_t, 3> num_blocks;
-            ctrs::array<std::size_t, 3> cells_in_block;
-            ctrs::array<std::size_t, 3> exchange_cells;
+            ctrs::array<int, 3> num_blocks;
+            ctrs::array<int, 3> cells_in_block;
+            ctrs::array<int, 3> exchange_cells;
             bound_box_t<dtype,  3> bounds;
             std::vector<bound_box_t<dtype, 3>> block_boxes;
             size_t total_blocks;
             par_group_t* grid_group;
             std::vector<neighbor_relationship_t> neighbors;
-            std::vector<ctrs::array<bool, 3>> block_is_domain_boundary;
+            std::vector<ctrs::array<bool, 6>> block_is_domain_boundary;
             std::vector<std::size_t> send_size_elems;
             std::vector<std::size_t> recv_size_elems;
             std::vector<std::vector<char>> send_bufs;

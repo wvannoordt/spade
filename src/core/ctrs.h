@@ -11,6 +11,8 @@ namespace cvdf::ctrs
         t[i];
     };
     
+    template <class T> concept not_basic_array = !basic_array<T>;
+    
     template <class T, typename data_t> concept basic_array_of_type = basic_array<T> && requires(T t, const int& i)
     {
         {t[i]}-> std::convertible_to<data_t>;
@@ -46,18 +48,21 @@ namespace cvdf::ctrs
         {
             for (size_t i = 0; i < this->size(); i++) data[i] = val;
         }
-        template <class param> void set_r(const size_t i, const param& p)
+        template <not_basic_array param> void set_r(const size_t i, const param& p)
         {
             data[i] = p;
         }
-        template <class param, class... params> void set_r(const size_t i, const param& p, params... ps)
+        template <not_basic_array param, class... params> void set_r(const size_t i, const param& p, params... ps)
         {
             data[i] = p;
             set_r(i+1, ps...);
         }
+        template <basic_array param, class... params> void set_r(const size_t i, const param& p)
+        {
+            for (std::size_t i = 0; i < p.size(); i++) data[i] = p[i];
+        }
         template <class... params> array(params... ps)
         {
-            static_assert(sizeof...(ps)==ar_size, "Incorrect number of arguments passed to array constructor");
             set_r(0, ps...);
         }
         array(const dtype& val) {fill(val);}

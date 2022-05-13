@@ -61,25 +61,6 @@ namespace cvdf::algs
         }
     }
     
-    template <class array_t, class callable_t>
-    void fill_array(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
-    {
-        const auto& grid = arr.get_grid();
-        auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
-        for (auto maj: range(0, arr.get_major_dims().total_size()))
-        {
-            for (auto i: grid_range)
-            {
-                auto x = detail::get_coords(grid, arr, i[0], i[1], i[2], i[3]);
-                auto data = detail::forward_fillable_args(grid, func, x, i[0], i[1], i[2], i[3]);
-                for (int n = 0; n < data.size(); ++n)
-                {
-                    arr.unwrap_idx(n, i[0], i[1], i[2], i[3], maj[0]) = data[n];
-                }
-            }
-        }
-    }
-    
     namespace detail
     {
         template <ctrs::basic_array elem_t, grid::multiblock_array array_t>
@@ -93,6 +74,35 @@ namespace cvdf::algs
         static _finline_  auto unwrap_to_minor_element_type(elem_t& elem, const array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
         {
             elem = arr.unwrap_idx(0, i, j, k, lb, maj);
+        }
+        
+        template <ctrs::basic_array elem_t, grid::multiblock_array array_t>
+        static _finline_ auto set_from_minor_element_type(const elem_t& elem, array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
+        {
+            for (std::size_t n = 0; n < elem.size(); ++n) arr.unwrap_idx(n, i, j, k, lb, maj) = elem[n];
+        }
+        
+        template <typename elem_t, grid::multiblock_array array_t>
+        requires (!ctrs::basic_array<elem_t>)
+        static _finline_  auto set_from_minor_element_type(const elem_t& elem, array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
+        {
+            arr.unwrap_idx(0, i, j, k, lb, maj) = elem;
+        }
+    }
+    
+    template <class array_t, class callable_t>
+    void fill_array(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
+    {
+        const auto& grid = arr.get_grid();
+        auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
+        for (auto maj: range(0, arr.get_major_dims().total_size()))
+        {
+            for (auto i: grid_range)
+            {
+                auto x = detail::get_coords(grid, arr, i[0], i[1], i[2], i[3]);
+                auto data = detail::forward_fillable_args(grid, func, x, i[0], i[1], i[2], i[3]);
+                detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
+            }
         }
     }
     
@@ -115,5 +125,23 @@ namespace cvdf::algs
             }
         }
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
+    }
+    
+    template <grid::multiblock_array array_t, class callable_t>
+    requires std::invocable<callable_t, typename array_t::unwrapped_minor_type>
+    auto& transform_inplace(const array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    {
+        const auto& grid = arr.get_grid();
+        auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
+        for (auto maj: range(0, arr.get_major_dims().total_size()))
+        {
+            for (auto i: grid_range)
+            {
+                typename array_t::unwrapped_minor_type data;
+                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
+                detail::set_from_minor_element_type(func(data), arr, i[0], i[1], i[2], i[3], maj[0]);
+            }
+        }
+        return arr;
     }
 }
