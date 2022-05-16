@@ -669,6 +669,13 @@ namespace cvdf::grid
             return *this;
         }
         
+        template <typename numeric_t> grid_array& operator *= (const numeric_t& rhs)
+        requires std::floating_point<numeric_t>
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs;
+            return *this;
+        }
+        
         grid_array& operator /= (const grid_array& rhs)
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs.data[i];

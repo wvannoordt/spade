@@ -88,6 +88,13 @@ namespace cvdf::algs
         {
             arr.unwrap_idx(0, i, j, k, lb, maj) = elem;
         }
+        
+        template <class T> concept has_arg_type = requires(T t) {typename T::arg_type;};
+        
+        template <typename array_t, typename callable_t> struct converted_elem
+        {
+            typedef std::conditional<has_arg_type<callable_t>, typename callable_t::arg_type, typename array_t::unwrapped_minor_type>::type type;
+        };
     }
     
     template <class array_t, class callable_t>
@@ -107,19 +114,19 @@ namespace cvdf::algs
     }
     
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>
-    requires std::invocable<callable_t, typename array_t::unwrapped_minor_type>
+    requires std::invocable<callable_t, typename detail::converted_elem<array_t, callable_t>::type>
     auto transform_reduce(const array_t& arr, const callable_t& func, reduce_t& reduce_oper, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const auto& grid = arr.get_grid();
         auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
-        typename array_t::unwrapped_minor_type init_data;
+        typename detail::converted_elem<array_t, callable_t>::type init_data;
         detail::unwrap_to_minor_element_type(init_data, arr, 0, 0, 0, 0, 0);
         reduce_oper.init(func(init_data));
         for (auto maj: range(0, arr.get_major_dims().total_size()))
         {
             for (auto i: grid_range)
             {
-                typename array_t::unwrapped_minor_type data;
+                typename detail::converted_elem<array_t, callable_t>::type data;
                 detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
                 reduce_oper.reduce_elem(func(data));
             }
@@ -128,8 +135,8 @@ namespace cvdf::algs
     }
     
     template <grid::multiblock_array array_t, class callable_t>
-    requires std::invocable<callable_t, typename array_t::unwrapped_minor_type>
-    auto& transform_inplace(const array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    requires std::invocable<callable_t, typename detail::converted_elem<array_t, callable_t>::type>
+    auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const auto& grid = arr.get_grid();
         auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
@@ -137,7 +144,7 @@ namespace cvdf::algs
         {
             for (auto i: grid_range)
             {
-                typename array_t::unwrapped_minor_type data;
+                typename detail::converted_elem<array_t, callable_t>::type data;
                 detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
                 detail::set_from_minor_element_type(func(data), arr, i[0], i[1], i[2], i[3], maj[0]);
             }

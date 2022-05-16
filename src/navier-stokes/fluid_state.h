@@ -132,7 +132,7 @@ namespace cvdf::fluid_state
        return os;
     }
 
-    template<typename ptype, typename ctype, class gas_t> static void convert_state(prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
+    template<typename ptype, typename ctype, class gas_t> static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
     {
         ptype rho = prim.p() / (gas.get_R(prim)*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
@@ -147,7 +147,7 @@ namespace cvdf::fluid_state
         cons.rho_w()  = rhoW;
     }
 
-    template<typename ptype, typename ctype, class gas_t> static void convert_state(cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
+    template<typename ptype, typename ctype, class gas_t> static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
     {
         ptype rho = cons.rho();
         ptype invrho = 1.0/rho;

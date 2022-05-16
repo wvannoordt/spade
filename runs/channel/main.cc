@@ -10,6 +10,7 @@ typedef cvdf::fluid_state::cons_t<real_t> cons_t;
 
 void set_channel_noslip(auto& prims)
 {
+    const real_t t_wall = 325.0;
     const auto& grid = prims.get_grid();
     for (auto lb: range(0, grid.get_num_local_blocks()))
     {
@@ -26,8 +27,20 @@ void set_channel_noslip(auto& prims)
                 auto r2 = range(-grid.get_num_exchange(2), grid.get_num_cells(2) + grid.get_num_exchange(2));
                 for (auto ii: r1*r2)
                 {
-                    v4c i_domain(ii[0], j,             ii[1], lb[0]);
-                    v4c i_ghost (ii[0], j+nvec_out[1], ii[1], lb[0]);
+                    v4c i_d(ii[0], j,             ii[1], lb[0]);
+                    v4c i_g(ii[0], j+nvec_out[1], ii[1], lb[0]);
+                    prim_t q_d, q_g;
+                    for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
+                    const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
+                    const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
+                    const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
+                    const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
+                    q_g.p() =  q_d.p();
+                    q_g.u() = -q_d.u()*n_d[0]/n_g[0];
+                    q_g.v() = -q_d.v()*n_d[1]/n_g[1];
+                    q_g.w() = -q_d.w()*n_d[2]/n_g[2];
+                    q_g.T() =  t_wall;
+                    for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
                 }
             }
             ++idc;
@@ -70,6 +83,7 @@ int main(int argc, char** argv)
     const double p0 = 101325.0;
     const double t0 = 325.0;
     const double u0 = 69.54;
+    const double duhat = 0.5;
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x) -> prim_t
     {
         prim_t output;
@@ -87,21 +101,64 @@ int main(int argc, char** argv)
     cvdf::convective::totani_lr tscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
     
+    struct p2c_t
+    {
+        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
+        typedef prim_t arg_type;
+        p2c_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
+        cons_t operator () (const prim_t& q) const
+        {
+            cons_t w;
+            cvdf::fluid_state::convert_state(q, w, *gas);
+            return w;
+        }
+    } p2c(air);
+    
+    struct c2p_t
+    {
+        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
+        typedef cons_t arg_type;
+        c2p_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
+        prim_t operator () (const cons_t& w) const
+        {
+            prim_t q;
+            cvdf::fluid_state::convert_state(w, q, *gas);
+            return q;
+        }
+    } c2p(air);
+    
+    struct get_u_t
+    {
+        typedef prim_t arg_type;
+        real_t operator () (const prim_t& q) const
+        {
+            return sqrt(q.u()*q.u() + q.v()*q.v() + q.w()*q.w());
+        }
+    } get_u;
+    
+    cvdf::reduce_ops::reduce_max<real_t> umax_op;
+    
     const int    nt_max = 1000;
     const real_t dt     = 1e-4;
     for (auto nti: range(0, nt_max))
     {
+        cvdf::algs::transform_inplace(prim, c2p);
         int nt = nti[0];
         grid.exchange_array(prim);
         set_channel_noslip(prim);
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
         cvdf::algs::transform_inplace(prim, p2c);
-        prim += dt*rhs;
-        cvdf::algs::transform_inplace(prim, c2p);
+        rhs  *= dt;
+        prim += rhs;
+        real_t umax = cvdf::algs::transform_reduce(prim, get_u, umax_op);
         if (group.isroot())
         {
-            print(nt);
+            print(nt, umax);
+        }
+        if (nt%300 == 0)
+        {
+            cvdf::output::output_vtk("output", "last", grid, prim);
         }
     }
     
