@@ -93,7 +93,12 @@ namespace cvdf::algs
         
         template <typename array_t, typename callable_t> struct converted_elem
         {
-            typedef std::conditional<has_arg_type<callable_t>, typename callable_t::arg_type, typename array_t::unwrapped_minor_type>::type type;
+            typedef typename array_t::unwrapped_minor_type type;
+        };
+        
+        template <typename array_t, has_arg_type callable_t> struct converted_elem<array_t, callable_t>
+        {
+            typedef typename callable_t::arg_type type;
         };
     }
     

@@ -36,9 +36,9 @@ void set_channel_noslip(auto& prims)
                     const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
                     const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
                     q_g.p() =  q_d.p();
-                    q_g.u() = -q_d.u()*n_d[0]/n_g[0];
+                    q_g.u() = -q_d.u();
                     q_g.v() = -q_d.v()*n_d[1]/n_g[1];
-                    q_g.w() = -q_d.w()*n_d[2]/n_g[2];
+                    q_g.w() = -q_d.w();
                     q_g.T() =  t_wall;
                     for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
                 }
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
     const double t0 = 325.0;
     const double u0 = 69.54;
     const double duhat = 0.5;
-    auto ini = [&](const cvdf::ctrs::array<real_t, 3> x) -> prim_t
+    auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
         prim_t output;
         output.p() = p0;
@@ -92,12 +92,17 @@ int main(int argc, char** argv)
         output.u() = 1.5*(1.0 - x[1]*x[1]/(delta*delta))*u0;
         output.v() = 0.0;
         output.w() = 0.0;
+        if ((((i/6) + (j/6))%2==0) && (((i/3) + (j/3))%2==0))
+        {
+            output.u() += duhat*u0;
+            output.v() += duhat*u0;
+            output.w() += duhat*u0;
+        }
         return output;
     };
+    
     cvdf::algs::fill_array(prim, ini);
-    
     cvdf::output::output_vtk("output", "ini", grid, prim);
-    
     cvdf::convective::totani_lr tscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
     
@@ -136,10 +141,10 @@ int main(int argc, char** argv)
         }
     } get_u;
     
-    cvdf::reduce_ops::reduce_max<real_t> umax_op;
+    cvdf::reduce_ops::reduce_max<real_t> max_op;
     
-    const int    nt_max = 1000;
-    const real_t dt     = 1e-4;
+    const int    nt_max = 100000;
+    const real_t dt     = 1e-2;
     for (auto nti: range(0, nt_max))
     {
         cvdf::algs::transform_inplace(prim, c2p);
@@ -151,10 +156,11 @@ int main(int argc, char** argv)
         cvdf::algs::transform_inplace(prim, p2c);
         rhs  *= dt;
         prim += rhs;
-        real_t umax = cvdf::algs::transform_reduce(prim, get_u, umax_op);
+        real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
+        real_t rhsmax = cvdf::algs::transform_reduce(rhs,  [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
         {
-            print(nt, umax);
+            print(nt, umax, rhsmax);
         }
         if (nt%300 == 0)
         {

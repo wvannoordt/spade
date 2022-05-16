@@ -25,7 +25,7 @@ namespace cvdf::flux_algs
             ctrs::array<grid::cell_t<int>, 4> il(idx[0], idx[1], idx[2], idx[3]);
             ctrs::array<grid::cell_t<int>, 4> ir(idx[0], idx[1], idx[2], idx[3]);
             ir[idir] += 1;
-            // auto flux_data = detail::buffer_flux_data(prims, );
+            // auto flux_data = detail::buffer_flux_data(prims, ); // TODO:: generalize to this level
             const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il[0], il[1], il[2], il[3]);
             const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir[0], ir[1], ir[2], ir[3]);
             ctrs::array<real_type,3> nvec_l = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_comp_l, il, idir);
@@ -35,6 +35,7 @@ namespace cvdf::flux_algs
             fluid_state::prim_t<real_type> ql, qr;
             for (int n = 0; n < ql.size(); ++n) ql[n] = prims(n, il[0], il[1], il[2], il[3]);
             for (int n = 0; n < qr.size(); ++n) qr[n] = prims(n, ir[0], ir[1], ir[2], ir[3]);
+            // calc_gradient(prims, ar_grid.coord_sys());
             fluid_state::flux_t<real_type> flux = flux_func.calc_flux(ql, qr, nvec_l, nvec_r);
             const real_type dx = ar_grid.get_dx(idir);
             for (int n = 0; n < flux.size(); ++n)
