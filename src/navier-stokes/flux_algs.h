@@ -3,6 +3,7 @@
 #include "core/grid.h"
 
 #include "navier-stokes/convective.h"
+#include "navier-stokes/flux_input.h"
 
 namespace cvdf::flux_algs
 {

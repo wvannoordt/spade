@@ -4,6 +4,9 @@
 #include "core/ctrs.h"
 
 #include "navier-stokes/fluid_state.h"
+#include "navier-stokes/flux_base.h"
+#include "navier-stokes/flux_input.h"
+
 namespace cvdf::convective
 {
     template <class T, class state_t>
@@ -19,6 +22,12 @@ namespace cvdf::convective
     };
     
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
+    : public flux_base::flux_base_t<
+        totani_lr,
+        fluid_state::flux_t<dtype>,
+        flux_input::flux_input_t<
+            flux_input::left_right<cell_state<fluid_state::prim_t<dtype>>, cell_normal<fluid_state::prim_t<dtype>>>
+            >
     {
         totani_lr(const gas_t& gas_in) {gas = &gas_in;}
         template <typename dtype> fluid_state::flux_t<dtype>
@@ -26,7 +35,7 @@ namespace cvdf::convective
             const fluid_state::prim_t<dtype>& ql,
             const fluid_state::prim_t<dtype>& qr,
             const ctrs::array<dtype,3>& normal_l,
-            const ctrs::array<dtype,3>& normal_r) const
+            const ctrs::array<dtype,3>& normal_r) const override final
         {
             fluid_state::flux_t<dtype> output;
             dtype un_l = normal_l[0]*ql.u()+normal_l[1]*ql.v()+normal_l[2]*ql.w();

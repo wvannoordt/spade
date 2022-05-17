@@ -442,7 +442,6 @@ namespace cvdf::grid
                                         (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj[0])),
                                         (char*)(&array.unwrap_idx(0,bounds.max(0),j,k,lb_loc,maj[0])),
                                         (char*)(&(send_buf_loc[send_offset_loc])));
-                                        
                                     send_offset_loc += copy_size;
                                 }
                             }
