@@ -134,12 +134,14 @@ int main(int argc, char** argv)
     
     struct get_u_t
     {
+        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
         typedef prim_t arg_type;
+        get_u_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
         real_t operator () (const prim_t& q) const
         {
-            return sqrt(q.u()*q.u() + q.v()*q.v() + q.w()*q.w());
+            return sqrt(gas->gamma*gas->R*q.T()) + sqrt(q.u()*q.u() + q.v()*q.v() + q.w()*q.w());
         }
-    } get_u;
+    } get_u(air);
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
     
