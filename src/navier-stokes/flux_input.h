@@ -42,6 +42,11 @@ namespace cvdf::flux_input
         cell_info_t left, right;
     };
     
+    template <const std::size_t stencil_size, typename cell_info_t> struct flux_line
+    {
+        ctrs::array<cell_info_t, stencil_size> stencil;
+    };
+    
     template <typename cell_stencil_t, typename face_info_t> struct flux_input_t
     {
         cell_stencil_t cell_data;
@@ -98,6 +103,18 @@ namespace cvdf::flux_input
             ir[idir] += 1;
             get_single_cell_data(ar_grid, prims, il, idir, lr.left);
             get_single_cell_data(ar_grid, prims, ir, idir, lr.right);
+        }
+        
+        template <const std::size_t flux_size, typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, flux_line<flux_size, cell_info_t>& sten)
+        {
+            const int idir = iface[0];
+            static_for<0,flux_size>([&](auto i) -> void
+            {
+                ctrs::array<grid::cell_t<int>, 4> icell((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+                icell[idir] += i.value - (int)(flux_size/2) + 1;
+                get_single_cell_data(ar_grid, prims, icell, idir, sten.stencil[i.value]);
+            });
         }
         
         template <typename face_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
