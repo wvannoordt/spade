@@ -27,20 +27,23 @@ void set_channel_noslip(auto& prims)
                 auto r2 = range(-grid.get_num_exchange(2), grid.get_num_cells(2) + grid.get_num_exchange(2));
                 for (auto ii: r1*r2)
                 {
-                    v4c i_d(ii[0], j,             ii[1], lb[0]);
-                    v4c i_g(ii[0], j+nvec_out[1], ii[1], lb[0]);
-                    prim_t q_d, q_g;
-                    for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
-                    const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
-                    const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
-                    const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
-                    const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
-                    q_g.p() =  q_d.p();
-                    q_g.u() = -q_d.u();
-                    q_g.v() = -q_d.v()*n_d[1]/n_g[1];
-                    q_g.w() = -q_d.w();
-                    q_g.T() =  t_wall;
-                    for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
+                    for (int nnn = 0; nnn < 2; ++nnn)
+                    {
+                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1],             ii[1], lb[0]);
+                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb[0]);
+                        prim_t q_d, q_g;
+                        for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
+                        const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
+                        const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
+                        const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
+                        const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
+                        q_g.p() =  q_d.p();
+                        q_g.u() = -q_d.u();
+                        q_g.v() = -q_d.v()*n_d[1]/n_g[1];
+                        q_g.w() = -q_d.w();
+                        q_g.T() =  t_wall;
+                        for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
+                    }
                 }
             }
             ++idc;
