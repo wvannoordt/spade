@@ -10,7 +10,7 @@ typedef cvdf::fluid_state::cons_t<real_t> cons_t;
 
 void set_channel_noslip(auto& prims)
 {
-    const real_t t_wall = 325.0;
+    const real_t t_wall = 0.1;
     const auto& grid = prims.get_grid();
     for (auto lb: range(0, grid.get_num_local_blocks()))
     {
@@ -48,22 +48,54 @@ void set_channel_noslip(auto& prims)
     }
 }
 
+void garbo_visc(auto& prims, auto& rhs, real_t mu)
+{
+    auto& grd = prims.get_grid();
+    auto rg = grd.get_range(cvdf::grid::cell_centered);
+    real_t dx = grd.get_dx(0);
+    real_t dy = grd.get_dx(1);
+    real_t dz = grd.get_dx(2);
+    for (auto idir: range(0, 3))
+    {
+        for (auto i: rg)
+        {
+            real_t lap = 0.0;
+            real_t d00 = prims(2+idir[0], i[0],   i[1],   i[2],   i[3]);
+            real_t d0p = prims(2+idir[0], i[0]+1, i[1],   i[2],   i[3]);
+            real_t d0m = prims(2+idir[0], i[0]-1, i[1],   i[2],   i[3]);
+            real_t d1p = prims(2+idir[0], i[0],   i[1]+1, i[2],   i[3]);
+            real_t d1m = prims(2+idir[0], i[0],   i[1]-1, i[2],   i[3]);
+            real_t d2p = prims(2+idir[0], i[0],   i[1],   i[2]+1, i[3]);
+            real_t d2m = prims(2+idir[0], i[0],   i[1],   i[2]-1, i[3]);
+            lap += (d0p - 2*d00 + d0m)/(dx*dx);
+            lap += (d1p - 2*d00 + d1m)/(dy*dy);
+            lap += (d2p - 2*d00 + d2m)/(dz*dz);
+            lap *= mu;
+            rhs(2+idir[0], i[0],   i[1],   i[2],   i[3]) += lap;
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     cvdf::parallel::mpi_t group(&argc, &argv);
     
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(4, 4, 4);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(24, 24, 24);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
     bounds.min(0) =  0.0;
-    bounds.max(0) =  4.0*cvdf::consts::pi*delta;
+    bounds.max(0) =  2.0*cvdf::consts::pi*delta;
     bounds.min(1) = -delta;
     bounds.max(1) =  delta;
     bounds.min(2) =  0.0;
-    bounds.max(2) =  4.0*cvdf::consts::pi*delta/3.0;
+    bounds.max(2) =  cvdf::consts::pi*delta;
+    
+    const real_t targ_cfl = 0.1;
+    const int    nt_max   = 100000;
+    const int    nt_skip  = 40;
     
     cvdf::coords::identity<real_t> coords;
     
@@ -80,24 +112,30 @@ int main(int argc, char** argv)
     air.R = 287.15;
     air.gamma = 1.4;
     
-    const double p0 = 101325.0;
-    const double t0 = 325.0;
+    const double p0 = 30.0;
+    const double t0 = 0.1;
     const double u0 = 69.54;
-    const double duhat = 0.5;
+    const double mu = visc_law.get_visc();
+    const double rho = p0/(air.R*t0);
+    const double u_tau = re_tau*mu/(rho*delta);
+    const double force_term = rho*u_tau*u_tau/delta;
+    
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
         prim_t output;
         output.p() = p0;
         output.T() = t0;
-        output.u() = 1.5*(1.0 - x[1]*x[1]/(delta*delta))*u0;
+        output.u() = 20.0*u_tau;
         output.v() = 0.0;
         output.w() = 0.0;
-        if ((((i/6) + (j/6))%2==0) && (((i/3) + (j/3))%2==0))
+        
+        if (x[0] > 1.15 && x[0] < 1.55 && x[1] > -0.08 && x[1] < 0.08 && x[2] > 1.15/2 && x[2] < 1.55/2)
         {
-            output.u() += duhat*u0;
-            output.v() += duhat*u0;
-            output.w() += duhat*u0;
+            output.u() += 10*u_tau;
+            output.v() += 10*u_tau;
+            output.w() += 10*u_tau;
         }
+        
         return output;
     };
     
@@ -145,28 +183,44 @@ int main(int argc, char** argv)
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
     
-    const int    nt_max = 100000;
-    const real_t dt     = 1e-2;
+    
+    
+    const real_t dx = cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
+    const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
+    const real_t dt     = targ_cfl*dx/umax_ini;
+    std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
-        cvdf::algs::transform_inplace(prim, c2p);
         int nt = nti[0];
         grid.exchange_array(prim);
         set_channel_noslip(prim);
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
         // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        cvdf::algs::transform_inplace(prim, [&](const cvdf::ctrs::array<real_t, 5>& rhs) -> cvdf::ctrs::array<real_t, 5> 
+        {
+            cvdf::ctrs::array<real_t, 5> rhs_new = rhs;
+            rhs_new[2] += force_term;
+            return rhs_new;
+        });
+        garbo_visc(prim, rhs, mu);
         cvdf::algs::transform_inplace(prim, p2c);
         rhs  *= dt;
         prim += rhs;
+        cvdf::algs::transform_inplace(prim, c2p);
         real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
         real_t rhsmax = cvdf::algs::transform_reduce(rhs,  [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
         {
-            print(nt, umax, rhsmax);
+            const real_t cfl = umax*dt/dx;
+            print(nt, cfl, umax, dx, dt);
+            myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
+            myfile.flush();
         }
-        if (nt%300 == 0)
+        if (nt%nt_skip == 0)
         {
-            cvdf::output::output_vtk("output", "last", grid, prim);
+            std::string nstr = cvdf::utils::zfill(nt, 8);
+            std::string filename = "prims"+nstr;
+            cvdf::output::output_vtk("output", filename, grid, prim);
         }
     }
     
