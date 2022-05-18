@@ -96,9 +96,9 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  cvdf::consts::pi*delta;
     
-    const real_t targ_cfl = 0.1;
-    const int    nt_max   = 100000;
-    const int    nt_skip  = 40;
+    const real_t targ_cfl = 0.05;
+    const int    nt_max   = 25000;
+    const int    nt_skip  = 250;
     
     cvdf::coords::identity<real_t> coords;
     
@@ -115,29 +115,49 @@ int main(int argc, char** argv)
     air.R = 287.15;
     air.gamma = 1.4;
     
-    const double p0 = 30.0;
-    const double t0 = 0.1;
-    const double u0 = 69.54;
-    const double mu = visc_law.get_visc();
-    const double rho = p0/(air.R*t0);
-    const double u_tau = re_tau*mu/(rho*delta);
-    const double force_term = rho*u_tau*u_tau/delta;
+    const real_t p0 = 30.0;
+    const real_t t0 = 0.1;
+    const real_t u0 = 69.54;
+    const real_t mu = visc_law.get_visc();
+    const real_t rho = p0/(air.R*t0);
+    const real_t u_tau = re_tau*mu/(rho*delta);
+    const real_t force_term = rho*u_tau*u_tau/delta;
+    const real_t du = 3.0;
+    
+    const int nidx = 8;
+    std::vector<real_t> r_amp_1(cells_in_block[0]/nidx);
+    std::vector<real_t> r_amp_2(cells_in_block[1]/nidx);
+    std::vector<real_t> r_amp_3(cells_in_block[2]/nidx);
+    
+    for (auto& p: r_amp_1) p = 1.0 - 2.0*cvdf::utils::unitary_random();
+    for (auto& p: r_amp_2) p = 1.0 - 2.0*cvdf::utils::unitary_random();
+    for (auto& p: r_amp_3) p = 1.0 - 2.0*cvdf::utils::unitary_random();
     
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
+        const real_t shape = 1.0 - pow(x[1]/delta, 4);
+        const real_t turb  = du*u_tau*sin(10.0*cvdf::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
         prim_t output;
         output.p() = p0;
         output.T() = t0;
-        output.u() = 20.0*u_tau;
-        output.v() = 0.0;
-        output.w() = 0.0;
+        output.u() = (20.0*u_tau + 0.0*turb)*shape;
+        output.v() = (0.0        + 0.0*turb)*shape;
+        output.w() = (0.0        + 0.0*turb)*shape;
         
-        if (x[0] > 1.15 && x[0] < 1.55 && x[1] > -0.08 && x[1] < 0.08 && x[2] > 1.15/2 && x[2] < 1.55/2)
-        {
-            output.u() += 10*u_tau;
-            output.v() += 10*u_tau;
-            output.w() += 10*u_tau;
-        }
+        int eff_i = i/nidx;
+        int eff_j = j/nidx;
+        int eff_k = k/nidx;
+        
+        const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k]);
+        // output.u() += per*shape;
+        // output.v() += per*shape;
+        // output.w() += per*shape;
+        // if (x[0] > 1.15 && x[0] < 1.55 && x[1] > -0.08 && x[1] < 0.08 && x[2] > 1.15/2 && x[2] < 1.55/2)
+        // {
+        //     output.u() += 10*u_tau;
+        //     output.v() += 10*u_tau;
+        //     output.w() += 10*u_tau;
+        // }
         
         return output;
     };
@@ -197,19 +217,6 @@ int main(int argc, char** argv)
         int nt = nti[0];
         grid.exchange_array(prim);
         set_channel_noslip(prim);
-        cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
-        cvdf::algs::transform_inplace(prim, [&](const cvdf::ctrs::array<real_t, 5>& rhs) -> cvdf::ctrs::array<real_t, 5> 
-        {
-            cvdf::ctrs::array<real_t, 5> rhs_new = rhs;
-            rhs_new[2] += force_term;
-            return rhs_new;
-        });
-        garbo_visc(prim, rhs, mu);
-        cvdf::algs::transform_inplace(prim, p2c);
-        rhs  *= dt;
-        prim += rhs;
-        cvdf::algs::transform_inplace(prim, c2p);
         real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
         real_t rhsmax = cvdf::algs::transform_reduce(rhs,  [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
@@ -225,6 +232,20 @@ int main(int argc, char** argv)
             std::string filename = "prims"+nstr;
             cvdf::output::output_vtk("output", filename, grid, prim);
         }
+        
+        cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
+        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        cvdf::algs::transform_inplace(prim, [&](const cvdf::ctrs::array<real_t, 5>& rhs) -> cvdf::ctrs::array<real_t, 5> 
+        {
+            cvdf::ctrs::array<real_t, 5> rhs_new = rhs;
+            rhs_new[2] += force_term;
+            return rhs_new;
+        });
+        garbo_visc(prim, rhs, mu);
+        cvdf::algs::transform_inplace(prim, p2c);
+        rhs  *= dt;
+        prim += rhs;
+        cvdf::algs::transform_inplace(prim, c2p);
     }
     
     

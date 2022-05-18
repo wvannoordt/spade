@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sstream>
 #include <iostream>
+#include <cstdlib>
+
 namespace cvdf::utils
 {
     template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
@@ -142,5 +144,15 @@ namespace cvdf::utils
     {
         int num = 1;
         return (! ( *(char *)&num == 1 ));
+    }
+    
+    static inline void random_seed(unsigned int seed)
+    {
+        srand(seed);
+    }
+    
+    template <typename out_t=double> static inline out_t unitary_random(void)
+    {
+        return ((out_t) rand() / (RAND_MAX));
     }
 }
