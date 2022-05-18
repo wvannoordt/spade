@@ -37,14 +37,14 @@ int main(int argc, char** argv)
     bounds.max(2) =  0.5;
     
     // cvdf::coords::integrated_tanh_1D<real_t> xc(bounds.min(0), bounds.max(0), 0.1, 1.3);
-    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    // cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
     // cvdf::coords::integrated_tanh_1D<real_t> zc(bounds.min(2), bounds.max(2), 0.1, 1.3);
     
-    cvdf::coords::identity_1D<real_t> xc;
+    // cvdf::coords::identity_1D<real_t> xc;
     // cvdf::coords::identity_1D<real_t> yc;
-    cvdf::coords::identity_1D<real_t> zc;
-    cvdf::coords::diagonal_coords coords(xc, yc, zc);
-    // cvdf::coords::cyl_coords<real_t> coords;
+    // cvdf::coords::identity_1D<real_t> zc;
+    // cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    cvdf::coords::cyl_coords<real_t> coords;
     
     // cvdf::coords::identity<real_t> coords;
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(2, 2, 2);
