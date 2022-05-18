@@ -319,6 +319,7 @@ namespace cvdf::output
                 
                 output_parallel_header_file(header_file_strm, block_template_str, numzeros, obj);
             }
+            obj.group().sync();
             for (auto i: range(0, obj.get_num_local_blocks()))
             {
                 std::filesystem::path block_abs_path(out_dir);
@@ -328,6 +329,7 @@ namespace cvdf::output
                 std::ofstream block_file_strm(block_abs_path_str);
                 output_parralel_block_file(block_file_strm, i[0], obj, arrays...);
             }
+            obj.group().sync();
             return header_filename;
         }
     }
