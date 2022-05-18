@@ -29,7 +29,7 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1],             ii[1], lb[0]);
+                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb[0]);
                         v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb[0]);
                         prim_t q_d, q_g;
                         for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
