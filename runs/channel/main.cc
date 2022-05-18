@@ -97,8 +97,8 @@ int main(int argc, char** argv)
     bounds.max(2) =  cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.05;
-    const int    nt_max   = 25000;
-    const int    nt_skip  = 250;
+    const int    nt_max   = 50000;
+    const int    nt_skip  = 5000;
     
     cvdf::coords::identity<real_t> coords;
     
@@ -165,6 +165,7 @@ int main(int argc, char** argv)
     cvdf::algs::fill_array(prim, ini);
     cvdf::output::output_vtk("output", "ini", grid, prim);
     cvdf::convective::totani_lr tscheme(air);
+    cvdf::convective::weno_3    wscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
     
     struct p2c_t
@@ -233,7 +234,8 @@ int main(int argc, char** argv)
             cvdf::output::output_vtk("output", filename, grid, prim);
         }
         
-        cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
+        // cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
+        cvdf::flux_algs::flux_lr_diff(prim, rhs, wscheme);
         // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
         cvdf::algs::transform_inplace(prim, [&](const cvdf::ctrs::array<real_t, 5>& rhs) -> cvdf::ctrs::array<real_t, 5> 
         {
