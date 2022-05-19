@@ -681,6 +681,12 @@ namespace cvdf::grid
             return *this;
         }
         
+        grid_array& operator = (const ar_data_t& v)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] = v;
+            return *this;
+        }
+        
         minor_dim_t get_minor_dims(void) const { return minor_dims; }
         major_dim_t get_major_dims(void) const { return major_dims; }
         major_dim_t get_grid_dims (void) const { return grid_dims;  }

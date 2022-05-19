@@ -106,7 +106,8 @@ int main(int argc, char** argv)
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
     cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs  (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array rhs0 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array rhs1 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -206,20 +207,46 @@ int main(int argc, char** argv)
     } get_u(air);
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
+    const real_t time0 = 0.0;
     
     
     
     const real_t dx = cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
     const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt     = targ_cfl*dx/umax_ini;
+    
+    auto ftrans = [&](auto& q) -> void
+    {
+        cvdf::algs::transform_inplace(prim, p2c);
+    };
+    auto itrans = [&](auto& q) -> void
+    {
+        cvdf::algs::transform_inplace(prim, c2p);
+    };
+    auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
+    {
+        rhs = 0.0;
+        grid.exchange_array(q);
+        set_channel_noslip(q);
+        cvdf::flux_algs::flux_lr_diff(q, rhs, tscheme);
+        // cvdf::flux_algs::flux_lr_diff(q, rhs, wscheme);
+        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
+        {
+            cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;
+            rhs_new[2] += force_term;
+            return rhs_new;
+        });
+        garbo_visc(q, rhs, mu);
+    };
+    
+    cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
+    
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
         int nt = nti[0];
-        grid.exchange_array(prim);
-        set_channel_noslip(prim);
         real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
-        real_t rhsmax = cvdf::algs::transform_reduce(rhs,  [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
@@ -233,21 +260,7 @@ int main(int argc, char** argv)
             std::string filename = "prims"+nstr;
             cvdf::output::output_vtk("output", filename, grid, prim);
         }
-        
-        // cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
-        cvdf::flux_algs::flux_lr_diff(prim, rhs, wscheme);
-        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
-        cvdf::algs::transform_inplace(prim, [&](const cvdf::ctrs::array<real_t, 5>& rhs) -> cvdf::ctrs::array<real_t, 5> 
-        {
-            cvdf::ctrs::array<real_t, 5> rhs_new = rhs;
-            rhs_new[2] += force_term;
-            return rhs_new;
-        });
-        garbo_visc(prim, rhs, mu);
-        cvdf::algs::transform_inplace(prim, p2c);
-        rhs  *= dt;
-        prim += rhs;
-        cvdf::algs::transform_inplace(prim, c2p);
+        time_int.advance();
     }
     
     
