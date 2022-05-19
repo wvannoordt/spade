@@ -9,21 +9,20 @@ int main(int argc, char** argv)
     real_t t1 = 5.0*cvdf::consts::pi;
     int nt = 250;
     real_t dt = (t1 - t0) / (nt);
-    var = -1.0;
-    
+    var = 5.0;
+    auto ftrans = [](real_t& f) -> void {f = f*f; };
+    auto itrans = [](real_t& f) -> void {f = sqrt(f); };
     auto calc_rhs = [&](real_t& rhs, const real_t& q, const real_t& time) -> void
     {
         rhs = 0.0;
-        rhs += sin(time);
+        rhs += 2.0*q*cos(time);
     };
-    cvdf::time_integration::identity_transform_t<real_t> trans;
-    cvdf::time_integration::rk2 time_int(var, rhs1, rhs2, t0, dt, calc_rhs, trans, trans);
+    cvdf::time_integration::rk2 time_int(var, rhs1, rhs2, t0, dt, calc_rhs, ftrans, itrans);
     std::ofstream myfile("soln.dat");
     for (int i = 0; i < nt; ++i)
     {
         time_int.advance();
-        print(time_int.time(), time_int.soln(), -cos(time_int.time()));
-        myfile << time_int.time() << " " << time_int.soln() << " " << -cos(time_int.time()) << std::endl;
+        myfile << time_int.time() << " " << time_int.soln() << " " << (5.0+sin(time_int.time())) << std::endl;
     }
     
     return 0;
