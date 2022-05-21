@@ -169,8 +169,7 @@ namespace cvdf::parallel
             {
                 for (std::size_t i = 0; i < buf.offst.size(); ++i)
                 {
-                    print(buf.offst[i], buf.datas[i], buf.sizes[i], group->rank());
-                    // MPI_CHECK(MPI_File_write_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
+                    MPI_CHECK(MPI_File_write_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
                 }
                 return *this;
             }
@@ -179,7 +178,7 @@ namespace cvdf::parallel
             {
                 for (std::size_t i = 0; i < buf.offst.size(); ++i)
                 {
-                    // MPI_CHECK(MPI_File_read_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
+                    MPI_CHECK(MPI_File_read_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
                 }
                 return *this;
             }
@@ -187,7 +186,7 @@ namespace cvdf::parallel
             mpi_file_t& close(void)
             {
                 is_open = false;
-                // MPI_CHECK(MPI_File_close(&file_handle));
+                MPI_CHECK(MPI_File_close(&file_handle));
                 return *this;
             }
         private:        

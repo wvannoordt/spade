@@ -96,10 +96,10 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  cvdf::consts::pi*delta;
     
-    const real_t targ_cfl         = 0.05;
-    const int    nt_max           = 50000;
-    const int    nt_skip          = 5000;
-    const int    checkpoint_skip  = 5000;
+    const real_t targ_cfl = 0.25;
+    const int    nt_max   = 52;
+    const int    nt_skip  = 50;
+    const int    checkpoint_skip  = 50;
     
     cvdf::coords::identity<real_t> coords;
     
@@ -154,9 +154,9 @@ int main(int argc, char** argv)
         int eff_k = k/nidx;
         
         const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k]);
-        // output.u() += per*shape;
-        // output.v() += per*shape;
-        // output.w() += per*shape;
+        output.u() += per*shape;
+        output.v() += per*shape;
+        output.w() += per*shape;
         // if (x[0] > 1.15 && x[0] < 1.55 && x[1] > -0.08 && x[1] < 0.08 && x[2] > 1.15/2 && x[2] < 1.55/2)
         // {
         //     output.u() += 10*u_tau;
@@ -172,6 +172,9 @@ int main(int argc, char** argv)
     cvdf::convective::totani_lr tscheme(air);
     cvdf::convective::weno_3    wscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
+    
+    
+    // cvdf::output::binary_read("checkpoint/check00000050.bin", prim);
     
     struct p2c_t
     {
@@ -260,16 +263,20 @@ int main(int argc, char** argv)
         }
         if (nt%nt_skip == 0)
         {
+            if (group.isroot()) print("Output solution...");
             std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "prims"+nstr;
             cvdf::output::output_vtk("output", filename, grid, prim);
+            if (group.isroot()) print("Done.");
         }
         if (nt%checkpoint_skip == 0)
         {
+            if (group.isroot()) print("Output checkpoint...");
             std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "check"+nstr;
             filename = "checkpoint/"+filename+".bin";
             cvdf::output::binary_write(filename, prim);
+            if (group.isroot()) print("Done.");
         }
         time_int.advance();
     }
