@@ -12,6 +12,7 @@ typedef MPI_Datatype  mpi_data_t;
 typedef MPI_Op        mpi_op_t;
 typedef MPI_Request   request_t;
 typedef MPI_Status    status_t;
+typedef MPI_File      mpi_native_file_t;
 #define MPI_CHECK(mycode) {mycode ;}
 
 namespace cvdf::parallel
@@ -25,6 +26,7 @@ typedef unsigned long mpi_data_t;
 typedef unsigned long mpi_op_t;
 typedef unsigned long request_t;
 typedef unsigned long status_t;
+typedef unsigned long mpi_native_file_t;
 #define MPI_CHECK(mycode) ;
 
 namespace cvdf::parallel

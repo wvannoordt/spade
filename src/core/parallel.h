@@ -3,6 +3,7 @@
 #include <concepts>
 #include <type_traits>
 #include <source_location>
+#include <vector>
 
 
 #include "print.h"
@@ -106,8 +107,93 @@ namespace cvdf::parallel
                 return red_glob;
             }
             
+            const mpi_comm_t& get_channel(void) const {return channel;}
+            
         private:
             int g_rank, g_size;
             mpi_comm_t channel;
+    };
+    
+    struct par_buf_t
+    {
+        std::vector<void*>       datas;
+        std::vector<std::size_t> sizes;
+        std::vector<std::size_t> offst;
+        void add(void* base, const std::size_t& size, const std::size_t offset)
+        {
+            sizes.push_back(size);
+            datas.push_back(base);
+            offst.push_back(offset);
+        }
+        
+        void clear(void)
+        {
+            datas.clear();
+            sizes.clear();
+            offst.clear();
+        }
+    };
+    
+    class mpi_file_t
+    {
+        public:
+            mpi_file_t(const mpi_t& group_in, const std::string& filename)
+            {
+                this->open(filename);
+                this->group = &group_in;
+            }
+            
+            mpi_file_t(const mpi_t& group_in)
+            {
+                this->group = &group_in;
+            }
+            
+            ~mpi_file_t(void)
+            {
+                if (this->is_open)
+                {
+                    this->close();
+                }
+            }
+            
+            mpi_file_t& open(const std::string& filename)
+            {
+                is_open = true;
+                auto chan = group->get_channel();
+                auto cstr = filename.c_str();
+                MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, cstr, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &file_handle));
+                return *this;
+            }
+            
+            mpi_file_t& write_buf(par_buf_t& buf)
+            {
+                for (std::size_t i = 0; i < buf.offst.size(); ++i)
+                {
+                    print(buf.offst[i], buf.datas[i], buf.sizes[i], group->rank());
+                    // MPI_CHECK(MPI_File_write_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
+                }
+                return *this;
+            }
+            
+            mpi_file_t& read_buf(par_buf_t& buf)
+            {
+                for (std::size_t i = 0; i < buf.offst.size(); ++i)
+                {
+                    // MPI_CHECK(MPI_File_read_at(file_handle, buf.offst[i], buf.datas[i], buf.sizes[i], MPI_CHAR, &file_status));
+                }
+                return *this;
+            }
+            
+            mpi_file_t& close(void)
+            {
+                is_open = false;
+                // MPI_CHECK(MPI_File_close(&file_handle));
+                return *this;
+            }
+        private:        
+            bool is_open = false;
+            mpi_native_file_t file_handle;
+            status_t file_status;
+            const mpi_t* group;
     };
 }

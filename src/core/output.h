@@ -352,4 +352,46 @@ namespace cvdf::output
             return total_filename;
         }
     }
+    
+    namespace detail
+    {
+        template <grid::multiblock_array array_t> void get_array_par_buf(parallel::par_buf_t& buf, const array_t& array)
+        {
+            buf.clear();
+            const auto& grid = array.get_grid();
+            auto block_range = grid.get_range(array.centering_type(), grid::include_exchanges);
+            std::size_t block_elems = block_range.size();
+            typedef typename array_t::value_type data_t;
+            std::size_t block_size_bytes = block_elems*sizeof(data_t);
+            ctrs::array<int, 3> nexch (grid.get_num_exchange(0), grid.get_num_exchange(1), grid.get_num_exchange(2));
+            for (auto maj: range(0, array.get_major_dims().total_size()))
+            {
+                for (auto lb: range(0, array.get_grid().get_num_local_blocks()))
+                {
+                    std::size_t lb_glob = array.get_grid().get_partition().get_global_block(lb[0]);
+                    void* ptr = (void*)(&array.unwrap_idx(0,-nexch[0], -nexch[1], -nexch[2], lb[0], maj[0]));
+                    std::size_t offset_bytes = lb_glob*block_size_bytes;
+                    buf.add(ptr, block_size_bytes, offset_bytes);
+                }
+            }
+        }
+    }
+    
+    template <grid::multiblock_array array_t> void binary_write(const std::string& filename, array_t& array)
+    {
+        const auto& group = array.get_grid().group();
+        parallel::par_buf_t buf;
+        detail::get_array_par_buf(buf, array);
+        parallel::mpi_file_t mf(group, filename);
+        mf.write_buf(buf);
+    }
+    
+    template <grid::multiblock_array array_t> void binary_read(const std::string& filename, array_t& array)
+    {
+        const auto& group = array.get_grid().group();
+        parallel::par_buf_t buf;
+        detail::get_array_par_buf(buf, array);
+        parallel::mpi_file_t mf(group, filename);
+        mf.read_buf(buf);
+    }
 }

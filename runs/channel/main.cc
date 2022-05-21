@@ -96,11 +96,15 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  cvdf::consts::pi*delta;
     
-    const real_t targ_cfl = 0.05;
-    const int    nt_max   = 50000;
-    const int    nt_skip  = 5000;
+    const real_t targ_cfl         = 0.05;
+    const int    nt_max           = 50000;
+    const int    nt_skip          = 5000;
+    const int    checkpoint_skip  = 5000;
     
     cvdf::coords::identity<real_t> coords;
+    
+    std::filesystem::path out_path("checkpoint");
+    if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
     
     
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
@@ -259,6 +263,13 @@ int main(int argc, char** argv)
             std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "prims"+nstr;
             cvdf::output::output_vtk("output", filename, grid, prim);
+        }
+        if (nt%checkpoint_skip == 0)
+        {
+            std::string nstr = cvdf::utils::zfill(nt, 8);
+            std::string filename = "check"+nstr;
+            filename = "checkpoint/"+filename+".bin";
+            cvdf::output::binary_write(filename, prim);
         }
         time_int.advance();
     }
