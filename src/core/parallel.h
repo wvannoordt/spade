@@ -2,12 +2,15 @@
 
 #include <concepts>
 #include <type_traits>
-#include <source_location>
 #include <vector>
 
-
-#include "print.h"
+#include "core/config.h"
+#include "core/print.h"
 #include "core/mpi_flags.h"
+
+#if (USE_SOURCE_LOCATION)
+#include <source_location>
+#endif
 
 namespace cvdf::parallel
 {
@@ -55,14 +58,20 @@ namespace cvdf::parallel
                 MPI_CHECK(MPI_Barrier(this->channel));
                 return *this;
             }
-            
+
+#if(USE_SOURCE_LOCATION)
             const mpi_t& pause(const std::source_location location = std::source_location::current()) const
+#else
+            const mpi_t& pause(void) const
+#endif
             {
                 if (isroot())
                 {
+#if(USE_SOURCE_LOCATION)
                     print("Parallel group", (void*)this, " paused at:");
                     print("File:", location.file_name());
                     print("Line:", location.line());
+#endif
                     print("Awaiting input...");
                     std::cin.get();
                 }
