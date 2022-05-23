@@ -98,23 +98,23 @@ int main(int argc, char** argv)
         }
     }
     
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(4, 4, 4);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
     bounds.min(0) =  0.0;
-    bounds.max(0) =  2.0*cvdf::consts::pi*delta;
+    bounds.max(0) =  4.0*cvdf::consts::pi*delta;
     bounds.min(1) = -delta;
     bounds.max(1) =  delta;
     bounds.min(2) =  0.0;
-    bounds.max(2) =  cvdf::consts::pi*delta;
+    bounds.max(2) =  2*cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.25;
-    const int    nt_max   = 52;
-    const int    nt_skip  = 50;
-    const int    checkpoint_skip  = 50;
+    const int    nt_max   = 150000;
+    const int    nt_skip  = 10000;
+    const int    checkpoint_skip  = 2500;
     
     cvdf::coords::identity<real_t> coords;
     
