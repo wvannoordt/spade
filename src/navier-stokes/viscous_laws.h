@@ -8,6 +8,7 @@ namespace cvdf::viscous_laws
 {
     template <class T> concept state_independent_viscosity = std::floating_point<typename T::value_type> && requires(T t)
     {
+        typename T::value_type;
         t.get_visc();
         t.get_beta();
         t.get_conductivity();
@@ -16,6 +17,7 @@ namespace cvdf::viscous_laws
     template <class T> concept state_dependent_viscosity = std::floating_point<typename T::value_type>
     && requires(T t, const fluid_state::prim_t<typename T::value_type>& q)
     {
+        typename T::value_type;
         t.get_visc(q);
         t.get_beta(q);
         t.get_conductivity(q);

@@ -24,6 +24,21 @@ namespace cvdf::flux_input
         data_t data;
     };
     
+    template <typename data_t> struct face_state
+    {
+        data_t data;
+    };
+    
+    template <typename data_t> struct face_state_grad
+    {
+        data_t data;
+    };
+    
+    template <typename data_t> struct face_normal
+    {
+        data_t data;
+    };
+    
     template <typename... infos_t> struct cell_info
     {
         const static std::size_t num_params = sizeof...(infos_t);
@@ -34,7 +49,10 @@ namespace cvdf::flux_input
     
     template <typename... infos_t> struct face_info
     {
-        std::tuple<infos_t...> data;
+        const static std::size_t num_params = sizeof...(infos_t);
+        std::tuple<infos_t...> elements;
+        template <const std::size_t idx> const auto& item(void) const {return std::get<idx>(elements).data;}
+        template <const std::size_t idx> auto& item(void) {return std::get<idx>(elements).data;}
     };
     
     template <typename cell_info_t> struct left_right
@@ -117,10 +135,62 @@ namespace cvdf::flux_input
             });
         }
         
-        template <typename face_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_face_stencil_data(const grid_t& grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, face_info_t& face_data)
+        template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_face_info_value(
+            const grid_t& ar_grid,
+            const array_t& prims,
+            const ctrs::array<grid::face_t<int>, 5>& iface,
+            face_normal<output_t>& output)
         {
-            //TODO [viscous implementation]
+            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(iface[0], iface[1], iface[2], iface[3], iface[4]);
+            output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface);
+        }
+        
+        template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_face_info_value(
+            const grid_t& ar_grid,
+            const array_t& prims,
+            const ctrs::array<grid::face_t<int>, 5>& iface,
+            face_state<output_t>& output)
+        {
+            const int idir = iface[0];
+            ctrs::array<grid::cell_t<int>, 4> il((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+            ctrs::array<grid::cell_t<int>, 4> ir((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+            ir[idir] += 1;
+            cell_state<output_t> ql, qr;
+            get_single_cell_info_value(ar_grid, prims, il, idir, ql);
+            get_single_cell_info_value(ar_grid, prims, ir, idir, qr);
+            for (int n = 0; n < output.data.size(); ++n) output.data[n] = 0.5*ql.data[n] + 0.5*qr.data[n];
+        }
+        
+        template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_face_info_value(
+            const grid_t& ar_grid,
+            const array_t& prims,
+            const ctrs::array<grid::face_t<int>, 5>& iface,
+            face_state_grad<output_t>& output)
+        {
+            const int idir0 = iface[0];
+            const int idir1 = (idir0+1)%3;
+            const int idir2 = (idir1+1)%3;
+            ctrs::array<grid::cell_t<int>, 4> il((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+            ctrs::array<grid::cell_t<int>, 4> ir((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+            ir[idir0] += 1;
+            cell_state<output_t> ql, qr;
+            get_single_cell_info_value(ar_grid, prims, il, idir0, ql);
+            get_single_cell_info_value(ar_grid, prims, ir, idir0, qr);
+            // for (int n = 0; n < output.data.size(); ++n) output.data[n] = 0.5*ql.data[n] + 0.5*qr.data[n];
+        }
+        
+        
+        template <typename face_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_face_data(const grid_t& grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, face_info_t& face_data)
+        {
+            auto& p = face_data.elements;
+            static_for<0,face_info_t::num_params>([&](auto i) -> void
+            {
+                get_face_info_value(grid, prims, iface, std::get<i.value>(p));
+            });
         }
     }
     
@@ -128,6 +198,6 @@ namespace cvdf::flux_input
     void get_flux_data(const grid_t& grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, flux_in_t& flux_input)
     {
         detail::get_cell_stencil_data(grid, prims, iface, flux_input.cell_data);
-        detail::get_face_stencil_data(grid, prims, iface, flux_input.face_data);
+        detail::get_face_data(grid, prims, iface, flux_input.face_data);
     }
 }

@@ -65,86 +65,82 @@ int main(int argc, char** argv)
     std::vector<real_t> err_4_l2  (numcells.size());
     std::vector<real_t> dxs;    
     
-    // for (int n = 0; n < numcells.size(); ++n)
-    // {
-    //     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(numcells[n], numcells[n], numcells[n]);
-    // 
-    //     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
-    // 
-    //     dxs.push_back(cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2)));
-    // 
-    //     std::size_t num_dof = grid.get_num_interior_cells();
-    //     num_dof = group.sum(num_dof);
-    // 
-    //     if (group.isroot()) print("Grid level / cells:           ", n, "/", num_dof);
-    // 
-    //     cvdf::grid::grid_array prim    (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    //     cvdf::grid::grid_array rhs     (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    //     cvdf::grid::grid_array rhs_test(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    // 
-    //     cvdf::algs::fill_array(prim,     mms_test_func, cvdf::grid::include_exchanges);
-    //     cvdf::algs::fill_array(rhs_test, mms_visc_func, cvdf::grid::include_exchanges);        
-    // 
-    //     cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
-    // 
-    //     bool output = true;
-    //     if (output)
-    //     {
-    //         std::string filename = "rhs" + std::to_string(n);
-    //         std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
-    //     }
-    //     rhs -= rhs_test;
-    // 
-    //     cvdf::reduce_ops::reduce_sum<real_t> sum;
-    //     cvdf::reduce_ops::reduce_max<real_t> max;
-    // 
-    //     err_0_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[0]*rhs_arr[0];}, sum)/num_dof);
-    //     err_1_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[1]*rhs_arr[1];}, sum)/num_dof);
-    //     err_2_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[2]*rhs_arr[2];}, sum)/num_dof);
-    //     err_3_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[3]*rhs_arr[3];}, sum)/num_dof);
-    //     err_4_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[4]*rhs_arr[4];}, sum)/num_dof);
-    // 
-    //     err_0_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[0]);}, max);
-    //     err_1_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[1]);}, max);
-    //     err_2_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[2]);}, max);
-    //     err_3_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[3]);}, max);
-    //     err_4_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[4]);}, max);
-    // 
-    //     if (group.isroot()) print("L2:  ", err_0_l2  [n], err_1_l2  [n], err_2_l2  [n], err_3_l2  [n], err_4_l2  [n]);
-    //     if (group.isroot()) print("LInf:", err_0_linf[n], err_1_linf[n], err_2_linf[n], err_3_linf[n], err_4_linf[n]);
-    //     if (group.isroot()) print();
-    // }
-    // auto err_report = [](const std::string& title, const std::vector<real_t>& errs, const std::vector<real_t>& dx) -> void
-    // {
-    //     std::vector<real_t> orders(errs.size()-1);
-    //     for (int i = 0; i < orders.size(); ++i)
-    //     {
-    //         orders[i] = (log(errs[i+1])-log(errs[i]))/(log(dx[i+1])-log(dx[i]));
-    //     }
-    //     print(">>", title);
-    //     for (auto r: orders)
-    //     {
-    //         print(r);
-    //     }
-    // };
-    // if (group.isroot())
-    // {
-    //     print("Error report:");
-    //     print("=========================================");
-    //     err_report("Continuity (conv, L2)", err_0_l2, dxs);
-    //     err_report("Energy     (conv, L2)", err_1_l2, dxs);
-    //     err_report("X-Momentum (conv, L2)", err_2_l2, dxs);
-    //     err_report("Z-Momentum (conv, L2)", err_3_l2, dxs);
-    //     err_report("Y-Momentum (conv, L2)", err_4_l2, dxs);
-    //     print("=========================================");
-    //     err_report("Continuity (conv, Linf)", err_0_linf, dxs);
-    //     err_report("Energy     (conv, Linf)", err_1_linf, dxs);
-    //     err_report("X-Momentum (conv, Linf)", err_2_linf, dxs);
-    //     err_report("Z-Momentum (conv, Linf)", err_3_linf, dxs);
-    //     err_report("Y-Momentum (conv, Linf)", err_4_linf, dxs);
-    //     print("=========================================");
-    //     print("Happy computing.");
-    // }
-    // 
+    for (int n = 0; n < numcells.size(); ++n)
+    {
+        cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> cells_in_block(numcells[n], numcells[n], numcells[n]);
+    
+        cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    
+        dxs.push_back(cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2)));
+    
+        std::size_t num_dof = grid.get_num_interior_cells();
+        num_dof = group.sum(num_dof);
+    
+        if (group.isroot()) print("Grid level / cells:           ", n, "/", num_dof);
+    
+        cvdf::grid::grid_array prim    (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+        cvdf::grid::grid_array rhs     (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+        cvdf::grid::grid_array rhs_test(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    
+        cvdf::algs::fill_array(prim,     mms_test_func, cvdf::grid::include_exchanges);
+        cvdf::algs::fill_array(rhs_test, mms_visc_func, cvdf::grid::include_exchanges);        
+    
+        cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+    
+        bool output = true;
+        if (output)
+        {
+            std::string filename = "rhs" + std::to_string(n);
+            std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
+        }
+        rhs -= rhs_test;
+    
+        cvdf::reduce_ops::reduce_sum<real_t> sum;
+        cvdf::reduce_ops::reduce_max<real_t> max;
+    
+        err_1_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[1]*rhs_arr[1];}, sum)/num_dof);
+        err_2_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[2]*rhs_arr[2];}, sum)/num_dof);
+        err_3_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[3]*rhs_arr[3];}, sum)/num_dof);
+        err_4_l2[n]   = sqrt(cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return rhs_arr[4]*rhs_arr[4];}, sum)/num_dof);
+    
+        err_1_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[1]);}, max);
+        err_2_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[2]);}, max);
+        err_3_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[3]);}, max);
+        err_4_linf[n] = cvdf::algs::transform_reduce(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_arr) -> real_t {return std::abs(rhs_arr[4]);}, max);
+    
+        if (group.isroot()) print("L2:  ", err_1_l2  [n], err_2_l2  [n], err_3_l2  [n], err_4_l2  [n]);
+        if (group.isroot()) print("LInf:", err_1_linf[n], err_2_linf[n], err_3_linf[n], err_4_linf[n]);
+        if (group.isroot()) print();
+    }
+    auto err_report = [](const std::string& title, const std::vector<real_t>& errs, const std::vector<real_t>& dx) -> void
+    {
+        std::vector<real_t> orders(errs.size()-1);
+        for (int i = 0; i < orders.size(); ++i)
+        {
+            orders[i] = (log(errs[i+1])-log(errs[i]))/(log(dx[i+1])-log(dx[i]));
+        }
+        print(">>", title);
+        for (auto r: orders)
+        {
+            print(r);
+        }
+    };
+    if (group.isroot())
+    {
+        print("Error report:");
+        print("=========================================");
+        err_report("Energy     (conv, L2)", err_1_l2, dxs);
+        err_report("X-Momentum (conv, L2)", err_2_l2, dxs);
+        err_report("Z-Momentum (conv, L2)", err_3_l2, dxs);
+        err_report("Y-Momentum (conv, L2)", err_4_l2, dxs);
+        print("=========================================");
+        err_report("Energy     (conv, Linf)", err_1_linf, dxs);
+        err_report("X-Momentum (conv, Linf)", err_2_linf, dxs);
+        err_report("Z-Momentum (conv, Linf)", err_3_linf, dxs);
+        err_report("Y-Momentum (conv, Linf)", err_4_linf, dxs);
+        print("=========================================");
+        print("Happy computing.");
+    }
+    
     return 0;
 }

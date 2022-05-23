@@ -177,6 +177,17 @@ namespace cvdf::coords
     }
     
     template <typename dtype, typename integral_t>
+    ctrs::array<dtype, 3> calc_normal_vector(
+        const identity<dtype>& coord,
+        const ctrs::array<dtype, 3>& coords,
+        const ctrs::array<grid::face_t<integral_t>, 5>& i)
+    {
+        ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
+        output[i[0]]=1.0;
+        return output;
+    }
+    
+    template <typename dtype, typename integral_t>
     dtype calc_jacobian(
         const identity<dtype>& coord,
         const ctrs::array<dtype, 3>& coords,
