@@ -83,6 +83,21 @@ int main(int argc, char** argv)
 {
     cvdf::parallel::mpi_t group(&argc, &argv);
     
+    bool init_from_file = false;
+    std::string init_filename = "";
+    cvdf::cli_args::shortname_args_t args(argc, argv);
+    if (args.has_arg("-init"))
+    {
+        init_filename = args["-init"];
+        if (group.isroot()) print("Initialize from", init_filename);
+        init_from_file = true;
+        if (!std::filesystem::exists(init_filename))
+        {
+            if (group.isroot()) print("Cannot find ini file", init_filename);
+            abort();
+        }
+    }
+    
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(4, 4, 4);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
@@ -133,10 +148,12 @@ int main(int argc, char** argv)
     std::vector<real_t> r_amp_1(cells_in_block[0]/nidx);
     std::vector<real_t> r_amp_2(cells_in_block[1]/nidx);
     std::vector<real_t> r_amp_3(cells_in_block[2]/nidx);
+    std::vector<real_t> r_amp_4(grid.get_partition().get_num_local_blocks());
     
     for (auto& p: r_amp_1) p = 1.0 - 2.0*cvdf::utils::unitary_random();
     for (auto& p: r_amp_2) p = 1.0 - 2.0*cvdf::utils::unitary_random();
     for (auto& p: r_amp_3) p = 1.0 - 2.0*cvdf::utils::unitary_random();
+    for (auto& p: r_amp_4) p = 1.0 - 2.0*cvdf::utils::unitary_random();
     
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
@@ -153,28 +170,25 @@ int main(int argc, char** argv)
         int eff_j = j/nidx;
         int eff_k = k/nidx;
         
-        const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k]);
+        const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k] + r_amp_4[lb]);
         output.u() += per*shape;
         output.v() += per*shape;
         output.w() += per*shape;
-        // if (x[0] > 1.15 && x[0] < 1.55 && x[1] > -0.08 && x[1] < 0.08 && x[2] > 1.15/2 && x[2] < 1.55/2)
-        // {
-        //     output.u() += 10*u_tau;
-        //     output.v() += 10*u_tau;
-        //     output.w() += 10*u_tau;
-        // }
         
         return output;
     };
     
     cvdf::algs::fill_array(prim, ini);
+    
+    if (init_from_file)
+    {
+        cvdf::output::binary_read(init_filename, prim);
+    }
+    
     cvdf::output::output_vtk("output", "ini", grid, prim);
     cvdf::convective::totani_lr tscheme(air);
     cvdf::convective::weno_3    wscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
-    
-    
-    // cvdf::output::binary_read("checkpoint/check00000050.bin", prim);
     
     struct p2c_t
     {
