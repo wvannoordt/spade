@@ -155,4 +155,25 @@ namespace cvdf::utils
     {
         return ((out_t) rand() / (RAND_MAX));
     }
+    
+    namespace padding
+    {
+        enum padding
+        {
+            left, right
+        };
+    }
+    template <typename data_t, const padding::padding pd = padding::right> static inline std::string pad_str(const data_t& data, const std::size_t& pad_size, const char& pad_char = ' ')
+    {
+        std::string output = std::to_string(data);
+        if constexpr (pd == padding::left)
+        {
+            while (output.length() < pad_size) output = pad_char + output;
+        }
+        else
+        {
+            while (output.length() < pad_size) output = output + pad_char;
+        }
+        return output;
+    }
 }

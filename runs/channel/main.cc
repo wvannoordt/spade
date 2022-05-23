@@ -271,7 +271,14 @@ int main(int argc, char** argv)
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
-            print(nt, cfl, umax, dx, dt);
+            print(
+                "nt: ", cvdf::utils::pad_str(nt, 15),
+                "cfl:", cvdf::utils::pad_str(cfl, 15),
+                "u+a:", cvdf::utils::pad_str(umax, 15),
+                "dx: ", cvdf::utils::pad_str(dx, 15),
+                "dt: ", cvdf::utils::pad_str(dt, 15),
+                "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/(bounds.max(0) - bounds.min(0)), 15)
+            );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
             myfile.flush();
         }
@@ -293,6 +300,15 @@ int main(int argc, char** argv)
             if (group.isroot()) print("Done.");
         }
         time_int.advance();
+        if (std::isnan(umax))
+        {
+            if (group.isroot())
+            {
+                print("A tragedy has occurred!");
+            }
+            group.sync();
+            return 155;
+        }
     }
     
     
