@@ -159,7 +159,7 @@ namespace cvdf::parallel
             mpi_file_t& open(const std::string& filename)
             {
                 is_open = true;
-                auto chan = group->get_channel();
+                // mpi_comm_t chan = group->get_channel();
                 auto cstr = filename.c_str();
                 MPI_CHECK(MPI_File_open(MPI_COMM_WORLD, cstr, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &file_handle));
                 return *this;
