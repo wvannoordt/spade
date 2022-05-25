@@ -85,6 +85,8 @@ namespace cvdf::grid
     {
         public:
             typedef coord_t::coord_type dtype;
+            typedef coord_t::coord_type coord_type;
+            typedef coord_t coord_sys_type;
             cartesian_grid_t(
                 const ctrs::array<int, cvdf_dim>& num_blocks_in,
                 const ctrs::array<int, cvdf_dim>& cells_in_block_in,
@@ -271,7 +273,7 @@ namespace cvdf::grid
                 {
                     output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
                 }
-                output[idir] -= 0.5*dx[idir];
+                output[idir] += 0.5*dx[idir];
                 return output;
             }
             
@@ -290,14 +292,29 @@ namespace cvdf::grid
                 return this->cell_coords(i, j, k, lb);
             }
             
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<face_t<int>, 5>& i) const
+            {
+                return this->get_comp_coords(i[0], i[1], i[2], i[3], i[4]);
+            }
+            
             _finline_ ctrs::array<dtype, 3> get_comp_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
             {
                 return this->face_comp_coords(idir, i, j, k, lb);
             }
             
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<node_t<int>, 4>& i) const
+            {
+                return this->get_comp_coords(i[0], i[1], i[2], i[3]);
+            }
+            
             _finline_ ctrs::array<dtype, 3> get_comp_coords(const node_t<int>& i, const node_t<int>& j, const node_t<int>& k, const node_t<int>& lb) const
             {
                 return this->node_comp_coords(i, j, k, lb);
+            }
+            
+            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<cell_t<int>, 4>& i) const
+            {
+                return this->get_comp_coords(i[0], i[1], i[2], i[3]);
             }
             
             _finline_ ctrs::array<dtype, 3> get_comp_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const

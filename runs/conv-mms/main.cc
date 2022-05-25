@@ -5,9 +5,6 @@ int main(int argc, char** argv)
     typedef double real_t;
     typedef cvdf::ctrs::array<real_t, 3> v3d;
     
-    
-    
-    
     cvdf::parallel::mpi_t group(&argc, &argv);
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
@@ -44,14 +41,14 @@ int main(int argc, char** argv)
     // cvdf::coords::identity_1D<real_t> yc;
     // cvdf::coords::identity_1D<real_t> zc;
     // cvdf::coords::diagonal_coords coords(xc, yc, zc);
-    // cvdf::coords::cyl_coords<real_t> coords;
+    cvdf::coords::cyl_coords<real_t> coords;
     
-    cvdf::coords::identity<real_t> coords;
+    // cvdf::coords::identity<real_t> coords;
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> num_blocks(2, 2, 2);
     cvdf::ctrs::array<std::size_t, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     
-    // cvdf::convective::totani_lr tscheme(air);
-    cvdf::convective::weno_3 tscheme(air);
+    cvdf::convective::totani_lr tscheme(air);
+    // cvdf::convective::weno_3 tscheme(air);
     
     // std::vector<int> numcells = {24, 26};
     std::vector<int> numcells = {8, 12, 16, 24, 28, 32};
@@ -87,7 +84,7 @@ int main(int argc, char** argv)
         cvdf::grid::grid_array rhs_test(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
         
         cvdf::algs::fill_array(prim,     mms_test_func, cvdf::grid::include_exchanges);
-        cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);        
+        cvdf::algs::fill_array(rhs_test, mms_conv_func, cvdf::grid::include_exchanges);
         
         cvdf::flux_algs::flux_lr_diff(prim, rhs, tscheme);
         
@@ -140,14 +137,14 @@ int main(int argc, char** argv)
         err_report("Continuity (conv, L2)", err_0_l2, dxs);
         err_report("Energy     (conv, L2)", err_1_l2, dxs);
         err_report("X-Momentum (conv, L2)", err_2_l2, dxs);
-        err_report("Z-Momentum (conv, L2)", err_3_l2, dxs);
-        err_report("Y-Momentum (conv, L2)", err_4_l2, dxs);
+        err_report("Y-Momentum (conv, L2)", err_3_l2, dxs);
+        err_report("Z-Momentum (conv, L2)", err_4_l2, dxs);
         print("=========================================");
         err_report("Continuity (conv, Linf)", err_0_linf, dxs);
         err_report("Energy     (conv, Linf)", err_1_linf, dxs);
         err_report("X-Momentum (conv, Linf)", err_2_linf, dxs);
-        err_report("Z-Momentum (conv, Linf)", err_3_linf, dxs);
-        err_report("Y-Momentum (conv, Linf)", err_4_linf, dxs);
+        err_report("Y-Momentum (conv, Linf)", err_3_linf, dxs);
+        err_report("Z-Momentum (conv, Linf)", err_4_linf, dxs);
         print("=========================================");
         print("Happy computing.");
     }
