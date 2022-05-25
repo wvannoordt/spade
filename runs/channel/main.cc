@@ -277,7 +277,7 @@ int main(int argc, char** argv)
                 "u+a:", cvdf::utils::pad_str(umax, 15),
                 "dx: ", cvdf::utils::pad_str(dx, 15),
                 "dt: ", cvdf::utils::pad_str(dt, 15),
-                "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/(bounds.max(0) - bounds.min(0)), 15)
+                "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)
             );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
             myfile.flush();
