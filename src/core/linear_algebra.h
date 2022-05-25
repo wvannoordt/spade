@@ -74,7 +74,9 @@ namespace cvdf::linear_algebra
                 {
                     a(r,c) -= root_elem*a(k,c);
                 }
-                y[r]-=root_elem*y[k];
+                y[k] *= root_elem;
+                y[r] -= y[k];
+                y[k] /= root_elem;
             }
         }
         for (int k = sys_size-1; k>=0; --k)
@@ -86,7 +88,9 @@ namespace cvdf::linear_algebra
                 {
                     a(r,c) -= root_elem*a(k,c);
                 }
-                y[r]-=root_elem*y[k];
+                y[k] *= root_elem;
+                y[r]-=y[k];
+                y[k] /= root_elem;
             }
         }
     }

@@ -35,6 +35,21 @@ namespace cvdf::fluid_state
         const rtype& v(void) const {return data[3];}
         const rtype& w(void) const {return data[4];}
         const rtype& operator [] (uint idx) const {return data[idx];}
+        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
+            return *this;
+        }
+        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
+            return *this;
+        }
+        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
+            return *this;
+        }
         
         std::string name(uint idx) const
         {
@@ -64,6 +79,22 @@ namespace cvdf::fluid_state
         const rtype& rho_w(void) const {return data[4];}
         const rtype& operator [] (uint idx) const {return data[idx];}
         
+        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
+            return *this;
+        }
+        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
+            return *this;
+        }
+        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
+            return *this;
+        }
+        
         std::string name(uint idx) const
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
@@ -92,6 +123,21 @@ namespace cvdf::fluid_state
         const rtype& z_momentum(void) const {return data[4];}
         const rtype& operator [] (uint idx) const {return data[idx];}
         
+        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
+            return *this;
+        }
+        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
+            return *this;
+        }
+        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
+            return *this;
+        }
         std::string name(uint idx) const
         {
             ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");

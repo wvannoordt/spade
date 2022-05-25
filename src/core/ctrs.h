@@ -44,7 +44,7 @@ namespace cvdf::ctrs
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
         constexpr size_t size(void) const noexcept {return ar_size;}
-        void fill(const dtype& val)
+        template <typename ftype> void fill(const ftype& val)
         {
             for (size_t i = 0; i < this->size(); i++) data[i] = val;
         }
