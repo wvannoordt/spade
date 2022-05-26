@@ -8,7 +8,7 @@
 #include "core/range.h"
 #include "core/typedef.h"
 #include "core/grid.h"
-#include "core/output.h"
+#include "core/io.h"
 #include "core/parallel.h"
 #include "core/algs.h"
 #include "core/timing.h"

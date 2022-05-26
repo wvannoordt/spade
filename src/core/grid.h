@@ -23,7 +23,7 @@ namespace cvdf::grid
     template <class T> concept multiblock_grid = requires(T t, size_t i, size_t j, size_t k, size_t lb)
     {
         // todo: write this
-        { t.node_coords(i, j, k, lb) } -> ctrs::vec_nd<3, typename T::dtype>;
+        { t.node_coords(i, j, k, lb) } -> ctrs::basic_array;
     };
     
     
@@ -40,7 +40,7 @@ namespace cvdf::grid
         { t.get_major_dims() } -> dims::grid_array_dimension;
         { t.get_minor_dims() } -> dims::grid_array_dimension;
         { t.get_grid_dims()  } -> dims::grid_array_dimension;
-        t.get_grid();
+        { t.get_grid()       } -> multiblock_grid;
         t.unwrap_idx(a, i, j, k, lb, b);
     };
     

@@ -9,7 +9,7 @@
 #include "core/utils.h"
 #include "core/base_64.h"
 
-namespace cvdf::output
+namespace cvdf::io
 {
     namespace detail
     {
@@ -334,8 +334,8 @@ namespace cvdf::output
         }
     }
     
-    template <grid::multiblock_grid grid_output_t, typename... arrays_t>
-    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const grid_output_t& obj, arrays_t... arrays)
+    template <grid::multiblock_grid obj_t, typename... arrays_t>
+    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const obj_t& obj, arrays_t... arrays)
     {
         if (obj.group().size()>1)
         {
@@ -351,6 +351,12 @@ namespace cvdf::output
             detail::output_grid_serial(out_str, obj, arrays...);
             return total_filename;
         }
+    }
+    
+    template <grid::multiblock_array arr_t, typename... arrays_t>
+    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const arr_t& arr, arrays_t... arrays)
+    {
+        return output_vtk(out_dir, out_name_no_extension, arr.get_grid(), arr, arrays...);
     }
     
     namespace detail
