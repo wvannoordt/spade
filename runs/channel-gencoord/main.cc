@@ -84,12 +84,13 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.35;
-    const int    nt_max   = 150000;
-    const int    nt_skip  = 10000;
-    const int    checkpoint_skip  = 2500;
+    const int    nt_max   = 15001;
+    const int    nt_skip  = 10;
+    const int    checkpoint_skip  = 5000;
     
     cvdf::coords::identity_1D<real_t> xc;
-    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::identity_1D<real_t> yc;
+    //    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
     cvdf::coords::identity_1D<real_t> zc;
     
     cvdf::coords::diagonal_coords coords(xc, yc, zc);
@@ -243,7 +244,7 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         set_channel_noslip(q);
         cvdf::flux_algs::flux_lr_diff(q, rhs, tscheme);
-        cvdf::flux_algs::flux_lr_diff(q, rhs, visc_scheme);
+	cvdf::flux_algs::flux_lr_diff(q, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
         {
             cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;

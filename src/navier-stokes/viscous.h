@@ -62,7 +62,6 @@ namespace cvdf::viscous
             output.continuity() = 0.0;
             output.energy()     = -(n[0]*ht[0]+n[1]*ht[1]+n[2]*ht[2]);
             output.x_momentum() = -(n[0]*tau(0,0)+n[1]*tau(0,1)+n[2]*tau(0,2));
-            output.x_momentum() = -(n[0]*face_grad[0].u()+n[1]*face_grad[1].v()+n[2]*face_grad[2].w());
             output.y_momentum() = -(n[0]*tau(1,0)+n[1]*tau(1,1)+n[2]*tau(1,2));
             output.z_momentum() = -(n[0]*tau(2,0)+n[1]*tau(2,1)+n[2]*tau(2,2));
             return output;

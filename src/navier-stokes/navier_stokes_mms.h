@@ -242,7 +242,6 @@ namespace cvdf::navier_stokes_mms
                 W(x[0],x[1],x[2])*dTau_zz_dz(x[0],x[1],x[2])+dW_dz(x[0],x[1],x[2])*Tau_zz(x[0],x[1],x[2])-
                 dQ_x_dx(x[0],x[1],x[2])-dQ_y_dy(x[0],x[1],x[2])-dQ_z_dz(x[0],x[1],x[2]);
             rhsAr[2] = dTau_xx_dx(x[0],x[1],x[2])+dTau_xy_dy(x[0],x[1],x[2])+dTau_xz_dz(x[0],x[1],x[2]);
-            rhsAr[2] = d2U_dxx(x[0],x[1],x[2])+d2V_dyy(x[0],x[1],x[2])+d2W_dzz(x[0],x[1],x[2]);
             rhsAr[3] = dTau_yx_dx(x[0],x[1],x[2])+dTau_yy_dy(x[0],x[1],x[2])+dTau_yz_dz(x[0],x[1],x[2]);
             rhsAr[4] = dTau_zx_dx(x[0],x[1],x[2])+dTau_zy_dy(x[0],x[1],x[2])+dTau_zz_dz(x[0],x[1],x[2]);
             return rhsAr;
