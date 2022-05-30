@@ -175,10 +175,10 @@ int main(int argc, char** argv)
     
     if (init_from_file)
     {
-        cvdf::output::binary_read(init_filename, prim);
+        cvdf::io::binary_read(init_filename, prim);
     }
     
-    cvdf::output::output_vtk("output", "ini", grid, prim);
+    cvdf::io::output_vtk("output", "ini", grid, prim);
     cvdf::convective::totani_lr tscheme(air);
     // cvdf::convective::weno_3    wscheme(air);
     cvdf::viscous::visc_lr visc_scheme(visc_law);
@@ -278,7 +278,7 @@ int main(int argc, char** argv)
             if (group.isroot()) print("Output solution...");
             std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "prims"+nstr;
-            cvdf::output::output_vtk("output", filename, grid, prim);
+            cvdf::io::output_vtk("output", filename, grid, prim);
             if (group.isroot()) print("Done.");
         }
         if (nt%checkpoint_skip == 0)
@@ -287,7 +287,7 @@ int main(int argc, char** argv)
             std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "check"+nstr;
             filename = "checkpoint/"+filename+".bin";
-            cvdf::output::binary_write(filename, prim);
+            cvdf::io::binary_write(filename, prim);
             if (group.isroot()) print("Done.");
         }
         time_int.advance();

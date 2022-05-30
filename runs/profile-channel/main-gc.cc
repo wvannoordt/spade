@@ -1,4 +1,6 @@
 #include "cvdf.h"
+#include "local_types.h"
+#include "dns_filter.h"
 
 typedef double real_t;
 typedef cvdf::ctrs::array<real_t, 3> v3d;
@@ -24,7 +26,7 @@ void extract_vel_profile(const auto& q, std::vector<real_t>& y, std::vector<real
     {
         const v4c  ijk(i[0], i[1], i[2], i[3]);
         const auto x  = grid.get_comp_coords(ijk);
-	const auto xp = grid.get_coords(ijk[0], ijk[1], ijk[2], ijk[3]);
+        const auto xp = grid.get_coords(ijk[0], ijk[1], ijk[2], ijk[3]);
         const auto dy = grid.get_dx(1);
         int idx = floor((x[1]-ymin)/dy);
         y[idx] += xp[1];
@@ -53,6 +55,8 @@ int main(int argc, char** argv)
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 6, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(24, 14, 24);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(6, 6, 6);
+    
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
@@ -70,6 +74,10 @@ int main(int argc, char** argv)
     cvdf::coords::diagonal_coords coords(xc, yc, zc);
     
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block, exchange_cells_filt, bounds, coords, group);
+    
+    cvdf::grid::grid_array prim_filt_r(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim_filt_f(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
     cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
@@ -103,8 +111,11 @@ int main(int argc, char** argv)
             return 15;
         }
         cvdf::io::binary_read(p, prim);
+        postprocessing::copy_field(prim, prim_filt_r);
+        grid_filt.exchange_array(prim_filt_r);
+        postprocessing::dns_filter(prim_filt_r, prim_filt_f);
         std::vector<real_t> y_loc, u_loc;
-        extract_vel_profile(prim, y_loc, u_loc);
+        extract_vel_profile(prim_filt_f, y_loc, u_loc);
         if (y.size()==0)
         {
             y.resize(y_loc.size(), 0.0);

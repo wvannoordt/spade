@@ -1,47 +1,6 @@
 #include "cvdf.h"
-
-typedef double real_t;
-typedef cvdf::ctrs::array<real_t, 3> v3d;
-typedef cvdf::ctrs::array<int,    3> v3i;
-typedef cvdf::ctrs::array<int,    4> v4i;
-typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
-typedef cvdf::fluid_state::prim_t<real_t> prim_t;
-typedef cvdf::fluid_state::cons_t<real_t> cons_t;
-
-void extract_vel_profile(const auto& q, std::vector<real_t>& y, std::vector<real_t>& u)
-{
-    std::vector<int> counts;
-    const auto& grid  = q.get_grid();
-    const auto& group = grid.group();
-    auto rg = grid.get_range(cvdf::grid::node_centered);
-    auto ymin = grid.get_bounds().min(1);
-    int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
-    
-    counts.resize(ny, 0);
-    y.resize(ny, 0.0);
-    u.resize(ny, 0.0);
-    for (auto i: rg)
-    {
-        const v4c  ijk(i[0], i[1], i[2], i[3]);
-        const auto x  = grid.get_comp_coords(ijk);
-        const auto dy = grid.get_dx(1);
-        int idx = floor((x[1]-ymin)/dy);
-        y[idx] += x[1];
-        u[idx] += q(2, i[0], i[1], i[2], i[3]);
-        counts[idx]++;
-    }
-    for (int ii = 0; ii < ny; ++ii)
-    {
-        y[ii]      = group.sum(y[ii]);
-        u[ii]      = group.sum(u[ii]);
-        counts[ii] = group.sum(counts[ii]);
-    }
-    for (int ii = 0; ii < ny; ++ii)
-    {
-        y[ii] /= counts[ii];
-        u[ii] /= counts[ii];
-    }
-}
+#include "local_types.h"
+#include "dns_filter.h"
 
 int main(int argc, char** argv)
 {
@@ -51,6 +10,7 @@ int main(int argc, char** argv)
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(2, 2, 2);
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
@@ -64,8 +24,11 @@ int main(int argc, char** argv)
     cvdf::coords::identity<real_t> coords;
     
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block, exchange_cells_filt, bounds, coords, group);
     
-    cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim_filt_r(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim_filt_f(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -97,8 +60,13 @@ int main(int argc, char** argv)
             return 15;
         }
         cvdf::io::binary_read(p, prim);
+        postprocessing::copy_field(prim, prim_filt_r);
+        grid_filt.exchange_array(prim_filt_r);
+        postprocessing::dns_filter(prim_filt_r, prim_filt_f);
+        // cvdf::io::output_vtk("output", "res",  prim_filt_r);
+        // cvdf::io::output_vtk("output", "filt", prim_filt_f);
         std::vector<real_t> y_loc, u_loc;
-        extract_vel_profile(prim, y_loc, u_loc);
+        postprocessing::extract_vel_profile(prim_filt_f, y_loc, u_loc);
         if (y.size()==0)
         {
             y.resize(y_loc.size(), 0.0);
