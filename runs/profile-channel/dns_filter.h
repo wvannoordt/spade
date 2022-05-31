@@ -9,7 +9,7 @@ namespace postprocessing
     {
         const auto rg = 
             range(0, src.get_minor_dims().total_size())*
-            src.get_grid().get_range(cvdf::grid::node_centered)*
+            src.get_grid().get_range(cvdf::grid::cell_centered)*
             range(0, src.get_major_dims().total_size());
         for (auto i: rg)
         {
@@ -39,7 +39,7 @@ namespace postprocessing
         std::vector<int> counts;
         const auto& grid  = q.get_grid();
         const auto& group = grid.group();
-        auto rg = grid.get_range(cvdf::grid::node_centered);
+        auto rg = grid.get_range(cvdf::grid::cell_centered);
         auto ymin = grid.get_bounds().min(1);
         int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
         
@@ -50,8 +50,9 @@ namespace postprocessing
         {
             const v4c  ijk(i[0], i[1], i[2], i[3]);
             const auto x  = grid.get_comp_coords(ijk);
+            const auto xp = grid.get_coords(ijk);
             const auto dy = grid.get_dx(1);
-            int idx = floor((x[1]-ymin)/dy);
+            int idx  = round((x[1]-0.5*dy-ymin)/dy);
             y[idx] += x[1];
             u[idx] += q(2, i[0], i[1], i[2], i[3]);
             counts[idx]++;

@@ -287,6 +287,11 @@ namespace cvdf::grid
                 return this->node_coords(i, j, k, lb);
             }
             
+            _finline_ ctrs::array<dtype, 3> get_coords(const ctrs::array<cell_t<int>, 4>& i) const
+            {
+                return this->get_coords(i[0], i[1], i[2], i[3]);
+            }
+            
             _finline_ ctrs::array<dtype, 3> get_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const
             {
                 return this->cell_coords(i, j, k, lb);
