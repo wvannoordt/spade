@@ -53,7 +53,7 @@ namespace postprocessing
             const auto xp = grid.get_coords(ijk);
             const auto dy = grid.get_dx(1);
             int idx  = round((x[1]-0.5*dy-ymin)/dy);
-            y[idx] += x[1];
+            y[idx] += xp[1];
             u[idx] += q(2, i[0], i[1], i[2], i[3]);
             counts[idx]++;
         }
