@@ -19,7 +19,7 @@ namespace postprocessing
     
     static void dns_filter(const auto& src, auto& dest)
     {
-        const int filtnum = 3;
+        const int filtnum = 8;
         const auto& grid = src.get_grid();
         const auto rg   = grid.get_range(cvdf::grid::cell_centered);
         const auto rg_f = range(-filtnum, filtnum+1)*range(-filtnum, filtnum+1)*range(-filtnum, filtnum+1);

@@ -10,7 +10,7 @@ int main(int argc, char** argv)
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(2, 2, 2);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(8, 8, 8);
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
@@ -63,8 +63,6 @@ int main(int argc, char** argv)
         postprocessing::copy_field(prim, prim_filt_r);
         grid_filt.exchange_array(prim_filt_r);
         postprocessing::dns_filter(prim_filt_r, prim_filt_f);
-        // cvdf::io::output_vtk("output", "res",  prim_filt_r);
-        // cvdf::io::output_vtk("output", "filt", prim_filt_f);
         std::vector<real_t> y_loc, u_loc;
         postprocessing::extract_vel_profile(prim_filt_f, y_loc, u_loc);
         if (y.size()==0)
