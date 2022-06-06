@@ -28,8 +28,8 @@ int main(int argc, char** argv)
     cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block, exchange_cells_filt, bounds, coords, group);
     
     cvdf::grid::grid_array prim(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array prim_filt_r(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array prim_filt_f(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim_o(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim_i(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -48,11 +48,26 @@ int main(int argc, char** argv)
     const real_t du         = 3.0;
     
     const int ny = grid.get_num_cells(1)*grid.get_num_blocks(1);
-    std::vector<prof_t> reg;
-    prof_t y (ny, 0.0, "y",  reg);
-    prof_t uo(ny, 0.0, "uo", reg);
-    prof_t ui(ny, 0.0, "ui", reg);
-    prof_t u (ny, 0.0, "u",  reg);
+    
+    std::vector<profr_t*> reg;
+    profr_t y    (ny, 0.0, "y",    reg);
+    profr_t ui   (ny, 0.0, "ui",   reg);
+    profr_t uo   (ny, 0.0, "uo",   reg);
+    profr_t vi   (ny, 0.0, "vi",   reg);
+    profr_t vo   (ny, 0.0, "vo",   reg);
+    profr_t wi   (ny, 0.0, "wi",   reg);
+    profr_t wo   (ny, 0.0, "wo",   reg);
+    profr_t ui2  (ny, 0.0, "ui2",  reg);
+    profr_t uo2  (ny, 0.0, "uo2",  reg);
+    profr_t vi2  (ny, 0.0, "vi2",  reg);
+    profr_t vo2  (ny, 0.0, "vo2",  reg);
+    profr_t wi2  (ny, 0.0, "wi2",  reg);
+    profr_t wo2  (ny, 0.0, "wo2",  reg);
+    profr_t uiuo (ny, 0.0, "uiuo", reg);
+    profr_t vivo (ny, 0.0, "vivo", reg);
+    profr_t wiwo (ny, 0.0, "wiwo", reg);
+    profr_t uivo (ny, 0.0, "uivo", reg);
+    profr_t viuo (ny, 0.0, "viuo", reg);
     
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
@@ -68,32 +83,43 @@ int main(int argc, char** argv)
             return 15;
         }
         cvdf::io::binary_read(p, prim);
-        postprocessing::copy_field(prim, prim_filt_r);
-        grid_filt.exchange_array(prim_filt_r);
-        postprocessing::dns_filter(prim_filt_r, prim_filt_f);
-        std::vector<real_t> y_loc, u_loc;
-        postprocessing::extract_vel_profile(prim_filt_r, prim_filt_f, y_loc, u_loc, uo_loc, ui_loc);
-        if (y.size()==0)
-        {
-            y.resize(y_loc.size(), 0.0);
-            u.resize(y_loc.size(), 0.0);
-        }
-        for (int iii = 0; iii < y.size(); ++iii)
-        {
-            y[iii] += y_loc[iii];
-            u[iii] += u_loc[iii];
-        }
-        ++ct;
+        postprocessing::copy_field(prim, prim_i);
+        grid_filt.exchange_array(prim_i);
+        postprocessing::dns_filter(prim_i, prim_o);
+        prim_i -= prim_o;
+        postprocessing::extract_profile(y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
+        postprocessing::extract_profile(ui,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
+        postprocessing::extract_profile(uo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
+        postprocessing::extract_profile(vi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v();});
+        postprocessing::extract_profile(vo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v();});
+        postprocessing::extract_profile(wi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
+        postprocessing::extract_profile(wo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
+        postprocessing::extract_profile(ui2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.u();});
+        postprocessing::extract_profile(uo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.u();});
+        postprocessing::extract_profile(vi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_i.v();});
+        postprocessing::extract_profile(vo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v()*q_o.v();});
+        postprocessing::extract_profile(wi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_i.w();});
+        postprocessing::extract_profile(wo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w()*q_o.w();});
+        postprocessing::extract_profile(uiuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.u();});
+        postprocessing::extract_profile(vivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_o.v();});
+        postprocessing::extract_profile(wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
+        postprocessing::extract_profile(uivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.v();});
+        postprocessing::extract_profile(viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
+        for (auto p:reg) p->aggregate();
     }
-    for (auto& v: y) v /= ct;
-    for (auto& v: u) v /= ct;
-    
     if (group.isroot())
     {
-        std::ofstream myfile("u.dat");
-        for (int i = 0; i < y.size()/2; ++i)
+        std::ofstream myfile("profs.dat");
+        for (int n = 0; n < reg.size(); ++n) myfile << reg[n]->name << ((n<(reg.size()-1))?",":"");
+        myfile << "\n";
+        for (int k = 0; k < reg[0]->avg.size(); ++k)
         {
-            myfile << y[i] << " " << u[i] << "\n";
+            for (int n = 0; n < reg.size(); ++n)
+            {
+                auto& vec = reg[k]->avg;
+                myfile << vec[k] << ((n<(reg.size()-1))?",":"");
+            }
+            myfile << "\n";
         }
     }
     return 0;

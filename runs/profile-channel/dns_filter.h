@@ -34,39 +34,44 @@ namespace postprocessing
         }
     }
     
-    static void extract_vel_profile(const auto& q_r, const auto& q_f, std::vector<real_t>& y, std::vector<real_t>& u)
+    static void extract_profile(profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
     {
         std::vector<int> counts;
-        const auto& grid  = q_r.get_grid();
+        const auto& grid  = q_o.get_grid();
         const auto& group = grid.group();
+        if (group.isroot())
+        {
+            print("Extract", prof.name);
+        }
         auto rg = grid.get_range(cvdf::grid::cell_centered);
         auto ymin = grid.get_bounds().min(1);
         int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
         
         counts.resize(ny, 0);
-        y.resize(ny, 0.0);
-        u.resize(ny, 0.0);
         for (auto i: rg)
         {
             const v4c  ijk(i[0], i[1], i[2], i[3]);
             const auto x  = grid.get_comp_coords(ijk);
+            prim_t q_i_l, q_o_l;
+            for (auto n: range(0,5))
+            {
+                q_i_l[n[0]] = q_i(n[0], i[0], i[1], i[2], i[3]);
+                q_o_l[n[0]] = q_o(n[0], i[0], i[1], i[2], i[3]);
+            }
             const auto xp = grid.get_coords(ijk);
             const auto dy = grid.get_dx(1);
             int idx  = round((x[1]-0.5*dy-ymin)/dy);
-            y[idx] += xp[1];
-            u[idx] += q_r(2, i[0], i[1], i[2], i[3]);
+            prof.inst[idx] += callable(xp, q_o_l, q_i_l);
             counts[idx]++;
         }
         for (int ii = 0; ii < ny; ++ii)
         {
-            y[ii]      = group.sum(y[ii]);
-            u[ii]      = group.sum(u[ii]);
-            counts[ii] = group.sum(counts[ii]);
+            prof.inst[ii] = group.sum(prof.inst[ii]);
+            counts[ii]    = group.sum(counts[ii]);
         }
         for (int ii = 0; ii < ny; ++ii)
         {
-            y[ii] /= counts[ii];
-            u[ii] /= counts[ii];
+            prof.inst[ii] /= counts[ii];
         }
     }
 }
