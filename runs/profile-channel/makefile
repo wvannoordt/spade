@@ -18,8 +18,7 @@ flags :=
 flags += -fconcepts-diagnostics-depth=3
 
 main:
-	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main-ct.cc -o prf-ct.x
-	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main-gc.cc -o prf-gc.x
+	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
 
 run: main
 	./${target}

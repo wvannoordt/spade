@@ -109,7 +109,6 @@ namespace cvdf::flux_input
             cell_info_t& info)
         {
             auto& p = info.elements;
-            // static_for<0,std::tuple_size<decltype(info.elements)>([&](auto i) -> void
             static_for<0,cell_info_t::num_params>([&](auto i) -> void
             {
                 get_single_cell_info_value(ar_grid, prims, icell, idir, std::get<i.value>(info.elements));

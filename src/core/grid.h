@@ -544,6 +544,7 @@ namespace cvdf::grid
         typename ar_data_t,
         dims::grid_array_dimension minor_dim_t,
         dims::grid_array_dimension major_dim_t,
+        typename data_alias_t=std::conditional<minor_dim_t::rank()==0, ar_data_t, ctrs::array<ar_data_t, minor_dim_t::total_size()>>::type,
         const array_center_e centering=cell_centered,
         array_container::grid_data_container container_t=std::vector<ar_data_t>>
     struct grid_array
@@ -581,8 +582,8 @@ namespace cvdf::grid
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
         typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
-        
-        typedef std::conditional<minor_dim_t::rank()==0, ar_data_t, ctrs::array<ar_data_t, minor_dim_t::total_size()>>::type unwrapped_minor_type;
+        typedef data_alias_t alias_type;
+        typedef data_alias_t unwrapped_minor_type;
         
         constexpr static array_center_e centering_type(void) { return centering; }
         

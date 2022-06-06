@@ -34,10 +34,10 @@ namespace postprocessing
         }
     }
     
-    static void extract_vel_profile(const auto& q, std::vector<real_t>& y, std::vector<real_t>& u)
+    static void extract_vel_profile(const auto& q_r, const auto& q_f, std::vector<real_t>& y, std::vector<real_t>& u)
     {
         std::vector<int> counts;
-        const auto& grid  = q.get_grid();
+        const auto& grid  = q_r.get_grid();
         const auto& group = grid.group();
         auto rg = grid.get_range(cvdf::grid::cell_centered);
         auto ymin = grid.get_bounds().min(1);
@@ -54,7 +54,7 @@ namespace postprocessing
             const auto dy = grid.get_dx(1);
             int idx  = round((x[1]-0.5*dy-ymin)/dy);
             y[idx] += xp[1];
-            u[idx] += q(2, i[0], i[1], i[2], i[3]);
+            u[idx] += q_r(2, i[0], i[1], i[2], i[3]);
             counts[idx]++;
         }
         for (int ii = 0; ii < ny; ++ii)
