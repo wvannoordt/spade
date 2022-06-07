@@ -102,8 +102,8 @@ int main(int argc, char** argv)
         postprocessing::extract_profile(vo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v()*q_o.v();});
         postprocessing::extract_profile(wi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_i.w();});
         postprocessing::extract_profile(wo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w()*q_o.w();});
-	postprocessing::extract_profile(uivi, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.v();});
-	postprocessing::extract_profile(uovo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.v();});
+        postprocessing::extract_profile(uivi, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.v();});
+        postprocessing::extract_profile(uovo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.v();});
         postprocessing::extract_profile(uiuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.u();});
         postprocessing::extract_profile(vivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_o.v();});
         postprocessing::extract_profile(wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
@@ -121,8 +121,8 @@ int main(int argc, char** argv)
         {
             for (int n = 0; n < reg.size(); ++n)
             {
-	      auto& vec = reg[n]->avg;
-	      myfile << vec[k] << ((n<(reg.size()-1))?",":"");
+                auto& vec = reg[n]->avg;
+                myfile << vec[k] << ((n<(reg.size()-1))?",":"");
             }
             myfile << "\n";
         }
