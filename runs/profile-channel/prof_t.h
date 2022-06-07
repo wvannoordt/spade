@@ -12,6 +12,7 @@ namespace postprocessing
             registry = &registry_in;
             registry->push_back(this);
             num_avg = 0;
+	    name = name_in;
         }
         void aggregate(void)
         {
