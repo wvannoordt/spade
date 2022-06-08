@@ -81,19 +81,21 @@ namespace cvdf::grid
         int lb_glob_end, lb_glob_start;
     };
     
-    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t> class cartesian_grid_t
+    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t, typename dimension_t=static_math::int_const_t<3>> class cartesian_grid_t
     {
         public:
             typedef coord_t::coord_type dtype;
             typedef coord_t::coord_type coord_type;
             typedef coord_t coord_sys_type;
+            typedef dimension_t dim_t;
             cartesian_grid_t(
-                const ctrs::array<int, cvdf_dim>& num_blocks_in,
-                const ctrs::array<int, cvdf_dim>& cells_in_block_in,
-                const ctrs::array<int, cvdf_dim>& exchange_cells_in,
-                const bound_box_t<dtype,  cvdf_dim>& bounds_in,
+                const ctrs::array<int,   dimension_t::value>& num_blocks_in,
+                const ctrs::array<int,   dimension_t::value>& cells_in_block_in,
+                const ctrs::array<int,   dimension_t::value>& exchange_cells_in,
+                const bound_box_t<dtype, dimension_t::value>& bounds_in,
                 const coord_t& coord_system_in,
-                par_group_t& group_in)
+                par_group_t& group_in,
+                const dimension_t& dim_v = static_math::int_const_t<3>())
             {
                 //Initialize class members
                 this->grid_group = &group_in;
@@ -102,12 +104,12 @@ namespace cvdf::grid
                 num_blocks = 1;
                 cells_in_block = 1;
                 total_blocks = 1;
-                is3d = (cvdf_dim==3);
+                is3d = dim()==3;
                 bounds.min(2) = 0.0;
                 bounds.max(2) = 1.0;
                 
                 //copy constructor arguments, compute domain bounding blox
-                for (std::size_t i = 0; i < cvdf_dim; i++)
+                for (std::size_t i = 0; i < dim(); i++)
                 {
                     bounds.max(i) = bounds_in.max(i);
                     bounds.min(i) = bounds_in.min(i);
@@ -118,6 +120,7 @@ namespace cvdf::grid
                     total_blocks *= num_blocks[i];
                 }
                 
+                
                 //partition the domain
                 grid_partition = partition::block_partition_t(num_blocks, &group_in);
                 
@@ -127,12 +130,13 @@ namespace cvdf::grid
                 {
                     auto& box = block_boxes[lb[0]];
                     ctrs::array<std::size_t, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb[0]), num_blocks);
-                    static_for<0,3>([&](auto i)
+                    static_for<0,dim()>([&](auto i)
                     {
                         box.min(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
                         box.max(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+1)*bounds.size(i.value)/num_blocks[i.value];
                     });
                 }
+                
                 
                 block_is_domain_boundary.resize(this->get_num_global_blocks());
                 for (auto lb: range(0,this->get_num_global_blocks()))
@@ -141,7 +145,7 @@ namespace cvdf::grid
                     auto& data = block_is_domain_boundary[lbi];
                     const auto lb_idx = ctrs::expand_index(lbi, num_blocks);
                     for (auto& val: data) val = false;
-                    for (auto d: range(0,cvdf_dim))
+                    for (auto d: range(0,dim()))
                     {
                         data[2*d[0]+0] = (lb_idx[d[0]]==0);
                         data[2*d[0]+1] = (lb_idx[d[0]]==(num_blocks[d[0]]-1));
@@ -203,12 +207,14 @@ namespace cvdf::grid
                 }
             }
             
+            constexpr static int dim(void) {return dim_t::value;}
+            
             _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
             {
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                for (size_t idir = 0; idir < dim(); idir++)
                 {
                     output[idir] = box.min(idir) + ijk[idir]*dx[idir];
                 }
@@ -220,7 +226,7 @@ namespace cvdf::grid
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                for (size_t idir = 0; idir < dim(); idir++)
                 {
                     output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
                 }
@@ -232,7 +238,7 @@ namespace cvdf::grid
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t d = 0; d < cvdf_dim; ++d)
+                for (size_t d = 0; d < dim(); ++d)
                 {
                     output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
                 }
@@ -245,7 +251,7 @@ namespace cvdf::grid
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                for (size_t idir = 0; idir < dim(); idir++)
                 {
                     output[idir] = box.min(idir) + ijk[idir]*dx[idir];
                 }
@@ -257,7 +263,7 @@ namespace cvdf::grid
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < cvdf_dim; idir++)
+                for (size_t idir = 0; idir < dim(); idir++)
                 {
                     output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
                 }
@@ -269,7 +275,7 @@ namespace cvdf::grid
                 ctrs::array<dtype, 3> output(0, 0, 0);
                 ctrs::array<int, 3> ijk(i, j, k);
                 auto& box = block_boxes[lb];
-                for (size_t d = 0; d < cvdf_dim; ++d)
+                for (size_t d = 0; d < dim(); ++d)
                 {
                     output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
                 }
@@ -337,6 +343,8 @@ namespace cvdf::grid
             md_range_t<int,4> get_range(const array_center_e& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
             {
                 int iexchg = 0;
+                int i3d = 0;
+                if (dim()==3) i3d = 1;
                 if (do_guards==include_exchanges) iexchg = 1;
                 switch (centering_in)
                 {
@@ -345,7 +353,7 @@ namespace cvdf::grid
                         return md_range_t<int,4>(
                             -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
                             -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
-                            -iexchg*exchange_cells[2],cells_in_block[2]+iexchg*exchange_cells[2],
+                            -i3d*iexchg*exchange_cells[2],cells_in_block[2]+i3d*iexchg*exchange_cells[2],
                             0,grid_partition.get_num_local_blocks());
                     }
                     case node_centered:
@@ -353,7 +361,7 @@ namespace cvdf::grid
                         return md_range_t<int,4>(
                             -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
                             -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
-                            -iexchg*exchange_cells[2],1+cells_in_block[2]+iexchg*exchange_cells[2],
+                            -i3d*iexchg*exchange_cells[2],(1-i3d)+cells_in_block[2]+i3d*iexchg*exchange_cells[2],
                             0,grid_partition.get_num_local_blocks());
                     }
                     default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
@@ -385,7 +393,7 @@ namespace cvdf::grid
                 output.min(0) = 0; output.max(0) = 1;
                 output.min(1) = 0; output.max(1) = 1;
                 output.min(2) = 0; output.max(2) = 1;
-                for (int i = 0; i < cvdf_dim; i++)
+                for (int i = 0; i < dim(); i++)
                 {
                     ctrs::array<int, 3> recv_start(
                         (int)cells_in_block[i],
@@ -407,7 +415,7 @@ namespace cvdf::grid
                 output.min(0) = 0; output.max(0) = 1;
                 output.min(1) = 0; output.max(1) = 1;
                 output.min(2) = 0; output.max(2) = 1;
-                for (int i = 0; i < cvdf_dim; i++)
+                for (int i = 0; i < dim(); i++)
                 {
                     ctrs::array<int, 3> send_start(
                         0,
@@ -425,7 +433,7 @@ namespace cvdf::grid
             
             template <grid::multiblock_array array_t> void exchange_array(array_t& array)
             {
-                const std::size_t num_neighs = static_math::pow<3,cvdf_dim>::value;
+                const std::size_t num_neighs = static_math::pow<3,dim()>::value;
                 
                 typedef typename array_t::value_type array_data_t;
                 

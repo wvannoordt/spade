@@ -17,9 +17,10 @@ namespace cvdf::pde_algs
     {
         typedef typename array_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
-        auto grid_range = range(-1,ar_grid.get_num_cells(0))*range(-1,ar_grid.get_num_cells(1))*range(-1,ar_grid.get_num_cells(2))*range(0,ar_grid.get_num_local_blocks());
+        int i3d = ((ar_grid.dim()==3)?1:0);
+        auto grid_range = range(-1,ar_grid.get_num_cells(0))*range(-1,ar_grid.get_num_cells(1))*range(-i3d,ar_grid.get_num_cells(2))*range(0,ar_grid.get_num_local_blocks());
         int ct = 0;
-        for (auto idx: grid_range*range(0, cvdf_dim))
+        for (auto idx: grid_range*range(0, ar_grid.dim()))
         {
             int idir = idx[4];
             ctrs::array<grid::face_t<int>, 5> iface(idir, idx[0], idx[1], idx[2], idx[3]);

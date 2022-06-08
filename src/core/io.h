@@ -24,10 +24,10 @@ namespace cvdf::io
             out_str << "DATASET STRUCTURED_POINTS\nDIMENSIONS ";
             out_str << (1+obj.get_num_blocks(0)*obj.get_num_cells(0)) <<  " ";
             out_str << (1+obj.get_num_blocks(1)*obj.get_num_cells(1)) <<  " ";
-            out_str << ((cvdf_dim==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2)) << "\n";
+            out_str << ((obj.dim()==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2)) << "\n";
             auto bnd = obj.get_bounds();
             out_str << "ORIGIN "  << bnd.min(0)    << " " << bnd.min(1)    << " " << bnd.min(2)    << "\n";
-            out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << (cvdf_dim==3)*obj.get_dx(2) << "\n";
+            out_str << "SPACING " << obj.get_dx(0) << " " << obj.get_dx(1) << " " << (obj.dim()==3)*obj.get_dx(2) << "\n";
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
@@ -43,7 +43,7 @@ namespace cvdf::io
             ctrs::array<int, 3> dims(
                 1+obj.get_num_blocks(0)*obj.get_num_cells(0),
                 1+obj.get_num_blocks(1)*obj.get_num_cells(1),
-                (cvdf_dim==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2));
+                (obj.dim()==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2));
             out_str << dims[0] <<  " ";
             out_str << dims[1] <<  " ";
             out_str << dims[2] << "\n";
@@ -254,7 +254,7 @@ namespace cvdf::io
             
             ctrs::array<int,3> ng(n_guard_i, n_guard_j, n_guard_k);
             auto box_tmp = obj.get_block_box(lb_loc);
-            static_for<0, cvdf_dim>([&](auto i)->void
+            static_for<0, obj.dim()>([&](auto i)->void
             {
                 box_tmp.min(i.value) -= obj.get_dx(i.value)*ng[i.value];
                 box_tmp.max(i.value) += obj.get_dx(i.value)*ng[i.value];

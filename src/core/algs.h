@@ -79,7 +79,10 @@ namespace cvdf::algs
         template <ctrs::basic_array elem_t, grid::multiblock_array array_t>
         static _finline_ auto set_from_minor_element_type(const elem_t& elem, array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
         {
-            for (std::size_t n = 0; n < elem.size(); ++n) arr.unwrap_idx(n, i, j, k, lb, maj) = elem[n];
+            for (std::size_t n = 0; n < elem.size(); ++n)
+            {
+                arr.unwrap_idx(n, i, j, k, lb, maj) = elem[n];
+            }
         }
         
         template <typename elem_t, grid::multiblock_array array_t>
