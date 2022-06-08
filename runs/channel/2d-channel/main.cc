@@ -118,9 +118,9 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.25;
-    const int    nt_max   = 150000;
+    const int    nt_max   = 300001;
     const int    nt_skip  = 10000;
-    const int    checkpoint_skip  = 2500;
+    const int    checkpoint_skip  = 10000;
     
     cvdf::coords::identity<real_t> coords;
     
@@ -176,9 +176,9 @@ int main(int argc, char** argv)
         int eff_k = k/nidx;
         
         const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[i3d*eff_k] + r_amp_4[lb]);
-        output.u() += per*shape;
-        output.v() += per*shape;
-        output.w() += per*shape;
+        output.u() += 0.0*per*shape;
+        output.v() += 0.0*per*shape;
+        output.w() += 0.0*per*shape;
         
         return output;
     };
