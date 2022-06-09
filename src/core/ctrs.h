@@ -145,8 +145,8 @@ namespace cvdf::ctrs
         typename arr_l_t::value_type output = 0;
         for (auto i: range(0, dims.size()))
         {
-            output += coeff*idx[i[0]];
-            coeff*=dims[i[0]];
+            output += coeff*idx[i];
+            coeff*=dims[i];
         }
         return output;
     }
@@ -161,10 +161,10 @@ namespace cvdf::ctrs
         idx_t sum = 0;
         for (auto i: range(0, dims.size()))
         {
-            modcoeff *= dims[i[0]];
-            output[i[0]] = ((temp_idx-sum) % modcoeff) / coeff;
-            sum += output[i[0]]*coeff;
-            coeff *= dims[i[0]];
+            modcoeff *= dims[i];
+            output[i] = ((temp_idx-sum) % modcoeff) / coeff;
+            sum += output[i]*coeff;
+            coeff *= dims[i];
         }
         return output;
     }

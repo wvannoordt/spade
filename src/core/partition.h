@@ -27,11 +27,11 @@ namespace cvdf::partition
                 std::size_t loc_count = 0;
                 for (auto lb: range(0, total_blocks))
                 {
-                    global_block_to_rank[lb[0]] = current_rank;
+                    global_block_to_rank[lb] = current_rank;
                     if (current_rank == group_in->rank())
                     {
-                        local_block_to_global_block[loc_count] = lb[0];
-                        global_block_to_local_block[lb[0]] = loc_count;
+                        local_block_to_global_block[loc_count] = lb;
+                        global_block_to_local_block[lb] = loc_count;
                         ++loc_count;
                     }
                     ++current_rank;

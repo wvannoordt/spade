@@ -128,8 +128,8 @@ namespace cvdf::grid
                 block_boxes.resize(grid_partition.get_num_local_blocks());
                 for (auto lb: range(0,grid_partition.get_num_local_blocks()))
                 {
-                    auto& box = block_boxes[lb[0]];
-                    ctrs::array<std::size_t, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb[0]), num_blocks);
+                    auto& box = block_boxes[lb];
+                    ctrs::array<std::size_t, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb), num_blocks);
                     static_for<0,dim()>([&](auto i)
                     {
                         box.min(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
@@ -141,14 +141,14 @@ namespace cvdf::grid
                 block_is_domain_boundary.resize(this->get_num_global_blocks());
                 for (auto lb: range(0,this->get_num_global_blocks()))
                 {
-                    const auto& lbi = lb[0];
+                    const auto& lbi = lb;
                     auto& data = block_is_domain_boundary[lbi];
                     const auto lb_idx = ctrs::expand_index(lbi, num_blocks);
                     for (auto& val: data) val = false;
                     for (auto d: range(0,dim()))
                     {
-                        data[2*d[0]+0] = (lb_idx[d[0]]==0);
-                        data[2*d[0]+1] = (lb_idx[d[0]]==(num_blocks[d[0]]-1));
+                        data[2*d+0] = (lb_idx[d]==0);
+                        data[2*d+1] = (lb_idx[d]==(num_blocks[d]-1));
                     }
                 }
                 
@@ -164,7 +164,7 @@ namespace cvdf::grid
                 //compute neighbor relationships
                 for (auto lb: range(0, this->get_num_global_blocks()))
                 {
-                    std::size_t lb_glob = lb[0];
+                    std::size_t lb_glob = lb;
                     ctrs::array<int, 3> delta_lb = 0;
                     int i3d = this->is_3d()?1:0;
                     auto delta_lb_range = range(-1, 2)*range(-1, 2)*range(-i3d, 1+i3d);
@@ -444,10 +444,10 @@ namespace cvdf::grid
                 
                 for (auto p:range(0, grid_group->size()))
                 {
-                    const std::size_t total_send_buf_size = cell_elem_size*send_size_elems[p[0]];
-                    const std::size_t total_recv_buf_size = cell_elem_size*recv_size_elems[p[0]];
-                    if (send_bufs[p[0]].size() < total_send_buf_size) send_bufs[p[0]].resize(total_send_buf_size);
-                    if (recv_bufs[p[0]].size() < total_recv_buf_size) recv_bufs[p[0]].resize(total_recv_buf_size);
+                    const std::size_t total_send_buf_size = cell_elem_size*send_size_elems[p];
+                    const std::size_t total_recv_buf_size = cell_elem_size*recv_size_elems[p];
+                    if (send_bufs[p].size() < total_send_buf_size) send_bufs[p].resize(total_send_buf_size);
+                    if (recv_bufs[p].size() < total_recv_buf_size) recv_bufs[p].resize(total_recv_buf_size);
                 }
                 
                 std::vector<std::size_t> offsets(grid_group->size(), 0);
@@ -469,8 +469,8 @@ namespace cvdf::grid
                                 for (int j = bounds.min(1); j < bounds.max(1); ++j)
                                 {
                                     std::copy(
-                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj[0])),
-                                        (char*)(&array.unwrap_idx(0,bounds.max(0),j,k,lb_loc,maj[0])),
+                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj)),
+                                        (char*)(&array.unwrap_idx(0,bounds.max(0),j,k,lb_loc,maj)),
                                         (char*)(&(send_buf_loc[send_offset_loc])));
                                     send_offset_loc += copy_size;
                                 }
@@ -514,7 +514,7 @@ namespace cvdf::grid
                                     std::copy(
                                         (char*)(&(recv_buf_loc[recv_offset_loc])),
                                         (char*)(&(recv_buf_loc[recv_offset_loc]))+copy_size,
-                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj[0])));
+                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj)));
                                         
                                     recv_offset_loc += copy_size;
                                 }
@@ -570,18 +570,18 @@ namespace cvdf::grid
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             array_container::fill_container(data, fill_elem);
             std::size_t n = total_idx_rank();
-            for (auto i: range(0,n)) idx_coeffs[i[0]] = 1;
+            for (auto i: range(0,n)) idx_coeffs[i] = 1;
             for (auto i : range(0, n))
             {
-                for (auto j : range(i[0]+1, n))
+                for (auto j : range(i+1, n))
                 {
-                    idx_coeffs[j[0]] *= this->get_index_extent(i[0]);
+                    idx_coeffs[j] *= this->get_index_extent(i);
                 }
             }
             offset = 0;
             for (auto i: range(0,dims::dynamic_dims<4>::rank()-1))
             {
-                offset += grid_in.get_num_exchange(i[0])*idx_coeffs[i[0] + minor_dim_t::rank()];
+                offset += grid_in.get_num_exchange(i)*idx_coeffs[i + minor_dim_t::rank()];
             }
         }
         

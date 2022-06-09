@@ -63,9 +63,18 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
         return (this->idx_v != rhs.idx_v) || (this->next != rhs.next);
     }
     
-    md_iterator& operator * (void)
+    template <const std::size_t dim_i> static const md_iterator& deref_iter(const md_iterator<index_t,dim_i>* ptr, const index_t& val)
     {
-        return *this;
+        return *ptr;
+    }
+    static index_t deref_iter(const md_iterator<index_t,1>* ptr, const index_t& val)
+    {
+        return val;
+    }
+    
+    auto operator * (void) const
+    {
+        return deref_iter(this, idx_v);
     }
     constexpr index_t brack_r(const typename md_iterator<index_t,0>::base_type_t& iter, std::size_t idx) const noexcept
     {

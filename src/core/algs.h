@@ -116,7 +116,7 @@ namespace cvdf::algs
             {
                 auto x = detail::get_coords(grid, arr, i[0], i[1], i[2], i[3]);
                 auto data = detail::forward_fillable_args(grid, func, x, i[0], i[1], i[2], i[3]);
-                detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
+                detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
             }
         }
     }
@@ -135,7 +135,7 @@ namespace cvdf::algs
             for (auto i: grid_range)
             {
                 typename detail::converted_elem<array_t, callable_t>::type data;
-                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
+                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
                 reduce_oper.reduce_elem(func(data));
             }
         }
@@ -153,8 +153,8 @@ namespace cvdf::algs
             for (auto i: grid_range)
             {
                 typename detail::converted_elem<array_t, callable_t>::type data;
-                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj[0]);
-                detail::set_from_minor_element_type(func(data), arr, i[0], i[1], i[2], i[3], maj[0]);
+                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
+                detail::set_from_minor_element_type(func(data), arr, i[0], i[1], i[2], i[3], maj);
             }
         }
         return arr;

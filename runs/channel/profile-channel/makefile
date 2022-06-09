@@ -1,4 +1,4 @@
-cvdf   := $(realpath ../../src)
+cvdf   := $(realpath ../../../src)
 target := vdf.x
 
 ifndef MPI_ENABLE

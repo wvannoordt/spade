@@ -7,9 +7,11 @@ int main(int argc, char** argv)
 {
     cvdf::parallel::mpi_t group(&argc, &argv);
     
-    
+    v3i filt(8, 16, 6);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
+    cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block_coarse;
+    for (auto i: range(0,3)) cells_in_block_coarse[i] = cells_in_block[i]/filt[i];
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(8, 8, 8);
     cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
@@ -24,8 +26,9 @@ int main(int argc, char** argv)
     
     cvdf::coords::identity<real_t> coords;
     
-    cvdf::grid::cartesian_grid_t grid     (num_blocks, cells_in_block, exchange_cells,      bounds, coords, group);
-    cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block, exchange_cells_filt, bounds, coords, group);
+    cvdf::grid::cartesian_grid_t grid     (num_blocks, cells_in_block,        exchange_cells,      bounds, coords, group);
+    cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block,        exchange_cells_filt, bounds, coords, group);
+    // cvdf::grid::cartesian_grid_t grid_crse(num_blocks, cells_in_block_coarse, exchange_cells,      bounds, coords, group);
     
     cvdf::grid::grid_array prim(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
     cvdf::grid::grid_array prim_o(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
@@ -74,6 +77,7 @@ int main(int argc, char** argv)
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
     
+    bool output = false;
     int ct = 0;
     for (auto& p: names)
     {
@@ -87,8 +91,16 @@ int main(int argc, char** argv)
         cvdf::io::binary_read(p, prim);
         postprocessing::copy_field(prim, prim_i);
         grid_filt.exchange_array(prim_i);
-        postprocessing::dns_filter(prim_i, prim_o);
+        postprocessing::dns_filter(filt, prim_i, prim_o);
         prim_i -= prim_o;
+        postprocessing::noslip(filt[1]/2, prim_o);
+        if (output)
+        {
+            postprocessing::copy_field(prim_i, prim);
+            cvdf::io::output_vtk("output", "q_i", prim);
+            postprocessing::copy_field(prim_o, prim);
+            cvdf::io::output_vtk("output", "q_o", prim);
+        }
         postprocessing::extract_profile(y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
         postprocessing::extract_profile(ui,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
         postprocessing::extract_profile(uo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
@@ -111,21 +123,25 @@ int main(int argc, char** argv)
         postprocessing::extract_profile(viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
         for (auto p:reg) p->aggregate();
     }
+    bool output_names = false;
     if (group.isroot())
     {
-        std::filesystem::create_directory("profiles");
-        std::ofstream myfile("profiles/pfs.dat");
-        for (int n = 0; n < reg.size(); ++n) myfile << reg[n]->name << ((n<(reg.size()-1))?",":"");
-        myfile << "\n";
-        for (int k = 0; k < reg[0]->avg.size(); ++k)
-        {
-            for (int n = 0; n < reg.size(); ++n)
-            {
-                auto& vec = reg[n]->avg;
-                myfile << vec[k] << ((n<(reg.size()-1))?",":"");
-            }
-            myfile << "\n";
-        }
+        // std::filesystem::create_directory("profiles");
+        // std::ofstream myfile("profiles/pfs.dat");
+        // if (output_names)
+        // {
+        //     for (int n = 0; n < reg.size(); ++n) myfile << reg[n]->name << ((n<(reg.size()-1))?",":"");
+        //     myfile << "\n";
+        // }
+        // for (int k = 0; k < reg[0]->avg.size(); ++k)
+        // {
+        //     for (int n = 0; n < reg.size(); ++n)
+        //     {
+        //         auto& vec = reg[n]->avg;
+        //         myfile << vec[k] << ((n<(reg.size()-1))?",":"");
+        //     }
+        //     myfile << "\n";
+        // }
     }
     return 0;
 }

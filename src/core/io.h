@@ -122,7 +122,7 @@ namespace cvdf::io
                             for (auto midx: total_range)
                             {
                                 std::size_t lb = obj.collapse_block_num(midx[1], midx[3], midx[5]);
-                                out_str << arr.unwrap_idx(i[0], midx[0], midx[2], midx[4], lb, j[0]) << "\n";
+                                out_str << arr.unwrap_idx(i, midx[0], midx[2], midx[4], lb, j) << "\n";
                             }
                         }
                     }
@@ -153,7 +153,7 @@ namespace cvdf::io
             // <DataSet index="100" file="flow/lev000/flow_bk0000100.vtr"/>
             for (auto i: range(0, obj.get_num_global_blocks()))
             {
-                out_str << ntab(3) << utils::strformat("<DataSet index=\"{}\" file=\"{}\"/>\n", i[0], utils::strformat(block_proto_string, utils::zfill(i[0],num_zeros)));
+                out_str << ntab(3) << utils::strformat("<DataSet index=\"{}\" file=\"{}\"/>\n", i, utils::strformat(block_proto_string, utils::zfill(i,num_zeros)));
             }
             out_str << ntab(2) << "</Block>\n";
             out_str << ntab(1) << "</vtkMultiBlockDataSet>\n";
@@ -200,7 +200,7 @@ namespace cvdf::io
                     for (auto i2:range(0,i.get_major_dims().total_size()))
                     {
                         if (idx>0) vars_string+=",";
-                        vars_string += get_arr_name(i, i1[0], i2[0]);
+                        vars_string += get_arr_name(i, i1, i2);
                         ++idx;
                     }
                 }
@@ -224,9 +224,9 @@ namespace cvdf::io
                         std::size_t idx = 0;
                         for (auto ijk: block_grid_range)
                         {
-                            compressed_data[idx++] = arr.unwrap_idx(i1[0], ijk[0], ijk[1], ijk[2], lb_loc, i2[0]);
+                            compressed_data[idx++] = arr.unwrap_idx(i1, ijk[0], ijk[1], ijk[2], lb_loc, i2);
                         }
-                        out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_arr_name(arr, i1[0], i2[0]) << "\" format=\"binary\">\n";
+                        out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_arr_name(arr, i1, i2) << "\" format=\"binary\">\n";
                         //data here
                         // here here he
                         cvdf::detail::stream_base_64(out_str, &total_bytes_size, 1);
@@ -325,9 +325,9 @@ namespace cvdf::io
                 std::filesystem::path block_abs_path(out_dir);
                 block_abs_path /= blocks_dir_name;
                 block_abs_path /= blocks_file_name_template;
-                std::string block_abs_path_str = utils::strformat(block_abs_path, utils::zfill(obj.get_partition().get_global_block(i[0]), numzeros));
+                std::string block_abs_path_str = utils::strformat(block_abs_path, utils::zfill(obj.get_partition().get_global_block(i), numzeros));
                 std::ofstream block_file_strm(block_abs_path_str);
-                output_parralel_block_file(block_file_strm, i[0], obj, arrays...);
+                output_parralel_block_file(block_file_strm, i, obj, arrays...);
             }
             obj.group().sync();
             return header_filename;
@@ -374,8 +374,8 @@ namespace cvdf::io
             {
                 for (auto lb: range(0, grid.get_num_local_blocks()))
                 {
-                    std::size_t lb_glob = array.get_grid().get_partition().get_global_block(lb[0]);
-                    void* ptr = (void*)(&array.unwrap_idx(0,-nexch[0], -nexch[1], -nexch[2], lb[0], maj[0]));
+                    std::size_t lb_glob = array.get_grid().get_partition().get_global_block(lb);
+                    void* ptr = (void*)(&array.unwrap_idx(0,-nexch[0], -nexch[1], -nexch[2], lb, maj));
                     std::size_t offset_bytes = lb_glob*block_size_bytes;
                     buf.add(ptr, block_size_bytes, offset_bytes);
                 }

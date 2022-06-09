@@ -85,7 +85,7 @@ namespace cvdf::flux_input
             const int& idir,
             cell_state<output_t>& output)
         {
-            for (auto n: range(0,output.data.size())) output.data[n[0]] = prims(n[0], icell[0], icell[1], icell[2], icell[3]);
+            for (auto n: range(0,output.data.size())) output.data[n] = prims(n, icell[0], icell[1], icell[2], icell[3]);
         }
         
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
