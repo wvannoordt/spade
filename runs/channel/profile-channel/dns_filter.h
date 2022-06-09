@@ -124,4 +124,50 @@ namespace postprocessing
             prof.inst[ii] /= counts[ii];
         }
     }
+    
+    static void extract_profile_f(profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
+    {
+        std::vector<int> counts;
+        const auto& grid  = q_o.get_grid();
+        const auto& group = grid.group();
+        if (group.isroot())
+        {
+            print("Extract", prof.name);
+        }
+        auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        auto ymin = grid.get_bounds().min(1);
+        int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
+        
+        counts.resize(ny, 0);
+        for (auto i: rg)
+        {
+            v4c  ijk_L(i[0], i[1], i[2], i[3]);
+            v4c  ijk_R(i[0], i[1], i[2], i[3]);
+            ijk_L[1] -= 1;
+            v5f  ijk_F(1, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
+            const auto x  = grid.get_comp_coords(ijk_F);
+            prim_t q_i_l_L, q_i_l_R, q_o_l_L, q_o_l_R;
+            for (auto n: range(0,5))
+            {
+                q_i_l_R[n] = q_i(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
+                q_o_l_R[n] = q_o(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
+                q_i_l_R[n] = q_i(n, ijk_R[0], ijk_R[1], ijk_R[2], ijk_R[3]);
+                q_o_l_R[n] = q_o(n, ijk_R[0], ijk_R[1], ijk_R[2], ijk_R[3]);
+            }
+            const auto xp = grid.get_coords(ijk_F);
+            const auto dy = grid.get_dx(1);
+            int idx  = round((xp[1]-ymin)/dy);
+            prof.inst[idx] += callable(xp, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
+            counts[idx]++;
+        }
+        for (int ii = 0; ii < ny; ++ii)
+        {
+            prof.inst[ii] = group.sum(prof.inst[ii]);
+            counts[ii]    = group.sum(counts[ii]);
+        }
+        for (int ii = 0; ii < ny; ++ii)
+        {
+            prof.inst[ii] /= counts[ii];
+        }
+    }
 }

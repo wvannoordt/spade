@@ -12,7 +12,7 @@ namespace postprocessing
             registry = &registry_in;
             registry->push_back(this);
             num_avg = 0;
-	    name = name_in;
+            name = name_in;
         }
         void aggregate(void)
         {
@@ -20,7 +20,8 @@ namespace postprocessing
             data_t beta  = 1.0/(num_avg+1);
             for (int i = 0; i < this->size(); ++i)
             {
-                avg[i] = alpha*avg[i] + beta*inst[i];
+                avg[i]  = alpha*avg[i] + beta*inst[i];
+                inst[i] = 0.0;
             }
             num_avg++;
         }
