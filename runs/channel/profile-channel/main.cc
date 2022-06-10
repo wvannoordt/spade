@@ -53,6 +53,28 @@ int main(int argc, char** argv)
     const int ny = grid.get_num_cells(1)*grid.get_num_blocks(1);
     
     std::vector<profr_t*> reg;
+    
+    profr_t y_f    (ny, 0.0, "y_f",    reg);
+    profr_t ui_f   (ny, 0.0, "ui_f",   reg);
+    profr_t uo_f   (ny, 0.0, "uo_f",   reg);
+    profr_t vi_f   (ny, 0.0, "vi_f",   reg);
+    profr_t vo_f   (ny, 0.0, "vo_f",   reg);
+    profr_t wi_f   (ny, 0.0, "wi_f",   reg);
+    profr_t wo_f   (ny, 0.0, "wo_f",   reg);
+    profr_t ui2_f  (ny, 0.0, "ui2_f",  reg);
+    profr_t uo2_f  (ny, 0.0, "uo2_f",  reg);
+    profr_t vi2_f  (ny, 0.0, "vi2_f",  reg);
+    profr_t vo2_f  (ny, 0.0, "vo2_f",  reg);
+    profr_t wi2_f  (ny, 0.0, "wi2_f",  reg);
+    profr_t wo2_f  (ny, 0.0, "wo2_f",  reg);
+    profr_t uivi_f (ny, 0.0, "uivi_f", reg);
+    profr_t uovo_f (ny, 0.0, "uovo_f", reg);
+    profr_t uiuo_f (ny, 0.0, "uiuo_f", reg);
+    profr_t vivo_f (ny, 0.0, "vivo_f", reg);
+    profr_t wiwo_f (ny, 0.0, "wiwo_f", reg);
+    profr_t uivo_f (ny, 0.0, "uivo_f", reg);
+    profr_t viuo_f (ny, 0.0, "viuo_f", reg);
+    
     profr_t y    (ny, 0.0, "y",    reg);
     profr_t ui   (ny, 0.0, "ui",   reg);
     profr_t uo   (ny, 0.0, "uo",   reg);
@@ -73,8 +95,8 @@ int main(int argc, char** argv)
     profr_t wiwo (ny, 0.0, "wiwo", reg);
     profr_t uivo (ny, 0.0, "uivo", reg);
     profr_t viuo (ny, 0.0, "viuo", reg);
-    
-    profr_t u_f  (ny, 0.0, "u_f", reg);
+    profr_t p1   (ny, 0.0, "p1",   reg);
+    profr_t p2   (ny, 0.0, "p2",   reg);
     
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
@@ -91,10 +113,14 @@ int main(int argc, char** argv)
             return 15;
         }
         cvdf::io::binary_read(p, prim);
+        cvdf::io::output_vtk("output", "q", prim);
+        return 1;
         postprocessing::copy_field(prim, prim_i);
         grid_filt.exchange_array(prim_i);
         postprocessing::dns_filter(filt, prim_i, prim_o);
         prim_i -= prim_o;
+        grid_filt.exchange_array(prim_i);
+        grid_filt.exchange_array(prim_o);
         postprocessing::noslip(filt[1]/2, prim_o);
         if (output)
         {
@@ -123,30 +149,52 @@ int main(int argc, char** argv)
         postprocessing::extract_profile(wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
         postprocessing::extract_profile(uivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.v();});
         postprocessing::extract_profile(viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
+        postprocessing::extract_profile(p1,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p());});
+        postprocessing::extract_profile(p2,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p())*(q_i.p()+q_o.p());});
         
-        postprocessing::extract_profile_f(u_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t {return 0.5*(q_o_L.u()+q_o_R.u()+q_i_L.u()+q_i_R.u());});
+        auto sqr = [](const real_t& x) -> real_t {return x*x;};
+        postprocessing::extract_profile_f(y_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return x[1]; });
+        postprocessing::extract_profile_f(ui_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u()); });
+        postprocessing::extract_profile_f(uo_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u()); });
+        postprocessing::extract_profile_f(vi_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v()); });
+        postprocessing::extract_profile_f(vo_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.v()+q_o_R.v()); });
+        postprocessing::extract_profile_f(wi_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w()); });
+        postprocessing::extract_profile_f(wo_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.w()+q_o_R.w()); });
+        postprocessing::extract_profile_f(ui2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.u()+q_i_R.u())); });
+        postprocessing::extract_profile_f(uo2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.u()+q_o_R.u())); });
+        postprocessing::extract_profile_f(vi2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.v()+q_i_R.v())); });
+        postprocessing::extract_profile_f(vo2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.v()+q_o_R.v())); });
+        postprocessing::extract_profile_f(wi2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.w()+q_i_R.w())); });
+        postprocessing::extract_profile_f(wo2_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.w()+q_o_R.w())); });
+        postprocessing::extract_profile_f(uivi_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_i_L.v()+q_i_R.v()); });
+        postprocessing::extract_profile_f(uovo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
+        postprocessing::extract_profile_f(uiuo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.u()+q_o_R.u()); });
+        postprocessing::extract_profile_f(vivo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.v()+q_o_R.v()); });
+        postprocessing::extract_profile_f(wiwo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
+        postprocessing::extract_profile_f(uivo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
+        postprocessing::extract_profile_f(viuo_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
         
         for (auto p:reg) p->aggregate();
     }
     bool output_names = false;
     if (group.isroot())
     {
-        // std::filesystem::create_directory("profiles");
-        // std::ofstream myfile("profiles/pfs.dat");
-        // if (output_names)
-        // {
-        //     for (int n = 0; n < reg.size(); ++n) myfile << reg[n]->name << ((n<(reg.size()-1))?",":"");
-        //     myfile << "\n";
-        // }
-        // for (int k = 0; k < reg[0]->avg.size(); ++k)
-        // {
-        //     for (int n = 0; n < reg.size(); ++n)
-        //     {
-        //         auto& vec = reg[n]->avg;
-        //         myfile << vec[k] << ((n<(reg.size()-1))?",":"");
-        //     }
-        //     myfile << "\n";
-        // }
+        std::filesystem::create_directory("profiles");
+        std::ofstream myfile("profiles/pfs.dat");
+        if (output_names)
+        {
+            for (int n = 0; n < reg.size(); ++n) myfile << reg[n]->name << ((n<(reg.size()-1))?",":"");
+            myfile << "\n";
+        }
+        for (int k = 0; k < reg[0]->avg.size(); ++k)
+        {
+            for (int n = 0; n < reg.size(); ++n)
+            {
+                auto& vec = reg[n]->avg;
+                myfile << vec[k] << ((n<(reg.size()-1))?",":"");
+            }
+            myfile << "\n";
+        }
     }
     return 0;
 }

@@ -143,21 +143,25 @@ namespace postprocessing
         {
             v4c  ijk_L(i[0], i[1], i[2], i[3]);
             v4c  ijk_R(i[0], i[1], i[2], i[3]);
-            ijk_L[1] -= 1;
+            ijk_R[1] += 1;
             v5f  ijk_F(1, (int)ijk_L[0], (int)ijk_L[1], (int)ijk_L[2], (int)ijk_L[3]);
             const auto x  = grid.get_comp_coords(ijk_F);
             prim_t q_i_l_L, q_i_l_R, q_o_l_L, q_o_l_R;
             for (auto n: range(0,5))
             {
-                q_i_l_R[n] = q_i(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
-                q_o_l_R[n] = q_o(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
+                q_i_l_L[n] = q_i(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
+                q_o_l_L[n] = q_o(n, ijk_L[0], ijk_L[1], ijk_L[2], ijk_L[3]);
                 q_i_l_R[n] = q_i(n, ijk_R[0], ijk_R[1], ijk_R[2], ijk_R[3]);
                 q_o_l_R[n] = q_o(n, ijk_R[0], ijk_R[1], ijk_R[2], ijk_R[3]);
             }
             const auto xp = grid.get_coords(ijk_F);
             const auto dy = grid.get_dx(1);
             int idx  = round((xp[1]-ymin)/dy);
-            if (idx < 0 || idx >= ny) print(idx);
+            if (idx < 0 || idx >= ny)
+            {
+                print(idx, ijk_F, xp, ymin, dy);
+                group.pause();
+            }
             prof.inst[idx] += callable(xp, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
             counts[idx]++;
         }
