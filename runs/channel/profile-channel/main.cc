@@ -74,6 +74,8 @@ int main(int argc, char** argv)
     profr_t uivo (ny, 0.0, "uivo", reg);
     profr_t viuo (ny, 0.0, "viuo", reg);
     
+    profr_t u_f  (ny, 0.0, "u_f", reg);
+    
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
     
@@ -121,6 +123,9 @@ int main(int argc, char** argv)
         postprocessing::extract_profile(wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
         postprocessing::extract_profile(uivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.v();});
         postprocessing::extract_profile(viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
+        
+        postprocessing::extract_profile_f(u_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t {return 0.5*(q_o_L.u()+q_o_R.u()+q_i_L.u()+q_i_R.u());});
+        
         for (auto p:reg) p->aggregate();
     }
     bool output_names = false;

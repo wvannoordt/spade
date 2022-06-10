@@ -283,6 +283,11 @@ namespace cvdf::grid
                 return output;
             }
             
+            _finline_ ctrs::array<dtype, 3> get_coords(const ctrs::array<face_t<int>, 5>& i) const
+            {
+                return this->face_coords(i[0], i[1], i[2], i[3], i[4]);
+            }
+            
             _finline_ ctrs::array<dtype, 3> get_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
             {
                 return this->face_coords(idir, i, j, k, lb);
