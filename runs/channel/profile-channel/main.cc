@@ -113,8 +113,6 @@ int main(int argc, char** argv)
             return 15;
         }
         cvdf::io::binary_read(p, prim);
-        cvdf::io::output_vtk("output", "q", prim);
-        return 1;
         postprocessing::copy_field(prim, prim_i);
         grid_filt.exchange_array(prim_i);
         postprocessing::dns_filter(filt, prim_i, prim_o);
