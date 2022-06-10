@@ -14,7 +14,7 @@ void set_channel_noslip(auto& prims)
     const auto& grid = prims.get_grid();
     for (auto lb: range(0, grid.get_num_local_blocks()))
     {
-        const auto& lb_glob = grid.get_partition().get_global_block(lb[0]);
+        const auto& lb_glob = grid.get_partition().get_global_block(lb);
         int idc = 0;
         for (int dir = 2; dir <= 3; ++dir)
         {
@@ -29,10 +29,10 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb[0]);
-                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb[0]);
+                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
-                        for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
+                        for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
                         const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
@@ -42,7 +42,7 @@ void set_channel_noslip(auto& prims)
                         q_g.v() = -q_d.v()*n_d[1]/n_g[1];
                         q_g.w() = -q_d.w();
                         q_g.T() =  t_wall;
-                        for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
+                        for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                     }
                 }
             }
@@ -63,18 +63,18 @@ void garbo_visc(auto& prims, auto& rhs, real_t mu)
         for (auto i: rg)
         {
             real_t lap = 0.0;
-            real_t d00 = prims(2+idir[0], i[0],   i[1],   i[2],   i[3]);
-            real_t d0p = prims(2+idir[0], i[0]+1, i[1],   i[2],   i[3]);
-            real_t d0m = prims(2+idir[0], i[0]-1, i[1],   i[2],   i[3]);
-            real_t d1p = prims(2+idir[0], i[0],   i[1]+1, i[2],   i[3]);
-            real_t d1m = prims(2+idir[0], i[0],   i[1]-1, i[2],   i[3]);
-            real_t d2p = prims(2+idir[0], i[0],   i[1],   i[2]+1, i[3]);
-            real_t d2m = prims(2+idir[0], i[0],   i[1],   i[2]-1, i[3]);
+            real_t d00 = prims(2+idir, i[0],   i[1],   i[2],   i[3]);
+            real_t d0p = prims(2+idir, i[0]+1, i[1],   i[2],   i[3]);
+            real_t d0m = prims(2+idir, i[0]-1, i[1],   i[2],   i[3]);
+            real_t d1p = prims(2+idir, i[0],   i[1]+1, i[2],   i[3]);
+            real_t d1m = prims(2+idir, i[0],   i[1]-1, i[2],   i[3]);
+            real_t d2p = prims(2+idir, i[0],   i[1],   i[2]+1, i[3]);
+            real_t d2m = prims(2+idir, i[0],   i[1],   i[2]-1, i[3]);
             lap += (d0p - 2*d00 + d0m)/(dx*dx);
             lap += (d1p - 2*d00 + d1m)/(dy*dy);
             lap += (d2p - 2*d00 + d2m)/(dz*dz);
             lap *= mu;
-            rhs(2+idir[0], i[0],   i[1],   i[2],   i[3]) += lap;
+            rhs(2+idir, i[0],   i[1],   i[2],   i[3]) += lap;
         }
     }
 }
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
-        int nt = nti[0];
+        int nt = nti;
         real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
         if (group.isroot())
         {
