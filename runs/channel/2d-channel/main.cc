@@ -122,6 +122,7 @@ int main(int argc, char** argv)
     const int    nt_skip  = 10000;
     const int    checkpoint_skip  = 10000;
     
+    
     cvdf::coords::identity<real_t> coords;
     
     std::filesystem::path out_path("checkpoint");
@@ -148,6 +149,7 @@ int main(int argc, char** argv)
     const real_t u_tau = re_tau*mu/(rho*delta);
     const real_t force_term = rho*u_tau*u_tau/delta;
     const real_t du = 3.0;
+    const real_t mach = 20.0*u_tau/sqrt(air.R*air.gamma*t0);
     
     const int nidx = 8;
     std::vector<real_t> r_amp_1(cvdf::utils::max(cells_in_block[2]/nidx, 10));

@@ -18,6 +18,7 @@ namespace cvdf::algs
             return grid.node_coords(i,j,k,lb);
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <grid::multiblock_grid grid_t, grid::has_centering_type<grid::cell_centered> arr_t>
         _finline_ auto get_coords(const grid_t& grid, const arr_t& arr, const int& i, const int& j, const int& k, const int& lb)
         {
@@ -42,18 +43,21 @@ namespace cvdf::algs
             {t(i,j,k,lb)} -> ctrs::basic_array;
         };
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <grid::multiblock_grid grid_t, xyz_ijk_callable<typename grid_t::dtype> func_t, ctrs::vec_nd<3, double> vec_t>
         _finline_ auto forward_fillable_args(const grid_t& grid, const func_t& func, const vec_t& x, const int& i, const int& j, const int& k, const int& lb)
         {
             return func(x,i,j,k,lb);
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <grid::multiblock_grid grid_t, xyz_callable<typename grid_t::dtype> func_t, ctrs::vec_nd<3, double> vec_t>
         _finline_ auto forward_fillable_args(const grid_t& grid, const func_t& func, const vec_t& x, const int& i, const int& j, const int& k, const int& lb)
         {
             return func(x);
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <grid::multiblock_grid grid_t, ijk_callable<typename grid_t::dtype> func_t, ctrs::vec_nd<3, double> vec_t>
         _finline_ auto forward_fillable_args(const grid_t& grid, const func_t& func, const vec_t& x, const int& i, const int& j, const int& k, const int& lb)
         {
@@ -63,12 +67,14 @@ namespace cvdf::algs
     
     namespace detail
     {
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <ctrs::basic_array elem_t, grid::multiblock_array array_t>
         static _finline_ auto unwrap_to_minor_element_type(elem_t& elem, const array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
         {
             for (std::size_t n = 0; n < elem.size(); ++n) elem[n] = arr.unwrap_idx(n, i, j, k, lb, maj);
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <typename elem_t, grid::multiblock_array array_t>
         requires (!ctrs::basic_array<elem_t>)
         static _finline_  auto unwrap_to_minor_element_type(elem_t& elem, const array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
@@ -76,6 +82,7 @@ namespace cvdf::algs
             elem = arr.unwrap_idx(0, i, j, k, lb, maj);
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <ctrs::basic_array elem_t, grid::multiblock_array array_t>
         static _finline_ auto set_from_minor_element_type(const elem_t& elem, array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
         {
@@ -85,6 +92,7 @@ namespace cvdf::algs
             }
         }
         
+        #pragma GCC diagnostic ignored "-Wattributes"
         template <typename elem_t, grid::multiblock_array array_t>
         requires (!ctrs::basic_array<elem_t>)
         static _finline_  auto set_from_minor_element_type(const elem_t& elem, array_t& arr, const int& i, const int& j, const int& k, const int& lb, const int& maj)
