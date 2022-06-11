@@ -51,9 +51,11 @@ int main(int argc, char** argv)
     const real_t du         = 3.0;
     
     
-    const int ny = grid.get_num_cells(1)*grid.get_num_blocks(1);
-    const real_t dy = 2*delta/ny;
-    
+    const int nyi = grid.get_num_cells(1)*grid.get_num_blocks(1);
+	const int nyo = nyi/filt[1];
+    const real_t dyi = 2*delta/nyi;
+	const real_t dyo = 2*delta/nyo;
+    const int ny = nyi;
     std::vector<profr_t*> reg;
     
     profr_t y_f    (ny, 0.0, "y_f",     reg);
@@ -175,8 +177,8 @@ int main(int argc, char** argv)
         postprocessing::extract_profile_f(wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
         postprocessing::extract_profile_f(uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
         postprocessing::extract_profile_f(viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dy;});
-        postprocessing::extract_profile_f(duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dy;});
+        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
+        postprocessing::extract_profile_f(duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
         
         for (auto p:reg) p->aggregate();
     }
