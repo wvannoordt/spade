@@ -207,9 +207,7 @@ namespace cvdf::flux_input
             const ctrs::array<grid::face_t<int>, 5>& iface,
             face_state_grad<output_t>& output)
         {
-            const int idir0 = iface[0];
-            const int idir1 = (idir0+1)%3;
-            const int idir2 = (idir1+1)%3;
+            const ctrs::array<int,3> idir(iface[0], (iface[0]+1)%3, (iface[0]+2)%3);
             const ctrs::array<typename grid_t::coord_type, 3> invdx
             (
                 1.0/ar_grid.get_dx(0),
@@ -222,34 +220,30 @@ namespace cvdf::flux_input
             cell_state<typename output_t::value_type> q;
             auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const ctrs::array<grid::cell_t<int>, 4>& idx)
             {
-                get_single_cell_info_value(ar_grid, prims, idx, idir0, q);
+                get_single_cell_info_value(ar_grid, prims, idx, idir[0], q);
                 for (std::size_t i = 0; i < output.data[iset].size(); ++i) output.data[iset][i] += coeff*q.data[i]*invdx[iset];
             };
             
-            apply_coeff_at(idir0,  -1.0, ic);
-            ic[idir1] += 1;
-            apply_coeff_at(idir1,  0.25, ic);
-            ic[idir1] -= 2;
-            apply_coeff_at(idir1, -0.25, ic);
-            ic[idir1] += 1;
-            ic[idir2] += 1;
-            apply_coeff_at(idir2,  0.25, ic);
-            ic[idir2] -= 2;
-            apply_coeff_at(idir2, -0.25, ic);
-            ic[idir2] += 1;
             
-            ic[idir0] += 1;
-            apply_coeff_at(idir0,   1.0, ic);
-            ic[idir1] += 1;
-            apply_coeff_at(idir1,  0.25, ic);
-            ic[idir1] -= 2;
-            apply_coeff_at(idir1, -0.25, ic);
-            ic[idir1] += 1;
-            ic[idir2] += 1;
-            apply_coeff_at(idir2,  0.25, ic);
-            ic[idir2] -= 2;
-            apply_coeff_at(idir2, -0.25, ic);
-            ic[idir2] += 1;
+            apply_coeff_at(idir[0],  -1.0, ic);
+            for (int ii = 1; ii < grid_t::dim(); ++ii)
+            {
+                ic[idir[ii]] += 1;
+                apply_coeff_at(idir[ii],  0.25, ic);
+                ic[idir[ii]] -= 2;
+                apply_coeff_at(idir[ii], -0.25, ic);
+                ic[idir[ii]] += 1;
+            }
+            ic[idir[0]] += 1;
+            apply_coeff_at(idir[0],   1.0, ic);
+            for (int ii = 1; ii < grid_t::dim(); ++ii)
+            {
+                ic[idir[ii]] += 1;
+                apply_coeff_at(idir[ii],  0.25, ic);
+                ic[idir[ii]] -= 2;
+                apply_coeff_at(idir[ii], -0.25, ic);
+                ic[idir[ii]] += 1;
+            }
             
             const auto& x_face = ar_grid.get_comp_coords(iface);
             transform_gradient(ar_grid, iface, output.data);

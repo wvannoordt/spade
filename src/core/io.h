@@ -13,6 +13,39 @@ namespace cvdf::io
 {
     namespace detail
     {
+        template <typename T> concept has_single_name    = requires(T t) {T::name();};
+        template <typename T> concept has_multiple_names = requires(T t, const int& i) {T::name(i);};
+        
+        template <typename T> 
+        requires (!has_single_name<T> && !has_multiple_names<T>)
+        static std::string get_name(const int& i) {return "data";}
+        
+        template <typename T> 
+        requires has_single_name<T>
+        static std::string get_name(const int& i) {return T::name();}
+        
+        template <typename T> 
+        requires has_multiple_names<T>
+        static std::string get_name(const int& i) {return T::name(i);}
+        
+        
+        template <typename arr_t> std::string get_array_name(const arr_t& arr, const int& i_minor, const int& i_major)
+        {
+            typedef typename arr_t::alias_type alias_t;
+            bool has_provided_name = has_single_name<alias_t> || has_multiple_names<alias_t>;
+            bool has_minor_suffix = !has_provided_name && arr.get_minor_dims().total_size()>1;
+            bool has_major_suffix = arr.get_major_dims().total_size()>1;
+            std::string base_name = "data";
+            std::string minor_suffix = "";
+            std::string major_suffix = "";
+            if (has_minor_suffix) minor_suffix = utils::zfill(i_minor, 4);
+            if (has_major_suffix) major_suffix = utils::zfill(i_major, 4);
+            std::string join = "";
+            if (has_provided_name) base_name = get_name<typename arr_t::alias_type>(i_minor);
+            if (has_minor_suffix && has_major_suffix) join = "_";
+            return base_name + minor_suffix + join + major_suffix;
+        }
+        
         template <class output_stream_t> static void output_serial_header(output_stream_t& out_str)
         {
             out_str << "# vtk DataFile Version 2.0\ncvdf output\nASCII\n";
@@ -103,7 +136,7 @@ namespace cvdf::io
             
             int ct = 0;
             auto current_centering = grid::node_centered;
-            auto output_array_data = [&](auto arr) -> void
+            auto output_array_data = [&](auto& arr) -> void
             {
                 if (arr.centering_type()==current_centering)
                 {
@@ -111,7 +144,7 @@ namespace cvdf::io
                     {
                         for (auto i: range(0,arr.get_minor_dims().total_size()))
                         {
-                            std::string name = "var" + zfill(ct++, 5);
+                            std::string name = get_array_name(arr, i, j);
                             out_str << "SCALARS " << name << " double\nLOOKUP_TABLE default\n";
                             auto grid_range = obj.get_range(arr.centering_type(), grid::exclude_exchanges);
                             auto r1 = grid_range.subrange(0)*range(0, obj.get_num_blocks(0));
@@ -188,11 +221,6 @@ namespace cvdf::io
             
             std::string vars_string = "";
             std::size_t idx = 0;
-            auto get_arr_name = [&](auto& arr, const std::size_t& inline_minor, const std::size_t& inline_major) -> std::string
-            {
-                std::size_t idx = inline_minor + inline_major*arr.get_minor_dims().total_size();
-                return "var" + zfill(idx, 5);
-            };
             auto add_name = [&](auto& i) -> void
             {
                 for (auto i1:range(0,i.get_minor_dims().total_size()))
@@ -200,7 +228,7 @@ namespace cvdf::io
                     for (auto i2:range(0,i.get_major_dims().total_size()))
                     {
                         if (idx>0) vars_string+=",";
-                        vars_string += get_arr_name(i, i1, i2);
+                        vars_string += get_array_name(i, i1, i2);
                         ++idx;
                     }
                 }
@@ -226,7 +254,7 @@ namespace cvdf::io
                         {
                             compressed_data[idx++] = arr.unwrap_idx(i1, ijk[0], ijk[1], ijk[2], lb_loc, i2);
                         }
-                        out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_arr_name(arr, i1, i2) << "\" format=\"binary\">\n";
+                        out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_array_name(arr, i1, i2) << "\" format=\"binary\">\n";
                         //data here
                         // here here he
                         cvdf::detail::stream_base_64(out_str, &total_bytes_size, 1);

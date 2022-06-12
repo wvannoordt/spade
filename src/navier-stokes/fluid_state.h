@@ -51,7 +51,7 @@ namespace cvdf::fluid_state
             return *this;
         }
         
-        std::string name(uint idx) const
+        static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
             return names[idx];
@@ -95,7 +95,7 @@ namespace cvdf::fluid_state
             return *this;
         }
         
-        std::string name(uint idx) const
+        static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
             return names[idx];
@@ -138,7 +138,7 @@ namespace cvdf::fluid_state
             for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
             return *this;
         }
-        std::string name(uint idx) const
+        static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");
             return names[idx];
@@ -171,7 +171,7 @@ namespace cvdf::fluid_state
        os << "{";
        for (size_t i = 0; i < state_type::size(); i++)
        {
-           os << state.name(i) << ":" << state.data[i];
+           os << state_type::name(i) << ":" << state.data[i];
            if (i<state_type::size()-1) os << ", ";
        }
        os << "}";

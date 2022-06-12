@@ -7,15 +7,16 @@
 namespace cvdf::pde_algs
 {
     template <
-        grid::multiblock_array array_t,
+        grid::multiblock_array array1_t,
+        grid::multiblock_array array2_t,
         typename flux_func_t>
     requires
-        grid::has_centering_type<array_t, grid::cell_centered> &&
-        (dims::rank_eval<typename array_t::array_minor_dim_t>::value==1) &&
-        (dims::rank_eval<typename array_t::array_major_dim_t>::value==0)
-    static void flux_div(const array_t& prims, array_t& rhs, const flux_func_t& flux_func)
+        grid::has_centering_type<array1_t, grid::cell_centered> &&
+        (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&
+        (dims::rank_eval<typename array1_t::array_major_dim_t>::value==0)
+    static void flux_div(const array1_t& prims, array2_t& rhs, const flux_func_t& flux_func)
     {
-        typedef typename array_t::value_type real_type;
+        typedef typename array1_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
         int i3d = ((ar_grid.dim()==3)?1:0);
         auto grid_range = range(-1,ar_grid.get_num_cells(0))*range(-1,ar_grid.get_num_cells(1))*range(-i3d,ar_grid.get_num_cells(2))*range(0,ar_grid.get_num_local_blocks());

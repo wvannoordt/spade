@@ -3,6 +3,8 @@
 int main(int argc, char** argv)
 {
     typedef double real_t;
+    typedef cvdf::fluid_state::prim_t<real_t> prim_t;
+    typedef cvdf::fluid_state::flux_t<real_t> flux_t;
     typedef cvdf::ctrs::array<real_t, 3> v3d;
     
     cvdf::parallel::mpi_t group(&argc, &argv);
@@ -82,22 +84,24 @@ int main(int argc, char** argv)
     
         if (group.isroot()) print("Grid level / cells:           ", n, "/", num_dof);
     
-        cvdf::grid::grid_array prim    (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-        cvdf::grid::grid_array rhs     (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-        cvdf::grid::grid_array rhs_test(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+        prim_t fill1 = 0.0;
+        flux_t fill2 = 0.0;
+        cvdf::grid::grid_array prim    (grid, fill1);
+        cvdf::grid::grid_array rhs     (grid, fill2);
+        cvdf::grid::grid_array rhs_test(grid, fill2);
     
         cvdf::algs::fill_array(prim,     mms_test_func, cvdf::grid::include_exchanges);
         cvdf::algs::fill_array(rhs_test, mms_visc_func, cvdf::grid::include_exchanges);        
     
-        cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        cvdf::pde_algs::flux_div(prim, rhs, visc_scheme);
     
         bool output = true;
         if (output)
         {
             std::string filename = "rhs" + std::to_string(n);
-            std::string out_file = cvdf::output::output_vtk("output", filename, grid, rhs);
+            std::string out_file = cvdf::io::output_vtk("output", filename, grid, rhs);
             filename = "ana" + std::to_string(n);
-            out_file = cvdf::output::output_vtk("output", filename, grid, rhs_test);
+            out_file = cvdf::io::output_vtk("output", filename, grid, rhs_test);
         }
         rhs -= rhs_test;
     

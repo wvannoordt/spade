@@ -81,7 +81,8 @@ namespace cvdf::grid
         int lb_glob_end, lb_glob_start;
     };
     
-    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t, typename dimension_t=static_math::int_const_t<3>> class cartesian_grid_t
+    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t, typename dimension_t=static_math::int_const_t<3>>
+    class cartesian_grid_t
     {
         public:
             typedef coord_t::coord_type dtype;
@@ -552,24 +553,52 @@ namespace cvdf::grid
             std::vector<status_t>  statuses;
     };
     
+    namespace detail
+    {
+        template <class T> concept has_value_type = requires(T t) {typename T::value_type;};
+        
+        template <typename data_t> struct get_fundamental_type
+        {
+            typedef data_t type;
+        };
+        
+        template <has_value_type data_t> struct get_fundamental_type<data_t>
+        {
+            typedef typename data_t::value_type type;
+        };
+        
+        template <class T> concept is_static_1D_array = ctrs::basic_array<T> && requires (T t)
+        {
+            t; //todo: figure out whay the heck is going on with this
+        };        
+        template <typename data_t> struct get_dim_type
+        {
+            typedef dims::singleton_dim type;
+        };
+        
+        template <is_static_1D_array data_t> struct get_dim_type<data_t>
+        {
+            typedef dims::static_dims<data_t::size()> type;
+        };
+    }
+    
     template <
         multiblock_grid grid_t,
-        typename ar_data_t,
-        dims::grid_array_dimension minor_dim_t,
-        dims::grid_array_dimension major_dim_t,
-        typename data_alias_t=std::conditional<minor_dim_t::rank()==0, ar_data_t, ctrs::array<ar_data_t, minor_dim_t::total_size()>>::type,
+        typename data_alias_t,
+        dims::grid_array_dimension major_dim_t=dims::singleton_dim,
         const array_center_e centering=cell_centered,
-        array_container::grid_data_container container_t=std::vector<ar_data_t>>
+        array_container::grid_data_container container_t=std::vector<typename detail::get_fundamental_type<data_alias_t>::type>>
     struct grid_array
     {
+        typedef typename detail::get_fundamental_type<data_alias_t>::type fundamental_type;
+        typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
         grid_array(
             const grid_t& grid_in,
-            const ar_data_t& fill_elem,
-            const minor_dim_t& minor_dims_in,
-            const major_dim_t& major_dims_in)
+            const data_alias_t& fill_elem,
+            const major_dim_t& major_dims_in=dims::singleton_dim())
         {
             grid = &grid_in;
-            minor_dims = minor_dims_in;
+            minor_dims = minor_dim_t();
             major_dims = major_dims_in;
             grid_dims = create_grid_dims(grid_in, this->centering_type());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
@@ -591,7 +620,7 @@ namespace cvdf::grid
         }
         
         typedef grid_t grid_type;
-        typedef ar_data_t value_type;
+        typedef fundamental_type value_type;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
         typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
@@ -633,14 +662,14 @@ namespace cvdf::grid
         }
         
         template <typename... idxs_t>
-        _finline_ ar_data_t& operator() (idxs_t... idxs)
+        _finline_ fundamental_type& operator() (idxs_t... idxs)
         {
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
         
         template <typename... idxs_t>
-        _finline_ const ar_data_t& operator() (idxs_t... idxs) const
+        _finline_ const fundamental_type& operator() (idxs_t... idxs) const
         {
             static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
@@ -653,7 +682,7 @@ namespace cvdf::grid
         std::convertible_to<i3_t, int> &&
         std::convertible_to<i4_t, int> &&
         std::convertible_to<i5_t, int>
-        _finline_ ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
+        _finline_ fundamental_type& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
         {
             return data[
                 offset +
@@ -667,7 +696,7 @@ namespace cvdf::grid
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
-        _finline_ const ar_data_t& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
+        _finline_ const fundamental_type& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
         {
             static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
             static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
@@ -717,7 +746,7 @@ namespace cvdf::grid
             return *this;
         }
         
-        grid_array& operator = (const ar_data_t& v)
+        grid_array& operator = (const fundamental_type& v)
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] = v;
             return *this;

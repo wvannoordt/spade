@@ -1,14 +1,7 @@
 #include "cvdf.h"
+#include "get_profile.h"
 
 const int dim = 2;
-
-typedef double real_t;
-typedef cvdf::ctrs::array<real_t, 3> v3d;
-typedef cvdf::ctrs::array<int,    3> v3i;
-typedef cvdf::ctrs::array<int,    4> v4i;
-typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
-typedef cvdf::fluid_state::prim_t<real_t> prim_t;
-typedef cvdf::fluid_state::cons_t<real_t> cons_t;
 
 void set_channel_noslip(auto& prims)
 {
@@ -103,7 +96,7 @@ int main(int argc, char** argv)
         }
     }
     
-    cvdf::ctrs::array<int, dim> num_blocks(8, 8);
+    cvdf::ctrs::array<int, dim> num_blocks(4,2);
     cvdf::ctrs::array<int, dim> cells_in_block(48, 48);
     cvdf::ctrs::array<int, dim> exchange_cells(2, 2);
     //cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(8, 8, 8);
@@ -130,9 +123,10 @@ int main(int argc, char** argv)
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, cvdf::static_math::int_const_t<dim>());
     
     
-    cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs0 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs1 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());    
+    prim_t fill = 0.0;
+    cvdf::grid::grid_array prim (grid, fill);
+    cvdf::grid::grid_array rhs0 (grid, fill);
+    cvdf::grid::grid_array rhs1 (grid, fill);    
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -164,23 +158,31 @@ int main(int argc, char** argv)
     int i3d = ((dim==3)?1:0);
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
-        const real_t shape = 1.0 - pow(x[1]/delta, 4);
-        const real_t turb  = du*u_tau*sin(10.0*cvdf::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
+        // const real_t shape = 1.0 - pow(x[1]/delta, 4);
+        // const real_t turb  = du*u_tau*sin(10.0*cvdf::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
         prim_t output;
+        // output.p() = p0;
+        // output.T() = t0;
+        // output.u() = (20.0*u_tau + 0.0*turb)*shape;
+        // output.v() = (0.0        + 0.0*turb)*shape;
+        // output.w() = (0.0        + 0.0*turb)*shape;
+        // 
+        // int eff_i = i/nidx;
+        // int eff_j = j/nidx;
+        // int eff_k = k/nidx;
+        // 
+        // const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[i3d*eff_k] + r_amp_4[lb]);
+        // output.u() += 0.1*per*shape;
+        // output.v() += 0.1*per*shape;
+        // output.w() += 0.1*per*shape;
+        
         output.p() = p0;
         output.T() = t0;
-        output.u() = (20.0*u_tau + 0.0*turb)*shape;
-        output.v() = (0.0        + 0.0*turb)*shape;
-        output.w() = (0.0        + 0.0*turb)*shape;
+        output.u() = 0.5*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
+        output.v() = 0.0;
+        output.w() = 0.0;
         
-        int eff_i = i/nidx;
-        int eff_j = j/nidx;
-        int eff_k = k/nidx;
-        
-        const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[i3d*eff_k] + r_amp_4[lb]);
-        output.u() += 0.0*per*shape;
-        output.v() += 0.0*per*shape;
-        output.w() += 0.0*per*shape;
+        output.u() = 0.0;
         
         return output;
     };
@@ -189,11 +191,21 @@ int main(int argc, char** argv)
     if (init_from_file)
     {
         cvdf::io::binary_read(init_filename, prim);
+        std::vector<real_t> yprof, uprof;
+        get_profile(prim, yprof, uprof);
+        if (group.isroot())
+        {
+            std::ofstream myfile("prof.dat");
+            for (int ppp = 0; ppp < yprof.size(); ++ppp)
+            {
+                myfile << yprof[ppp] << "    " << uprof[ppp] << std::endl;
+            }
+        }
     }
     
     cvdf::convective::totani_lr tscheme(air);
     cvdf::convective::weno_3    wscheme(air);
-    cvdf::viscous::visc_lr visc_scheme(visc_law);
+    cvdf::viscous::visc_lr      visc_scheme(visc_law);
     
     struct p2c_t
     {
@@ -254,7 +266,8 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        cvdf::pde_algs::flux_div(q, rhs, tscheme);
+        // cvdf::pde_algs::flux_div(q, rhs, tscheme);
+        cvdf::pde_algs::flux_div(q, rhs, wscheme);
         cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
         {
@@ -262,7 +275,7 @@ int main(int argc, char** argv)
             rhs_new[2] += force_term;
             return rhs_new;
         });
-        //garbo_visc(q, rhs, mu);
+        // garbo_visc(q, rhs, mu);
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
@@ -271,17 +284,20 @@ int main(int argc, char** argv)
     for (auto nti: range(0, nt_max))
     {
         int nt = nti;
-        real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
+        real_t umax     = cvdf::algs::transform_reduce(prim, get_u,       max_op);
+        real_t rhsmax   = cvdf::algs::transform_reduce(rhs0, [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {
+            return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
             print(
-                "nt: ", cvdf::utils::pad_str(nt, 15),
-                "cfl:", cvdf::utils::pad_str(cfl, 15),
-                "u+a:", cvdf::utils::pad_str(umax, 15),
-                "dx: ", cvdf::utils::pad_str(dx, 15),
-                "dt: ", cvdf::utils::pad_str(dt, 15),
-                "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)
+                "nt:     ", cvdf::utils::pad_str(nt, 10),
+                "cfl:    ", cvdf::utils::pad_str(cfl, 10),
+                "u+a:    ", cvdf::utils::pad_str(umax, 10),
+                "dx:     ", cvdf::utils::pad_str(dx, 10),
+                "dt:     ", cvdf::utils::pad_str(dt, 10),
+                "rhsmax: ", cvdf::utils::pad_str(rhsmax, 10),
+                "ftt:    ", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 10)
             );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
             myfile.flush();
