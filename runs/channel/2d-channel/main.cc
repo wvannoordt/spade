@@ -275,7 +275,6 @@ int main(int argc, char** argv)
             rhs_new[2] += force_term;
             return rhs_new;
         });
-        // garbo_visc(q, rhs, mu);
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
