@@ -245,28 +245,26 @@ int main(int argc, char** argv)
     } get_u(air);
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
-    const real_t time0 = 0.0;
-    
-    
-    
-    const real_t dx = cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
+    const real_t time0    = 0.0;
+    const real_t dx       = cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
     const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
-    const real_t dt     = targ_cfl*dx/umax_ini;
+    const real_t dt       = targ_cfl*dx/umax_ini;
     
     auto ftrans = [&](auto& q) -> void
     {
         cvdf::algs::transform_inplace(prim, p2c);
     };
+    
     auto itrans = [&](auto& q) -> void
     {
         cvdf::algs::transform_inplace(prim, c2p);
     };
+
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        // cvdf::pde_algs::flux_div(q, rhs, tscheme);
         cvdf::pde_algs::flux_div(q, rhs, wscheme);
         cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
