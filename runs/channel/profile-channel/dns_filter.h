@@ -89,10 +89,6 @@ namespace postprocessing
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
         const auto& group = grid.group();
-        if (group.isroot())
-        {
-            print("Extract", prof.name);
-        }
         auto rg   = grid.get_range(cvdf::grid::cell_centered);
         auto ymin = grid.get_bounds().min(1);
         int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);

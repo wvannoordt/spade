@@ -8,6 +8,7 @@ int main(int argc, char** argv)
     cvdf::parallel::mpi_t group(&argc, &argv);
     
     v3i filt(8, 16, 6);
+    //v3i filt(1, 1, 1);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block_coarse;
@@ -23,16 +24,16 @@ int main(int argc, char** argv)
     bounds.max(1) =  delta;
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*cvdf::consts::pi*delta;
-    
+    prim_t fill1 = 0;
     cvdf::coords::identity<real_t> coords;
     
     cvdf::grid::cartesian_grid_t grid     (num_blocks, cells_in_block,        exchange_cells,      bounds, coords, group);
     cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block,        exchange_cells_filt, bounds, coords, group);
     // cvdf::grid::cartesian_grid_t grid_crse(num_blocks, cells_in_block_coarse, exchange_cells,      bounds, coords, group);
     
-    cvdf::grid::grid_array prim(grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array prim_o(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array prim_i(grid_filt, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    cvdf::grid::grid_array prim(grid, fill1);
+    cvdf::grid::grid_array prim_o(grid_filt, fill1);
+    cvdf::grid::grid_array prim_i(grid_filt, fill1);
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -177,7 +178,7 @@ int main(int argc, char** argv)
         postprocessing::extract_profile_f(wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
         postprocessing::extract_profile_f(uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
         postprocessing::extract_profile_f(viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
+        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyi;});
         postprocessing::extract_profile_f(duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
         
         for (auto p:reg) p->aggregate();
@@ -202,5 +203,6 @@ int main(int argc, char** argv)
             myfile << "\n";
         }
     }
+    if (group.isroot()) print("done!");
     return 0;
 }

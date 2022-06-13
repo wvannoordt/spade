@@ -111,9 +111,9 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.25;
-    const int    nt_max   = 300001;
-    const int    nt_skip  = 10000;
-    const int    checkpoint_skip  = 10000;
+    const int    nt_max   = 30000001;
+    const int    nt_skip  = 1000000;
+    const int    checkpoint_skip  = 1000000;
     
     
     cvdf::coords::identity<real_t> coords;
@@ -285,8 +285,6 @@ int main(int argc, char** argv)
     {
         int nt = nti;
         real_t umax     = cvdf::algs::transform_reduce(prim, get_u,       max_op);
-        real_t rhsmax   = cvdf::algs::transform_reduce(rhs0, [](const cvdf::ctrs::array<real_t, 5>& rhs) -> real_t {
-            return cvdf::utils::max(rhs[0], rhs[1], rhs[2], rhs[3], rhs[4]);}, max_op);
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
@@ -296,7 +294,6 @@ int main(int argc, char** argv)
                 "u+a:    ", cvdf::utils::pad_str(umax, 10),
                 "dx:     ", cvdf::utils::pad_str(dx, 10),
                 "dt:     ", cvdf::utils::pad_str(dt, 10),
-                "rhsmax: ", cvdf::utils::pad_str(rhsmax, 10),
                 "ftt:    ", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 10)
             );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
