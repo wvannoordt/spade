@@ -207,7 +207,7 @@ namespace cvdf::flux_input
             const ctrs::array<grid::face_t<int>, 5>& iface,
             face_state_grad<output_t>& output)
         {
-            const ctrs::array<int,3> idir(iface[0], (iface[0]+1)%3, (iface[0]+2)%3);
+            const ctrs::array<int,3> idir(iface[0], (iface[0]+1)%ar_grid.dim(), (iface[0]+2)%ar_grid.dim());
             const ctrs::array<typename grid_t::coord_type, 3> invdx
             (
                 1.0/ar_grid.get_dx(0),
@@ -223,7 +223,6 @@ namespace cvdf::flux_input
                 get_single_cell_info_value(ar_grid, prims, idx, idir[0], q);
                 for (std::size_t i = 0; i < output.data[iset].size(); ++i) output.data[iset][i] += coeff*q.data[i]*invdx[iset];
             };
-            
             
             apply_coeff_at(idir[0],  -1.0, ic);
             for (int ii = 1; ii < grid_t::dim(); ++ii)
