@@ -266,13 +266,14 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         set_channel_noslip(q);
         cvdf::pde_algs::flux_div(q, rhs, wscheme);
-        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
+	//        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
         {
             cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;
             rhs_new[2] += force_term;
             return rhs_new;
         });
+	garbo_visc(q, rhs, mu);
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);

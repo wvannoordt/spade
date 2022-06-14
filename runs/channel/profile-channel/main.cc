@@ -53,34 +53,36 @@ int main(int argc, char** argv)
     
     
     const int nyi = grid.get_num_cells(1)*grid.get_num_blocks(1);
-	const int nyo = nyi/filt[1];
+    const int nyo = nyi/filt[1];
     const real_t dyi = 2*delta/nyi;
-	const real_t dyo = 2*delta/nyo;
+    const real_t dyo = 2*delta/nyo;
     const int ny = nyi;
+
+    
     std::vector<profr_t*> reg;
     
-    profr_t y_f    (ny, 0.0, "y_f",     reg);
-    profr_t ui_f   (ny, 0.0, "ui_f",    reg);
-    profr_t uo_f   (ny, 0.0, "uo_f",    reg);
-    profr_t vi_f   (ny, 0.0, "vi_f",    reg);
-    profr_t vo_f   (ny, 0.0, "vo_f",    reg);
-    profr_t wi_f   (ny, 0.0, "wi_f",    reg);
-    profr_t wo_f   (ny, 0.0, "wo_f",    reg);
-    profr_t ui2_f  (ny, 0.0, "ui2_f",   reg);
-    profr_t uo2_f  (ny, 0.0, "uo2_f",   reg);
-    profr_t vi2_f  (ny, 0.0, "vi2_f",   reg);
-    profr_t vo2_f  (ny, 0.0, "vo2_f",   reg);
-    profr_t wi2_f  (ny, 0.0, "wi2_f",   reg);
-    profr_t wo2_f  (ny, 0.0, "wo2_f",   reg);
-    profr_t uivi_f (ny, 0.0, "uivi_f",  reg);
-    profr_t uovo_f (ny, 0.0, "uovo_f",  reg);
-    profr_t uiuo_f (ny, 0.0, "uiuo_f",  reg);
-    profr_t vivo_f (ny, 0.0, "vivo_f",  reg);
-    profr_t wiwo_f (ny, 0.0, "wiwo_f",  reg);
-    profr_t uivo_f (ny, 0.0, "uivo_f",  reg);
-    profr_t viuo_f (ny, 0.0, "viuo_f",  reg);
-    profr_t duidy_f(ny, 0.0, "duidy_f", reg);
-    profr_t duody_f(ny, 0.0, "duody_f", reg);
+    profr_t y_f    (ny, 0.0, "y_f",     reg); // 1
+    profr_t ui_f   (ny, 0.0, "ui_f",    reg); // 2
+    profr_t uo_f   (ny, 0.0, "uo_f",    reg); // 3
+    profr_t vi_f   (ny, 0.0, "vi_f",    reg); // 4
+    profr_t vo_f   (ny, 0.0, "vo_f",    reg); // 5
+    profr_t wi_f   (ny, 0.0, "wi_f",    reg); // 6
+    profr_t wo_f   (ny, 0.0, "wo_f",    reg); // 7
+    profr_t ui2_f  (ny, 0.0, "ui2_f",   reg); // 8
+    profr_t uo2_f  (ny, 0.0, "uo2_f",   reg); // 9
+    profr_t vi2_f  (ny, 0.0, "vi2_f",   reg); // 10
+    profr_t vo2_f  (ny, 0.0, "vo2_f",   reg); // 11
+    profr_t wi2_f  (ny, 0.0, "wi2_f",   reg); // 12
+    profr_t wo2_f  (ny, 0.0, "wo2_f",   reg); // 13
+    profr_t uivi_f (ny, 0.0, "uivi_f",  reg); // 14
+    profr_t uovo_f (ny, 0.0, "uovo_f",  reg); // 15
+    profr_t uiuo_f (ny, 0.0, "uiuo_f",  reg); // 16
+    profr_t vivo_f (ny, 0.0, "vivo_f",  reg); // 17
+    profr_t wiwo_f (ny, 0.0, "wiwo_f",  reg); // 18
+    profr_t uivo_f (ny, 0.0, "uivo_f",  reg); // 19
+    profr_t viuo_f (ny, 0.0, "viuo_f",  reg); // 20
+    profr_t duidy_f(ny, 0.0, "duidy_f", reg); // 21
+    profr_t duody_f(ny, 0.0, "duody_f", reg); // 22
 
     profr_t y    (ny, 0.0, "y",    reg);
     profr_t ui   (ny, 0.0, "ui",   reg);
@@ -123,9 +125,10 @@ int main(int argc, char** argv)
         postprocessing::copy_field(prim, prim_i);
         grid_filt.exchange_array(prim_i);
         postprocessing::dns_filter(filt, prim_i, prim_o);
-        prim_i -= prim_o;
+	//        prim_i -= prim_o;
         grid_filt.exchange_array(prim_i);
         grid_filt.exchange_array(prim_o);
+	postprocessing::noslip(filt[1]/2, prim_i);
         postprocessing::noslip(filt[1]/2, prim_o);
         if (output)
         {
@@ -178,7 +181,7 @@ int main(int argc, char** argv)
         postprocessing::extract_profile_f(wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
         postprocessing::extract_profile_f(uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
         postprocessing::extract_profile_f(viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyi;});
+        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
         postprocessing::extract_profile_f(duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
         
         for (auto p:reg) p->aggregate();
