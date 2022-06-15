@@ -33,10 +33,6 @@ namespace cvdf::viscous
         {
             // don't forget the negative signs
             fluid_state::flux_t<dtype> output;
-            // const auto& ql       = std::get<0>(input.cell_data.left.elements).data;
-            // const auto& qr       = std::get<0>(input.cell_data.right.elements).data;
-            // const auto& normal_l = std::get<1>(input.cell_data.left.elements).data;
-            // const auto& normal_r = std::get<1>(input.cell_data.right.elements).data;
             const auto& q_face      = std::get<0>(input.face_data.elements).data;
             const auto& face_grad   = std::get<1>(input.face_data.elements).data;
             const auto& n           = std::get<2>(input.face_data.elements).data;
