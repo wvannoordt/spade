@@ -4,6 +4,7 @@ typedef double real_t;
 typedef cvdf::ctrs::array<real_t, 3> v3d;
 typedef cvdf::ctrs::array<int,    3> v3i;
 typedef cvdf::ctrs::array<int,    4> v4i;
+typedef cvdf::ctrs::array<real_t, 5> v5d;
 typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
 typedef cvdf::fluid_state::prim_t<real_t> prim_t;
 typedef cvdf::fluid_state::cons_t<real_t> cons_t;
@@ -14,7 +15,7 @@ void set_channel_noslip(auto& prims)
     const auto& grid = prims.get_grid();
     for (auto lb: range(0, grid.get_num_local_blocks()))
     {
-        const auto& lb_glob = grid.get_partition().get_global_block(lb[0]);
+        const auto& lb_glob = grid.get_partition().get_global_block(lb);
         int idc = 0;
         for (int dir = 2; dir <= 3; ++dir)
         {
@@ -29,10 +30,10 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb[0]);
-                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb[0]);
+                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
-                        for (auto n: range(0,5)) q_d[n[0]] = prims(n[0], i_d[0], i_d[1], i_d[2], i_d[3]);
+                        for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
                         const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
@@ -42,7 +43,7 @@ void set_channel_noslip(auto& prims)
                         q_g.v() = -q_d.v()*n_d[1]/n_g[1];
                         q_g.w() = -q_d.w();
                         q_g.T() =  t_wall;
-                        for (auto n: range(0,5)) prims(n[0], i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n[0]];
+                        for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                     }
                 }
             }
@@ -99,7 +100,6 @@ int main(int argc, char** argv)
     std::filesystem::path out_path("checkpoint");
     if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
     
-    
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
     cvdf::ctrs::array<real_t, 3> dx_comp(grid.get_dx(0),grid.get_dx(1),grid.get_dx(2));
@@ -110,10 +110,10 @@ int main(int argc, char** argv)
         zc.map(bounds.min(2)+dx_comp[2]) - zc.map(bounds.min(2))
     );
     
-    
-    cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs0 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs1 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    prim_t fill_elem = 0.0;
+    cvdf::grid::grid_array prim (grid, fill_elem);
+    cvdf::grid::grid_array rhs0 (grid, fill_elem);
+    cvdf::grid::grid_array rhs1 (grid, fill_elem);
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -221,13 +221,10 @@ int main(int argc, char** argv)
     } get_u(air);
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
-    const real_t time0 = 0.0;
-    
-    
-    
-    const real_t dx = cvdf::utils::min(dx_phys[0], dx_phys[1], dx_phys[2]);
+    const real_t time0    = 0.0;
+    const real_t dx       = cvdf::utils::min(dx_phys[0], dx_phys[1], dx_phys[2]);
     const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
-    const real_t dt     = targ_cfl*dx/umax_ini;
+    const real_t dt       = targ_cfl*dx/umax_ini;
     
     auto ftrans = [&](auto& q) -> void
     {
@@ -242,14 +239,9 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        cvdf::flux_algs::flux_lr_diff(q, rhs, tscheme);
-	cvdf::flux_algs::flux_lr_diff(q, rhs, visc_scheme);
-        cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
-        {
-            cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;
-            rhs_new[2] += force_term;
-            return rhs_new;
-        });
+        cvdf::pde_algs::flux_div(q, rhs, tscheme);
+        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
+        cvdf::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
@@ -257,7 +249,7 @@ int main(int argc, char** argv)
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
-        int nt = nti[0];
+        int nt = nti;
         real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
         if (group.isroot())
         {
