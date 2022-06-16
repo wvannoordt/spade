@@ -8,6 +8,7 @@ int main(int argc, char** argv)
     cvdf::parallel::mpi_t group(&argc, &argv);
     
     v3i filt(8, 16, 6);
+    //v3i filt(4, 8, 3);
     //v3i filt(1, 1, 1);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
     cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);

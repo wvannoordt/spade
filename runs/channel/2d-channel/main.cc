@@ -265,7 +265,11 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        cvdf::pde_algs::flux_div(q, rhs, wscheme);
+	const real_t alpha = 0.00005;
+	cvdf::pde_algs::flux_div(q, rhs, wscheme);
+	rhs *= (alpha)/(1.0-alpha);
+	cvdf::pde_algs::flux_div(q, rhs, tscheme);
+	rhs *= 1.0-alpha;
 	//        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
         {
@@ -292,7 +296,7 @@ int main(int argc, char** argv)
                 "u+a:    ", cvdf::utils::pad_str(umax, 10),
                 "dx:     ", cvdf::utils::pad_str(dx, 10),
                 "dt:     ", cvdf::utils::pad_str(dt, 10),
-                "ftt:    ", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 10)
+                "ftt:    ", cvdf::utils::pad_str(0.5*re_tau*u_tau*time_int.time()/delta, 10)
             );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
             myfile.flush();
