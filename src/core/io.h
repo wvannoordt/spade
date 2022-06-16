@@ -66,7 +66,18 @@ namespace cvdf::io
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::diagonal_coordinate_system diag_coord_sys_t>
         static void output_mesh_data(output_stream_t& out_str, const grid_output_t& obj, const diag_coord_sys_t& coord_sys)
         {
-            print("NOT IMPLEMENTED: output_mesh_data (diag)!", __FILE__, __LINE__);
+            out_str << "DATASET RECTILINEAR_GRID\nDIMENSIONS ";
+            int nx = (1+obj.get_num_blocks(0)*obj.get_num_cells(0));
+            int ny = (1+obj.get_num_blocks(1)*obj.get_num_cells(1));
+            int nz = ((obj.dim()==3)*(1)+obj.get_num_blocks(2)*obj.get_num_cells(2));
+            out_str << nx <<  " " << ny <<  " " << nz << "\n";
+            auto bnd = obj.get_bounds();
+            out_str << "X_COORDINATES " << nx << " double\n";
+            for (auto i: range(0,nx)) out_str << coord_sys.xcoord.map(bnd.min(0)+i*obj.get_dx(0)) << "\n";
+            out_str << "Y_COORDINATES " << ny << " double\n";
+            for (auto j: range(0,ny)) out_str << coord_sys.ycoord.map(bnd.min(1)+j*obj.get_dx(1)) << "\n";
+            out_str << "Z_COORDINATES " << nz << " double\n";
+            for (auto k: range(0,nz)) out_str << coord_sys.zcoord.map(bnd.min(2)+k*obj.get_dx(2)) << "\n";
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t, coords::dense_coordinate_system dense_coord_sys_t>

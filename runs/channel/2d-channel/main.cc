@@ -110,13 +110,18 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
-    const real_t targ_cfl = 0.25;
+    const real_t targ_cfl = 0.45;
     const int    nt_max   = 30000001;
-    const int    nt_skip  = 1000000;
-    const int    checkpoint_skip  = 1000000;
+    const int    nt_skip  = 10000;
+    const int    checkpoint_skip  = 10000;
     
     
-    cvdf::coords::identity<real_t> coords;
+    // cvdf::coords::identity<real_t> coords;
+    
+    cvdf::coords::identity_1D<real_t> xc;
+    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    cvdf::coords::identity_1D<real_t> zc;
+    cvdf::coords::diagonal_coords coords(xc, yc, zc);
     
     std::filesystem::path out_path("checkpoint");
     if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
@@ -158,32 +163,12 @@ int main(int argc, char** argv)
     int i3d = ((dim==3)?1:0);
     auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
-        // const real_t shape = 1.0 - pow(x[1]/delta, 4);
-        // const real_t turb  = du*u_tau*sin(10.0*cvdf::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
         prim_t output;
-        // output.p() = p0;
-        // output.T() = t0;
-        // output.u() = (20.0*u_tau + 0.0*turb)*shape;
-        // output.v() = (0.0        + 0.0*turb)*shape;
-        // output.w() = (0.0        + 0.0*turb)*shape;
-        // 
-        // int eff_i = i/nidx;
-        // int eff_j = j/nidx;
-        // int eff_k = k/nidx;
-        // 
-        // const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[i3d*eff_k] + r_amp_4[lb]);
-        // output.u() += 0.1*per*shape;
-        // output.v() += 0.1*per*shape;
-        // output.w() += 0.1*per*shape;
-        
         output.p() = p0;
         output.T() = t0;
         output.u() = 0.5*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
         output.v() = 0.0;
         output.w() = 0.0;
-        
-        output.u() = 0.0;
-        
         return output;
     };
     
@@ -246,7 +231,7 @@ int main(int argc, char** argv)
     
     cvdf::reduce_ops::reduce_max<real_t> max_op;
     const real_t time0    = 0.0;
-    const real_t dx       = cvdf::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
+    const real_t dx       = coords.ycoord.map(bounds.min(1)+grid.get_dx(1))-coords.ycoord.map(bounds.min(1));
     const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt       = targ_cfl*dx/umax_ini;
     
@@ -265,19 +250,13 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-	const real_t alpha = 0.00005;
-	cvdf::pde_algs::flux_div(q, rhs, wscheme);
-	rhs *= (alpha)/(1.0-alpha);
-	cvdf::pde_algs::flux_div(q, rhs, tscheme);
-	rhs *= 1.0-alpha;
-	//        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
-        cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
-        {
-            cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;
-            rhs_new[2] += force_term;
-            return rhs_new;
-        });
-	garbo_visc(q, rhs, mu);
+        const real_t alpha = 0.00005;
+        cvdf::pde_algs::flux_div(q, rhs, wscheme);
+        rhs *= (alpha)/(1.0-alpha);
+        cvdf::pde_algs::flux_div(q, rhs, tscheme);
+        rhs *= 1.0-alpha;
+        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
+        cvdf::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
@@ -287,6 +266,7 @@ int main(int argc, char** argv)
     {
         int nt = nti;
         real_t umax     = cvdf::algs::transform_reduce(prim, get_u,       max_op);
+        real_t ratio    = umax/(0.5*re_tau*u_tau + sqrt(air.gamma*air.R*t0));
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
@@ -295,6 +275,7 @@ int main(int argc, char** argv)
                 "cfl:    ", cvdf::utils::pad_str(cfl, 10),
                 "u+a:    ", cvdf::utils::pad_str(umax, 10),
                 "dx:     ", cvdf::utils::pad_str(dx, 10),
+                "%:      ", cvdf::utils::pad_str(ratio, 10),
                 "dt:     ", cvdf::utils::pad_str(dt, 10),
                 "ftt:    ", cvdf::utils::pad_str(0.5*re_tau*u_tau*time_int.time()/delta, 10)
             );

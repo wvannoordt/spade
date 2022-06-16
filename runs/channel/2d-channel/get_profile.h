@@ -2,6 +2,7 @@
 
 typedef double real_t;
 typedef cvdf::ctrs::array<real_t, 3> v3d;
+typedef cvdf::ctrs::array<real_t, 5> v5d;
 typedef cvdf::ctrs::array<int,    3> v3i;
 typedef cvdf::ctrs::array<int,    4> v4i;
 typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
