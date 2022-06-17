@@ -84,10 +84,10 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
-    const real_t targ_cfl = 0.35;
-    const int    nt_max   = 150001;
-    const int    nt_skip  = 5000;
-    const int    checkpoint_skip  = 5000;
+    const real_t targ_cfl = 0.45;
+    const int    nt_max   = 450001;
+    const int    nt_skip  = 25000;
+    const int    checkpoint_skip  = 25000;
     
     cvdf::coords::identity_1D<real_t> xc;
     cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
