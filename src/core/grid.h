@@ -44,6 +44,13 @@ namespace cvdf::grid
         t.unwrap_idx(a, i, j, k, lb, b);
     };
     
+    template <typename T0, typename T1> concept elementwise_compatible = multiblock_array<T0> && multiblock_array<T1> &&
+    requires(const T0& t0, const T1& t1)
+    {
+        //TODO: write this
+        t0;
+    };
+    
     enum exchange_inclusion_e
     {
         exclude_exchanges=0,
@@ -715,19 +722,25 @@ namespace cvdf::grid
             ];
         }
         
-        grid_array& operator -= (const grid_array& rhs)
+        template <multiblock_array rhs_t>
+        requires elementwise_compatible<grid_array, rhs_t>
+        grid_array& operator -= (const rhs_t& rhs)
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] -= rhs.data[i];
             return *this;
         }
         
-        grid_array& operator += (const grid_array& rhs)
+        template <multiblock_array rhs_t>
+        requires elementwise_compatible<grid_array, rhs_t>
+        grid_array& operator += (const rhs_t& rhs)
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] += rhs.data[i];
             return *this;
         }
         
-        grid_array& operator *= (const grid_array& rhs)
+        template <multiblock_array rhs_t>
+        requires elementwise_compatible<grid_array, rhs_t>
+        grid_array& operator *= (const rhs_t& rhs)
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs.data[i];
             return *this;
