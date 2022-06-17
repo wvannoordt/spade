@@ -84,7 +84,7 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
-    const real_t targ_cfl = 0.45;
+    const real_t targ_cfl = 0.2;
     const int    nt_max   = 450001;
     const int    nt_skip  = 25000;
     const int    checkpoint_skip  = 25000;
