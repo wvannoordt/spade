@@ -126,10 +126,10 @@ int main(int argc, char** argv)
         postprocessing::copy_field(prim, prim_i);
         grid_filt.exchange_array(prim_i);
         postprocessing::dns_filter(filt, prim_i, prim_o);
-	//        prim_i -= prim_o;
+        prim_i -= prim_o;
         grid_filt.exchange_array(prim_i);
         grid_filt.exchange_array(prim_o);
-	postprocessing::noslip(filt[1]/2, prim_i);
+        postprocessing::noslip(filt[1]/2, prim_i);
         postprocessing::noslip(filt[1]/2, prim_o);
         if (output)
         {
