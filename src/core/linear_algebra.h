@@ -58,7 +58,7 @@ namespace cvdf::linear_algebra
                 value_type sum = 0.0;
                 for (std::size_t j = 0; j < mat_size; ++j)
                 {
-                    sum += (*this)(i,j);
+                    sum += (*this)(i,j)*rhs[j];
                 }
                 output[i] = sum;
             }
