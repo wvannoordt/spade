@@ -112,7 +112,7 @@ namespace cvdf::grid
                 num_blocks = 1;
                 cells_in_block = 1;
                 total_blocks = 1;
-                is3d = dim()==3;
+                is3d = (dim()==3);
                 bounds.min(2) = 0.0;
                 bounds.max(2) = 1.0;
                 
