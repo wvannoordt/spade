@@ -81,6 +81,13 @@ namespace cvdf::ctrs
             return *this;
         }
         
+        template <typename rhs_t> auto operator + (const array<rhs_t, ar_size>& rhs) const
+        {
+            array<decltype(dtype()+rhs_t()), ar_size> output;
+            for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
+            return output;
+        }
+        
         template <basic_array arr_t> auto& operator -= (const arr_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs[i];

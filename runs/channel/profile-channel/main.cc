@@ -125,6 +125,25 @@ int main(int argc, char** argv)
                 return 15;
             }
             cvdf::io::binary_read(p, prim);
+            m3r symmetry_jacobian;
+            switch (symmetry_index)
+            {
+                case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+                case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+            }
+            cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t{
+                prim_t q_out;
+                q_out.p() = q.p();
+                q_out.T() = q.T();
+                v3r u_vec(q.u(), q.v(), q.w());
+                u_vec = symmetry_jacobian * u_vec;
+                q_out.u() = u_vec[0];
+                q_out.v() = u_vec[1];
+                q_out.w() = u_vec[2];
+                return q_out;
+            });
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
             postprocessing::dns_filter(filt, prim_i, prim_o);
@@ -139,14 +158,6 @@ int main(int argc, char** argv)
                 cvdf::io::output_vtk("output", "q_i", prim);
                 postprocessing::copy_field(prim_o, prim);
                 cvdf::io::output_vtk("output", "q_o", prim);
-            }
-            m3r symmetry_jacobian;
-            switch (symmetry_index)
-            {
-                case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
-                case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
             }
             
             postprocessing::extract_profile(symmetry_jacobian, y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
