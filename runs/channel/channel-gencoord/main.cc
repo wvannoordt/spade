@@ -289,11 +289,13 @@ int main(int argc, char** argv)
             {
                 print("A tragedy has occurred!");
             }
+	    std::string nstr = cvdf::utils::zfill(nt, 8);
+            std::string filename = "check"+nstr;
+            filename = "checkpoint/"+filename+".crash.bin";
+            cvdf::io::binary_write(filename, prim);
             group.sync();
             return 155;
         }
     }
-    
-    
     return 0;
 }
