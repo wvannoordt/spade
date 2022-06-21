@@ -50,6 +50,35 @@ namespace cvdf::linear_algebra
             return *this;
         }
         
+        vector_type operator * (const vector_type& rhs) const
+        {
+            vector_type output;
+            for (std::size_t i = 0; i < mat_size; ++i)
+            {
+                value_type sum = 0.0;
+                for (std::size_t j = 0; j < mat_size; ++j)
+                {
+                    sum += (*this)(i,j);
+                }
+                output[i] = sum;
+            }
+            return output;
+        }
+        
+        dense_mat<data_t, mat_size> operator - (const dense_mat<data_t, mat_size>& rhs) const
+        {
+            dense_mat<data_t, mat_size> output;
+            for (std::size_t i = 0; i < mat_size*mat_size; ++i) output.m[i] = m[i]-rhs.m[i];
+            return output;
+        }
+        
+        dense_mat<data_t, mat_size> operator + (const dense_mat<data_t, mat_size>& rhs) const
+        {
+            dense_mat<data_t, mat_size> output;
+            for (std::size_t i = 0; i < mat_size*mat_size; ++i) output.m[i] = m[i]+rhs.m[i];
+            return output;
+        }
+        
         data_t det(void) const
         {
             static_assert(mat_size==3, "Determinant calculation not yet implemented for matrices other thatn 3x3");
@@ -58,6 +87,14 @@ namespace cvdf::linear_algebra
                 +  (*this)(0,2)*((*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0));
         }
     };
+    
+    template <typename rhs_t, typename data_t, const std::size_t mat_size>
+    dense_mat<data_t, mat_size> operator * (const rhs_t& rhs, const dense_mat<data_t, mat_size>& mat)
+    {
+        dense_mat<data_t, mat_size> output;
+        for (std::size_t i = 0; i < mat_size*mat_size; ++i) output.m[i] = mat.m[i]*rhs;
+        return output;
+    }
     
     template <typename data_t, const std::size_t sys_size, ctrs::basic_array rhs_t>
     void brute_solve_inplace(dense_mat<data_t, sys_size>& a, rhs_t& y)

@@ -115,77 +115,103 @@ int main(int argc, char** argv)
     int ct = 0;
     for (auto& p: names)
     {
-        if (group.isroot()) print(p);
-        if (!std::filesystem::exists(p))
+        for (auto symmetry_index: range(0,4))
         {
-            if (group.isroot()) print("The following file does not exsist:", p);
-            group.sync();
-            return 15;
+            if (group.isroot())
+            {
+                print("File:", p, "  symmetry:", symmetry_index);
+            }
+            if (!std::filesystem::exists(p))
+            {
+                if (group.isroot()) print("The following file does not exsist:", p);
+                group.sync();
+                return 15;
+            }
+            cvdf::io::binary_read(p, prim);
+            m3r symmetry_jacobian;
+            switch (symmetry_index)
+            {
+                case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+                case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+            }
+            cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t{
+                prim_t q_out;
+                q_out.p() = q.p();
+                q_out.T() = q.T();
+                v3r u_vec(q.u(), q.v(), q.w());
+                u_vec = symmetry_jacobian * u_vec;
+                q_out.u() = u_vec[0];
+                q_out.v() = u_vec[1];
+                q_out.w() = u_vec[2];
+                return q_out;
+            });
+            postprocessing::copy_field(prim, prim_i);
+            grid_filt.exchange_array(prim_i);
+            postprocessing::dns_filter(filt, prim_i, prim_o);
+            prim_i -= prim_o;
+            grid_filt.exchange_array(prim_i);
+            grid_filt.exchange_array(prim_o);
+            postprocessing::noslip(filt[1]/2, prim_i);
+            postprocessing::noslip(filt[1]/2, prim_o);
+            if (output)
+            {
+                postprocessing::copy_field(prim_i, prim);
+                cvdf::io::output_vtk("output", "q_i", prim);
+                postprocessing::copy_field(prim_o, prim);
+                cvdf::io::output_vtk("output", "q_o", prim);
+            }
+            
+            postprocessing::extract_profile(symmetry_jacobian, y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
+            postprocessing::extract_profile(symmetry_jacobian, ui,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
+            postprocessing::extract_profile(symmetry_jacobian, uo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
+            postprocessing::extract_profile(symmetry_jacobian, vi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v();});
+            postprocessing::extract_profile(symmetry_jacobian, vo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v();});
+            postprocessing::extract_profile(symmetry_jacobian, wi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w();});
+            postprocessing::extract_profile(symmetry_jacobian, wo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w();});
+            postprocessing::extract_profile(symmetry_jacobian, ui2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.u();});
+            postprocessing::extract_profile(symmetry_jacobian, uo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.u();});
+            postprocessing::extract_profile(symmetry_jacobian, vi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_i.v();});
+            postprocessing::extract_profile(symmetry_jacobian, vo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v()*q_o.v();});
+            postprocessing::extract_profile(symmetry_jacobian, wi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_i.w();});
+            postprocessing::extract_profile(symmetry_jacobian, wo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w()*q_o.w();});
+            postprocessing::extract_profile(symmetry_jacobian, uivi, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.v();});
+            postprocessing::extract_profile(symmetry_jacobian, uovo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.v();});
+            postprocessing::extract_profile(symmetry_jacobian, uiuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.u();});
+            postprocessing::extract_profile(symmetry_jacobian, vivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_o.v();});
+            postprocessing::extract_profile(symmetry_jacobian, wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
+            postprocessing::extract_profile(symmetry_jacobian, uivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.v();});
+            postprocessing::extract_profile(symmetry_jacobian, viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
+            postprocessing::extract_profile(symmetry_jacobian, p1,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p());});
+            postprocessing::extract_profile(symmetry_jacobian, p2,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p())*(q_i.p()+q_o.p());});
+            
+            auto sqr = [](const real_t& x) -> real_t {return x*x;};
+            postprocessing::extract_profile_f(symmetry_jacobian, y_f,     prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return x[1]; });
+            postprocessing::extract_profile_f(symmetry_jacobian, ui_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, vi_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, vo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.v()+q_o_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, wi_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, wo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.w()+q_o_R.w()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, ui2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.u()+q_i_R.u())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.u()+q_o_R.u())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, vi2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.v()+q_i_R.v())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, vo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.v()+q_o_R.v())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, wi2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.w()+q_i_R.w())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, wo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.w()+q_o_R.w())); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uivi_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_i_L.v()+q_i_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uovo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uiuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.u()+q_o_R.u()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, vivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.v()+q_o_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
+            postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
+            postprocessing::extract_profile_f(symmetry_jacobian, duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
+            
+            for (auto p:reg) p->aggregate();
         }
-        cvdf::io::binary_read(p, prim);
-        postprocessing::copy_field(prim, prim_i);
-        grid_filt.exchange_array(prim_i);
-        postprocessing::dns_filter(filt, prim_i, prim_o);
-        prim_i -= prim_o;
-        grid_filt.exchange_array(prim_i);
-        grid_filt.exchange_array(prim_o);
-        postprocessing::noslip(filt[1]/2, prim_i);
-        postprocessing::noslip(filt[1]/2, prim_o);
-        if (output)
-        {
-            postprocessing::copy_field(prim_i, prim);
-            cvdf::io::output_vtk("output", "q_i", prim);
-            postprocessing::copy_field(prim_o, prim);
-            cvdf::io::output_vtk("output", "q_o", prim);
-        }
-        postprocessing::extract_profile(y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
-        postprocessing::extract_profile(ui,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
-        postprocessing::extract_profile(uo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
-        postprocessing::extract_profile(vi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v();});
-        postprocessing::extract_profile(vo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v();});
-        postprocessing::extract_profile(wi,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w();});
-        postprocessing::extract_profile(wo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w();});
-        postprocessing::extract_profile(ui2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.u();});
-        postprocessing::extract_profile(uo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.u();});
-        postprocessing::extract_profile(vi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_i.v();});
-        postprocessing::extract_profile(vo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.v()*q_o.v();});
-        postprocessing::extract_profile(wi2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_i.w();});
-        postprocessing::extract_profile(wo2,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.w()*q_o.w();});
-        postprocessing::extract_profile(uivi, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_i.v();});
-        postprocessing::extract_profile(uovo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_o.v();});
-        postprocessing::extract_profile(uiuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.u();});
-        postprocessing::extract_profile(vivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.v()*q_o.v();});
-        postprocessing::extract_profile(wiwo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.w()*q_o.w();});
-        postprocessing::extract_profile(uivo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u()*q_o.v();});
-        postprocessing::extract_profile(viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
-        postprocessing::extract_profile(p1,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p());});
-        postprocessing::extract_profile(p2,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p())*(q_i.p()+q_o.p());});
-        
-        auto sqr = [](const real_t& x) -> real_t {return x*x;};
-        postprocessing::extract_profile_f(y_f,     prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return x[1]; });
-        postprocessing::extract_profile_f(ui_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u()); });
-        postprocessing::extract_profile_f(uo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(vi_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v()); });
-        postprocessing::extract_profile_f(vo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.v()+q_o_R.v()); });
-        postprocessing::extract_profile_f(wi_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w()); });
-        postprocessing::extract_profile_f(wo_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.w()+q_o_R.w()); });
-        postprocessing::extract_profile_f(ui2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.u()+q_i_R.u())); });
-        postprocessing::extract_profile_f(uo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.u()+q_o_R.u())); });
-        postprocessing::extract_profile_f(vi2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.v()+q_i_R.v())); });
-        postprocessing::extract_profile_f(vo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.v()+q_o_R.v())); });
-        postprocessing::extract_profile_f(wi2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_i_L.w()+q_i_R.w())); });
-        postprocessing::extract_profile_f(wo2_f,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return sqr(0.5*(q_o_L.w()+q_o_R.w())); });
-        postprocessing::extract_profile_f(uivi_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_i_L.v()+q_i_R.v()); });
-        postprocessing::extract_profile_f(uovo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_o_L.u()+q_o_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
-        postprocessing::extract_profile_f(uiuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(vivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.v()+q_o_R.v()); });
-        postprocessing::extract_profile_f(wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
-        postprocessing::extract_profile_f(uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
-        postprocessing::extract_profile_f(viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-        postprocessing::extract_profile_f(duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
-        postprocessing::extract_profile_f(duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
-        
-        for (auto p:reg) p->aggregate();
     }
     bool output_names = false;
     if (group.isroot())
