@@ -5,6 +5,14 @@
 
 namespace postprocessing
 {
+    v3r map_coords(const v3r& xp, const m3r& jac, const cvdf::bound_box_t<real_t,3>& bounds)
+    {
+        m3r i({{1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{0.0, 1.0, 0.0}});
+        const auto offset = 0.5*(i-jac)*v3r(bounds.max(0), bounds.max(1), bounds.max(2));
+        const auto xmod = offset + jac*xp;
+        return xp;
+    }
+    
     static void copy_field(const auto& src, auto& dest)
     {
         const auto rg = 
@@ -84,7 +92,7 @@ namespace postprocessing
         }
     }
     
-    static void extract_profile(profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
+    static void extract_profile(const m3r& jac, profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
     {
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
@@ -105,9 +113,10 @@ namespace postprocessing
                 q_o_l[n] = q_o(n, i[0], i[1], i[2], i[3]);
             }
             const auto xp = grid.get_coords(ijk);
+            const auto xp_sym = map_coords(xp, jac, grid.get_bounds());
             const auto dy = grid.get_dx(1);
-            int idx  = round((x[1]-0.5*dy-ymin)/dy);
-            prof.inst[idx] += callable(xp, q_o_l, q_i_l);
+            int idx  = round((xp_sym[1]-0.5*dy-ymin)/dy);
+            prof.inst[idx] += callable(xp_sym, q_o_l, q_i_l);
             counts[idx]++;
         }
         for (int ii = 0; ii < ny; ++ii)
@@ -121,7 +130,7 @@ namespace postprocessing
         }
     }
     
-    static void extract_profile_f(profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
+    static void extract_profile_f(const m3r& jac, profr_t& prof, const auto& q_o, const auto& q_i, const auto& callable)
     {
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
@@ -147,9 +156,10 @@ namespace postprocessing
                 q_o_l_R[n] = q_o(n, ijk_R[0], ijk_R[1], ijk_R[2], ijk_R[3]);
             }
             const auto xp = grid.get_coords(ijk_F);
+            const auto xp_sym = map_coords(xp, jac, grid.get_bounds());
             const auto dy = grid.get_dx(1);
-            int idx  = round((xp[1]-ymin)/dy);
-            prof.inst[idx] += callable(xp, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
+            int idx  = round((xp_sym[1]-ymin)/dy);
+            prof.inst[idx] += callable(xp_sym, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
             counts[idx]++;
         }
         for (int ii = 0; ii < ny; ++ii)

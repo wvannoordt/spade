@@ -50,6 +50,13 @@ namespace cvdf::linear_algebra
             return *this;
         }
         
+        dense_mat<data_t, mat_size> operator - (const dense_mat<data_t, mat_size>& rhs) const
+        {
+            dense_mat<data_t, mat_size> output;
+            for (std::size_t i = 0; i < mat_size*mat_size; ++i) output.m[i] = m[i]-rhs.m[i];
+            return output;
+        }
+        
         data_t det(void) const
         {
             static_assert(mat_size==3, "Determinant calculation not yet implemented for matrices other thatn 3x3");
