@@ -117,7 +117,10 @@ int main(int argc, char** argv)
     {
         for (auto symmetry_index: range(0,4))
         {
-            if (group.isroot()) print(p);
+            if (group.isroot())
+            {
+                print("File:", p, "  symmetry:", symmetry_index);
+            }
             if (!std::filesystem::exists(p))
             {
                 if (group.isroot()) print("The following file does not exsist:", p);
