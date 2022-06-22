@@ -133,9 +133,13 @@ namespace postprocessing
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
         const auto& group = grid.group();
-        auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        // auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        auto rg = range(0, grid.get_num_cells(0))
+            *range(-1, grid.get_num_cells(1)+1)
+            *range(0, grid.get_num_cells(2))
+            *range(0, grid.get_partition().get_num_local_blocks());
         auto ymin = grid.get_bounds().min(1);
-        int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
+        int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1)+1;
         
         counts.resize(ny, 0);
         for (auto i: rg)
@@ -157,8 +161,11 @@ namespace postprocessing
             const auto xp_sym = map_coords(xp, jac, grid.get_bounds());
             const auto dy = grid.get_dx(1);
             int idx  = round((xp_sym[1]-ymin)/dy);
-            prof.inst[idx] += callable(xp_sym, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
-            counts[idx]++;
+            if (idx >= 0  && idx < ny)
+            {
+                prof.inst[idx] += callable(xp_sym, q_o_l_L, q_i_l_L, q_o_l_R, q_i_l_R);
+                counts[idx]++;
+            }
         }
         for (int ii = 0; ii < ny; ++ii)
         {
