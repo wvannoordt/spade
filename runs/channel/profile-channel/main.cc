@@ -85,28 +85,28 @@ int main(int argc, char** argv)
     profr_t duidy_f(ny, 0.0, "duidy_f", reg); // 21
     profr_t duody_f(ny, 0.0, "duody_f", reg); // 22
 
-    profr_t y    (ny, 0.0, "y",    reg);
-    profr_t ui   (ny, 0.0, "ui",   reg);
-    profr_t uo   (ny, 0.0, "uo",   reg);
-    profr_t vi   (ny, 0.0, "vi",   reg);
-    profr_t vo   (ny, 0.0, "vo",   reg);
-    profr_t wi   (ny, 0.0, "wi",   reg);
-    profr_t wo   (ny, 0.0, "wo",   reg);
-    profr_t ui2  (ny, 0.0, "ui2",  reg);
-    profr_t uo2  (ny, 0.0, "uo2",  reg);
-    profr_t vi2  (ny, 0.0, "vi2",  reg);
-    profr_t vo2  (ny, 0.0, "vo2",  reg);
-    profr_t wi2  (ny, 0.0, "wi2",  reg);
-    profr_t wo2  (ny, 0.0, "wo2",  reg);
-    profr_t uivi (ny, 0.0, "uivi", reg);
-    profr_t uovo (ny, 0.0, "uovo", reg);
-    profr_t uiuo (ny, 0.0, "uiuo", reg);
-    profr_t vivo (ny, 0.0, "vivo", reg);
-    profr_t wiwo (ny, 0.0, "wiwo", reg);
-    profr_t uivo (ny, 0.0, "uivo", reg);
-    profr_t viuo (ny, 0.0, "viuo", reg);
-    profr_t p1   (ny, 0.0, "p1",   reg);
-    profr_t p2   (ny, 0.0, "p2",   reg);
+    profr_t y    (ny, 0.0, "y",    reg); // 23
+    profr_t ui   (ny, 0.0, "ui",   reg); // 24
+    profr_t uo   (ny, 0.0, "uo",   reg); // 25
+    profr_t vi   (ny, 0.0, "vi",   reg); // 26
+    profr_t vo   (ny, 0.0, "vo",   reg); // 27
+    profr_t wi   (ny, 0.0, "wi",   reg); // 28
+    profr_t wo   (ny, 0.0, "wo",   reg); // 29
+    profr_t ui2  (ny, 0.0, "ui2",  reg); // 30
+    profr_t uo2  (ny, 0.0, "uo2",  reg); // 31
+    profr_t vi2  (ny, 0.0, "vi2",  reg); // 32
+    profr_t vo2  (ny, 0.0, "vo2",  reg); // 33
+    profr_t wi2  (ny, 0.0, "wi2",  reg); // 34
+    profr_t wo2  (ny, 0.0, "wo2",  reg); // 35
+    profr_t uivi (ny, 0.0, "uivi", reg); // 36
+    profr_t uovo (ny, 0.0, "uovo", reg); // 37
+    profr_t uiuo (ny, 0.0, "uiuo", reg); // 38
+    profr_t vivo (ny, 0.0, "vivo", reg); // 39
+    profr_t wiwo (ny, 0.0, "wiwo", reg); // 40
+    profr_t uivo (ny, 0.0, "uivo", reg); // 41
+    profr_t viuo (ny, 0.0, "viuo", reg); // 42
+    profr_t p1   (ny, 0.0, "p1",   reg); // 43
+    profr_t p2   (ny, 0.0, "p2",   reg); // 44
     
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     int ct = 0;
     for (auto& p: names)
     {
-        for (auto symmetry_index: range(0,4))
+        for (auto symmetry_index: range(0,2))
         {
             if (group.isroot())
             {
@@ -132,8 +132,8 @@ int main(int argc, char** argv)
             switch (symmetry_index)
             {
                 case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
+                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
                 case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
             }
             cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t{
