@@ -7,9 +7,7 @@ namespace postprocessing
 {
     v3r map_coords(const v3r& xp, const m3r& jac, const cvdf::bound_box_t<real_t,3>& bounds)
     {
-        m3r i({{1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{0.0, 1.0, 0.0}});
-        const auto offset = 0.5*(i-jac)*v3r(bounds.max(0), bounds.max(1), bounds.max(2));
-        const auto xmod = offset + jac*xp;
+        const auto xmod = jac*xp;
         return xp;
     }
     
