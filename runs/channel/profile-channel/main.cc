@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     int ct = 0;
     for (auto& p: names)
     {
-        for (auto symmetry_index: range(0,2))
+        for (auto symmetry_index: range(0,4))
         {
             if (group.isroot())
             {
@@ -131,12 +131,13 @@ int main(int argc, char** argv)
             m3r symmetry_jacobian;
             switch (symmetry_index)
             {
-                case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
-                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
                 case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
             }
-            cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t{
+            cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t
+            {
                 prim_t q_out;
                 q_out.p() = q.p();
                 q_out.T() = q.T();

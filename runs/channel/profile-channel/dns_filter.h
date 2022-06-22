@@ -8,7 +8,7 @@ namespace postprocessing
     v3r map_coords(const v3r& xp, const m3r& jac, const cvdf::bound_box_t<real_t,3>& bounds)
     {
         const auto xmod = jac*xp;
-        return xp;
+        return xmod;
     }
     
     static void copy_field(const auto& src, auto& dest)
