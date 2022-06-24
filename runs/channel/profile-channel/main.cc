@@ -133,8 +133,8 @@ int main(int argc, char** argv)
             switch (symmetry_index)
             {
                 case 0: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
-                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
-                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 1: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0, 1.0 }}); break; }
+                case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
                 case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
             }
             cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t
@@ -149,6 +149,8 @@ int main(int argc, char** argv)
                 q_out.w() = u_vec[2];
                 return q_out;
             });
+	    v3r e_y(0,1,0);
+	    v3r e_y_sym = symmetry_jacobian*e_y;
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
             
@@ -212,8 +214,8 @@ int main(int argc, char** argv)
             postprocessing::extract_profile_f(symmetry_jacobian, wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
             postprocessing::extract_profile_f(symmetry_jacobian, uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
             postprocessing::extract_profile_f(symmetry_jacobian, viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-            postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_o_R.u()-q_o_L.u())/dyo;});
-            postprocessing::extract_profile_f(symmetry_jacobian, duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return (q_i_R.u()-q_i_L.u())/dyi;});
+            postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_o_R.u()-q_o_L.u())/dyo;});
+            postprocessing::extract_profile_f(symmetry_jacobian, duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_i_R.u()-q_i_L.u())/dyi;});
             
             for (auto p:reg) p->aggregate();
         }
