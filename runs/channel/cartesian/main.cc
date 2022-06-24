@@ -1,3 +1,4 @@
+
 #include "cvdf.h"
 
 typedef double real_t;
@@ -6,7 +7,10 @@ typedef cvdf::ctrs::array<int,    3> v3i;
 typedef cvdf::ctrs::array<int,    4> v4i;
 typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
 typedef cvdf::fluid_state::prim_t<real_t> prim_t;
+typedef cvdf::fluid_state::flux_t<real_t> flux_t;
 typedef cvdf::fluid_state::cons_t<real_t> cons_t;
+
+#include "calc_u_bulk.h"
 
 void set_channel_noslip(auto& prims)
 {
@@ -125,9 +129,12 @@ int main(int argc, char** argv)
     
     cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
-    cvdf::grid::grid_array prim (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs0 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
-    cvdf::grid::grid_array rhs1 (grid, 0.0, cvdf::dims::static_dims<5>(), cvdf::dims::singleton_dim());
+    prim_t fill1 = 0.0;
+    flux_t fill2 = 0.0;
+    
+    cvdf::grid::grid_array prim (grid, fill1);
+    cvdf::grid::grid_array rhs0 (grid, fill2);
+    cvdf::grid::grid_array rhs1 (grid, fill2);
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -188,7 +195,7 @@ int main(int argc, char** argv)
     
     cvdf::convective::totani_lr tscheme(air);
     cvdf::convective::weno_3    wscheme(air);
-    cvdf::viscous::visc_lr visc_scheme(visc_law);
+    cvdf::viscous::visc_lr  visc_scheme(visc_law);
     
     struct p2c_t
     {
@@ -251,14 +258,14 @@ int main(int argc, char** argv)
         set_channel_noslip(q);
         cvdf::pde_algs::flux_div(q, rhs, tscheme);
         // cvdf::flux_algs::flux_lr_diff(q, rhs, wscheme);
-        // cvdf::flux_algs::flux_lr_diff(prim, rhs, visc_scheme);
+        cvdf::pde_algs::flux_div(prim, rhs, visc_scheme);
         cvdf::algs::transform_inplace(rhs, [&](const cvdf::ctrs::array<real_t, 5>& rhs_ar) -> cvdf::ctrs::array<real_t, 5> 
         {
             cvdf::ctrs::array<real_t, 5> rhs_new = rhs_ar;
             rhs_new[2] += force_term;
             return rhs_new;
         });
-        garbo_visc(q, rhs, mu);
+        // garbo_visc(q, rhs, mu);
     };
     
     cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
@@ -267,7 +274,8 @@ int main(int argc, char** argv)
     for (auto nti: range(0, nt_max))
     {
         int nt = nti;
-        real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
+        const real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
+        const real_t ub     = calc_u_bulk(prim, air);
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
@@ -275,11 +283,12 @@ int main(int argc, char** argv)
                 "nt: ", cvdf::utils::pad_str(nt, 15),
                 "cfl:", cvdf::utils::pad_str(cfl, 15),
                 "u+a:", cvdf::utils::pad_str(umax, 15),
+                "ub: ", cvdf::utils::pad_str(ub, 15),
                 "dx: ", cvdf::utils::pad_str(dx, 15),
                 "dt: ", cvdf::utils::pad_str(dt, 15),
                 "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)
             );
-            myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
+            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << dx << " " << dt << std::endl;
             myfile.flush();
         }
         if (nt%nt_skip == 0)
