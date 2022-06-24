@@ -2,6 +2,7 @@
 #include "local_types.h"
 #include "dns_filter.h"
 #include "prof_t.h"
+#include "calc_u_bulk.h"
 
 int main(int argc, char** argv)
 {
@@ -110,7 +111,7 @@ int main(int argc, char** argv)
     
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
-    
+    std::ofstream ub_out("ub.dat");
     bool output = false;
     int ct = 0;
     for (auto& p: names)
@@ -150,6 +151,9 @@ int main(int argc, char** argv)
             });
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
+            
+            const real_t ub = calc_u_bulk(prim, air);
+            if (group.isroot()) ub_out << ub << std::endl;
             postprocessing::dns_filter(filt, prim_i, prim_o);
             prim_i -= prim_o;
             grid_filt.exchange_array(prim_i);
