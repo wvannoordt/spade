@@ -7,6 +7,7 @@ typedef cvdf::ctrs::array<int,    4> v4i;
 typedef cvdf::ctrs::array<real_t, 5> v5d;
 typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
 typedef cvdf::fluid_state::prim_t<real_t> prim_t;
+typedef cvdf::fluid_state::flux_t<real_t> flux_t;
 typedef cvdf::fluid_state::cons_t<real_t> cons_t;
 
 void set_channel_noslip(auto& prims)
@@ -110,10 +111,11 @@ int main(int argc, char** argv)
         zc.map(bounds.min(2)+dx_comp[2]) - zc.map(bounds.min(2))
     );
     
-    prim_t fill_elem = 0.0;
-    cvdf::grid::grid_array prim (grid, fill_elem);
-    cvdf::grid::grid_array rhs0 (grid, fill_elem);
-    cvdf::grid::grid_array rhs1 (grid, fill_elem);
+    prim_t fill_elem1 = 0.0;
+    flux_t fill_elem2 = 0.0;
+    cvdf::grid::grid_array prim        (grid, fill_elem1);
+    cvdf::grid::grid_array rhs0        (grid, fill_elem2);
+    cvdf::grid::grid_array rhs1        (grid, fill_elem2);
     
     cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -285,11 +287,8 @@ int main(int argc, char** argv)
         time_int.advance();
         if (std::isnan(umax))
         {
-            if (group.isroot())
-            {
-                print("A tragedy has occurred!");
-            }
-	    std::string nstr = cvdf::utils::zfill(nt, 8);
+            if (group.isroot()) print("A tragedy has occurred!");
+            std::string nstr = cvdf::utils::zfill(nt, 8);
             std::string filename = "check"+nstr;
             filename = "checkpoint/"+filename+".crash.bin";
             cvdf::io::binary_write(filename, prim);
