@@ -7,7 +7,7 @@
 #include "navier-stokes/viscous_laws.h"
 #include "navier-stokes/flux_input.h"
 
-namespace cvdf::viscous
+namespace spade::viscous
 {
     template <viscous_laws::viscous_law vlaw_t> struct visc_lr
     {

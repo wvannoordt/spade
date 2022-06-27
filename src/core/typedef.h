@@ -1,7 +1,6 @@
 #pragma once
 
-namespace cvdf
+namespace spade
 {
     typedef double real_t;
-    const size_t cvdf_dim = 3;
 }

@@ -3,7 +3,7 @@
 #include <concepts>
 #include <type_traits>
 
-namespace cvdf::static_math
+namespace spade::static_math
 {
     template <const int i1> struct int_const_t { constexpr static int value = i1; };
     

@@ -4,7 +4,7 @@
 
 #include "core/grid.h"
 
-namespace cvdf::array_constraints
+namespace spade::array_constraints
 {
     // template <class T, const std::size_t dim>
 }

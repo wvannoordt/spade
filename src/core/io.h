@@ -9,7 +9,7 @@
 #include "core/utils.h"
 #include "core/base_64.h"
 
-namespace cvdf::io
+namespace spade::io
 {
     namespace detail
     {
@@ -48,7 +48,7 @@ namespace cvdf::io
         
         template <class output_stream_t> static void output_serial_header(output_stream_t& out_str)
         {
-            out_str << "# vtk DataFile Version 2.0\ncvdf output\nASCII\n";
+            out_str << "# vtk DataFile Version 2.0\nspade output\nASCII\n";
         }
         
         template <class output_stream_t, grid::multiblock_grid grid_output_t>
@@ -268,8 +268,8 @@ namespace cvdf::io
                         out_str << ntab(4) << "<DataArray type=\"Float64\" Name=\"" << get_array_name(arr, i1, i2) << "\" format=\"binary\">\n";
                         //data here
                         // here here he
-                        cvdf::detail::stream_base_64(out_str, &total_bytes_size, 1);
-                        cvdf::detail::stream_base_64(out_str, &compressed_data[0], compressed_data.size());
+                        spade::detail::stream_base_64(out_str, &total_bytes_size, 1);
+                        spade::detail::stream_base_64(out_str, &compressed_data[0], compressed_data.size());
                         //do this bit right now
                         out_str << "\n" << ntab(4) << "</DataArray>\n";
                     }
@@ -299,7 +299,7 @@ namespace cvdf::io
                 box_tmp.max(i.value) += obj.get_dx(i.value)*ng[i.value];
             });
             
-            out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(0), box_tmp.max(0)) << std::endl;
+            out_str << ntab(4) << spade::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(0), box_tmp.max(0)) << std::endl;
             int i,j,k;
             j = 0;
             k = 0;
@@ -309,7 +309,7 @@ namespace cvdf::io
                 out_str << csp20 << xyz[0] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
-            out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(1), box_tmp.max(1)) << std::endl;
+            out_str << ntab(4) << spade::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(1), box_tmp.max(1)) << std::endl;
             
             i = 0;
             k = 0;
@@ -319,7 +319,7 @@ namespace cvdf::io
                 out_str << csp20 << xyz[1] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
-            out_str << ntab(4) << cvdf::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(2), box_tmp.max(2)) << std::endl;
+            out_str << ntab(4) << spade::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(2), box_tmp.max(2)) << std::endl;
             
             i = 0;
             j = 0;

@@ -1,20 +1,20 @@
 #pragma once
 
 typedef double real_t;
-typedef cvdf::ctrs::array<real_t, 3> v3d;
-typedef cvdf::ctrs::array<real_t, 5> v5d;
-typedef cvdf::ctrs::array<int,    3> v3i;
-typedef cvdf::ctrs::array<int,    4> v4i;
-typedef cvdf::ctrs::array<cvdf::grid::cell_t<int>, 4> v4c;
-typedef cvdf::fluid_state::prim_t<real_t> prim_t;
-typedef cvdf::fluid_state::cons_t<real_t> cons_t;
+typedef spade::ctrs::array<real_t, 3> v3d;
+typedef spade::ctrs::array<real_t, 5> v5d;
+typedef spade::ctrs::array<int,    3> v3i;
+typedef spade::ctrs::array<int,    4> v4i;
+typedef spade::ctrs::array<spade::grid::cell_t<int>, 4> v4c;
+typedef spade::fluid_state::prim_t<real_t> prim_t;
+typedef spade::fluid_state::cons_t<real_t> cons_t;
 
 static void get_profile(const auto& q, std::vector<double>& y, std::vector<double>& u)
 {
     std::vector<int> counts;
     const auto& grid  = q.get_grid();
     const auto& group = grid.group();
-    auto rg   = grid.get_range(cvdf::grid::cell_centered);
+    auto rg   = grid.get_range(spade::grid::cell_centered);
     auto ymin = grid.get_bounds().min(1);
     int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
     y.resize(ny, 0.0);

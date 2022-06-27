@@ -1,4 +1,4 @@
-#include "cvdf.h"
+#include "spade.h"
 #include "get_profile.h"
 
 const int dim = 2;
@@ -15,9 +15,9 @@ void set_channel_noslip(auto& prims)
         {
             if (grid.is_domain_boundary(lb_glob, dir))
             {
-                const auto lb_idx = cvdf::ctrs::expand_index(lb_glob, grid.get_num_blocks());
+                const auto lb_idx = spade::ctrs::expand_index(lb_glob, grid.get_num_blocks());
                 const auto nvec_out = v3i(0,2*idc-1,0);
-                const cvdf::grid::cell_t<int> j = idc*(grid.get_num_cells(1)-1);
+                const spade::grid::cell_t<int> j = idc*(grid.get_num_cells(1)-1);
                 auto r1 = range(-grid.get_num_exchange(0), grid.get_num_cells(0) + grid.get_num_exchange(0));
                 auto r2 = range(-grid.get_num_exchange(2), grid.get_num_cells(2) + grid.get_num_exchange(2));
                 for (auto ii: r1*r2)
@@ -49,7 +49,7 @@ void set_channel_noslip(auto& prims)
 void garbo_visc(auto& prims, auto& rhs, real_t mu)
 {
     auto& grd = prims.get_grid();
-    auto rg = grd.get_range(cvdf::grid::cell_centered);
+    auto rg = grd.get_range(spade::grid::cell_centered);
     real_t dx = grd.get_dx(0);
     real_t dy = grd.get_dx(1);
     real_t dz = grd.get_dx(2);
@@ -79,11 +79,11 @@ void garbo_visc(auto& prims, auto& rhs, real_t mu)
 
 int main(int argc, char** argv)
 {
-    cvdf::parallel::mpi_t group(&argc, &argv);
+    spade::parallel::mpi_t group(&argc, &argv);
     
     bool init_from_file = false;
     std::string init_filename = "";
-    cvdf::cli_args::shortname_args_t args(argc, argv);
+    spade::cli_args::shortname_args_t args(argc, argv);
     if (args.has_arg("-init"))
     {
         init_filename = args["-init"];
@@ -96,19 +96,19 @@ int main(int argc, char** argv)
         }
     }
     
-    cvdf::ctrs::array<int, dim> num_blocks(4,2);
-    cvdf::ctrs::array<int, dim> cells_in_block(48, 48);
-    cvdf::ctrs::array<int, dim> exchange_cells(2, 2);
-    //cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(8, 8, 8);
-    cvdf::bound_box_t<real_t, dim> bounds;
+    spade::ctrs::array<int, dim> num_blocks(4,2);
+    spade::ctrs::array<int, dim> cells_in_block(48, 48);
+    spade::ctrs::array<int, dim> exchange_cells(2, 2);
+    //spade::ctrs::array<int, 2> exchange_cells(8, 8, 8);
+    spade::bound_box_t<real_t, dim> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
     bounds.min(0) =  0.0;
-    bounds.max(0) =  4.0*cvdf::consts::pi*delta;
+    bounds.max(0) =  4.0*spade::consts::pi*delta;
     bounds.min(1) = -delta;
     bounds.max(1) =  delta;
     bounds.min(2) =  0.0;
-    bounds.max(2) =  2*cvdf::consts::pi*delta;
+    bounds.max(2) =  2*spade::consts::pi*delta;
     
     const real_t targ_cfl = 0.45;
     const int    nt_max   = 30000001;
@@ -116,27 +116,27 @@ int main(int argc, char** argv)
     const int    checkpoint_skip  = 10000;
     
     
-    // cvdf::coords::identity<real_t> coords;
+    // spade::coords::identity<real_t> coords;
     
-    cvdf::coords::identity_1D<real_t> xc;
-    cvdf::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
-    cvdf::coords::identity_1D<real_t> zc;
-    cvdf::coords::diagonal_coords coords(xc, yc, zc);
+    spade::coords::identity_1D<real_t> xc;
+    spade::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
+    spade::coords::identity_1D<real_t> zc;
+    spade::coords::diagonal_coords coords(xc, yc, zc);
     
     std::filesystem::path out_path("checkpoint");
     if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
-    cvdf::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, cvdf::static_math::int_const_t<dim>());
+    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, spade::static_math::int_const_t<dim>());
     
     
     prim_t fill = 0.0;
-    cvdf::grid::grid_array prim (grid, fill);
-    cvdf::grid::grid_array rhs0 (grid, fill);
-    cvdf::grid::grid_array rhs1 (grid, fill);    
+    spade::grid::grid_array prim (grid, fill);
+    spade::grid::grid_array rhs0 (grid, fill);
+    spade::grid::grid_array rhs1 (grid, fill);    
     
-    cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
+    spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
     
-    cvdf::fluid_state::perfect_gas_t<real_t> air;
+    spade::fluid_state::perfect_gas_t<real_t> air;
     air.R = 287.15;
     air.gamma = 1.4;
     
@@ -151,17 +151,17 @@ int main(int argc, char** argv)
     const real_t mach = 20.0*u_tau/sqrt(air.R*air.gamma*t0);
     
     const int nidx = 8;
-    std::vector<real_t> r_amp_1(cvdf::utils::max(cells_in_block[2]/nidx, 10));
-    std::vector<real_t> r_amp_2(cvdf::utils::max(cells_in_block[2]/nidx, 10));
-    std::vector<real_t> r_amp_3(cvdf::utils::max(cells_in_block[2]/nidx, 10));
+    std::vector<real_t> r_amp_1(spade::utils::max(cells_in_block[2]/nidx, 10));
+    std::vector<real_t> r_amp_2(spade::utils::max(cells_in_block[2]/nidx, 10));
+    std::vector<real_t> r_amp_3(spade::utils::max(cells_in_block[2]/nidx, 10));
     std::vector<real_t> r_amp_4(grid.get_partition().get_num_local_blocks());
     
-    for (auto& p: r_amp_1) p = 1.0 - 2.0*cvdf::utils::unitary_random();
-    for (auto& p: r_amp_2) p = 1.0 - 2.0*cvdf::utils::unitary_random();
-    for (auto& p: r_amp_3) p = 1.0 - 2.0*cvdf::utils::unitary_random();
-    for (auto& p: r_amp_4) p = 1.0 - 2.0*cvdf::utils::unitary_random();
+    for (auto& p: r_amp_1) p = 1.0 - 2.0*spade::utils::unitary_random();
+    for (auto& p: r_amp_2) p = 1.0 - 2.0*spade::utils::unitary_random();
+    for (auto& p: r_amp_3) p = 1.0 - 2.0*spade::utils::unitary_random();
+    for (auto& p: r_amp_4) p = 1.0 - 2.0*spade::utils::unitary_random();
     int i3d = ((dim==3)?1:0);
-    auto ini = [&](const cvdf::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
+    auto ini = [&](const spade::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
         prim_t output;
         output.p() = p0;
@@ -172,10 +172,10 @@ int main(int argc, char** argv)
         return output;
     };
     
-    cvdf::algs::fill_array(prim, ini);
+    spade::algs::fill_array(prim, ini);
     if (init_from_file)
     {
-        cvdf::io::binary_read(init_filename, prim);
+        spade::io::binary_read(init_filename, prim);
         std::vector<real_t> yprof, uprof;
         get_profile(prim, yprof, uprof);
         if (group.isroot())
@@ -188,61 +188,61 @@ int main(int argc, char** argv)
         }
     }
     
-    cvdf::convective::totani_lr tscheme(air);
-    cvdf::convective::weno_3    wscheme(air);
-    cvdf::viscous::visc_lr      visc_scheme(visc_law);
+    spade::convective::totani_lr tscheme(air);
+    spade::convective::weno_3    wscheme(air);
+    spade::viscous::visc_lr      visc_scheme(visc_law);
     
     struct p2c_t
     {
-        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
+        const spade::fluid_state::perfect_gas_t<real_t>* gas;
         typedef prim_t arg_type;
-        p2c_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
+        p2c_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
         cons_t operator () (const prim_t& q) const
         {
             cons_t w;
-            cvdf::fluid_state::convert_state(q, w, *gas);
+            spade::fluid_state::convert_state(q, w, *gas);
             return w;
         }
     } p2c(air);
     
     struct c2p_t
     {
-        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
+        const spade::fluid_state::perfect_gas_t<real_t>* gas;
         typedef cons_t arg_type;
-        c2p_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
+        c2p_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
         prim_t operator () (const cons_t& w) const
         {
             prim_t q;
-            cvdf::fluid_state::convert_state(w, q, *gas);
+            spade::fluid_state::convert_state(w, q, *gas);
             return q;
         }
     } c2p(air);
     
     struct get_u_t
     {
-        const cvdf::fluid_state::perfect_gas_t<real_t>* gas;
+        const spade::fluid_state::perfect_gas_t<real_t>* gas;
         typedef prim_t arg_type;
-        get_u_t(const cvdf::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
+        get_u_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
         real_t operator () (const prim_t& q) const
         {
             return sqrt(gas->gamma*gas->R*q.T()) + sqrt(q.u()*q.u() + q.v()*q.v() + q.w()*q.w());
         }
     } get_u(air);
     
-    cvdf::reduce_ops::reduce_max<real_t> max_op;
+    spade::reduce_ops::reduce_max<real_t> max_op;
     const real_t time0    = 0.0;
     const real_t dx       = coords.ycoord.map(bounds.min(1)+grid.get_dx(1))-coords.ycoord.map(bounds.min(1));
-    const real_t umax_ini = cvdf::algs::transform_reduce(prim, get_u, max_op);
+    const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt       = targ_cfl*dx/umax_ini;
     
     auto ftrans = [&](auto& q) -> void
     {
-        cvdf::algs::transform_inplace(prim, p2c);
+        spade::algs::transform_inplace(prim, p2c);
     };
     
     auto itrans = [&](auto& q) -> void
     {
-        cvdf::algs::transform_inplace(prim, c2p);
+        spade::algs::transform_inplace(prim, c2p);
     };
 
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
@@ -251,33 +251,33 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         set_channel_noslip(q);
         const real_t alpha = 0.00005;
-        cvdf::pde_algs::flux_div(q, rhs, wscheme);
+        spade::pde_algs::flux_div(q, rhs, wscheme);
         rhs *= (alpha)/(1.0-alpha);
-        cvdf::pde_algs::flux_div(q, rhs, tscheme);
+        spade::pde_algs::flux_div(q, rhs, tscheme);
         rhs *= 1.0-alpha;
-        cvdf::pde_algs::flux_div(q, rhs, visc_scheme);
-        cvdf::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
+        spade::pde_algs::flux_div(q, rhs, visc_scheme);
+        spade::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
     
-    cvdf::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
+    spade::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
         int nt = nti;
-        real_t umax     = cvdf::algs::transform_reduce(prim, get_u,       max_op);
+        real_t umax     = spade::algs::transform_reduce(prim, get_u,       max_op);
         real_t ratio    = umax/(0.5*re_tau*u_tau + sqrt(air.gamma*air.R*t0));
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
             print(
-                "nt:     ", cvdf::utils::pad_str(nt, 10),
-                "cfl:    ", cvdf::utils::pad_str(cfl, 10),
-                "u+a:    ", cvdf::utils::pad_str(umax, 10),
-                "dx:     ", cvdf::utils::pad_str(dx, 10),
-                "%:      ", cvdf::utils::pad_str(ratio, 10),
-                "dt:     ", cvdf::utils::pad_str(dt, 10),
-                "ftt:    ", cvdf::utils::pad_str(0.5*re_tau*u_tau*time_int.time()/delta, 10)
+                "nt:     ", spade::utils::pad_str(nt, 10),
+                "cfl:    ", spade::utils::pad_str(cfl, 10),
+                "u+a:    ", spade::utils::pad_str(umax, 10),
+                "dx:     ", spade::utils::pad_str(dx, 10),
+                "%:      ", spade::utils::pad_str(ratio, 10),
+                "dt:     ", spade::utils::pad_str(dt, 10),
+                "ftt:    ", spade::utils::pad_str(0.5*re_tau*u_tau*time_int.time()/delta, 10)
             );
             myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
             myfile.flush();
@@ -285,18 +285,18 @@ int main(int argc, char** argv)
         if (nt%nt_skip == 0)
         {
             if (group.isroot()) print("Output solution...");
-            std::string nstr = cvdf::utils::zfill(nt, 8);
+            std::string nstr = spade::utils::zfill(nt, 8);
             std::string filename = "prims"+nstr;
-            cvdf::io::output_vtk("output", filename, grid, prim);
+            spade::io::output_vtk("output", filename, grid, prim);
             if (group.isroot()) print("Done.");
         }
         if (nt%checkpoint_skip == 0)
         {
             if (group.isroot()) print("Output checkpoint...");
-            std::string nstr = cvdf::utils::zfill(nt, 8);
+            std::string nstr = spade::utils::zfill(nt, 8);
             std::string filename = "check"+nstr;
             filename = "checkpoint/"+filename+".bin";
-            cvdf::io::binary_write(filename, prim);
+            spade::io::binary_write(filename, prim);
             if (group.isroot()) print("Done.");
         }
         time_int.advance();

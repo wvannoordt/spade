@@ -4,7 +4,7 @@
 
 //TODO
 
-namespace cvdf::block_config
+namespace spade::block_config
 {
     template <typename T> concept block_config = requires(T t)
     {

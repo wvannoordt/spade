@@ -1,7 +1,7 @@
 #pragma once
 #include <type_traits>
 #include <concepts>
-namespace cvdf::grid
+namespace spade::grid
 {
     template <typename derived_t, typename arith_t>
     struct arithmetic_wrapper_t

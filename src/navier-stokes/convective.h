@@ -6,7 +6,7 @@
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/flux_input.h"
 
-namespace cvdf::convective
+namespace spade::convective
 {    
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
     {

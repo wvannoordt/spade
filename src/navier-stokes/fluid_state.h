@@ -4,7 +4,7 @@
 
 #include "core/ctrs.h"
 
-namespace cvdf::fluid_state
+namespace spade::fluid_state
 {
     
     template <class T> concept is_state_type = requires(T t, size_t idx)

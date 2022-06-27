@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cstdlib>
 
-namespace cvdf::utils
+namespace spade::utils
 {
     template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
     {

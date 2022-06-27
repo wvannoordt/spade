@@ -1,4 +1,4 @@
-#include "cvdf.h"
+#include "spade.h"
 #include "local_types.h"
 #include "dns_filter.h"
 #include "prof_t.h"
@@ -6,41 +6,41 @@
 
 int main(int argc, char** argv)
 {
-    cvdf::parallel::mpi_t group(&argc, &argv);
+    spade::parallel::mpi_t group(&argc, &argv);
     
     v3i filt(8, 16, 6);
     //v3i filt(4, 8, 3);
     //v3i filt(1, 1, 1);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> num_blocks(8, 8, 8);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block(48, 48, 48);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> cells_in_block_coarse;
+    spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
+    spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
+    spade::ctrs::array<int, 3> cells_in_block_coarse;
     for (auto i: range(0,3)) cells_in_block_coarse[i] = cells_in_block[i]/filt[i];
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells(2, 2, 2);
-    cvdf::ctrs::array<int, cvdf::cvdf_dim> exchange_cells_filt(8, 8, 8);
-    cvdf::bound_box_t<real_t, cvdf::cvdf_dim> bounds;
+    spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
+    spade::ctrs::array<int, 3> exchange_cells_filt(8, 8, 8);
+    spade::bound_box_t<real_t, 3> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
     bounds.min(0) =  0.0;
-    bounds.max(0) =  4.0*cvdf::consts::pi*delta;
+    bounds.max(0) =  4.0*spade::consts::pi*delta;
     bounds.min(1) = -delta;
     bounds.max(1) =  delta;
     bounds.min(2) =  0.0;
-    bounds.max(2) =  2*cvdf::consts::pi*delta;
+    bounds.max(2) =  2*spade::consts::pi*delta;
     prim_t fill1 = 0;
-    cvdf::coords::identity<real_t> coords;
+    spade::coords::identity<real_t> coords;
     
-    cvdf::grid::cartesian_grid_t grid     (num_blocks, cells_in_block,        exchange_cells,      bounds, coords, group);
-    cvdf::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block,        exchange_cells_filt, bounds, coords, group);
-    // cvdf::grid::cartesian_grid_t grid_crse(num_blocks, cells_in_block_coarse, exchange_cells,      bounds, coords, group);
+    spade::grid::cartesian_grid_t grid     (num_blocks, cells_in_block,        exchange_cells,      bounds, coords, group);
+    spade::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block,        exchange_cells_filt, bounds, coords, group);
+    // spade::grid::cartesian_grid_t grid_crse(num_blocks, cells_in_block_coarse, exchange_cells,      bounds, coords, group);
     
-    cvdf::grid::grid_array prim(grid, fill1);
-    cvdf::grid::grid_array prim_o(grid_filt, fill1);
-    cvdf::grid::grid_array prim_i(grid_filt, fill1);
+    spade::grid::grid_array prim(grid, fill1);
+    spade::grid::grid_array prim_o(grid_filt, fill1);
+    spade::grid::grid_array prim_i(grid_filt, fill1);
     
-    cvdf::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
+    spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
     
-    cvdf::fluid_state::perfect_gas_t<real_t> air;
+    spade::fluid_state::perfect_gas_t<real_t> air;
     air.R = 287.15;
     air.gamma = 1.4;
     
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
                 group.sync();
                 return 15;
             }
-            cvdf::io::binary_read(p, prim);
+            spade::io::binary_read(p, prim);
             m3r symmetry_jacobian;
             switch (symmetry_index)
             {
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
                 case 2: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0, 1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
                 case 3: { symmetry_jacobian = m3r({{ 1.0, 0.0, 0.0 },{ 0.0,-1.0, 0.0 },{ 0.0, 0.0,-1.0 }}); break; }
             }
-            cvdf::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t
+            spade::algs::transform_inplace(prim, [&](const prim_t& q) -> prim_t
             {
                 prim_t q_out;
                 q_out.p() = q.p();
@@ -165,9 +165,9 @@ int main(int argc, char** argv)
             if (output)
             {
                 postprocessing::copy_field(prim_i, prim);
-                cvdf::io::output_vtk("output", "q_i", prim);
+                spade::io::output_vtk("output", "q_i", prim);
                 postprocessing::copy_field(prim_o, prim);
-                cvdf::io::output_vtk("output", "q_o", prim);
+                spade::io::output_vtk("output", "q_o", prim);
             }
             
             postprocessing::extract_profile(symmetry_jacobian, y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});

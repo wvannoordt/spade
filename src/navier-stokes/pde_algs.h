@@ -4,7 +4,7 @@
 
 #include "navier-stokes/convective.h"
 
-namespace cvdf::pde_algs
+namespace spade::pde_algs
 {
     template <
         grid::multiblock_array array1_t,

@@ -2,7 +2,7 @@
 
 #include "core/typedef.h"
 
-namespace cvdf::consts
+namespace spade::consts
 {
     const real_t pi = 3.1415926535;
 }

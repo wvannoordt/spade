@@ -1,4 +1,4 @@
-#include "cvdf.h"
+#include "spade.h"
 #include "prof_t.h"
 
 int main(int argc, char** argv)
@@ -15,8 +15,8 @@ int main(int argc, char** argv)
     double t0 = 0.0;
     double t1 = 60.0;
     
-    auto func1 = [&](const double& y, const double& t) -> double {return sin(2.0*cvdf::consts::pi*y*y*y + 2.0*cvdf::consts::pi*t);};
-    auto func2 = [&](const double& y, const double& t) -> double {return sin(2.0*cvdf::consts::pi*t);};
+    auto func1 = [&](const double& y, const double& t) -> double {return sin(2.0*spade::consts::pi*y*y*y + 2.0*spade::consts::pi*t);};
+    auto func2 = [&](const double& y, const double& t) -> double {return sin(2.0*spade::consts::pi*t);};
     for (auto n: range(0,nt))
     {
         double t = t0 + n*(t1-t0)/(nt-1);

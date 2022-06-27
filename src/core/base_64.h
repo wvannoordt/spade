@@ -10,7 +10,7 @@
 #include <cstring>
 #include "core/print.h"
 
-namespace cvdf::detail
+namespace spade::detail
 {
     template <class data_t> static inline void stream_base_64(std::ostream& strm, data_t* data, const size_t& data_size)
     {

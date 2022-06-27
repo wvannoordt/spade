@@ -12,7 +12,7 @@
 #include <source_location>
 #endif
 
-namespace cvdf::parallel
+namespace spade::parallel
 {
     template <class T> concept parallel_group = requires(T t)
     {

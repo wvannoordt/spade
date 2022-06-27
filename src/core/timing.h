@@ -1,7 +1,7 @@
 #pragma once
 #include <chrono>
 #include <string>
-namespace cvdf::timing
+namespace spade::timing
 {
     class scoped_tmr_t
     {
