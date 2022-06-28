@@ -5,7 +5,7 @@
 #include "core/ctrs.h"
 #include "core/print.h"
 
-namespace cvdf::linear_algebra
+namespace spade::linear_algebra
 {
     template <class T, const size_t size, typename real_type>
     concept mat_nd = requires(T t, size_t i, size_t j, typename T::vector_type rhs)

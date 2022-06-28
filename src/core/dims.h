@@ -4,7 +4,7 @@
 #include <concepts>
 #include <type_traits>
 
-namespace cvdf::dims
+namespace spade::dims
 {
     template <class T> concept grid_array_dimension = requires(T t, std::size_t i)
     {

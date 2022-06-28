@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <concepts>
 #include "core/utils.h"
-namespace cvdf::ctrs
+namespace spade::ctrs
 {
     template <class T> concept basic_array = requires(T t, const int& i)
     {

@@ -2,7 +2,7 @@
 
 #include "navier-stokes/fluid_state.h"
 
-namespace cvdf::navier_stokes_mms
+namespace spade::navier_stokes_mms
 {
     template <fluid_state::state_independent_gas gas_t, viscous_laws::state_independent_viscosity visc_t> struct cns_perfectgas_mms_t
     {

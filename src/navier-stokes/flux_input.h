@@ -6,7 +6,7 @@
 #include "core/grid.h"
 #include "core/coord_system.h"
 
-namespace cvdf::flux_input
+namespace spade::flux_input
 {
     template <typename data_t> struct cell_state
     {

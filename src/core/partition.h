@@ -4,7 +4,7 @@
 #include "core/ctrs.h"
 #include "core/parallel.h"
 
-namespace cvdf::partition
+namespace spade::partition
 {
     class block_partition_t
     {

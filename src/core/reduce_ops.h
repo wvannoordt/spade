@@ -5,7 +5,7 @@
 
 #include "core/parallel.h"
 
-namespace cvdf::reduce_ops
+namespace spade::reduce_ops
 {
     template<class T, typename rtype> concept reduce_operation = requires(T t, const rtype b)
     {

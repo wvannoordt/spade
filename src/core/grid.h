@@ -18,7 +18,7 @@
 #include "core/static_math.h"
 #include "core/grid_index_types.h"
 
-namespace cvdf::grid
+namespace spade::grid
 {    
     template <class T> concept multiblock_grid = requires(T t, size_t i, size_t j, size_t k, size_t lb)
     {

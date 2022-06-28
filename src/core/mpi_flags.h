@@ -15,7 +15,7 @@ typedef MPI_Status    status_t;
 typedef MPI_File      mpi_native_file_t;
 #define MPI_CHECK(mycode) {mycode ;}
 
-namespace cvdf::parallel
+namespace spade::parallel
 {
     static const mpi_op_t par_sum = MPI_SUM;
     static const mpi_op_t par_max = MPI_MAX;
@@ -29,7 +29,7 @@ typedef unsigned long status_t;
 typedef unsigned long mpi_native_file_t;
 #define MPI_CHECK(mycode) ;
 
-namespace cvdf::parallel
+namespace spade::parallel
 {
     static const mpi_op_t par_sum = 0;
     static const mpi_op_t par_max = 1;

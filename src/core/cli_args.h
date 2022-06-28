@@ -2,7 +2,7 @@
 #include <string>
 #include <map>
 #include <sstream>
-namespace cvdf::cli_args
+namespace spade::cli_args
 {
     struct arg_t
     {

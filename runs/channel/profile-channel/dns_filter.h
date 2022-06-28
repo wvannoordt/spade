@@ -1,11 +1,11 @@
 #pragma once
 
-#include "cvdf.h"
+#include "spade.h"
 #include "local_types.h"
 
 namespace postprocessing
 {
-    v3r map_coords(const v3r& xp, const m3r& jac, const cvdf::bound_box_t<real_t,3>& bounds)
+    v3r map_coords(const v3r& xp, const m3r& jac, const spade::bound_box_t<real_t,3>& bounds)
     {
         const auto xmod = jac*xp;
         return xmod;
@@ -15,7 +15,7 @@ namespace postprocessing
     {
         const auto rg = 
             range(0, src.get_minor_dims().total_size())*
-            src.get_grid().get_range(cvdf::grid::cell_centered)*
+            src.get_grid().get_range(spade::grid::cell_centered)*
             range(0, src.get_major_dims().total_size());
         for (auto i: rg)
         {
@@ -23,10 +23,10 @@ namespace postprocessing
         }
     }
     
-    static void dns_filter(const cvdf::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
+    static void dns_filter(const spade::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
     {
         const auto& grid = src.get_grid();
-        const auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        const auto rg   = grid.get_range(spade::grid::cell_centered);
         v3i big;
         for (auto i: range(0,3)) big[i] = grid.get_num_cells(i)/filtsize[i];
         for (auto lb: range(0,grid.get_num_local_blocks()))
@@ -59,9 +59,9 @@ namespace postprocessing
             {
                 if (grid.is_domain_boundary(lb_glob, dir))
                 {
-                    const auto lb_idx = cvdf::ctrs::expand_index(lb_glob, grid.get_num_blocks());
+                    const auto lb_idx = spade::ctrs::expand_index(lb_glob, grid.get_num_blocks());
                     const auto nvec_out = v3i(0,2*idc-1,0);
-                    const cvdf::grid::cell_t<int> j = idc*(grid.get_num_cells(1)-1);
+                    const spade::grid::cell_t<int> j = idc*(grid.get_num_cells(1)-1);
                     auto r1 = range(-grid.get_num_exchange(0), grid.get_num_cells(0) + grid.get_num_exchange(0));
                     auto r2 = range(-grid.get_num_exchange(2), grid.get_num_cells(2) + grid.get_num_exchange(2));
                     for (auto ii: r1*r2)
@@ -95,7 +95,7 @@ namespace postprocessing
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
         const auto& group = grid.group();
-        auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        auto rg   = grid.get_range(spade::grid::cell_centered);
         auto ymin = grid.get_bounds().min(1);
         int  ny   = grid.get_num_cells(1)*grid.get_num_blocks(1);
         
@@ -133,7 +133,7 @@ namespace postprocessing
         std::vector<int> counts;
         const auto& grid  = q_o.get_grid();
         const auto& group = grid.group();
-        // auto rg   = grid.get_range(cvdf::grid::cell_centered);
+        // auto rg   = grid.get_range(spade::grid::cell_centered);
         auto rg = range(0, grid.get_num_cells(0))
             *range(-1, grid.get_num_cells(1)+1)
             *range(0, grid.get_num_cells(2))

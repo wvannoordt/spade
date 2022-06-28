@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace cvdf
+namespace spade
 {
     template <typename dtype, const size_t ar_size> struct bound_box_t
     {

@@ -4,7 +4,7 @@
 #include <concepts>
 
 
-namespace cvdf::viscous_laws
+namespace spade::viscous_laws
 {
     template <class T> concept state_independent_viscosity = std::floating_point<typename T::value_type> && requires(T t)
     {

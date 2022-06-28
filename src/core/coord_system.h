@@ -7,7 +7,7 @@
 #include "core/grid_index_types.h"
 #include "core/linear_algebra.h"
 
-namespace cvdf::coords
+namespace spade::coords
 {
     template <class T> concept coordinate_system = std::floating_point<typename T::coord_type>
     && requires(T t, ctrs::array<typename T::coord_type,3> x)

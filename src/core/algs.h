@@ -7,7 +7,7 @@
 #include "core/grid.h"
 #include "core/reduce_ops.h"
 
-namespace cvdf::algs
+namespace spade::algs
 {
     
     namespace detail
