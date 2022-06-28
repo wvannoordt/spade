@@ -117,8 +117,8 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*cvdf::consts::pi*delta;
     
     const real_t targ_cfl = 0.25;
-    const int    nt_max   = 150000;
-    const int    nt_skip  = 10000;
+    const int    nt_max   = 150001;
+    const int    nt_skip  = 50000000;
     const int    checkpoint_skip  = 2500;
     
     cvdf::coords::identity<real_t> coords;
@@ -275,7 +275,8 @@ int main(int argc, char** argv)
     {
         int nt = nti;
         const real_t umax   = cvdf::algs::transform_reduce(prim, get_u, max_op);
-        const real_t ub     = calc_u_bulk(prim, air);
+	real_t ub, rhob;
+	calc_u_bulk(prim, air, ub, rhob);
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
@@ -284,11 +285,12 @@ int main(int argc, char** argv)
                 "cfl:", cvdf::utils::pad_str(cfl, 15),
                 "u+a:", cvdf::utils::pad_str(umax, 15),
                 "ub: ", cvdf::utils::pad_str(ub, 15),
+		"rb: ", cvdf::utils::pad_str(rhob, 15),
                 "dx: ", cvdf::utils::pad_str(dx, 15),
                 "dt: ", cvdf::utils::pad_str(dt, 15),
                 "ftt:", cvdf::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)
             );
-            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << dx << " " << dt << std::endl;
+            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << rhob << " " << dx << " " << dt << std::endl;
             myfile.flush();
         }
         if (nt%nt_skip == 0)

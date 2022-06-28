@@ -1,6 +1,6 @@
 #include "cvdf.h"
 
-real_t calc_u_bulk(const auto& q, const auto& air)
+void calc_u_bulk(const auto& q, const auto& air, real_t& u_bulk, real_t& rho_bulk)
 {
     const auto& grid = q.get_grid();
     const real_t dV = grid.get_dx(0)*grid.get_dx(1)*grid.get_dx(2);
@@ -33,5 +33,8 @@ real_t calc_u_bulk(const auto& q, const auto& air)
     
     const real_t int_rho_u = cvdf::algs::transform_reduce(q, integrate_rho_u, rsum);
     const real_t int_rho   = cvdf::algs::transform_reduce(q, integrate_rho,   rsum);
-    return int_rho_u/int_rho;
+    const auto bnd = grid.get_bounds();
+    const real_t vol  = bnd.size(0)*bnd.size(1)*bnd.size(2);
+    rho_bulk = int_rho / vol;
+    u_bulk = int_rho_u/int_rho;
 }
