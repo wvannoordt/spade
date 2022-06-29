@@ -6,10 +6,24 @@
 
 namespace spade::pde_algs
 {
+    template <typename flux_func_t> concept is_flux_functor =
+    requires(const flux_func_t& f)
+    {
+        //TODO
+        f;
+    };
+    
+    template <typename arr_t, typename flux_eval_t> concept has_flux_compatibility =
+    requires(const arr_t& t0, const flux_eval_t& t1)
+    {
+        //TODO
+        t0;
+    };
+    
     template <
         grid::multiblock_array array1_t,
         grid::multiblock_array array2_t,
-        typename flux_func_t>
+        is_flux_functor flux_func_t>
     requires
         grid::has_centering_type<array1_t, grid::cell_centered> &&
         (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&

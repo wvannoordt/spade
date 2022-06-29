@@ -1,0 +1,5 @@
+[ ] Write a global function to convert between node/face/cell indices to standardize convention
+[ ] Separate out the block topology type to handle neighbor relationships and domain boundary status
+[ ] Better separation of navier-stokes code and the general finite-volume framework code
+[ ] Flux compatibility concepts
+[ ] Fix the segfault issue with the MPI communicator when not using MPI_COMM_WORLD

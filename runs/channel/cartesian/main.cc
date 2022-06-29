@@ -11,6 +11,7 @@ typedef spade::fluid_state::flux_t<real_t> flux_t;
 typedef spade::fluid_state::cons_t<real_t> cons_t;
 
 #include "calc_u_bulk.h"
+#include "calc_boundary_flux.h"
 
 void set_channel_noslip(auto& prims)
 {
@@ -128,6 +129,7 @@ int main(int argc, char** argv)
     
     
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    
     
     prim_t fill1 = 0.0;
     flux_t fill2 = 0.0;
