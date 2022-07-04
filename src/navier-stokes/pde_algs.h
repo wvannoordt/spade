@@ -47,7 +47,7 @@ namespace spade::pde_algs
             flux_input::get_flux_data(ar_grid, prims, iface, flux_data);
             const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
             const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
-            fluid_state::flux_t<real_type> flux = flux_func.calc_flux(flux_data);
+            auto flux = flux_func.calc_flux(flux_data);
             const real_type dx = ar_grid.get_dx(idir);
             for (int n = 0; n < flux.size(); ++n)
             {

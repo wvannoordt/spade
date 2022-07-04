@@ -215,12 +215,33 @@ int main(int argc, char** argv)
     
     if (init_from_file)
     {
+        if (group.isroot()) print("reading...");
         spade::io::binary_read(init_filename, prim);
+        grid.exchange_array(prim);
+        set_channel_noslip(prim);
     }
     
     spade::convective::totani_lr tscheme(air);
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
+    
+    // auto conv0 = proto::get_domain_boundary_flux(prim, tscheme, 0);
+    // auto conv1 = proto::get_domain_boundary_flux(prim, tscheme, 1);
+    // auto conv2 = proto::get_domain_boundary_flux(prim, tscheme, 2);
+    // auto conv3 = proto::get_domain_boundary_flux(prim, tscheme, 3);
+    // auto conv4 = proto::get_domain_boundary_flux(prim, tscheme, 4);
+    // auto conv5 = proto::get_domain_boundary_flux(prim, tscheme, 5);
+    // if (group.isroot())
+    // {
+    //     print(conv0);
+    //     print(conv1);
+    //     print(conv2);
+    //     print(conv3);
+    //     print(conv4);
+    //     print(conv5);
+    // }
+    // group.pause();
+    // return 1;
     
     struct p2c_t
     {

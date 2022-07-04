@@ -50,6 +50,11 @@ namespace spade::fluid_state
             for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
             return *this;
         }
+        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
+            return *this;
+        }
         
         static std::string name(uint idx)
         {
@@ -94,6 +99,11 @@ namespace spade::fluid_state
             for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
             return *this;
         }
+        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
+            return *this;
+        }
         
         static std::string name(uint idx)
         {
@@ -136,6 +146,11 @@ namespace spade::fluid_state
         template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
         {
             for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
+            return *this;
+        }
+        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
             return *this;
         }
         static std::string name(uint idx)
