@@ -34,12 +34,12 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
-                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
                         for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
-                        const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
-                        const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
+                        const auto x_g = grid.get_comp_coords(i_g);
+                        const auto x_d = grid.get_comp_coords(i_d);
                         const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
                         const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
                         q_g.p() =  q_d.p();
@@ -103,6 +103,20 @@ int main(int argc, char** argv)
         }
     }
     
+    bool viz_only = false;
+    std::string viz_filename = "";
+    if (args.has_arg("-viz"))
+    {
+        viz_filename = args["-viz"];
+        if (group.isroot()) print("Converting", viz_filename);
+        viz_only = true;
+        if (!std::filesystem::exists(viz_filename))
+        {
+            if (group.isroot()) print("Cannot find viz file", viz_filename);
+            abort();
+        }
+    }
+    
     spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
     spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
@@ -135,6 +149,15 @@ int main(int argc, char** argv)
     flux_t fill2 = 0.0;
     
     spade::grid::grid_array prim (grid, fill1);
+    
+    if (viz_only)
+    {
+        spade::io::binary_read(viz_filename, prim);
+        std::string fname = spade::io::output_vtk("output", "viz", prim);
+        if (group.isroot()) print("outputting", fname);
+        return 0;
+    }
+    
     spade::grid::grid_array rhs0 (grid, fill2);
     spade::grid::grid_array rhs1 (grid, fill2);
     
@@ -287,7 +310,7 @@ int main(int argc, char** argv)
                 "cfl:", spade::utils::pad_str(cfl, 15),
                 "u+a:", spade::utils::pad_str(umax, 15),
                 "ub: ", spade::utils::pad_str(ub, 15),
-		"rb: ", spade::utils::pad_str(rhob, 15),
+                "rb: ", spade::utils::pad_str(rhob, 15),
                 "dx: ", spade::utils::pad_str(dx, 15),
                 "dt: ", spade::utils::pad_str(dt, 15),
                 "ftt:", spade::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)

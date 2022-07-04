@@ -11,6 +11,7 @@ namespace spade::convective
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
     {
         typedef typename gas_t::value_type dtype;
+        typedef fluid_state::flux_t<dtype> output_type;
         typedef flux_input::flux_input_t
         <
             flux_input::left_right
@@ -26,10 +27,10 @@ namespace spade::convective
         
         totani_lr(const gas_t& gas_in) {gas = &gas_in;}
         
-        fluid_state::flux_t<dtype>
-        calc_flux(const input_type& input) const
+        
+        output_type calc_flux(const input_type& input) const
         {
-            fluid_state::flux_t<dtype> output;
+            output_type output;
             const auto& ql       = std::get<0>(input.cell_data.left.elements).data;
             const auto& qr       = std::get<0>(input.cell_data.right.elements).data;
             const auto& normal_l = std::get<1>(input.cell_data.left.elements).data;
@@ -59,6 +60,7 @@ namespace spade::convective
     template <fluid_state::state_dependent_gas gas_t> struct weno_3
     {
         typedef typename gas_t::value_type dtype;
+        typedef fluid_state::flux_t<dtype> output_type;
         typedef flux_input::flux_input_t
         <
             flux_input::flux_line
@@ -75,8 +77,7 @@ namespace spade::convective
         
         weno_3(const gas_t& gas_in) { gas = &gas_in; }
         
-        fluid_state::flux_t<dtype>
-        calc_flux(const input_type& input) const
+        output_type calc_flux(const input_type& input) const
         {
             fluid_state::flux_t<dtype> output;
             const auto& q0       = std::get<0>(input.cell_data.stencil[0].elements).data;
