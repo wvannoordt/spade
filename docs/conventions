@@ -1,6 +1,7 @@
-Face indices:
+Indexing: note that the conventions for indexing are now
+implemented in src/core/grid_index_types.h
 
- 
+Face indices: 
             | <- exchange boundary
             |
 |     |     |     |     |
