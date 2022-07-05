@@ -225,24 +225,6 @@ int main(int argc, char** argv)
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
     
-    // auto conv0 = proto::get_domain_boundary_flux(prim, tscheme, 0);
-    // auto conv1 = proto::get_domain_boundary_flux(prim, tscheme, 1);
-    // auto conv2 = proto::get_domain_boundary_flux(prim, tscheme, 2);
-    // auto conv3 = proto::get_domain_boundary_flux(prim, tscheme, 3);
-    // auto conv4 = proto::get_domain_boundary_flux(prim, tscheme, 4);
-    // auto conv5 = proto::get_domain_boundary_flux(prim, tscheme, 5);
-    // if (group.isroot())
-    // {
-    //     print(conv0);
-    //     print(conv1);
-    //     print(conv2);
-    //     print(conv3);
-    //     print(conv4);
-    //     print(conv5);
-    // }
-    // group.pause();
-    // return 1;
-    
     struct p2c_t
     {
         const spade::fluid_state::perfect_gas_t<real_t>* gas;
@@ -303,7 +285,6 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         set_channel_noslip(q);
         spade::pde_algs::flux_div(q, rhs, tscheme);
-        // spade::flux_algs::flux_lr_diff(q, rhs, wscheme);
         spade::pde_algs::flux_div(prim, rhs, visc_scheme);
         spade::algs::transform_inplace(rhs, [&](const spade::ctrs::array<real_t, 5>& rhs_ar) -> spade::ctrs::array<real_t, 5> 
         {
@@ -311,7 +292,6 @@ int main(int argc, char** argv)
             rhs_new[2] += force_term;
             return rhs_new;
         });
-        // garbo_visc(q, rhs, mu);
     };
     
     spade::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
@@ -321,22 +301,31 @@ int main(int argc, char** argv)
     {
         int nt = nti;
         const real_t umax   = spade::algs::transform_reduce(prim, get_u, max_op);
-	real_t ub, rhob;
-	calc_u_bulk(prim, air, ub, rhob);
+        real_t ub, rhob;
+        calc_u_bulk(prim, air, ub, rhob);
+        const real_t area = bounds.size(0)*bounds.size(2);
+        auto conv2 = proto::get_domain_boundary_flux(prim, visc_scheme, 2);
+        auto conv3 = proto::get_domain_boundary_flux(prim, visc_scheme, 3);
+        conv2 /= area;
+        conv3 /= area;
+        const real_t tau = 0.5*(spade::utils::abs(conv2.x_momentum()) + spade::utils::abs(conv3.x_momentum()));
+        
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
+            const int pn = 10;
             print(
-                "nt: ", spade::utils::pad_str(nt, 15),
-                "cfl:", spade::utils::pad_str(cfl, 15),
-                "u+a:", spade::utils::pad_str(umax, 15),
-                "ub: ", spade::utils::pad_str(ub, 15),
-                "rb: ", spade::utils::pad_str(rhob, 15),
-                "dx: ", spade::utils::pad_str(dx, 15),
-                "dt: ", spade::utils::pad_str(dt, 15),
-                "ftt:", spade::utils::pad_str(20.0*u_tau*time_int.time()/delta, 15)
+                "nt: ", spade::utils::pad_str(nt, pn),
+                "cfl:", spade::utils::pad_str(cfl, pn),
+                "u+a:", spade::utils::pad_str(umax, pn),
+                "ub: ", spade::utils::pad_str(ub, pn),
+                "rb: ", spade::utils::pad_str(rhob, pn),
+                "tau:", spade::utils::pad_str(tau, pn),
+                "dx: ", spade::utils::pad_str(dx, pn),
+                "dt: ", spade::utils::pad_str(dt, pn),
+                "ftt:", spade::utils::pad_str(20.0*u_tau*time_int.time()/delta, pn)
             );
-            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << rhob << " " << dx << " " << dt << std::endl;
+            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << rhob << " " << tau << " " << dx << " " << dt << std::endl;
             myfile.flush();
         }
         if (nt%nt_skip == 0)

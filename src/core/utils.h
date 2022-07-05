@@ -70,6 +70,11 @@ namespace spade::utils
         return min(t, min(ts...));
     }
     
+    template <typename rtype> static auto abs(const rtype& val)
+    {
+        return val<0?-val:val;
+    }
+    
     static inline void get_format_substrings(std::vector<std::string>& subStrings, const std::string& templateStr)
     {
         std::string delimiter = "{}";
