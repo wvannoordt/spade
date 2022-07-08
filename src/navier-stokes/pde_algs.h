@@ -6,6 +6,12 @@
 
 namespace spade::pde_algs
 {
+    enum domain_boundary_flux_policy_e
+    {
+        include_domain_boundary_flux,
+        exclude_domain_boundary_flux
+    };
+    
     template <typename flux_func_t> concept is_flux_functor =
     requires(const flux_func_t& f)
     {

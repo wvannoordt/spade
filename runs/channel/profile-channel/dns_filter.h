@@ -68,12 +68,12 @@ namespace postprocessing
                     {
                         for (int nnn = 0; nnn < numcell; ++nnn)
                         {
-                            v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
-                            v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
+                            spade::grid::cell_idx_t i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                            spade::grid::cell_idx_t i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                             prim_t q_d, q_g;
                             for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
-                            const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
-                            const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
+                            const auto x_g = grid.get_comp_coords(i_g);
+                            const auto x_d = grid.get_comp_coords(i_d);
                             const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
                             const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
                             q_g.p() =  q_d.p();
@@ -102,7 +102,7 @@ namespace postprocessing
         counts.resize(ny, 0);
         for (auto i: rg)
         {
-            const v4c  ijk(i[0], i[1], i[2], i[3]);
+            const spade::grid::cell_idx_t  ijk(i[0], i[1], i[2], i[3]);
             const auto x  = grid.get_comp_coords(ijk);
             prim_t q_i_l, q_o_l;
             for (auto n: range(0,5))
@@ -144,10 +144,10 @@ namespace postprocessing
         counts.resize(ny, 0);
         for (auto i: rg)
         {
-            v4c  ijk_L(i[0], i[1], i[2], i[3]);
-            v4c  ijk_R(i[0], i[1], i[2], i[3]);
+            spade::grid::cell_idx_t  ijk_L(i[0], i[1], i[2], i[3]);
+            spade::grid::cell_idx_t  ijk_R(i[0], i[1], i[2], i[3]);
             ijk_L[1] -= 1;
-            v5f  ijk_F(1, (int)ijk_R[0], (int)ijk_R[1], (int)ijk_R[2], (int)ijk_R[3]);
+            spade::grid::face_idx_t  ijk_F((int)ijk_R[0], (int)ijk_R[1], (int)ijk_R[2], (int)ijk_R[3], 1);
             const auto x  = grid.get_comp_coords(ijk_F);
             prim_t q_i_l_L, q_i_l_R, q_o_l_L, q_o_l_R;
             for (auto n: range(0,5))
