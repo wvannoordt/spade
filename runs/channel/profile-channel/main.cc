@@ -112,11 +112,11 @@ int main(int argc, char** argv)
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
     std::ofstream ub_out("ub.dat");
-    bool output = false;
+    bool output = true;
     int ct = 0;
     for (auto& p: names)
     {
-        for (auto symmetry_index: range(0,4))
+        for (auto symmetry_index: range(0,2))
         {
             if (group.isroot())
             {

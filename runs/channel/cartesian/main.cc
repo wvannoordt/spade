@@ -1,4 +1,4 @@
-
+#include <chrono>
 #include "spade.h"
 
 typedef double real_t;
@@ -132,9 +132,9 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*spade::consts::pi*delta;
     
     const real_t targ_cfl = 0.25;
-    const int    nt_max   = 150001;
+    const int    nt_max   = 300001;
     const int    nt_skip  = 50000000;
-    const int    checkpoint_skip  = 2500;
+    const int    checkpoint_skip  = 5000;
     
     spade::coords::identity<real_t> coords;
     
@@ -346,7 +346,10 @@ int main(int argc, char** argv)
             spade::io::binary_write(filename, prim);
             if (group.isroot()) print("Done.");
         }
+	auto start = std::chrono::steady_clock::now();
         time_int.advance();
+	auto end = std::chrono::steady_clock::now();
+	if (group.isroot()) print("Elapsed:", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count(), "ms");
         if (std::isnan(umax))
         {
             if (group.isroot())
