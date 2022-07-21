@@ -50,10 +50,10 @@ namespace postprocessing
     static void spatial_filter(const spade::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
     {
         const auto& grid = src.get_grid();
-        const auto rg    = grid.get_range(spade::grid::cell_centered);
+        const auto rg    = range(0,5)*grid.get_range(spade::grid::cell_centered);
         v3i half;
         for (auto i: range(0,3)) half[i] = (filtsize[i]-1)/2;
-        auto di_rg = range(0,5)*range(-half[0],half[0]+1)*range(-half[1],half[1]+1)*range(-half[2],half[2]+1);
+        auto di_rg = range(-half[0],half[0]+1)*range(-half[1],half[1]+1)*range(-half[2],half[2]+1);
         const double coeff = 1.0/di_rg.size();
         for (auto i: rg)
         {
