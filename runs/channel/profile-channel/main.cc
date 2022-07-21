@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     spade::ctrs::array<int, 3> cells_in_block_coarse;
     for (auto i: range(0,3)) cells_in_block_coarse[i] = cells_in_block[i]/filt[i];
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
-    spade::ctrs::array<int, 3> exchange_cells_filt(8, 8, 8);
+    spade::ctrs::array<int, 3> exchange_cells_filt(filt[0]/2, filt[1]/2, filt[2]/2);
     spade::bound_box_t<real_t, 3> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
@@ -165,9 +165,13 @@ int main(int argc, char** argv)
             if (output)
             {
                 postprocessing::copy_field(prim_i, prim);
+                if (group.isroot()) print("Outputting...");
                 spade::io::output_vtk("output", "q_i", prim);
                 postprocessing::copy_field(prim_o, prim);
                 spade::io::output_vtk("output", "q_o", prim);
+                if (group.isroot()) print("Done. Exiting.");
+                group.sync();
+                return 0;
             }
             
             postprocessing::extract_profile(symmetry_jacobian, y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
