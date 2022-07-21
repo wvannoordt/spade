@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     spade::parallel::mpi_t group(&argc, &argv);
     
-    v3i filt(8, 16, 6);
+    v3i filt(9, 15, 7);
     //v3i filt(4, 8, 3);
     //v3i filt(1, 1, 1);
     spade::ctrs::array<int, 3> num_blocks(8, 8, 8);

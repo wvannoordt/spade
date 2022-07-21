@@ -12,6 +12,7 @@ namespace spade::viscous
     template <viscous_laws::viscous_law vlaw_t> struct visc_lr
     {
         typedef typename vlaw_t::value_type dtype;
+        typedef fluid_state::flux_t<dtype> output_type;
         typedef flux_input::flux_input_t
         <
             flux_input::left_right
@@ -28,8 +29,7 @@ namespace spade::viscous
         
         visc_lr(const vlaw_t& vlaw_in) { vlaw = &vlaw_in; }
         
-        fluid_state::flux_t<dtype>
-        calc_flux(const input_type& input) const
+        output_type calc_flux(const input_type& input) const
         {
             // don't forget the negative signs
             fluid_state::flux_t<dtype> output;

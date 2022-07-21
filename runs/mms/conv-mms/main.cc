@@ -79,22 +79,24 @@ int main(int argc, char** argv)
         
         if (group.isroot()) print("Grid level / cells:           ", n, "/", num_dof);
         
-        spade::grid::grid_array prim    (grid, 0.0, spade::dims::static_dims<5>(), spade::dims::singleton_dim());
-        spade::grid::grid_array rhs     (grid, 0.0, spade::dims::static_dims<5>(), spade::dims::singleton_dim());
-        spade::grid::grid_array rhs_test(grid, 0.0, spade::dims::static_dims<5>(), spade::dims::singleton_dim());
+        spade::fluid_state::prim_t<real_t> fill1 = 0.0;
+        spade::fluid_state::flux_t<real_t> fill2 = 0.0;
+        spade::grid::grid_array prim    (grid, fill1);
+        spade::grid::grid_array rhs     (grid, fill2);
+        spade::grid::grid_array rhs_test(grid, fill2);
         
         spade::algs::fill_array(prim,     mms_test_func, spade::grid::include_exchanges);
         spade::algs::fill_array(rhs_test, mms_conv_func, spade::grid::include_exchanges);
         
-        spade::flux_algs::flux_lr_diff(prim, rhs, tscheme);
+        spade::pde_algs::flux_div(prim, rhs, tscheme);
         
         bool output = true;
         if (output)
         {
             std::string filename = "rhs" + std::to_string(n);
-            std::string out_file = spade::output::output_vtk("output", filename, grid, rhs);
+            std::string out_file = spade::io::output_vtk("output", filename, grid, rhs);
             filename = "ana" + std::to_string(n);
-            out_file = spade::output::output_vtk("output", filename, grid, rhs_test);
+            out_file = spade::io::output_vtk("output", filename, grid, rhs_test);
         }
         rhs -= rhs_test;
         

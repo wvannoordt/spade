@@ -15,14 +15,16 @@ namespace spade::algs
         template <grid::multiblock_grid grid_t, grid::has_centering_type<grid::node_centered> arr_t>
         _finline_ auto get_coords(const grid_t& grid, const arr_t& arr, const int& i, const int& j, const int& k, const int& lb)
         {
-            return grid.node_coords(i,j,k,lb);
+            grid::node_idx_t i_n(i, j, k, lb);
+            return grid.get_coords(i_n);
         }
         
         #pragma GCC diagnostic ignored "-Wattributes"
         template <grid::multiblock_grid grid_t, grid::has_centering_type<grid::cell_centered> arr_t>
         _finline_ auto get_coords(const grid_t& grid, const arr_t& arr, const int& i, const int& j, const int& k, const int& lb)
         {
-            return grid.cell_coords(i,j,k,lb);
+            grid::cell_idx_t i_c(i, j, k, lb);
+            return grid.get_coords(i_c);
         }
         
         template <class T, typename rtype> concept xyz_ijk_callable = std::is_invocable<T, ctrs::array<rtype, 3>, int, int, int, int>::value &&

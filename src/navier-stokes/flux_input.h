@@ -81,7 +81,7 @@ namespace spade::flux_input
         void get_single_cell_info_value(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::cell_t<int>, 4>& icell,
+            const grid::cell_idx_t& icell,
             const int& idir,
             cell_state<output_t>& output)
         {
@@ -92,11 +92,11 @@ namespace spade::flux_input
         void get_single_cell_info_value(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::cell_t<int>, 4>& icell,
+            const grid::cell_idx_t& icell,
             const int& idir,
             cell_normal<output_t>& output)
         {
-            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(icell[0], icell[1], icell[2], icell[3]);
+            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(icell);
             output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, icell, idir);
         }
         
@@ -104,7 +104,7 @@ namespace spade::flux_input
         void get_single_cell_data(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::cell_t<int>, 4>& icell,
+            const grid::cell_idx_t& icell,
             const int& idir,
             cell_info_t& info)
         {
@@ -116,23 +116,22 @@ namespace spade::flux_input
         }
         
         template <typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, left_right<cell_info_t>& lr)
+        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, left_right<cell_info_t>& lr)
         {
-            const int idir = iface[0];
-            ctrs::array<grid::cell_t<int>, 4> il((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
-            ctrs::array<grid::cell_t<int>, 4> ir((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
-            ir[idir] += 1;
+            const int idir = grid::get_face_dir(iface);
+            grid::cell_idx_t il = grid::face_to_cell(iface, 0);
+            grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
             get_single_cell_data(ar_grid, prims, il, idir, lr.left);
             get_single_cell_data(ar_grid, prims, ir, idir, lr.right);
         }
         
         template <const std::size_t flux_size, typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, flux_line<flux_size, cell_info_t>& sten)
+        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, flux_line<flux_size, cell_info_t>& sten)
         {
-            const int idir = iface[0];
+            const int idir = grid::get_face_dir(iface);
             static_for<0,flux_size>([&](auto i) -> void
             {
-                ctrs::array<grid::cell_t<int>, 4> icell((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+                grid::cell_idx_t icell = grid::face_to_cell(iface, 0);
                 icell[idir] += i.value - (int)(flux_size/2) + 1;
                 get_single_cell_data(ar_grid, prims, icell, idir, sten.stencil[i.value]);
             });
@@ -142,24 +141,23 @@ namespace spade::flux_input
         void get_face_info_value(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::face_t<int>, 5>& iface,
+            const grid::face_idx_t& iface,
             face_normal<output_t>& output)
         {
-            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(iface[0], iface[1], iface[2], iface[3], iface[4]);
-            output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface, iface[0]);
+            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(iface);
+            output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface, grid::get_face_dir(iface));
         }
         
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
         void get_face_info_value(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::face_t<int>, 5>& iface,
+            const grid::face_idx_t& iface,
             face_state<output_t>& output)
         {
-            const int idir = iface[0];
-            ctrs::array<grid::cell_t<int>, 4> il((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
-            ctrs::array<grid::cell_t<int>, 4> ir((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
-            ir[idir] += 1;
+            const int idir = grid::get_face_dir(iface);
+            const grid::cell_idx_t il = grid::face_to_cell(iface, 0);
+            const grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
             cell_state<output_t> ql, qr;
             get_single_cell_info_value(ar_grid, prims, il, idir, ql);
             get_single_cell_info_value(ar_grid, prims, ir, idir, qr);
@@ -168,7 +166,7 @@ namespace spade::flux_input
         
         template <grid::multiblock_grid grid_t, ctrs::basic_array vec_t, typename idx_t>
         requires std::is_same<typename grid_t::coord_sys_type, coords::identity<typename grid_t::coord_type>>::value
-        void transform_gradient(const grid_t& ar_grid, const idx_t& iface, ctrs::array<vec_t, 3>& data)
+        void transform_gradient(const grid_t& ar_grid, const idx_t& idx, ctrs::array<vec_t, 3>& data)
         {
             // do nothing (identity coordinates)
         }
@@ -204,21 +202,22 @@ namespace spade::flux_input
         void get_face_info_value(
             const grid_t& ar_grid,
             const array_t& prims,
-            const ctrs::array<grid::face_t<int>, 5>& iface,
+            const grid::face_idx_t& iface,
             face_state_grad<output_t>& output)
         {
-            const ctrs::array<int,3> idir(iface[0], (iface[0]+1)%ar_grid.dim(), (iface[0]+2)%ar_grid.dim());
+            const int idir0 = grid::get_face_dir(iface);
+            const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
             const ctrs::array<typename grid_t::coord_type, 3> invdx
             (
                 1.0/ar_grid.get_dx(0),
                 1.0/ar_grid.get_dx(1),
                 1.0/ar_grid.get_dx(2)
             );
-            ctrs::array<grid::cell_t<int>, 4> ic((int)iface[1], (int)iface[2], (int)iface[3], (int)iface[4]);
+            grid::cell_idx_t ic = grid::face_to_cell(iface, 0);
             
             output.data = 0.0;
             cell_state<typename output_t::value_type> q;
-            auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const ctrs::array<grid::cell_t<int>, 4>& idx)
+            auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const grid::cell_idx_t& idx)
             {
                 get_single_cell_info_value(ar_grid, prims, idx, idir[0], q);
                 for (std::size_t i = 0; i < output.data[iset].size(); ++i) output.data[iset][i] += coeff*q.data[i]*invdx[iset];
@@ -250,7 +249,7 @@ namespace spade::flux_input
         
         
         template <typename face_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_face_data(const grid_t& grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, face_info_t& face_data)
+        void get_face_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, face_info_t& face_data)
         {
             auto& p = face_data.elements;
             static_for<0,face_info_t::num_params>([&](auto i) -> void
@@ -261,7 +260,7 @@ namespace spade::flux_input
     }
     
     template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename flux_in_t>
-    void get_flux_data(const grid_t& grid, const array_t& prims, const ctrs::array<grid::face_t<int>, 5>& iface, flux_in_t& flux_input)
+    void get_flux_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, flux_in_t& flux_input)
     {
         detail::get_cell_stencil_data(grid, prims, iface, flux_input.cell_data);
         detail::get_face_data(grid, prims, iface, flux_input.face_data);

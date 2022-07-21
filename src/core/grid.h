@@ -20,10 +20,15 @@
 
 namespace spade::grid
 {    
-    template <class T> concept multiblock_grid = requires(T t, size_t i, size_t j, size_t k, size_t lb)
+    template <class T> concept multiblock_grid = requires(T t, const cell_idx_t& i_c, const face_idx_t& i_f, const node_idx_t& i_n)
     {
         // todo: write this
-        { t.node_coords(i, j, k, lb) } -> ctrs::basic_array;
+        { t.get_coords(i_c) } -> ctrs::basic_array;
+        { t.get_coords(i_f) } -> ctrs::basic_array;
+        { t.get_coords(i_n) } -> ctrs::basic_array;
+        { t.get_comp_coords(i_c) } -> ctrs::basic_array;
+        { t.get_comp_coords(i_f) } -> ctrs::basic_array;
+        { t.get_comp_coords(i_n) } -> ctrs::basic_array;
     };
     
     
@@ -217,133 +222,22 @@ namespace spade::grid
             
             constexpr static int dim(void) {return dim_t::value;}
             
-            _finline_ ctrs::array<dtype, 3> node_coords(const int& i, const int& j, const int& k, const int& lb) const
+            template <multiblock_grid_idx_t idx_t>_finline_ ctrs::array<dtype, 3> get_coords(const idx_t& i) const
             {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < dim(); idir++)
-                {
-                    output[idir] = box.min(idir) + ijk[idir]*dx[idir];
-                }
-                return coord_system.map(output);
+                return coord_system.map(this->get_comp_coords(i));
             }
             
-            _finline_ ctrs::array<dtype, 3> cell_coords(const int& i, const int& j, const int& k, const int& lb) const
+            template <multiblock_grid_idx_t idx_t>_finline_ ctrs::array<dtype, 3> get_comp_coords(const idx_t& i) const
             {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < dim(); idir++)
+                const auto  idx_r = get_index_coord(i);
+                const int   lb    = (int)i[3];
+                const auto& bnd   = block_boxes[lb];
+                ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
+                for (auto d: range(0,dim()))
                 {
-                    output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
-                }
-                return coord_system.map(output);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> face_coords(const int& idir, const int& i, const int& j, const int& k, const int& lb) const
-            {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t d = 0; d < dim(); ++d)
-                {
-                    output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
-                }
-                output[idir] -= 0.5*dx[idir];
-                return coord_system.map(output);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> node_comp_coords(const int& i, const int& j, const int& k, const int& lb) const
-            {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < dim(); idir++)
-                {
-                    output[idir] = box.min(idir) + ijk[idir]*dx[idir];
+                    output[d] = bnd.min(d)+idx_r[d]*this->get_dx(d);
                 }
                 return output;
-            }
-            
-            _finline_ ctrs::array<dtype, 3> cell_comp_coords(const int& i, const int& j, const int& k, const int& lb) const
-            {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t idir = 0; idir < dim(); idir++)
-                {
-                    output[idir] = box.min(idir) + (ijk[idir]+0.5)*dx[idir];
-                }
-                return output;
-            }
-            
-            _finline_ ctrs::array<dtype, 3> face_comp_coords(const int& idir, const int& i, const int& j, const int& k, const int& lb) const
-            {
-                ctrs::array<dtype, 3> output(0, 0, 0);
-                ctrs::array<int, 3> ijk(i, j, k);
-                auto& box = block_boxes[lb];
-                for (size_t d = 0; d < dim(); ++d)
-                {
-                    output[d] = box.min(d) + (ijk[d]+0.5)*dx[d];
-                }
-                output[idir] += 0.5*dx[idir];
-                return output;
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_coords(const ctrs::array<face_t<int>, 5>& i) const
-            {
-                return this->face_coords(i[0], i[1], i[2], i[3], i[4]);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
-            {
-                return this->face_coords(idir, i, j, k, lb);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_coords(const node_t<int>& i, const node_t<int>& j, const node_t<int>& k, const node_t<int>& lb) const
-            {
-                return this->node_coords(i, j, k, lb);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_coords(const ctrs::array<cell_t<int>, 4>& i) const
-            {
-                return this->get_coords(i[0], i[1], i[2], i[3]);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const
-            {
-                return this->cell_coords(i, j, k, lb);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<face_t<int>, 5>& i) const
-            {
-                return this->get_comp_coords(i[0], i[1], i[2], i[3], i[4]);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const int& idir, const face_t<int>& i, const face_t<int>& j, const face_t<int>& k, const face_t<int>& lb) const
-            {
-                return this->face_comp_coords(idir, i, j, k, lb);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<node_t<int>, 4>& i) const
-            {
-                return this->get_comp_coords(i[0], i[1], i[2], i[3]);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const node_t<int>& i, const node_t<int>& j, const node_t<int>& k, const node_t<int>& lb) const
-            {
-                return this->node_comp_coords(i, j, k, lb);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const ctrs::array<cell_t<int>, 4>& i) const
-            {
-                return this->get_comp_coords(i[0], i[1], i[2], i[3]);
-            }
-            
-            _finline_ ctrs::array<dtype, 3> get_comp_coords(const cell_t<int>& i, const cell_t<int>& j, const cell_t<int>& k, const cell_t<int>& lb) const
-            {
-                return this->cell_comp_coords(i, j, k, lb);
             }
             
             const par_group_t& group(void) const

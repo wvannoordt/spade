@@ -121,7 +121,8 @@ namespace spade::io
                                 lb = obj.collapse_block_num(lbi,lbj,lbk);
                                 for (i = 0; i < obj.get_num_cells(0)+((lbi==(nlbi-1))?(1):(0)); ++i)
                                 {
-                                    x = obj.get_coords((gnt)i,(gnt)j,(gnt)k,(gnt)lb);
+                                    grid::node_idx_t i_n(i, j, k, lb);
+                                    x = obj.get_coords(i_n);
                                     out_str << x[0] << " " << x[1] << " " << x[2] << "\n";
                                     ct++;
                                 }
@@ -305,7 +306,8 @@ namespace spade::io
             k = 0;
             for (i = -n_guard_i; i <=n_cells_i+n_guard_i; i++)
             {
-                xyz = obj.node_coords(i, j, k, lb_loc);
+                grid::node_idx_t i_n(i, j, k, lb_loc);
+                xyz = obj.get_coords(i_n);
                 out_str << csp20 << xyz[0] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
@@ -315,7 +317,8 @@ namespace spade::io
             k = 0;
             for (j = -n_guard_j; j <=n_cells_j+n_guard_j; j++)
             {
-                xyz = obj.node_coords(i, j, k, lb_loc);
+                grid::node_idx_t i_n(i, j, k, lb_loc);
+                xyz = obj.get_coords(i_n);
                 out_str << csp20 << xyz[1] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
@@ -325,7 +328,8 @@ namespace spade::io
             j = 0;
             for (k = -n_guard_k; k <=n_cells_k+n_guard_k; k++)
             {
-                xyz = obj.node_coords(i, j, k, lb_loc);
+                grid::node_idx_t i_n(i, j, k, lb_loc);
+                xyz = obj.get_coords(i_n);
                 out_str << csp20 << xyz[2] << "\n";
             }
             out_str << ntab(4) << "</DataArray>" << std::endl;
