@@ -149,19 +149,19 @@ int main(int argc, char** argv)
                 q_out.w() = u_vec[2];
                 return q_out;
             });
-	    v3r e_y(0,1,0);
-	    v3r e_y_sym = symmetry_jacobian*e_y;
+            v3r e_y(0,1,0);
+            v3r e_y_sym = symmetry_jacobian*e_y;
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
             
             const real_t ub = calc_u_bulk(prim, air);
             if (group.isroot()) ub_out << ub << std::endl;
-            postprocessing::dns_filter(filt, prim_i, prim_o);
+            postprocessing::noslip(filt[1]/2, prim_i);
+            postprocessing::noslip(filt[1]/2, prim_o);
+            postprocessing::spatial_filter(filt, prim_i, prim_o);
             prim_i -= prim_o;
             grid_filt.exchange_array(prim_i);
             grid_filt.exchange_array(prim_o);
-            postprocessing::noslip(filt[1]/2, prim_i);
-            postprocessing::noslip(filt[1]/2, prim_o);
             if (output)
             {
                 postprocessing::copy_field(prim_i, prim);

@@ -23,7 +23,7 @@ namespace postprocessing
         }
     }
     
-    static void dns_filter(const spade::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
+    static void les_cell_bin(const spade::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
     {
         const auto& grid = src.get_grid();
         const auto rg   = grid.get_range(spade::grid::cell_centered);
@@ -47,7 +47,25 @@ namespace postprocessing
         }
     }
     
-    void noslip(const int& numcell, auto& prims)
+    static void spatial_filter(const spade::ctrs::array<int, 3>& filtsize, const auto& src, auto& dest)
+    {
+        const auto& grid = src.get_grid();
+        const auto rg    = grid.get_range(spade::grid::cell_centered);
+        v3i half;
+        for (auto i: range(0,3)) half[i] = (filtsize[i]-1)/2;
+        auto di_rg = range(0,5)*range(-half[0],half[0]+1)*range(-half[1],half[1]+1)*range(-half[2],half[2]+1);
+        const double coeff = 1.0/di_rg.size();
+        for (auto i: rg)
+        {
+            dest(i[0],i[1],i[2],i[3],i[4]) = 0.0;
+            for (auto di: di_rg)
+            {
+                dest(i[0],i[1],i[2],i[3],i[4]) += coeff*src(i[0], i[1]+di[0], i[2]+di[1], i[3]+di[2], i[4]);
+            }
+        }
+    }
+    
+    static void noslip(const int& numcell, auto& prims)
     {
         const real_t t_wall = 0.1;
         const auto& grid = prims.get_grid();

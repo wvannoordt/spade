@@ -191,6 +191,7 @@ int main(int argc, char** argv)
     if (init_from_file)
     {
         spade::io::binary_read(init_filename, prim);
+        if (group.isroot()) print("Init done.");
     }
     
     spade::convective::totani_lr tscheme(air);
