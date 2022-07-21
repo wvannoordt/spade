@@ -149,8 +149,8 @@ int main(int argc, char** argv)
                 q_out.w() = u_vec[2];
                 return q_out;
             });
-	    v3r e_y(0,1,0);
-	    v3r e_y_sym = symmetry_jacobian*e_y;
+            v3r e_y(0,1,0);
+            v3r e_y_sym = symmetry_jacobian*e_y;
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
             
