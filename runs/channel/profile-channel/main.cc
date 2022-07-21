@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {
     spade::parallel::mpi_t group(&argc, &argv);
     
-    v3i filt(8, 16, 6);
+    v3i filt(9, 15, 7);
     //v3i filt(4, 8, 3);
     //v3i filt(1, 1, 1);
     spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
@@ -156,12 +156,12 @@ int main(int argc, char** argv)
             
             const real_t ub = calc_u_bulk(prim, air);
             if (group.isroot()) ub_out << ub << std::endl;
-            postprocessing::dns_filter(filt, prim_i, prim_o);
+            postprocessing::noslip(filt[1]/2, prim_i);
+            postprocessing::noslip(filt[1]/2, prim_o);
+            postprocessing::spatial_filter(filt, prim_i, prim_o);
             prim_i -= prim_o;
             grid_filt.exchange_array(prim_i);
             grid_filt.exchange_array(prim_o);
-            postprocessing::noslip(filt[1]/2, prim_i);
-            postprocessing::noslip(filt[1]/2, prim_o);
             if (output)
             {
                 postprocessing::copy_field(prim_i, prim);

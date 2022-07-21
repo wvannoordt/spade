@@ -217,6 +217,7 @@ int main(int argc, char** argv)
     {
         if (group.isroot()) print("reading...");
         spade::io::binary_read(init_filename, prim);
+        if (group.isroot()) print("Init done.");
         grid.exchange_array(prim);
         set_channel_noslip(prim);
     }
