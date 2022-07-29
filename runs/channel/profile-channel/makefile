@@ -1,4 +1,4 @@
-cvdf   := $(realpath ../../../src)
+spade  := $(realpath ../../../src)
 target := vdf.x
 
 ifndef MPI_ENABLE
@@ -16,9 +16,17 @@ compflags += -DMPI_ENABLE=${MPI_ENABLE}
 
 flags :=
 flags += -fconcepts-diagnostics-depth=3
+flags += -fsanitize=undefined,address
+
+iflags := 
+iflags += -I${spade}
+iflags += -I${PTL}/include
+
+lflags := 
+lflags += -L${PTL}/lib -lPTL
 
 main:
-	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
+	${cc} -std=c++20 -g -O0 ${flags} ${compflags} ${iflags} main.cc -o ${target} ${lflags}
 
 run: main
 	./${target}

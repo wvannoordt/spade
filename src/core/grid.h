@@ -510,6 +510,7 @@ namespace spade::grid
             {
                 for (auto j : range(i+1, n))
                 {
+                    print(i+1,n);
                     idx_coeffs[j] *= this->get_index_extent(i);
                 }
             }

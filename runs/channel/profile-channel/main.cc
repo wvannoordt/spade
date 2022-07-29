@@ -1,3 +1,4 @@
+#include "PTL.h"
 #include "spade.h"
 #include "local_types.h"
 #include "dns_filter.h"
@@ -6,11 +7,28 @@
 
 int main(int argc, char** argv)
 {
+    
+    for (auto pp: range(6,5)*range(0,5))
+    {
+        print(pp[0], pp[1]);
+    }
+    return 0;
+/*    
     spade::parallel::mpi_t group(&argc, &argv);
     
-    v3i filt(9, 15, 7);
-    //v3i filt(4, 8, 3);
-    //v3i filt(1, 1, 1);
+    std::string input_filename = "input.ptl";
+    PTL::PropertyTree input;
+    // input.Read(input_filename);
+    // int filt_x  = input["filt_x"];
+    // int filt_y  = input["filt_y"];
+    // int filt_z  = input["filt_z"];
+    // bool output = input["output"];
+    int filt_x  = 13;
+    int filt_y  = 13;
+    int filt_z  = 13;
+    bool output = false;
+    v3i filt(filt_x, filt_y, filt_z);
+    
     spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
     spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
     spade::ctrs::array<int, 3> cells_in_block_coarse;
@@ -37,6 +55,8 @@ int main(int argc, char** argv)
     spade::grid::grid_array prim_o(grid_filt, fill1);
     spade::grid::grid_array prim_i(grid_filt, fill1);
     
+    
+    
     spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
     
@@ -59,7 +79,6 @@ int main(int argc, char** argv)
     const real_t dyi = 2*delta/nyi;
     const real_t dyo = 2*delta/nyo;
     const int ny = nyi;
-
     
     std::vector<profr_t*> reg;
     
@@ -85,7 +104,7 @@ int main(int argc, char** argv)
     profr_t viuo_f (ny+1, 0.0, "viuo_f",  reg); // 20
     profr_t duidy_f(ny+1, 0.0, "duidy_f", reg); // 21
     profr_t duody_f(ny+1, 0.0, "duody_f", reg); // 22
-
+    
     profr_t y    (ny+1, 0.0, "y",    reg); // 23
     profr_t ui   (ny+1, 0.0, "ui",   reg); // 24
     profr_t uo   (ny+1, 0.0, "uo",   reg); // 25
@@ -112,7 +131,6 @@ int main(int argc, char** argv)
     std::vector<std::string> names;
     for (int i = 1; i < argc; i++) names.push_back(std::string(argv[i]));
     std::ofstream ub_out("ub.dat");
-    bool output = true;
     int ct = 0;
     for (auto& p: names)
     {
@@ -153,7 +171,7 @@ int main(int argc, char** argv)
             v3r e_y_sym = symmetry_jacobian*e_y;
             postprocessing::copy_field(prim, prim_i);
             grid_filt.exchange_array(prim_i);
-            
+    
             const real_t ub = calc_u_bulk(prim, air);
             if (group.isroot()) ub_out << ub << std::endl;
             postprocessing::noslip(filt[1]/2, prim_i);
@@ -173,7 +191,7 @@ int main(int argc, char** argv)
                 group.sync();
                 return 0;
             }
-            
+    
             postprocessing::extract_profile(symmetry_jacobian, y,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return x[1];});
             postprocessing::extract_profile(symmetry_jacobian, ui,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_i.u();});
             postprocessing::extract_profile(symmetry_jacobian, uo,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u();});
@@ -196,7 +214,7 @@ int main(int argc, char** argv)
             postprocessing::extract_profile(symmetry_jacobian, viuo, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return q_o.u()*q_i.v();});
             postprocessing::extract_profile(symmetry_jacobian, p1,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p());});
             postprocessing::extract_profile(symmetry_jacobian, p2,   prim_o, prim_i, [&](const v3d& x, const prim_t& q_o, const prim_t& q_i) -> real_t {return (q_i.p()+q_o.p())*(q_i.p()+q_o.p());});
-            
+    
             auto sqr = [](const real_t& x) -> real_t {return x*x;};
             postprocessing::extract_profile_f(symmetry_jacobian, y_f,     prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return x[1]; });
             postprocessing::extract_profile_f(symmetry_jacobian, ui_f,    prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u()); });
@@ -220,7 +238,7 @@ int main(int argc, char** argv)
             postprocessing::extract_profile_f(symmetry_jacobian, viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
             postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_o_R.u()-q_o_L.u())/dyo;});
             postprocessing::extract_profile_f(symmetry_jacobian, duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_i_R.u()-q_i_L.u())/dyi;});
-            
+    
             for (auto p:reg) p->aggregate();
         }
     }
@@ -245,5 +263,5 @@ int main(int argc, char** argv)
         }
     }
     if (group.isroot()) print("done!");
-    return 0;
+    return 0;*/
 }

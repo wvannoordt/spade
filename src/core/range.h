@@ -8,13 +8,13 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
     index_t idx_v, start_v, end_v;
     typedef std::size_t base_type_t;
     typename std::conditional<(idx_dim<=1), base_type_t, md_iterator<index_t,idx_dim-1>>::type next;
-    template <typename... idxs_t> static void set_start_r(std::size_t& base){base = 0;}
+    template <typename... idxs_t> static void set_start_r(base_type_t& base){base = 0;}
     template <class callee_t> static void set_start_r(callee_t& arg)
     {
         arg.idx_v = arg.start_v;
         set_start_r(arg.next);
     }
-    template <typename... idxs_t> static void set_end_r(std::size_t& base){base = 1;}
+    template <typename... idxs_t> static void set_end_r(base_type_t& base){base = 1;}
     template <class callee_t> static void set_end_r(callee_t& arg)
     {
         arg.idx_v = arg.start_v;
@@ -60,6 +60,12 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
     
     bool operator != (const md_iterator& rhs)
     {
+        // std::cout << "==============================================" << std::endl;
+        // std::cout << (this->idx_v != rhs.idx_v) << std::endl;
+        // std::cout << (this->next != rhs.next) << std::endl;
+        // std::cout << ((this->idx_v != rhs.idx_v) || (this->next != rhs.next)) << std::endl;
+        // std::cout << this->next << ": " << rhs.next << std::endl;
+        // std::cout << "==============================================" << std::endl;
         return (this->idx_v != rhs.idx_v) || (this->next != rhs.next);
     }
     

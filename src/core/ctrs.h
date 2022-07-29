@@ -67,11 +67,21 @@ namespace spade::ctrs
         }
         array(const dtype& val) {fill(val);}
         array(void) {fill(dtype());}
-        template <typename rhs_t> array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        
+        template <typename rhs_t>
+        requires (!basic_array<rhs_t>)
+        array<dtype, ar_size>& operator = (const rhs_t& rhs)
         {
             this->fill(rhs);
             return *this;
         }
+        
+        template <basic_array rhs_t> array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        {
+            copy_array(rhs,*this);
+            return *this;
+        }
+        
         template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
         template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
         
