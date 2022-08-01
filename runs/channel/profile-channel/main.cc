@@ -7,32 +7,28 @@
 
 int main(int argc, char** argv)
 {
+    //This issue really needs to be addressed!
+    // for (auto pp: range(6,5)*range(0,5))
+    // {
+    //     print(pp[0], pp[1]);
+    // }
+    // return 0;
     
-    for (auto pp: range(6,5)*range(0,5))
-    {
-        print(pp[0], pp[1]);
-    }
-    return 0;
-/*    
     spade::parallel::mpi_t group(&argc, &argv);
     
     std::string input_filename = "input.ptl";
     PTL::PropertyTree input;
-    // input.Read(input_filename);
-    // int filt_x  = input["filt_x"];
-    // int filt_y  = input["filt_y"];
-    // int filt_z  = input["filt_z"];
-    // bool output = input["output"];
-    int filt_x  = 13;
-    int filt_y  = 13;
-    int filt_z  = 13;
-    bool output = false;
+    input.Read(input_filename);
+    int    filt_x = input["filt_x"];
+    int    filt_y = input["filt_y"];
+    int    filt_z = input["filt_z"];
+    double theta  = input["theta"];
+    bool   output = input["output"];
     v3i filt(filt_x, filt_y, filt_z);
     
     spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
     spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
     spade::ctrs::array<int, 3> cells_in_block_coarse;
-    for (auto i: range(0,3)) cells_in_block_coarse[i] = cells_in_block[i]/filt[i];
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
     spade::ctrs::array<int, 3> exchange_cells_filt(filt[0]/2, filt[1]/2, filt[2]/2);
     spade::bound_box_t<real_t, 3> bounds;
@@ -49,7 +45,6 @@ int main(int argc, char** argv)
     
     spade::grid::cartesian_grid_t grid     (num_blocks, cells_in_block,        exchange_cells,      bounds, coords, group);
     spade::grid::cartesian_grid_t grid_filt(num_blocks, cells_in_block,        exchange_cells_filt, bounds, coords, group);
-    // spade::grid::cartesian_grid_t grid_crse(num_blocks, cells_in_block_coarse, exchange_cells,      bounds, coords, group);
     
     spade::grid::grid_array prim(grid, fill1);
     spade::grid::grid_array prim_o(grid_filt, fill1);
@@ -174,8 +169,7 @@ int main(int argc, char** argv)
     
             const real_t ub = calc_u_bulk(prim, air);
             if (group.isroot()) ub_out << ub << std::endl;
-            postprocessing::noslip(filt[1]/2, prim_i);
-            postprocessing::noslip(filt[1]/2, prim_o);
+            postprocessing::noslip(filt[1]/2, prim_i, theta);
             postprocessing::spatial_filter(filt, prim_i, prim_o);
             prim_i -= prim_o;
             grid_filt.exchange_array(prim_i);
@@ -236,7 +230,7 @@ int main(int argc, char** argv)
             postprocessing::extract_profile_f(symmetry_jacobian, wiwo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.w()+q_i_R.w())*0.5*(q_o_L.w()+q_o_R.w()); });
             postprocessing::extract_profile_f(symmetry_jacobian, uivo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.u()+q_i_R.u())*0.5*(q_o_L.v()+q_o_R.v()); });
             postprocessing::extract_profile_f(symmetry_jacobian, viuo_f,  prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return 0.5*(q_i_L.v()+q_i_R.v())*0.5*(q_o_L.u()+q_o_R.u()); });
-            postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_o_R.u()-q_o_L.u())/dyo;});
+            postprocessing::extract_profile_f(symmetry_jacobian, duody_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_o_R.u()-q_o_L.u())/dyi;});
             postprocessing::extract_profile_f(symmetry_jacobian, duidy_f, prim_o, prim_i, [&](const v3d& x, const prim_t& q_o_L, const prim_t& q_i_L, const prim_t& q_o_R, const prim_t& q_i_R) -> real_t { return e_y_sym[1]*(q_i_R.u()-q_i_L.u())/dyi;});
     
             for (auto p:reg) p->aggregate();
@@ -263,5 +257,5 @@ int main(int argc, char** argv)
         }
     }
     if (group.isroot()) print("done!");
-    return 0;*/
+    return 0;
 }

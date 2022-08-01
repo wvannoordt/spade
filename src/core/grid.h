@@ -508,9 +508,8 @@ namespace spade::grid
             for (auto i: range(0,n)) idx_coeffs[i] = 1;
             for (auto i : range(0, n))
             {
-                for (auto j : range(i+1, n))
+                for (int j =i+1; j < n; ++j)
                 {
-                    print(i+1,n);
                     idx_coeffs[j] *= this->get_index_extent(i);
                 }
             }

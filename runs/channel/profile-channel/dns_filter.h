@@ -65,7 +65,7 @@ namespace postprocessing
         }
     }
     
-    static void noslip(const int& numcell, auto& prims)
+    static void noslip(const int& numcell, auto& prims, const double& theta = 0.0)
     {
         const real_t t_wall = 0.1;
         const auto& grid = prims.get_grid();
@@ -95,9 +95,9 @@ namespace postprocessing
                             const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
                             const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
                             q_g.p() =  q_d.p();
-                            q_g.u() = -q_d.u();
+                            q_g.u() = (2.0*theta-1)*q_d.u();
                             q_g.v() = -q_d.v()*n_d[1]/n_g[1];
-                            q_g.w() = -q_d.w();
+                            q_g.w() = (2.0*theta-1)*q_d.w();
                             q_g.T() =  t_wall;
                             for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                         }

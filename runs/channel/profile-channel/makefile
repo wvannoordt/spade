@@ -16,7 +16,7 @@ compflags += -DMPI_ENABLE=${MPI_ENABLE}
 
 flags :=
 flags += -fconcepts-diagnostics-depth=3
-flags += -fsanitize=undefined,address
+#flags += -fsanitize=undefined,address
 
 iflags := 
 iflags += -I${spade}
@@ -26,7 +26,7 @@ lflags :=
 lflags += -L${PTL}/lib -lPTL
 
 main:
-	${cc} -std=c++20 -g -O0 ${flags} ${compflags} ${iflags} main.cc -o ${target} ${lflags}
+	${cc} -std=c++20 -g -O3 ${flags} ${compflags} ${iflags} main.cc -o ${target} ${lflags}
 
 run: main
 	./${target}
