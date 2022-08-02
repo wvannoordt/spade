@@ -1,11 +1,19 @@
 #pragma once
 
+#include <concepts>
+
+#include "core/rk_tables.h"
+
 namespace spade::time_integration
 {
-    template <typename state_trans_t> struct identity_transform_t
+    template <typename T> concept time_int_scheme = requires(T t)
     {
-        void operator() (state_trans_t& state) const {}
+        T::num_substeps();
+        t.advance();
     };
+    
+    struct identity_transform_t { };
+    
     template <
         typename var_state_t,
         typename rhs_state_t,
@@ -44,6 +52,8 @@ namespace spade::time_integration
             inv_state_trans = &inv_trans_in;
         }
         
+        static std::size_t num_substeps(void) {return 2;}
+        
         void advance()
         {
             (*rhs_oper)((*k0), (*q), t);
@@ -64,4 +74,31 @@ namespace spade::time_integration
         time_state_t& time(void) {return  t;}
         var_state_t&  soln(void) {return *q;}
     };
+    
+    // template <
+    //     typename var_state_t,
+    //     typename rhs_state_t,
+    //     typename time_state_t,
+    //     typename rhs_calc_t,
+    //     typename rk_table_t=rk_tables::rk4,
+    //     typename state_trans_t=identity_transform_t,
+    //     typename inv_state_trans_t=identity_transform_t
+    //     >
+    // struct explicit_rk
+    // {
+    //     explicit_rk(
+    //         const var_state_t& q_in,
+    //         const rhs_state_t& rhs_in,
+    //         const time_state_t& t0_in,
+    //         const time_state_t& dt_in,
+    //         const rhs_calc_t& rhs_calc_in,
+    //         const rk_table_t& rk_table_in = rk_table_t(),
+    //         const state_trans_t& state_trans_in = identity_transform_t(),
+    //         const inv_state_trans_t& inv_state_trans_in = identity_transform_t())
+    //     {
+    // 
+    //     }
+    // 
+    //     rk_table_t table;
+    // };
 }

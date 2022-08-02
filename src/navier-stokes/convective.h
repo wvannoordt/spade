@@ -42,7 +42,7 @@ namespace spade::convective
             dtype rho_l = ql.p()/(gas->get_R(ql)*ql.T());
             dtype rho_r = qr.p()/(gas->get_R(qr)*qr.T());
             
-            dtype e_l = ql.p()/(rho_l*(gas->get_gamma(ql)-1.0));
+            dtype e_l = ql.p()/(rho_l*(gas->get_gamma(ql)-dtype(1.0)));
             dtype e_r = qr.p()/(rho_r*(gas->get_gamma(qr)-1.0));
             
             dtype c = 0.25*(rho_l+rho_r)*(un_l+un_r);

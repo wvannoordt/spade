@@ -346,10 +346,10 @@ int main(int argc, char** argv)
             spade::io::binary_write(filename, prim);
             if (group.isroot()) print("Done.");
         }
-	auto start = std::chrono::steady_clock::now();
+    	auto start = std::chrono::steady_clock::now();
         time_int.advance();
-	auto end = std::chrono::steady_clock::now();
-	if (group.isroot()) print("Elapsed:", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count(), "ms");
+    	auto end = std::chrono::steady_clock::now();
+    	if (group.isroot()) print("Elapsed:", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count(), "ms");
         if (std::isnan(umax))
         {
             if (group.isroot())
