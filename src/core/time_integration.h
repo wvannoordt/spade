@@ -80,7 +80,7 @@ namespace spade::time_integration
     //     typename rhs_state_t,
     //     typename time_state_t,
     //     typename rhs_calc_t,
-    //     typename rk_table_t=rk_tables::rk4,
+    //     typename rk_table_t=rk_tables::rk4_t,
     //     typename state_trans_t=identity_transform_t,
     //     typename inv_state_trans_t=identity_transform_t
     //     >
@@ -92,13 +92,41 @@ namespace spade::time_integration
     //         const time_state_t& t0_in,
     //         const time_state_t& dt_in,
     //         const rhs_calc_t& rhs_calc_in,
-    //         const rk_table_t& rk_table_in = rk_table_t(),
+    //         // const rk_table_t& rk_table_in = rk_table_t(),
     //         const state_trans_t& state_trans_in = identity_transform_t(),
     //         const inv_state_trans_t& inv_state_trans_in = identity_transform_t())
     //     {
     // 
     //     }
     // 
-    //     rk_table_t table;
+    //     // rk_table_t table;
+    // };
+    // 
+    // template <
+    //     typename var_state_t,
+    //     typename rhs_state_t,
+    //     typename time_state_t,
+    //     typename rhs_calc_t,
+    //     typename rk_table_t=rk_tables::rk4_t,
+    //     typename state_trans_t=identity_transform_t,
+    //     typename inv_state_trans_t=identity_transform_t
+    //     >
+    // https://en.wikipedia.org/wiki/Backward_differentiation_formula
+    // struct implicit_bdf
+    // {
+    //     explicit_rk(
+    //         const var_state_t& q_in,
+    //         const rhs_state_t& rhs_in,
+    //         const time_state_t& t0_in,
+    //         const time_state_t& dt_in,
+    //         const rhs_calc_t& rhs_calc_in,
+    //         // const rk_table_t& rk_table_in = rk_table_t(),
+    //         const state_trans_t& state_trans_in = identity_transform_t(),
+    //         const inv_state_trans_t& inv_state_trans_in = identity_transform_t())
+    //     {
+    // 
+    //     }
+    // 
+    //     // rk_table_t table;
     // };
 }
