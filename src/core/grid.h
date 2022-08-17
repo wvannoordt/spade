@@ -19,7 +19,10 @@
 #include "core/grid_index_types.h"
 
 namespace spade::grid
-{    
+{
+    const static static_math::int_const_t<3> dim3;
+    const static static_math::int_const_t<2> dim2;
+    
     template <class T> concept multiblock_grid = requires(T t, const cell_idx_t& i_c, const face_idx_t& i_f, const node_idx_t& i_n)
     {
         // todo: write this

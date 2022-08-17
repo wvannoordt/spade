@@ -35,8 +35,8 @@ void set_channel_noslip(auto& prims)
                         v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
                         for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
-                        const auto x_g = grid.get_comp_coords(i_g[0], i_g[1], i_g[2], i_g[3]);
-                        const auto x_d = grid.get_comp_coords(i_d[0], i_d[1], i_d[2], i_d[3]);
+                        const auto x_g = grid.get_comp_coords(i_g);
+                        const auto x_d = grid.get_comp_coords(i_d);
                         const auto n_g = calc_normal_vector(grid.coord_sys(), x_g, i_g, 1);
                         const auto n_d = calc_normal_vector(grid.coord_sys(), x_d, i_d, 1);
                         q_g.p() =  q_d.p();
