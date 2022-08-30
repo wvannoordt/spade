@@ -276,8 +276,13 @@ namespace spade::time_integration
         
         void advance()
         {
-            //the "furthest back" variable state gets set to the residual term
-            
+            //the "furthest back" variable state gets set to the residual term            
+            auto& grouped_terms = auxiliary_states[0];
+            grouped_terms *= diff_coeffs[0];
+            for (auto i: range(1,auxiliary_states.size())) {}
+            //something
+            grouped_terms
+            *solver
         }
         
         time_state_t& time(void)     {return  t;}
