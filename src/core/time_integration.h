@@ -281,7 +281,7 @@ namespace spade::time_integration
             grouped_terms *= diff_coeffs[0];
             for (auto i: range(1,auxiliary_states.size())) {}
             //something
-            grouped_terms
+            grouped_terms /= 
             *solver
         }
         
