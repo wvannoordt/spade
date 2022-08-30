@@ -15,7 +15,6 @@
 #include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
 #include "core/time_integration.h"
-#include "core/rk_tables.h"
 #include "core/cli_args.h"
 
 #include "navier-stokes/fluid_state.h"

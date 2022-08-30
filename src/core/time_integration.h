@@ -2,7 +2,7 @@
 
 #include <concepts>
 
-#include "core/rk_tables.h"
+
 
 namespace spade::time_integration
 {
@@ -129,4 +129,20 @@ namespace spade::time_integration
     // 
     //     // rk_table_t table;
     // };
+    
+    template
+    <
+        const std::size_t order=2,
+        typename var_state_t,
+        typename residual_state_t,
+        typename time_state_t,
+        typename rhs_calc_t,
+        typename implicit_solve_t,
+        typename state_trans_t=identity_transform_t,
+        typename inv_state_trans_t=identity_transform_t
+        
+    > struct bdf_t
+    {
+        
+    };
 }
