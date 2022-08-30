@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < nt; ++i)
     {
         time_int.advance();
-        myfile << time_int.time() << " " << time_int.soln() << " " << (5.0+sin(time_int.time())) << std::endl;
+        myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
     }
     
     return 0;

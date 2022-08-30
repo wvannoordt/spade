@@ -29,10 +29,15 @@ namespace spade::ctrs
     template <class T> concept integral_type = std::is_integral<T>::value;
 
 
-    template <basic_array a1_t, basic_array a2_t> static void copy_array(const a1_t& src, a2_t& dest)
+    template <basic_array a1_t, basic_array a2_t> constexpr static void copy_array(const a1_t& src, a2_t& dest)
     {
         std::size_t tsize = utils::min(src.size(), dest.size());
         for (std::size_t i = 0; i < tsize; ++i) dest[i] = src[i];
+    }
+    
+    template <basic_array arr_t, typename rhs_t> static void fill_array(arr_t& arr, const rhs_t& val)
+    {
+        for (std::size_t i = 0; i < arr.size(); ++i) arr[i] = val;
     }
     
     
@@ -43,7 +48,7 @@ namespace spade::ctrs
         dtype& operator [] (size_t idx) {return data[idx];}
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
-        constexpr size_t size(void) const noexcept {return ar_size;}
+        constexpr static size_t size(void) {return ar_size;}
         template <typename ftype> void fill(const ftype& val)
         {
             for (size_t i = 0; i < this->size(); i++) data[i] = val;
@@ -66,7 +71,8 @@ namespace spade::ctrs
             set_r(0, ps...);
         }
         array(const dtype& val) {fill(val);}
-        array(void) {fill(dtype());}
+        array(void) {}
+        constexpr array(const array& rhs) = default;
         
         template <typename rhs_t>
         requires (!basic_array<rhs_t>)
@@ -76,7 +82,7 @@ namespace spade::ctrs
             return *this;
         }
         
-        template <basic_array rhs_t> array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        template <basic_array rhs_t> constexpr array<dtype, ar_size>& operator = (const rhs_t& rhs)
         {
             copy_array(rhs,*this);
             return *this;

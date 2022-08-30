@@ -13,6 +13,15 @@ namespace spade::static_math
         real_const_t(const data_t& data_in) {data = data_in;}
     };
     
+    template <const int n> struct factorial
+    {
+        constexpr static int value = n*factorial<n-1>::value;
+    };
+    template <> struct factorial<0>
+    {
+        constexpr static int value = 1;
+    };
+    
     template <const int i1, const unsigned int i2> struct pow
     {
         constexpr static int value = 
