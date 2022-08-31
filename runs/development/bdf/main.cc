@@ -8,7 +8,7 @@ int main(int argc, char** argv)
     real_t rhs = 0.0;
     real_t t0 = 0.0;
     real_t t1 = 5.0*spade::consts::pi;
-    int nt = 2000;
+    int nt = 80;
     real_t dt = (t1 - t0) / (nt);
     q = 5.0;
     real_t t = t0;

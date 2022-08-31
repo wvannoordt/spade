@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include "core/finite_diff.h"
+#include "core/iterative_control.h"
 #include "core/ctrs.h"
 
 namespace spade::time_integration
@@ -117,19 +118,20 @@ namespace spade::time_integration
         >
     struct rk2
     {
-        time_state_t t;
-        time_state_t dt;
+        time_state_t* t;
+        time_state_t  dt;
         var_state_t* q;
         rhs_state_t* k0;
         rhs_state_t* k1;
+        rhs_state_t  k1_storage;
         const rhs_calc_t*  rhs_oper;
         const state_trans_t* state_trans;
         const inv_state_trans_t* inv_state_trans;
+        rk2(){}
         rk2(
             var_state_t& q_in,
             rhs_state_t& k0_in,
-            rhs_state_t& k1_in,
-            const time_state_t& t0_in,
+            time_state_t& t_in,
             const time_state_t& dt_in,
             const rhs_calc_t& rhs_oper_in,
             const state_trans_t& trans_in,
@@ -137,92 +139,95 @@ namespace spade::time_integration
         {
             dt = dt_in;
             q  = &q_in;
-            t  = t0_in;
+            t  = &t_in;
             k0 = &k0_in;
-            k1 = &k1_in;
+            k1_storage = (*k0);
+            k1 = &k1_storage;
             rhs_oper = &rhs_oper_in;
             state_trans = &trans_in;
             inv_state_trans = &inv_trans_in;
+            print(__FILE__, __LINE__, t);
         }
         
         static std::size_t num_substeps(void) {return 2;}
         
         void advance()
         {
-            (*rhs_oper)((*k0), (*q), t);
+            print(__FILE__, __LINE__, t);
+            (*rhs_oper)((*k0), (*q), *t);
             (*k0) *= (0.5*dt);
             (*state_trans)((*q));
             (*q) += (*k0);
             (*inv_state_trans)((*q));
-            t += 0.5*dt;
-            (*rhs_oper)((*k1), (*q), t);
+            *t += 0.5*dt;
+            (*rhs_oper)((*k1), (*q), *t);
             (*k1) *= (dt);
             (*state_trans)((*q));
             (*q) -= (*k0);
             (*q) += (*k1);
             (*inv_state_trans)((*q));
-            t += 0.5*dt;
+            *t += 0.5*dt;
         }
         
         time_state_t& time(void)     {return  t;}
         var_state_t&  solution(void) {return *q;}
     };
-    
-    // template <
-    //     typename var_state_t,
-    //     typename rhs_state_t,
-    //     typename time_state_t,
-    //     typename rhs_calc_t,
-    //     typename rk_table_t=rk_tables::rk4_t,
-    //     typename state_trans_t=identity_transform_t,
-    //     typename inv_state_trans_t=identity_transform_t
-    //     >
-    // struct explicit_rk
-    // {
-    //     explicit_rk(
-    //         const var_state_t& q_in,
-    //         const rhs_state_t& rhs_in,
-    //         const time_state_t& t0_in,
-    //         const time_state_t& dt_in,
-    //         const rhs_calc_t& rhs_calc_in,
-    //         // const rk_table_t& rk_table_in = rk_table_t(),
-    //         const state_trans_t& state_trans_in = identity_transform_t(),
-    //         const inv_state_trans_t& inv_state_trans_in = identity_transform_t())
-    //     {
-    // 
-    //     }
-    // 
-    //     // rk_table_t table;
-    // };
-    // 
-    // template <
-    //     typename var_state_t,
-    //     typename rhs_state_t,
-    //     typename time_state_t,
-    //     typename rhs_calc_t,
-    //     typename rk_table_t=rk_tables::rk4_t,
-    //     typename state_trans_t=identity_transform_t,
-    //     typename inv_state_trans_t=identity_transform_t
-    //     >
-    // https://en.wikipedia.org/wiki/Backward_differentiation_formula
-    // struct implicit_bdf
-    // {
-    //     explicit_rk(
-    //         const var_state_t& q_in,
-    //         const rhs_state_t& rhs_in,
-    //         const time_state_t& t0_in,
-    //         const time_state_t& dt_in,
-    //         const rhs_calc_t& rhs_calc_in,
-    //         // const rk_table_t& rk_table_in = rk_table_t(),
-    //         const state_trans_t& state_trans_in = identity_transform_t(),
-    //         const inv_state_trans_t& inv_state_trans_in = identity_transform_t())
-    //     {
-    // 
-    //     }
-    // 
-    //     // rk_table_t table;
-    // };
-    
+
+    namespace detail
+    {
+        template
+        <
+            typename coeffs_t,
+            typename var_state_t,
+            typename time_state_t,
+            typename rhs_calc_t,
+            typename state_trans_t,
+            typename inv_state_trans_t
+        >
+        struct bdf_inner_rhs_helper
+        {
+            const coeffs_t* diff_coeffs;
+            const var_state_t* grouped_terms;
+            time_state_t* t;
+            time_state_t dt;
+            const rhs_calc_t* rhs_calc;
+            const state_trans_t* ftrans;
+            const inv_state_trans_t* itrans;
+            
+            bdf_inner_rhs_helper(
+                coeffs_t& diff_coeffs_in,
+                var_state_t& grouped_terms_in,
+                time_state_t& time_in,
+                const time_state_t& dt_in,
+                const rhs_calc_t& rhs_calc_in,
+                const state_trans_t& ftrans_in,
+                const inv_state_trans_t& itrans_in
+            )
+            {
+                diff_coeffs = &diff_coeffs_in;
+                grouped_terms = &grouped_terms_in;
+                t = &time_in;
+                dt = dt_in;
+                rhs_calc = &rhs_calc_in;
+                ftrans = &ftrans_in;
+                itrans = &itrans_in;
+            }
+            template <typename residual_state_t, typename var_state_in_t>
+            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime) const
+            {
+                //note: using t_n+1 instead of the pseudotime here.
+                rhs = (typename coeffs_t::value_type)(0);
+                time_state_t cur_time = (*t) + (dt);
+                (*rhs_calc)(rhs, q, cur_time);
+                rhs *= (dt)/(*diff_coeffs)[(*diff_coeffs).size()-1];
+                rhs += (*grouped_terms);
+                (*ftrans)(q);
+                rhs += q;
+                (*itrans)(q);
+            }
+        };
+    }
+
     const static int default_bdf_order = 2;
     template
     <
@@ -242,23 +247,24 @@ namespace spade::time_integration
         
         var_state_t*      q;
         residual_state_t* rhs;
-        time_state_t      t;
+        time_state_t*     t;
         time_state_t      dt;
         const rhs_calc_t*        rhs_calc;
-        const implicit_solve_t*  solver;
+        implicit_solve_t*  solver;
         const state_trans_t*     ftrans;
         const inv_state_trans_t* itrans;
         ctrs::array<coeff_t,order+1> diff_coeffs = finite_diff::backward_difference_coeffs_node_based<coeff_t, order>();
         
         detail::cascade_t<var_state_t, order, policy> auxiliary_states;
         
+        bdf_t(){}
         bdf_t(
             var_state_t& q_in,
             residual_state_t& rhs_in,
-            const time_state_t& t0_in,
+            time_state_t& t0_in,
             const time_state_t& dt_in,
             const rhs_calc_t& rhs_calc_in,
-            const implicit_solve_t& solver_in,
+            implicit_solve_t& solver_in,
             const static_math::int_const_t<order>& order_in = static_math::int_const_t<default_bdf_order>(),
             const state_trans_t&     ftrans_in = identity_transform,
             const inv_state_trans_t& itrans_in = identity_transform
@@ -266,7 +272,7 @@ namespace spade::time_integration
         {
             q        = &q_in; //assume filled with initial condition
             rhs      = &rhs_in;
-            t        = t0_in;
+            t        = &t0_in;
             dt       = dt_in;
             solver   = &solver_in;
             rhs_calc = &rhs_calc_in;
@@ -277,40 +283,205 @@ namespace spade::time_integration
             for (auto i: range(0,auxiliary_states.size())) (*ftrans)(auxiliary_states[i]);
         }
         
+        var_state_t& get_grouped_term()
+        {
+            return auxiliary_states[0];
+        }
+        
+        //We need to compute the first few states with a reduced-order BDF scheme!
+        void initialize_states()
+        {
+            //TODO
+        }
+        
         void advance()
         {
             //the "furthest back" variable state gets set to the residual term
-            auto& grouped_terms = auxiliary_states[0];
+            auto& grouped_terms = this->get_grouped_term();
             grouped_terms *= diff_coeffs[0]/diff_coeffs[1];
             for (auto i: range(1,auxiliary_states.size()))
             {
                 grouped_terms+=auxiliary_states[i];
                 grouped_terms*=(diff_coeffs[i]/diff_coeffs[i+1]);
             }
-            const auto& inner_residual_calc = [&](
-                var_state_t& q_solver,
-                residual_state_t& rhs_solver) -> void
-                {
-                    //initialize rhs array to zero
-                    rhs_solver = (coeff_t)(0);
-                    (*rhs_calc)(rhs_solver, q_solver, t+dt);
-                    rhs_solver *= dt/diff_coeffs[diff_coeffs.size()-1];
-                    rhs_solver += grouped_terms;
-                    (*ftrans)(q_solver);
-                    rhs_solver += q_solver;
-                    (*itrans)(q_solver);
-                };
-            (*solver)(*rhs, *q, inner_residual_calc);
+            detail::bdf_inner_rhs_helper inner_rhs(
+                diff_coeffs,
+                grouped_terms,
+                *t,
+                dt,
+                *rhs_calc,
+                *ftrans,
+                *itrans
+            );
+            (*solver)(*rhs, *q, inner_rhs);
             (*ftrans)(*q);
             auxiliary_states.push(*q);
             (*itrans)(*q);
-            t += dt;
+            *t += dt;
         }
         
-        time_state_t& time(void)     {return  t;}
+        time_state_t& time(void)     {return  *t;}
         var_state_t&  solution(void) {return *q;}
         
         // var_state_t* principal_state;
         // detail::var_state_cascade_t<var_state_t,> aux_states[order];
+    };
+    
+    namespace detail
+    {
+        template
+        <
+            typename time_integrator_t,
+            typename convergence_t,
+            typename var_state_t,
+            typename rhs_state_t,
+            typename rhs_calc_t
+        > struct dual_time_inner_update_helper
+        {
+            time_integrator_t* inner_scheme;
+            const convergence_t* convergence_crit;
+            dual_time_inner_update_helper(
+                time_integrator_t& inner_scheme_in,
+                const convergence_t& convergence_crit_in
+            )
+            {
+                inner_scheme = &inner_scheme_in;
+                convergence_crit = &convergence_crit_in;
+            }
+            
+            // steady solver
+            void operator()(auto& rhs_in, auto& q_in, const auto& rhs_calc)
+            {
+                using err_t =  typename convergence_t::err_t;
+                err_t eps = (1000.0)*convergence_crit->error_tol;
+                int num_its =  0;
+                // while((eps>convergence_crit->error_tol) && (num_its++ < convergence_crit->max_its))
+                while((eps>convergence_crit->error_tol))
+                // while(num_its++ < convergence_crit->max_its)
+                {
+                    inner_scheme->advance();
+                    eps = convergence_crit->calc_residual(rhs_in);
+                }
+            }
+        };
+    }
+
+    template
+    <
+        typename var_state_t,
+        typename residual_state_t,
+        typename time_state_t,
+        typename rhs_calc_t,
+        typename convergence_t,
+        const int bdf_order=default_bdf_order,
+        typename state_trans_t     = identity_transform_t,
+        typename inv_state_trans_t = identity_transform_t
+    > struct dual_time_t
+    {
+        
+        var_state_t* q;
+        residual_state_t* rhs;
+        time_state_t* t;
+        time_state_t  dt;
+        const rhs_calc_t* rhs_calc;
+        const convergence_t* convergence_crit;
+        const state_trans_t*     ftrans;
+        const inv_state_trans_t* itrans;
+        
+        typedef typename detail::get_fundamental_type_if_avail<time_state_t, var_state_t>::type coeff_t;
+        typedef detail::bdf_inner_rhs_helper
+        <
+            ctrs::array<coeff_t,bdf_order+1>,
+            var_state_t,
+            time_state_t,
+            rhs_calc_t,
+            state_trans_t,
+            inv_state_trans_t
+        > inner_rhs_t;
+        
+        typedef rk2
+        <
+            var_state_t,
+            residual_state_t,
+            time_state_t,
+            inner_rhs_t,
+            state_trans_t,
+            inv_state_trans_t
+        > inner_scheme_t;
+        
+        typedef detail::dual_time_inner_update_helper
+        <
+            inner_scheme_t,
+            convergence_t,
+            var_state_t,
+            residual_state_t,
+            rhs_calc_t
+        > outer_helper_t;
+        
+        typedef bdf_t
+        <
+            var_state_t,
+            residual_state_t,
+            time_state_t,
+            rhs_calc_t,
+            outer_helper_t,
+            bdf_order,
+            state_trans_t,
+            inv_state_trans_t
+        > outer_scheme_t;
+        
+        inner_scheme_t inner_scheme;
+        
+        outer_scheme_t outer_scheme;
+        
+        dual_time_t(
+            var_state_t& q_in,
+            residual_state_t& rhs_in,
+            time_state_t& t_in,
+            const time_state_t& dt_in,
+            const rhs_calc_t& rhs_calc_in,
+            const convergence_t& convergence_crit_in,
+            const static_math::int_const_t<bdf_order>& order_in = static_math::int_const_t<default_bdf_order>(),
+            const state_trans_t&     ftrans_in = identity_transform,
+            const inv_state_trans_t& itrans_in = identity_transform
+        )
+        {
+            q   = &q_in;
+            rhs = &rhs_in;
+            t   = &t_in;
+            dt  = dt_in;
+            rhs_calc = &rhs_calc_in;
+            convergence_crit = &convergence_crit_in;
+            outer_helper_t inner_solver(inner_scheme, *convergence_crit);
+            outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, ftrans_in, itrans_in);
+            inner_rhs_t inner_rhs(
+                outer_scheme.diff_coeffs,
+                outer_scheme.get_grouped_term(),
+                *t,
+                dt,
+                rhs_calc_in,
+                ftrans_in,
+                itrans_in
+            );
+            inner_scheme = inner_scheme_t(
+                *q,
+                *rhs,
+                *t,
+                dt,
+                inner_rhs,
+                ftrans_in,
+                itrans_in
+            );
+        }
+        
+        outer_scheme_t& get_outer_scheme() {return outer_scheme;}
+        inner_scheme_t& get_inner_scheme() {return inner_scheme;}
+        time_state_t& time(void)     {return *t;}
+        var_state_t&  solution(void) {return *q;}
+        
+        void advance()
+        {
+            outer_scheme.advance();
+        }
     };
 }
