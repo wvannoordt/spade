@@ -260,8 +260,8 @@ namespace spade::time_integration
             const rhs_calc_t& rhs_calc_in,
             const implicit_solve_t& solver_in,
             const static_math::int_const_t<order>& order_in = static_math::int_const_t<default_bdf_order>(),
-            const state_trans_t&     ftrans = identity_transform,
-            const inv_state_trans_t& itrans = identity_transform
+            const state_trans_t&     ftrans_in = identity_transform,
+            const inv_state_trans_t& itrans_in = identity_transform
         )
         {
             q        = &q_in; //assume filled with initial condition
@@ -271,18 +271,40 @@ namespace spade::time_integration
             solver   = &solver_in;
             rhs_calc = &rhs_calc_in;
             solver   = &solver_in;
+            ftrans   = &ftrans_in;
+            itrans   = &itrans_in;
             ctrs::fill_array(auxiliary_states, (*q));
+            for (auto i: range(0,auxiliary_states.size())) (*ftrans)(auxiliary_states[i]);
         }
         
         void advance()
         {
-            //the "furthest back" variable state gets set to the residual term            
+            //the "furthest back" variable state gets set to the residual term
             auto& grouped_terms = auxiliary_states[0];
-            grouped_terms *= diff_coeffs[0];
-            for (auto i: range(1,auxiliary_states.size())) {}
-            //something
-            grouped_terms /= 
-            *solver
+            grouped_terms *= diff_coeffs[0]/diff_coeffs[1];
+            for (auto i: range(1,auxiliary_states.size()))
+            {
+                grouped_terms+=auxiliary_states[i];
+                grouped_terms*=(diff_coeffs[i]/diff_coeffs[i+1]);
+            }
+            const auto& inner_residual_calc = [&](
+                var_state_t& q_solver,
+                residual_state_t& rhs_solver) -> void
+                {
+                    //initialize rhs array to zero
+                    rhs_solver = (coeff_t)(0);
+                    (*rhs_calc)(rhs_solver, q_solver, t+dt);
+                    rhs_solver *= dt/diff_coeffs[diff_coeffs.size()-1];
+                    rhs_solver += grouped_terms;
+                    (*ftrans)(q_solver);
+                    rhs_solver += q_solver;
+                    (*itrans)(q_solver);
+                };
+            (*solver)(*rhs, *q, inner_residual_calc);
+            (*ftrans)(*q);
+            auxiliary_states.push(*q);
+            (*itrans)(*q);
+            t += dt;
         }
         
         time_state_t& time(void)     {return  t;}
