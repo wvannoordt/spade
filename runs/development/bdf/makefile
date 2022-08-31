@@ -16,6 +16,7 @@ compflags += -DMPI_ENABLE=${MPI_ENABLE}
 
 flags :=
 flags += -fconcepts-diagnostics-depth=3
+flags += -fsanitize=undefined,address
 
 main:
 	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
