@@ -1,4 +1,3 @@
-#include "debug.h"
 #include "spade.h"
 
 #include <iomanip>
