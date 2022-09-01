@@ -1,6 +1,8 @@
 #include "debug.h"
 #include "spade.h"
 
+#include <iomanip>
+
 typedef double real_t;
 
 int main(int argc, char** argv)
@@ -14,6 +16,8 @@ int main(int argc, char** argv)
     q = 5.0;
     real_t t = t0;
     
+    std::cout << std::setprecision(15);
+    
     auto ftrans = [](real_t& f) -> void {f = f*f; };
     auto itrans = [](real_t& f) -> void {f = sqrt(f); };
     
@@ -26,23 +30,30 @@ int main(int argc, char** argv)
     spade::static_math::int_const_t<3> bdf_order;
     
     
-    int max_its = 25;
+    int max_its = 25000;
     const real_t error_tol = 1e-6;
     auto error_norm = [](const real_t& r) -> real_t {return spade::utils::abs(r);};
     spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(q, rhs, t, dt, rhs_calc, convergence_crit, bdf_order, ftrans, itrans);
+    spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, ftrans, itrans);
     time_int.get_outer_scheme().auxiliary_states[0] = 5.0 + sin(0*dt);
     time_int.get_outer_scheme().auxiliary_states[1] = 5.0 + sin(1*dt);
     time_int.get_outer_scheme().auxiliary_states[2] = 5.0 + sin(2*dt);
+    
     ftrans(time_int.get_outer_scheme().auxiliary_states[0]);
     ftrans(time_int.get_outer_scheme().auxiliary_states[1]);
     ftrans(time_int.get_outer_scheme().auxiliary_states[2]);
+    
+    auto& q0 = time_int.get_outer_scheme().auxiliary_states[0];
+    auto& q1 = time_int.get_outer_scheme().auxiliary_states[1];
+    auto& q2 = time_int.get_outer_scheme().auxiliary_states[2];
+    
     time_int.solution() = 5.0 + sin(2*dt);
     time_int.time() = 2*dt;
     std::ofstream myfile("soln.dat");
-    // for (auto n: range(0, nt))
-    for (auto n: range(0, 2))
-    {        
+    for (auto n: range(0, nt))
+    {
+        print(q, q2, q1, q0, "======>");
+        std::cin.get();
         time_int.advance();
         myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
     }

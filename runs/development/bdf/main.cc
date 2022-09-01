@@ -32,7 +32,7 @@ int main(int argc, char** argv)
         while (spade::utils::abs(eps)>1e-7)
         {
             rhs_calc_in(rhs_in, q_in, t+dt);
-            dr_dq = 2.0*q_in - k*2.0*cos(t+dt);
+            dr_dq = -(2.0*q_in - k*2.0*cos(t+dt));
             q_in = q_in-rhs_in/dr_dq;
             eps = rhs_in;
             it++;

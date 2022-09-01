@@ -152,7 +152,6 @@ namespace spade::time_integration
         
         void advance()
         {
-            print("HI");
             (*rhs_oper)((*k0), (*q), *t);
             (*k0) *= (0.5*dt);
             (*state_trans)((*q));
@@ -166,10 +165,13 @@ namespace spade::time_integration
             (*q) += (*k1);
             (*inv_state_trans)((*q));
             *t += 0.5*dt;
+            //This is done so that the residual is physically scaled for external use.
+            (*k1) /= (dt);
         }
         
         time_state_t& time(void)     {return  t;}
         var_state_t&  solution(void) {return *q;}
+        var_state_t&  residual(void) {return *k1;}
     };
 
     namespace detail
@@ -178,6 +180,7 @@ namespace spade::time_integration
         <
             typename coeffs_t,
             typename var_state_t,
+            typename residual_state_t,
             typename time_state_t,
             typename rhs_calc_t,
             typename state_trans_t,
@@ -196,6 +199,7 @@ namespace spade::time_integration
             bdf_inner_rhs_helper(
                 coeffs_t& diff_coeffs_in,
                 var_state_t& grouped_terms_in,
+                residual_state_t& rhs,
                 time_state_t& time_in,
                 const time_state_t& dt_in,
                 rhs_calc_t& rhs_calc_in,
@@ -211,17 +215,17 @@ namespace spade::time_integration
                 ftrans = &ftrans_in;
                 itrans = &itrans_in;
             }
-            template <typename residual_state_t, typename var_state_in_t>
-            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime)
+            
+            void operator()(residual_state_t& rhs, var_state_t& q, const time_state_t& pseudotime)
             {
-                //note: using t_n+1 instead of the pseudotime here.
+                // note: using t_n+1 instead of the pseudotime here.
                 rhs = (typename coeffs_t::value_type)(0);
                 time_state_t cur_time = (*t) + (dt);
                 (*rhs_calc)(rhs, q, cur_time);
-                rhs *= (dt)/(*diff_coeffs)[(*diff_coeffs).size()-1];
-                rhs += (*grouped_terms);
+                rhs *= (-dt)/(*diff_coeffs)[(*diff_coeffs).size()-1];
+                rhs -= (*grouped_terms);
                 (*ftrans)(q);
-                rhs += q;
+                rhs -= q;
                 (*itrans)(q);
             }
         };
@@ -306,13 +310,14 @@ namespace spade::time_integration
             detail::bdf_inner_rhs_helper inner_rhs(
                 diff_coeffs,
                 grouped_terms,
+                *rhs,
                 *t,
                 dt,
                 *rhs_calc,
                 *ftrans,
                 *itrans
             );
-            // (*solver)(*rhs, *q, inner_rhs);
+            (*solver)(*rhs, *q, inner_rhs);
             (*ftrans)(*q);
             auxiliary_states.push(*q);
             (*itrans)(*q);
@@ -350,7 +355,7 @@ namespace spade::time_integration
             }
             
             // steady solver
-            void operator()(auto& rhs_in, auto& q_in, auto& rhs_calc)
+            void operator()(rhs_state_t& rhs_in, var_state_t& q_in, rhs_calc_t& rhs_calc)
             {
                 using err_t =  typename convergence_t::err_t;
                 err_t eps = (1000.0)*convergence_crit->error_tol;
@@ -358,7 +363,7 @@ namespace spade::time_integration
                 while((eps>convergence_crit->error_tol) && (num_its++ < convergence_crit->max_its))                
                 {
                     inner_scheme->advance();
-                    eps = convergence_crit->calc_residual(rhs_in);
+                    eps = convergence_crit->calc_residual(inner_scheme->residual());
                 }
             }
         };
@@ -381,7 +386,9 @@ namespace spade::time_integration
         residual_state_t* rhs;
         residual_state_t  rhs_inner_val;
         time_state_t* t;
+        time_state_t  tau;
         time_state_t  dt;
+        time_state_t  dt_inner;
         rhs_calc_t* rhs_calc;
         convergence_t* convergence_crit;
         const state_trans_t*     ftrans;
@@ -392,6 +399,7 @@ namespace spade::time_integration
         <
             ctrs::array<coeff_t,bdf_order+1>,
             var_state_t,
+            residual_state_t,
             time_state_t,
             rhs_calc_t,
             state_trans_t,
@@ -414,7 +422,7 @@ namespace spade::time_integration
             convergence_t,
             var_state_t,
             residual_state_t,
-            rhs_calc_t
+            inner_rhs_t
         > outer_helper_t;
         
         typedef bdf_t
@@ -442,6 +450,7 @@ namespace spade::time_integration
             residual_state_t& rhs_in,
             time_state_t& t_in,
             const time_state_t& dt_in,
+            const time_state_t& dt_inner_in,
             rhs_calc_t& rhs_calc_in,
             convergence_t& convergence_crit_in,
             const static_math::int_const_t<bdf_order>& order_in = static_math::int_const_t<default_bdf_order>(),
@@ -453,6 +462,8 @@ namespace spade::time_integration
             rhs = &rhs_in;
             t   = &t_in;
             dt  = dt_in;
+            tau = time_state_t(0.0);
+            dt_inner  = dt_inner_in;
             rhs_calc = &rhs_calc_in;
             convergence_crit = &convergence_crit_in;
             inner_solver = outer_helper_t(inner_scheme, *convergence_crit);
@@ -460,6 +471,7 @@ namespace spade::time_integration
             inner_rhs = inner_rhs_t(
                 outer_scheme.diff_coeffs,
                 outer_scheme.get_grouped_term(),
+                rhs_inner_val,
                 *t,
                 dt,
                 rhs_calc_in,
@@ -469,12 +481,13 @@ namespace spade::time_integration
             inner_scheme = inner_scheme_t(
                 *q,
                 rhs_inner_val,
-                *t,
-                dt,
+                tau,
+                dt_inner,
                 inner_rhs,
                 ftrans_in,
                 itrans_in
             );
+            inner_scheme.k1 = &(inner_scheme.k1_storage);
         }
         
         outer_scheme_t& get_outer_scheme() {return outer_scheme;}
