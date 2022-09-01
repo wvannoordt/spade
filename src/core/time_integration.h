@@ -211,7 +211,7 @@ namespace spade::time_integration
                 itrans = &itrans_in;
             }
             template <typename residual_state_t, typename var_state_in_t>
-            void operator()(residual_state_t& rhs, var_state_in_t& q) const
+            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime) const
             {
                 //note: using t_n+1 instead of the pseudotime here.
                 rhs = (typename coeffs_t::value_type)(0);
@@ -379,6 +379,7 @@ namespace spade::time_integration
         
         var_state_t* q;
         residual_state_t* rhs;
+        residual_state_t  rhs_inner_val;
         time_state_t* t;
         time_state_t  dt;
         const rhs_calc_t* rhs_calc;
@@ -463,7 +464,7 @@ namespace spade::time_integration
             );
             inner_scheme = inner_scheme_t(
                 *q,
-                *rhs,
+                rhs_inner_val,
                 *t,
                 dt,
                 inner_rhs,

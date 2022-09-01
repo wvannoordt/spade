@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "spade.h"
 
 typedef double real_t;
@@ -38,12 +39,11 @@ int main(int argc, char** argv)
     // ftrans(time_int.get_outer_scheme().auxiliary_states[2]);
     // time_int.solution() = 5.0 + sin(2*dt);
     // time_int.time() = 2*dt;
-    // std::ofstream myfile("soln.dat");
+    std::ofstream myfile("soln.dat");
     for (auto n: range(0, nt))
     {        
         time_int.advance();
-        print("F");
-    //     myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
+        myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
     }
     return 0;
 }
