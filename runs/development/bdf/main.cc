@@ -8,7 +8,7 @@ int main(int argc, char** argv)
     real_t rhs = 0.0;
     real_t t0 = 0.0;
     real_t t1 = 5.0*spade::consts::pi;
-    int nt = 80;
+    int nt = 50;
     real_t dt = (t1 - t0) / (nt);
     q = 5.0;
     real_t t = t0;
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
         rhs_in = 0.0;
         rhs_in += 2.0*q*cos(t_in);
     };
-    auto solver   = [&](auto& rhs_in, auto& q_in, const auto& rhs_calc) -> void
+    auto solver   = [&](auto& rhs_in, auto& q_in, const auto& rhs_calc_in) -> void
     {
         const real_t k = -dt/a3;
         real_t dr_dq;
@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         int it = 0;
         while (spade::utils::abs(eps)>1e-7)
         {
-            rhs_calc(q_in, rhs_in);
+            rhs_calc_in(rhs_in, q_in);
             dr_dq = 2.0*q_in - k*2.0*cos(t+dt);
             q_in = q_in-rhs_in/dr_dq;
             eps = rhs_in;
@@ -49,6 +49,7 @@ int main(int argc, char** argv)
     ftrans(time_int.auxiliary_states[1]);
     ftrans(time_int.auxiliary_states[2]);
     q = 5.0 + sin(2*dt);
+    ftrans(q);
     t = 2*dt;
     std::ofstream myfile("soln.dat");
     for (auto n: range(0, nt))

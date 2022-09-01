@@ -146,14 +146,12 @@ namespace spade::time_integration
             rhs_oper = &rhs_oper_in;
             state_trans = &trans_in;
             inv_state_trans = &inv_trans_in;
-            print(__FILE__, __LINE__, t);
         }
         
         static std::size_t num_substeps(void) {return 2;}
         
         void advance()
         {
-            print(__FILE__, __LINE__, t);
             (*rhs_oper)((*k0), (*q), *t);
             (*k0) *= (0.5*dt);
             (*state_trans)((*q));
@@ -213,7 +211,7 @@ namespace spade::time_integration
                 itrans = &itrans_in;
             }
             template <typename residual_state_t, typename var_state_in_t>
-            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime) const
+            void operator()(residual_state_t& rhs, var_state_in_t& q) const
             {
                 //note: using t_n+1 instead of the pseudotime here.
                 rhs = (typename coeffs_t::value_type)(0);
@@ -249,7 +247,7 @@ namespace spade::time_integration
         residual_state_t* rhs;
         time_state_t*     t;
         time_state_t      dt;
-        const rhs_calc_t*        rhs_calc;
+        const rhs_calc_t*  rhs_calc;
         implicit_solve_t*  solver;
         const state_trans_t*     ftrans;
         const inv_state_trans_t* itrans;
