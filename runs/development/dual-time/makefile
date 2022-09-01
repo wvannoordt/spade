@@ -21,7 +21,7 @@ flags += -fsanitize=undefined,address -fstack-protector-all
 endif
 
 main:
-	${cc} -std=c++20 -g -O0 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
+	${cc} -std=c++20 -g3 -O0 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
 
 run: main
 	./${target}

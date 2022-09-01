@@ -124,7 +124,7 @@ namespace spade::time_integration
         rhs_state_t* k0;
         rhs_state_t* k1;
         rhs_state_t  k1_storage;
-        const rhs_calc_t*  rhs_oper;
+        rhs_calc_t*  rhs_oper;
         const state_trans_t* state_trans;
         const inv_state_trans_t* inv_state_trans;
         rk2(){}
@@ -133,7 +133,7 @@ namespace spade::time_integration
             rhs_state_t& k0_in,
             time_state_t& t_in,
             const time_state_t& dt_in,
-            const rhs_calc_t& rhs_oper_in,
+            rhs_calc_t& rhs_oper_in,
             const state_trans_t& trans_in,
             const inv_state_trans_t& inv_trans_in)
         {
@@ -152,6 +152,7 @@ namespace spade::time_integration
         
         void advance()
         {
+            print("HI");
             (*rhs_oper)((*k0), (*q), *t);
             (*k0) *= (0.5*dt);
             (*state_trans)((*q));
@@ -188,16 +189,16 @@ namespace spade::time_integration
             const var_state_t* grouped_terms;
             time_state_t* t;
             time_state_t dt;
-            const rhs_calc_t* rhs_calc;
+            rhs_calc_t* rhs_calc;
             const state_trans_t* ftrans;
             const inv_state_trans_t* itrans;
-            
+            bdf_inner_rhs_helper(){}
             bdf_inner_rhs_helper(
                 coeffs_t& diff_coeffs_in,
                 var_state_t& grouped_terms_in,
                 time_state_t& time_in,
                 const time_state_t& dt_in,
-                const rhs_calc_t& rhs_calc_in,
+                rhs_calc_t& rhs_calc_in,
                 const state_trans_t& ftrans_in,
                 const inv_state_trans_t& itrans_in
             )
@@ -211,7 +212,7 @@ namespace spade::time_integration
                 itrans = &itrans_in;
             }
             template <typename residual_state_t, typename var_state_in_t>
-            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime) const
+            void operator()(residual_state_t& rhs, var_state_in_t& q, const time_state_t& pseudotime)
             {
                 //note: using t_n+1 instead of the pseudotime here.
                 rhs = (typename coeffs_t::value_type)(0);
@@ -247,7 +248,7 @@ namespace spade::time_integration
         residual_state_t* rhs;
         time_state_t*     t;
         time_state_t      dt;
-        const rhs_calc_t*  rhs_calc;
+        rhs_calc_t*  rhs_calc;
         implicit_solve_t*  solver;
         const state_trans_t*     ftrans;
         const inv_state_trans_t* itrans;
@@ -261,7 +262,7 @@ namespace spade::time_integration
             residual_state_t& rhs_in,
             time_state_t& t0_in,
             const time_state_t& dt_in,
-            const rhs_calc_t& rhs_calc_in,
+            rhs_calc_t& rhs_calc_in,
             implicit_solve_t& solver_in,
             const static_math::int_const_t<order>& order_in = static_math::int_const_t<default_bdf_order>(),
             const state_trans_t&     ftrans_in = identity_transform,
@@ -311,14 +312,14 @@ namespace spade::time_integration
                 *ftrans,
                 *itrans
             );
-            (*solver)(*rhs, *q, inner_rhs);
+            // (*solver)(*rhs, *q, inner_rhs);
             (*ftrans)(*q);
             auxiliary_states.push(*q);
             (*itrans)(*q);
             *t += dt;
         }
         
-        time_state_t& time(void)     {return  *t;}
+        time_state_t& time(void)     {return *t;}
         var_state_t&  solution(void) {return *q;}
         
         // var_state_t* principal_state;
@@ -337,10 +338,11 @@ namespace spade::time_integration
         > struct dual_time_inner_update_helper
         {
             time_integrator_t* inner_scheme;
-            const convergence_t* convergence_crit;
+            convergence_t* convergence_crit;
+            dual_time_inner_update_helper(){}
             dual_time_inner_update_helper(
                 time_integrator_t& inner_scheme_in,
-                const convergence_t& convergence_crit_in
+                convergence_t& convergence_crit_in
             )
             {
                 inner_scheme = &inner_scheme_in;
@@ -348,14 +350,12 @@ namespace spade::time_integration
             }
             
             // steady solver
-            void operator()(auto& rhs_in, auto& q_in, const auto& rhs_calc)
+            void operator()(auto& rhs_in, auto& q_in, auto& rhs_calc)
             {
                 using err_t =  typename convergence_t::err_t;
                 err_t eps = (1000.0)*convergence_crit->error_tol;
                 int num_its =  0;
-                // while((eps>convergence_crit->error_tol) && (num_its++ < convergence_crit->max_its))
-                while((eps>convergence_crit->error_tol))
-                // while(num_its++ < convergence_crit->max_its)
+                while((eps>convergence_crit->error_tol) && (num_its++ < convergence_crit->max_its))                
                 {
                     inner_scheme->advance();
                     eps = convergence_crit->calc_residual(rhs_in);
@@ -382,8 +382,8 @@ namespace spade::time_integration
         residual_state_t  rhs_inner_val;
         time_state_t* t;
         time_state_t  dt;
-        const rhs_calc_t* rhs_calc;
-        const convergence_t* convergence_crit;
+        rhs_calc_t* rhs_calc;
+        convergence_t* convergence_crit;
         const state_trans_t*     ftrans;
         const inv_state_trans_t* itrans;
         
@@ -433,13 +433,17 @@ namespace spade::time_integration
         
         outer_scheme_t outer_scheme;
         
+        outer_helper_t inner_solver;
+        
+        inner_rhs_t inner_rhs;
+        
         dual_time_t(
             var_state_t& q_in,
             residual_state_t& rhs_in,
             time_state_t& t_in,
             const time_state_t& dt_in,
-            const rhs_calc_t& rhs_calc_in,
-            const convergence_t& convergence_crit_in,
+            rhs_calc_t& rhs_calc_in,
+            convergence_t& convergence_crit_in,
             const static_math::int_const_t<bdf_order>& order_in = static_math::int_const_t<default_bdf_order>(),
             const state_trans_t&     ftrans_in = identity_transform,
             const inv_state_trans_t& itrans_in = identity_transform
@@ -451,9 +455,9 @@ namespace spade::time_integration
             dt  = dt_in;
             rhs_calc = &rhs_calc_in;
             convergence_crit = &convergence_crit_in;
-            outer_helper_t inner_solver(inner_scheme, *convergence_crit);
+            inner_solver = outer_helper_t(inner_scheme, *convergence_crit);
             outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, ftrans_in, itrans_in);
-            inner_rhs_t inner_rhs(
+            inner_rhs = inner_rhs_t(
                 outer_scheme.diff_coeffs,
                 outer_scheme.get_grouped_term(),
                 *t,

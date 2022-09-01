@@ -23,7 +23,7 @@ int main(int argc, char** argv)
         rhs_in = 0.0;
         rhs_in += 2.0*q*cos(t_in);
     };
-    auto solver   = [&](auto& rhs_in, auto& q_in, const auto& rhs_calc_in) -> void
+    auto solver   = [&](auto& rhs_in, auto& q_in, auto& rhs_calc_in) -> void
     {
         const real_t k = -dt/a3;
         real_t dr_dq;
@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         int it = 0;
         while (spade::utils::abs(eps)>1e-7)
         {
-            rhs_calc_in(rhs_in, q_in);
+            rhs_calc_in(rhs_in, q_in, t+dt);
             dr_dq = 2.0*q_in - k*2.0*cos(t+dt);
             q_in = q_in-rhs_in/dr_dq;
             eps = rhs_in;
