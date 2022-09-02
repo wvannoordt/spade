@@ -7,6 +7,7 @@ typedef spade::ctrs::array<int,    3> v3i;
 typedef spade::ctrs::array<int,    4> v4i;
 typedef spade::ctrs::array<spade::grid::cell_t<int>, 4> v4c;
 typedef spade::fluid_state::prim_t<real_t> prim_t;
+typedef spade::fluid_state::flux_t<real_t> flux_t;
 typedef spade::fluid_state::cons_t<real_t> cons_t;
 
 static void get_profile(const auto& q, std::vector<double>& y, std::vector<double>& u)

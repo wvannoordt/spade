@@ -158,8 +158,7 @@ int main(int argc, char** argv)
         return 0;
     }
     
-    spade::grid::grid_array rhs0 (grid, fill2);
-    spade::grid::grid_array rhs1 (grid, fill2);
+    spade::grid::grid_array rhs (grid, fill2);
     
     spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -264,7 +263,7 @@ int main(int argc, char** argv)
     } get_u(air);
     
     spade::reduce_ops::reduce_max<real_t> max_op;
-    const real_t time0 = 0.0;
+    real_t time0 = 0.0;
     
     
     
@@ -295,7 +294,7 @@ int main(int argc, char** argv)
         });
     };
     
-    spade::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
+    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))

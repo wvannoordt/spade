@@ -171,7 +171,7 @@ namespace spade::time_integration
             (*k1) /= (dt);
         }
         
-        time_state_t& time(void)     {return  t;}
+        time_state_t& time(void)     {return *t;}
         var_state_t&  solution(void) {return *q;}
         var_state_t&  residual(void) {return *k1;}
     };

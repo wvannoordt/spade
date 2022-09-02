@@ -496,6 +496,7 @@ namespace spade::grid
     {
         typedef typename detail::get_fundamental_type<data_alias_t>::type fundamental_type;
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
+        grid_array(){}
         grid_array(
             const grid_t& grid_in,
             const data_alias_t& fill_elem,
@@ -643,10 +644,25 @@ namespace spade::grid
             return *this;
         }
         
+        template <multiblock_array rhs_t>
+        requires elementwise_compatible<grid_array, rhs_t>
+        grid_array& operator /= (const rhs_t& rhs)
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs.data[i];
+            return *this;
+        }
+        
         template <typename numeric_t> grid_array& operator *= (const numeric_t& rhs)
         requires std::floating_point<numeric_t>
         {
             for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs;
+            return *this;
+        }
+        
+        template <typename numeric_t> grid_array& operator /= (const numeric_t& rhs)
+        requires std::floating_point<numeric_t>
+        {
+            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs;
             return *this;
         }
         

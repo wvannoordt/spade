@@ -128,10 +128,10 @@ int main(int argc, char** argv)
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, spade::static_math::int_const_t<dim>());
     
     
-    prim_t fill = 0.0;
-    spade::grid::grid_array prim (grid, fill);
-    spade::grid::grid_array rhs0 (grid, fill);
-    spade::grid::grid_array rhs1 (grid, fill);    
+    prim_t fillp = 0.0;
+    flux_t fillr = 0.0;
+    spade::grid::grid_array prim (grid, fillp);
+    spade::grid::grid_array rhs  (grid, fillr);
     
     spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
     } get_u(air);
     
     spade::reduce_ops::reduce_max<real_t> max_op;
-    const real_t time0    = 0.0;
+    real_t time0    = 0.0;
     const real_t dx       = coords.ycoord.map(bounds.min(1)+grid.get_dx(1))-coords.ycoord.map(bounds.min(1));
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt       = targ_cfl*dx/umax_ini;
@@ -260,7 +260,7 @@ int main(int argc, char** argv)
         spade::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
     
-    spade::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
+    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
