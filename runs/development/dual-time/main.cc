@@ -1,5 +1,4 @@
 #include "spade.h"
-
 #include <iomanip>
 
 typedef double real_t;
@@ -14,8 +13,6 @@ int main(int argc, char** argv)
     real_t dt = (t1 - t0) / (nt);
     q = 5.0;
     real_t t = t0;
-    
-    std::cout << std::setprecision(15);
     
     auto ftrans = [](real_t& f) -> void {f = f*f; };
     auto itrans = [](real_t& f) -> void {f = sqrt(f); };
@@ -49,10 +46,9 @@ int main(int argc, char** argv)
     time_int.solution() = 5.0 + sin(2*dt);
     time_int.time() = 2*dt;
     std::ofstream myfile("soln.dat");
+    myfile << std::setprecision(15);
     for (auto n: range(0, nt))
     {
-        print(q, q2, q1, q0, "======>");
-        std::cin.get();
         time_int.advance();
         myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
     }

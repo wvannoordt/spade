@@ -13,6 +13,8 @@ namespace spade::time_integration
         var_cascade_inplace
     };
     
+    static constexpr var_cascade_policy default_policy = var_cascade_inplace;
+    
     namespace detail
     {
         template <const std::size_t ar_size, const var_cascade_policy policy> struct cascade_offset_t {};
@@ -208,13 +210,15 @@ namespace spade::time_integration
             )
             {
                 diff_coeffs = &diff_coeffs_in;
-                grouped_terms = &grouped_terms_in;
+                set_grouped_term(grouped_terms_in);
                 t = &time_in;
                 dt = dt_in;
                 rhs_calc = &rhs_calc_in;
                 ftrans = &ftrans_in;
                 itrans = &itrans_in;
             }
+            
+            void set_grouped_term(const var_state_t& g) {grouped_terms = &g;}
             
             void operator()(residual_state_t& rhs, var_state_t& q, const time_state_t& pseudotime)
             {
@@ -242,7 +246,7 @@ namespace spade::time_integration
         const int order=default_bdf_order,
         typename state_trans_t=identity_transform_t,
         typename inv_state_trans_t=identity_transform_t,
-        const var_cascade_policy policy=var_cascade_inplace
+        const var_cascade_policy policy=default_policy
     > struct bdf_t
     {
         static_assert(order <= 6, "BDF non-zero-stable for order larger than 6!");
@@ -497,6 +501,7 @@ namespace spade::time_integration
         
         void advance()
         {
+            inner_rhs.set_grouped_term(outer_scheme.get_grouped_term());
             outer_scheme.advance();
         }
     };
