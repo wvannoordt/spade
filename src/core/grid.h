@@ -96,7 +96,12 @@ namespace spade::grid
         int lb_glob_end, lb_glob_start;
     };
     
-    template <coords::coordinate_system coord_t, parallel::parallel_group par_group_t, typename dimension_t=static_math::int_const_t<3>>
+    template
+    <
+        coords::coordinate_system coord_t,
+        parallel::parallel_group par_group_t,
+        typename dimension_t=static_math::int_const_t<3>
+    >
     class cartesian_grid_t
     {
         public:
@@ -111,7 +116,8 @@ namespace spade::grid
                 const bound_box_t<dtype, dimension_t::value>& bounds_in,
                 const coord_t& coord_system_in,
                 par_group_t& group_in,
-                const dimension_t& dim_v = static_math::int_const_t<3>())
+                const dimension_t& dim_v = static_math::int_const_t<3>()
+                )
             {
                 //Initialize class members
                 this->grid_group = &group_in;
