@@ -173,7 +173,7 @@ namespace spade::time_integration
         
         time_state_t& time(void)     {return *t;}
         var_state_t&  solution(void) {return *q;}
-        var_state_t&  residual(void) {return *k1;}
+        rhs_state_t&  residual(void) {return *k1;}
     };
 
     namespace detail
@@ -464,6 +464,7 @@ namespace spade::time_integration
         {
             q   = &q_in;
             rhs = &rhs_in;
+            rhs_inner_val = rhs_in;
             t   = &t_in;
             dt  = dt_in;
             tau = time_state_t(0.0);
@@ -471,7 +472,7 @@ namespace spade::time_integration
             rhs_calc = &rhs_calc_in;
             convergence_crit = &convergence_crit_in;
             inner_solver = outer_helper_t(inner_scheme, *convergence_crit);
-            outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, ftrans_in, itrans_in);
+            outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, ftrans_in, itrans_in); //trouble
             inner_rhs = inner_rhs_t(
                 outer_scheme.diff_coeffs,
                 outer_scheme.get_grouped_term(),

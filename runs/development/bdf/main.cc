@@ -8,7 +8,7 @@ int main(int argc, char** argv)
     real_t rhs = 0.0;
     real_t t0 = 0.0;
     real_t t1 = 5.0*spade::consts::pi;
-    int nt = 50;
+    int nt = 500;
     real_t dt = (t1 - t0) / (nt);
     q = 5.0;
     real_t t = t0;
@@ -16,8 +16,10 @@ int main(int argc, char** argv)
     auto ftrans = [](real_t& f) -> void {f = f*f; };
     auto itrans = [](real_t& f) -> void {f = sqrt(f); };
     
-    const real_t a3 = -11.0/6.0;
-    
+    spade::static_math::int_const_t<3> order;
+    auto diff_coeffs = spade::finite_diff::backward_difference_coeffs_node_based<real_t, order.value>();
+    const real_t a3 = diff_coeffs[diff_coeffs.size()-1];    
+        
     auto rhs_calc = [&](auto& rhs_in, auto& q_in, const auto& t_in) -> void
     {
         rhs_in = 0.0;
@@ -40,7 +42,7 @@ int main(int argc, char** argv)
         print(it, eps);
     };
     
-    spade::static_math::int_const_t<3> order;
+    
     spade::time_integration::bdf_t time_int(q, rhs, t, dt, rhs_calc, solver, order, ftrans, itrans);
     time_int.auxiliary_states[0] = 5.0 + sin(0*dt);
     time_int.auxiliary_states[1] = 5.0 + sin(1*dt);

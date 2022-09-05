@@ -1,7 +1,17 @@
+#include <chrono>
 #include "spade.h"
-#include "get_profile.h"
 
-const int dim = 2;
+typedef double real_t;
+typedef spade::ctrs::array<real_t, 3> v3d;
+typedef spade::ctrs::array<int,    3> v3i;
+typedef spade::ctrs::array<int,    4> v4i;
+typedef spade::ctrs::array<spade::grid::cell_t<int>, 4> v4c;
+typedef spade::fluid_state::prim_t<real_t> prim_t;
+typedef spade::fluid_state::flux_t<real_t> flux_t;
+typedef spade::fluid_state::cons_t<real_t> cons_t;
+
+#include "calc_u_bulk.h"
+#include "calc_boundary_flux.h"
 
 void set_channel_noslip(auto& prims)
 {
@@ -24,8 +34,8 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
-                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
                         for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto x_g = grid.get_comp_coords(i_g);
@@ -63,14 +73,11 @@ void garbo_visc(auto& prims, auto& rhs, real_t mu)
             real_t d0m = prims(2+idir, i[0]-1, i[1],   i[2],   i[3]);
             real_t d1p = prims(2+idir, i[0],   i[1]+1, i[2],   i[3]);
             real_t d1m = prims(2+idir, i[0],   i[1]-1, i[2],   i[3]);
-            if constexpr (dim==3)
-            {
-                real_t d2p = prims(2+idir, i[0],   i[1],   i[2]+1, i[3]);
-                real_t d2m = prims(2+idir, i[0],   i[1],   i[2]-1, i[3]);
-                lap += (d2p - 2*d00 + d2m)/(dz*dz);
-            }
+            real_t d2p = prims(2+idir, i[0],   i[1],   i[2]+1, i[3]);
+            real_t d2m = prims(2+idir, i[0],   i[1],   i[2]-1, i[3]);
             lap += (d0p - 2*d00 + d0m)/(dx*dx);
             lap += (d1p - 2*d00 + d1m)/(dy*dy);
+            lap += (d2p - 2*d00 + d2m)/(dz*dz);
             lap *= mu;
             rhs(2+idir, i[0],   i[1],   i[2],   i[3]) += lap;
         }
@@ -96,11 +103,25 @@ int main(int argc, char** argv)
         }
     }
     
-    spade::ctrs::array<int, dim> num_blocks(4,2);
-    spade::ctrs::array<int, dim> cells_in_block(96, 96);
-    spade::ctrs::array<int, dim> exchange_cells(2, 2);
-    //spade::ctrs::array<int, 2> exchange_cells(8, 8, 8);
-    spade::bound_box_t<real_t, dim> bounds;
+    bool viz_only = false;
+    std::string viz_filename = "";
+    if (args.has_arg("-viz"))
+    {
+        viz_filename = args["-viz"];
+        if (group.isroot()) print("Converting", viz_filename);
+        viz_only = true;
+        if (!std::filesystem::exists(viz_filename))
+        {
+            if (group.isroot()) print("Cannot find viz file", viz_filename);
+            abort();
+        }
+    }
+    
+    spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
+    spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
+    spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
+    //spade::ctrs::array<int, 3> exchange_cells(8, 8, 8);
+    spade::bound_box_t<real_t, 3> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;
     bounds.min(0) =  0.0;
@@ -110,29 +131,34 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*spade::consts::pi*delta;
     
-    // const real_t targ_cfl = 0.45;
     const real_t targ_cfl = 5.0;
-    const int    nt_max   = 30000001;
-    const int    nt_skip  = 10000;
-    const int    checkpoint_skip  = 10000;
+    const int    nt_max   = 300001;
+    const int    nt_skip  = 50000000;
+    const int    checkpoint_skip  = 5000;
     
-    
-    // spade::coords::identity<real_t> coords;
-    
-    spade::coords::identity_1D<real_t> xc;
-    spade::coords::integrated_tanh_1D<real_t> yc(bounds.min(1), bounds.max(1), 0.1, 1.3);
-    spade::coords::identity_1D<real_t> zc;
-    spade::coords::diagonal_coords coords(xc, yc, zc);
+    spade::coords::identity<real_t> coords;
     
     std::filesystem::path out_path("checkpoint");
     if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
-    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, spade::static_math::int_const_t<dim>());
     
     
-    prim_t fillp = 0.0;
-    flux_t fillr = 0.0;
-    spade::grid::grid_array prim (grid, fillp);
-    spade::grid::grid_array rhs  (grid, fillr);
+    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    
+    
+    prim_t fill1 = 0.0;
+    flux_t fill2 = 0.0;
+    
+    spade::grid::grid_array prim (grid, fill1);
+    
+    if (viz_only)
+    {
+        spade::io::binary_read(viz_filename, prim);
+        std::string fname = spade::io::output_vtk("output", "viz", prim);
+        if (group.isroot()) print("outputting", fname);
+        return 0;
+    }
+    
+    spade::grid::grid_array rhs (grid, fill2);
     
     spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -149,50 +175,55 @@ int main(int argc, char** argv)
     const real_t u_tau = re_tau*mu/(rho*delta);
     const real_t force_term = rho*u_tau*u_tau/delta;
     const real_t du = 3.0;
-    const real_t mach = 20.0*u_tau/sqrt(air.R*air.gamma*t0);
     
     const int nidx = 8;
-    std::vector<real_t> r_amp_1(spade::utils::max(cells_in_block[2]/nidx, 10));
-    std::vector<real_t> r_amp_2(spade::utils::max(cells_in_block[2]/nidx, 10));
-    std::vector<real_t> r_amp_3(spade::utils::max(cells_in_block[2]/nidx, 10));
+    std::vector<real_t> r_amp_1(cells_in_block[0]/nidx);
+    std::vector<real_t> r_amp_2(cells_in_block[1]/nidx);
+    std::vector<real_t> r_amp_3(cells_in_block[2]/nidx);
     std::vector<real_t> r_amp_4(grid.get_partition().get_num_local_blocks());
     
     for (auto& p: r_amp_1) p = 1.0 - 2.0*spade::utils::unitary_random();
     for (auto& p: r_amp_2) p = 1.0 - 2.0*spade::utils::unitary_random();
     for (auto& p: r_amp_3) p = 1.0 - 2.0*spade::utils::unitary_random();
     for (auto& p: r_amp_4) p = 1.0 - 2.0*spade::utils::unitary_random();
-    int i3d = ((dim==3)?1:0);
+    
     auto ini = [&](const spade::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
+        const real_t shape = 1.0 - pow(x[1]/delta, 4);
+        const real_t turb  = du*u_tau*sin(10.0*spade::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
         prim_t output;
         output.p() = p0;
         output.T() = t0;
-        // output.u() = 0.5*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
-        output.u() = 0.1*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
-        output.v() = 0.0;
-        output.w() = 0.0;
+        output.u() = (20.0*u_tau + 0.0*turb)*shape;
+        output.v() = (0.0        + 0.0*turb)*shape;
+        output.w() = (0.0        + 0.0*turb)*shape;
+        
+        int eff_i = i/nidx;
+        int eff_j = j/nidx;
+        int eff_k = k/nidx;
+        
+        const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k] + r_amp_4[lb]);
+        output.u() += per*shape;
+        output.v() += per*shape;
+        output.w() += per*shape;
+        
         return output;
     };
     
     spade::algs::fill_array(prim, ini);
+    
     if (init_from_file)
     {
+        if (group.isroot()) print("reading...");
         spade::io::binary_read(init_filename, prim);
-        std::vector<real_t> yprof, uprof;
-        get_profile(prim, yprof, uprof);
-        if (group.isroot())
-        {
-            std::ofstream myfile("prof.dat");
-            for (int ppp = 0; ppp < yprof.size(); ++ppp)
-            {
-                myfile << yprof[ppp] << "    " << uprof[ppp] << std::endl;
-            }
-        }
+        if (group.isroot()) print("Init done.");
+        grid.exchange_array(prim);
+        set_channel_noslip(prim);
     }
     
     spade::convective::totani_lr tscheme(air);
     spade::convective::weno_3    wscheme(air);
-    spade::viscous::visc_lr      visc_scheme(visc_law);
+    spade::viscous::visc_lr  visc_scheme(visc_law);
     
     struct p2c_t
     {
@@ -233,38 +264,41 @@ int main(int argc, char** argv)
     
     spade::reduce_ops::reduce_max<real_t> max_op;
     spade::reduce_ops::reduce_max<real_t> sum_op;
-    real_t time0    = 0.0;
-    const real_t dx       = coords.ycoord.map(bounds.min(1)+grid.get_dx(1))-coords.ycoord.map(bounds.min(1));
+    real_t time0 = 0.0;
+    
+    
+    
+    const real_t dx = spade::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
-    const real_t dt       = targ_cfl*dx/umax_ini;
+    const real_t dt     = targ_cfl*dx/umax_ini;
     
     auto ftrans = [&](auto& q) -> void
     {
         spade::algs::transform_inplace(q, p2c);
     };
-    
     auto itrans = [&](auto& q) -> void
     {
         spade::algs::transform_inplace(q, c2p);
     };
-
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        const real_t alpha = 0.00002;
-        spade::pde_algs::flux_div(q, rhs, wscheme);
-        rhs *= (alpha)/(1.0-alpha);
         spade::pde_algs::flux_div(q, rhs, tscheme);
-        rhs *= 1.0-alpha;
-        spade::pde_algs::flux_div(q, rhs, visc_scheme);
-        spade::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
+        spade::pde_algs::flux_div(prim, rhs, visc_scheme);
+        spade::algs::transform_inplace(rhs, [&](const spade::ctrs::array<real_t, 5>& rhs_ar) -> spade::ctrs::array<real_t, 5> 
+        {
+            spade::ctrs::array<real_t, 5> rhs_new = rhs_ar;
+            rhs_new[2] += force_term;
+            return rhs_new;
+        });
     };
     
-    int max_its = 25000;
+    
+    int max_its = 50;
     spade::static_math::int_const_t<3> bdf_order;
-    const real_t error_tol = 1e-14;
+    const real_t error_tol = 5e-5;
     const int ndof = grid.grid_size();
     auto error_norm = [&](const auto& r) -> real_t
     {
@@ -274,34 +308,47 @@ int main(int argc, char** argv)
             {
                 return f[0]*f[0] + f[1]*f[1] + f[2]*f[2] + f[3]*f[3] + f[4]*f[4];
             },
-            sum_op);
-        output = sqrt(output)/ndof;
-        print(output);
+            max_op);
+        // output = sqrt(output)/ndof;
+        if (group.isroot()) print("Residual:", output);
         return output;
     };
     
     spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt/10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    
+    // spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
     {
         int nt = nti;
-        real_t umax     = spade::algs::transform_reduce(prim, get_u, max_op);
-        real_t ratio    = umax/(0.5*re_tau*u_tau + sqrt(air.gamma*air.R*t0));
+        const real_t umax   = spade::algs::transform_reduce(prim, get_u, max_op);
+        real_t ub, rhob;
+        calc_u_bulk(prim, air, ub, rhob);
+        const real_t area = bounds.size(0)*bounds.size(2);
+        auto conv2 = proto::get_domain_boundary_flux(prim, visc_scheme, 2);
+        auto conv3 = proto::get_domain_boundary_flux(prim, visc_scheme, 3);
+        conv2 /= area;
+        conv3 /= area;
+        const real_t tau = 0.5*(spade::utils::abs(conv2.x_momentum()) + spade::utils::abs(conv3.x_momentum()));
+        
         if (group.isroot())
         {
             const real_t cfl = umax*dt/dx;
+            const int pn = 10;
             print(
-                "nt:     ", spade::utils::pad_str(nt, 10),
-                "cfl:    ", spade::utils::pad_str(cfl, 10),
-                "u+a:    ", spade::utils::pad_str(umax, 10),
-                "dx:     ", spade::utils::pad_str(dx, 10),
-                "%:      ", spade::utils::pad_str(ratio, 10),
-                "dt:     ", spade::utils::pad_str(dt, 10),
-                "ftt:    ", spade::utils::pad_str(0.5*re_tau*u_tau*time_int.time()/delta, 10)
+                "nt: ", spade::utils::pad_str(nt, pn),
+                "cfl:", spade::utils::pad_str(cfl, pn),
+                "u+a:", spade::utils::pad_str(umax, pn),
+                "ub: ", spade::utils::pad_str(ub, pn),
+                "rb: ", spade::utils::pad_str(rhob, pn),
+                "tau:", spade::utils::pad_str(tau, pn),
+                "dx: ", spade::utils::pad_str(dx, pn),
+                "dt: ", spade::utils::pad_str(dt, pn),
+                "ftt:", spade::utils::pad_str(20.0*u_tau*time_int.time()/delta, pn)
             );
-            myfile << nt << " " << cfl << " " << umax << " " << dx << " " << dt << std::endl;
+            myfile << nt << " " << cfl << " " << umax << " " << ub << " " << rhob << " " << tau << " " << dx << " " << dt << std::endl;
             myfile.flush();
         }
         if (nt%nt_skip == 0)
@@ -321,7 +368,10 @@ int main(int argc, char** argv)
             spade::io::binary_write(filename, prim);
             if (group.isroot()) print("Done.");
         }
+    	auto start = std::chrono::steady_clock::now();
         time_int.advance();
+    	auto end = std::chrono::steady_clock::now();
+    	if (group.isroot()) print("Elapsed:", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count(), "ms");
         if (std::isnan(umax))
         {
             if (group.isroot())

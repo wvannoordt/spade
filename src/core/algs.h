@@ -133,7 +133,11 @@ namespace spade::algs
     
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>
     requires std::invocable<callable_t, typename detail::converted_elem<array_t, callable_t>::type>
-    auto transform_reduce(const array_t& arr, const callable_t& func, reduce_t& reduce_oper, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    auto transform_reduce(
+        const array_t& arr,
+        const callable_t& func,
+        reduce_t& reduce_oper,
+        const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const auto& grid = arr.get_grid();
         auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);

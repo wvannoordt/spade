@@ -119,6 +119,7 @@ namespace spade::grid
                 dx = 1.0;
                 num_blocks = 1;
                 cells_in_block = 1;
+                exchange_cells = 0;
                 total_blocks = 1;
                 is3d = (dim()==3);
                 bounds.min(2) = 0.0;
@@ -292,6 +293,12 @@ namespace spade::grid
             dtype get_dx(const std::size_t& i) const {return dx[i];}
             bound_box_t<dtype, 3> get_block_box(const std::size_t& lb) const {return block_boxes[lb];}
             bool is_3d(void) const {return this->is3d;}
+            
+            std::size_t grid_size() const
+            {
+                return grid_partition.get_num_global_blocks()*cells_in_block[0]*cells_in_block[1]*cells_in_block[2];
+            }
+            
             std::size_t collapse_block_num(const std::size_t& lb_i, const std::size_t& lb_j, const std::size_t& lb_k) const
             {
                 return lb_i + lb_j*this->get_num_blocks(0) + lb_k*this->get_num_blocks(0)*this->get_num_blocks(1);
