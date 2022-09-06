@@ -21,8 +21,8 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*spade::consts::pi*delta;
 
     spade::coords::identity<real_t> coords;
-    spade::block_config::regular_block_config blocks(num_blocks);
-    spade::grid::cartesian_grid_t grid(, cells_in_block, exchange_cells, bounds, coords, group);
+    spade::block_config::cartesian_blocks_t blocks(num_blocks, bounds);
+    // spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, blocks, bounds, coords, group);
 
     return 0;
 }

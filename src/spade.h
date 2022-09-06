@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cmath>
 
 #include "core/config.h"
@@ -15,7 +16,7 @@
 #include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
 #include "core/time_integration.h"
-#include "core/cli_args.h"
+#include "core/block_config.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"
