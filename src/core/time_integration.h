@@ -381,8 +381,8 @@ namespace spade::time_integration
         typename rhs_calc_t,
         typename convergence_t,
         const int bdf_order=default_bdf_order,
-        typename state_trans_t     = identity_transform_t,
-        typename inv_state_trans_t = identity_transform_t
+        typename state_trans_t      = identity_transform_t,
+        typename inv_state_trans_t  = identity_transform_t
     > struct dual_time_t
     {
         
