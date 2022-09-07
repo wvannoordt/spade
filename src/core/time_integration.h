@@ -372,7 +372,6 @@ namespace spade::time_integration
         typename state_trans_t = identity_transform_t
     > struct dual_time_t
     {
-        
         var_state_t* q;
         residual_state_t* rhs;
         residual_state_t  rhs_inner_val;
