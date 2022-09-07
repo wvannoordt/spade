@@ -13,8 +13,11 @@ int main(int argc, char** argv)
     q = 5.0;
     real_t t = t0;
     
-    auto ftrans = [](real_t& f) -> void {f = f*f; };
-    auto itrans = [](real_t& f) -> void {f = sqrt(f); };
+    struct trans_t
+    {
+        void transform_forward(real_t& f) const { f = f*f; }
+        void transform_inverse(real_t& f) const { f = sqrt(f); }
+    } trans;
     
     spade::static_math::int_const_t<3> order;
     auto diff_coeffs = spade::finite_diff::backward_difference_coeffs_node_based<real_t, order.value>();
@@ -43,7 +46,7 @@ int main(int argc, char** argv)
     };
     
     
-    spade::time_integration::bdf_t time_int(q, rhs, t, dt, rhs_calc, solver, order, ftrans, itrans);
+    spade::time_integration::bdf_t time_int(q, rhs, t, dt, rhs_calc, solver, order, trans);
     time_int.auxiliary_states[0] = 5.0 + sin(0*dt);
     time_int.auxiliary_states[1] = 5.0 + sin(1*dt);
     time_int.auxiliary_states[2] = 5.0 + sin(2*dt);
