@@ -369,7 +369,8 @@ namespace spade::time_integration
         typename rhs_calc_t,
         typename convergence_t,
         const int bdf_order=default_bdf_order,
-        typename state_trans_t = identity_transform_t
+        typename state_trans_t = identity_transform_t,
+        typename conditioner_t = identity_transform_t
     > struct dual_time_t
     {
         var_state_t* q;
@@ -382,6 +383,7 @@ namespace spade::time_integration
         rhs_calc_t* rhs_calc;
         convergence_t* convergence_crit;
         const state_trans_t* trans;
+        const conditioner_t* conditioner;
         
         typedef typename detail::get_fundamental_type_if_avail<time_state_t, var_state_t>::type coeff_t;
         typedef detail::bdf_inner_rhs_helper
@@ -440,7 +442,8 @@ namespace spade::time_integration
             rhs_calc_t& rhs_calc_in,
             convergence_t& convergence_crit_in,
             const static_math::int_const_t<bdf_order>& order_in = static_math::int_const_t<default_bdf_order>(),
-            const state_trans_t& trans_in = identity_transform
+            const state_trans_t& trans_in = identity_transform,
+            const conditioner_t& conditioner_in = identity_transform
         )
         {
             q   = &q_in;
