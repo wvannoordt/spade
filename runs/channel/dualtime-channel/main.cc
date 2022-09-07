@@ -2,6 +2,7 @@
 #include "spade.h"
 #include "typedef.h"
 #include "c2p.h"
+#include "preconditioner.h"
 #include "calc_u_bulk.h"
 #include "calc_boundary_flux.h"
 
@@ -253,7 +254,6 @@ int main(int argc, char** argv)
         });
     };
     
-    
     int max_its = 50;
     spade::static_math::int_const_t<3> bdf_order;
     const real_t error_tol = 5e-5;
@@ -272,6 +272,7 @@ int main(int argc, char** argv)
     };
     
     trans_t trans(air, prim);
+    const real_t beta = 0.5;
     preconditioner_t preconditioner(air, prim, beta);
     
     spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
