@@ -111,9 +111,9 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*spade::consts::pi*delta;
     
     // const real_t targ_cfl = 0.45;
-    const real_t targ_cfl = 5.0;
+    const real_t targ_cfl = 0.25;
     const int    nt_max   = 30000001;
-    const int    nt_skip  = 10000;
+    const int    nt_skip  = 100;
     const int    checkpoint_skip  = 10000;
     
     
@@ -162,10 +162,12 @@ int main(int argc, char** argv)
     for (auto& p: r_amp_3) p = 1.0 - 2.0*spade::utils::unitary_random();
     for (auto& p: r_amp_4) p = 1.0 - 2.0*spade::utils::unitary_random();
     int i3d = ((dim==3)?1:0);
+    const real_t dp = 0.2*p0;
+    const real_t pi = spade::consts::pi;
     auto ini = [&](const spade::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
     {
         prim_t output;
-        output.p() = p0;
+        output.p() = p0 + dp*sin(15*2*pi*x[1])*cos(15*x[0]);
         output.T() = t0;
         // output.u() = 0.5*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
         output.u() = 0.1*re_tau*u_tau*(1.0-(x[1]*x[1])/(delta*delta));
@@ -193,6 +195,7 @@ int main(int argc, char** argv)
     spade::convective::totani_lr tscheme(air);
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr      visc_scheme(visc_law);
+    spade::convective::pressure_diss_lr diss_scheme(air, 2.0);
     
     struct p2c_t
     {
@@ -253,11 +256,13 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        const real_t alpha = 0.00002;
-        spade::pde_algs::flux_div(q, rhs, wscheme);
-        rhs *= (alpha)/(1.0-alpha);
+        // const real_t alpha = 0.00002;
+        // spade::pde_algs::flux_div(q, rhs, wscheme);
+        // rhs *= (alpha)/(1.0-alpha);
+        // spade::pde_algs::flux_div(q, rhs, tscheme);
+        // rhs *= 1.0-alpha;
         spade::pde_algs::flux_div(q, rhs, tscheme);
-        rhs *= 1.0-alpha;
+        spade::pde_algs::flux_div(q, rhs, diss_scheme);
         spade::pde_algs::flux_div(q, rhs, visc_scheme);
         spade::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
@@ -281,7 +286,8 @@ int main(int argc, char** argv)
     };
     
     spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt/10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    // spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt/10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))

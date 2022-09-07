@@ -8,6 +8,7 @@
 #include "core/print.h"
 #include "core/range.h"
 #include "core/typedef.h"
+#include "core/cli_args.h"
 #include "core/grid.h"
 #include "core/io.h"
 #include "core/parallel.h"

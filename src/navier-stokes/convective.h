@@ -7,23 +7,25 @@
 #include "navier-stokes/flux_input.h"
 
 namespace spade::convective
-{    
+{
+    template <typename dtype> using standard_lr_input_type = flux_input::flux_input_t
+    <
+        flux_input::left_right
+        <
+            flux_input::cell_info
+            <
+                flux_input::cell_state<fluid_state::prim_t<dtype>>,
+                flux_input::cell_normal<ctrs::array<dtype, 3>>
+            >
+        >,
+        flux_input::face_info<>
+    >;
+        
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef flux_input::flux_input_t
-        <
-            flux_input::left_right
-            <
-                flux_input::cell_info
-                <
-                    flux_input::cell_state<fluid_state::prim_t<dtype>>,
-                    flux_input::cell_normal<ctrs::array<dtype, 3>>
-                >
-            >,
-            flux_input::face_info<>
-        > input_type;
+        typedef standard_lr_input_type<dtype> input_type;
         
         totani_lr(const gas_t& gas_in) {gas = &gas_in;}
         
@@ -55,6 +57,41 @@ namespace spade::convective
         }
         
         const gas_t* gas;
+    };
+    
+    template <fluid_state::state_dependent_gas gas_t> struct pressure_diss_lr
+    {
+        typedef typename gas_t::value_type dtype;
+        typedef fluid_state::flux_t<dtype> output_type;
+        typedef standard_lr_input_type<dtype> input_type;
+        
+        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in;}
+        
+        output_type calc_flux(const input_type& input) const
+        {
+            output_type output;
+            const auto& ql       = std::get<0>(input.cell_data.left.elements).data;
+            const auto& qr       = std::get<0>(input.cell_data.right.elements).data;
+            const auto& normal_l = std::get<1>(input.cell_data.left.elements).data;
+            const auto& normal_r = std::get<1>(input.cell_data.right.elements).data;
+            
+            const dtype delta_p = ql.p()-qr.p();
+            const dtype inv_RT = 1.0/(0.25*(gas->get_R(ql)+gas->get_R(qr))*(ql.T()+qr.T()));
+            const dtype gamma =  0.5*(gas->get_gamma(ql)+gas->get_gamma(qr));
+            const dtype k = 0.5*(ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w());
+            const dtype u = 0.5*(ql.u()+qr.u());
+            const dtype v = 0.5*(ql.v()+qr.v());
+            const dtype w = 0.5*(ql.w()+qr.w());
+            output.continuity() = eps_p*delta_p*inv_RT;
+            output.energy()     = eps_p*delta_p*(k*inv_RT + 1.0/gamma);
+            output.x_momentum() = eps_p*delta_p*u*inv_RT;
+            output.y_momentum() = eps_p*delta_p*v*inv_RT;
+            output.z_momentum() = eps_p*delta_p*w*inv_RT;
+            return output;
+        }
+        
+        const gas_t* gas;
+        dtype eps_p;
     };
     
     template <fluid_state::state_dependent_gas gas_t> struct weno_3
