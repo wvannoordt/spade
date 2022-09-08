@@ -1,6 +1,6 @@
 #pragma once
 
-namespace spade::time_integration
+namespace spade::algs
 {
     template <typename residual_t, typename residual_norm_t, typename error_tol_t> struct iterative_control
     {

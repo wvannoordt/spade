@@ -3,6 +3,7 @@
 #include <concepts>
 #include "core/finite_diff.h"
 #include "core/iterative_control.h"
+#include "core/composite_transform.h"
 #include "core/ctrs.h"
 
 namespace spade::time_integration
@@ -385,6 +386,9 @@ namespace spade::time_integration
         const state_trans_t* trans;
         const conditioner_t* conditioner;
         
+        using composite_transform_type = composite_transform_t<state_trans_t, conditioner_t>;
+        composite_transform_type composite_transform;
+        
         typedef typename detail::get_fundamental_type_if_avail<time_state_t, var_state_t>::type coeff_t;
         typedef detail::bdf_inner_rhs_helper
         <
@@ -457,6 +461,7 @@ namespace spade::time_integration
             convergence_crit = &convergence_crit_in;
             inner_solver = outer_helper_t(inner_scheme, *convergence_crit);
             outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, trans_in); //trouble
+            composite_transform = composite_transform_type(trans_in, conditioner_in);
             inner_rhs = inner_rhs_t(
                 outer_scheme.diff_coeffs,
                 outer_scheme.get_grouped_term(),
@@ -472,7 +477,7 @@ namespace spade::time_integration
                 tau,
                 dt_inner,
                 inner_rhs,
-                trans_in
+                composite_transform
             );
             inner_scheme.k1 = &(inner_scheme.k1_storage);
         }
