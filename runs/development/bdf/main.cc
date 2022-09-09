@@ -19,6 +19,7 @@ int main(int argc, char** argv)
         void transform_inverse(real_t& f) const { f = sqrt(f); }
     } trans;
     
+    
     spade::static_math::int_const_t<3> order;
     auto diff_coeffs = spade::finite_diff::backward_difference_coeffs_node_based<real_t, order.value>();
     const real_t a3 = diff_coeffs[diff_coeffs.size()-1];    
@@ -50,11 +51,11 @@ int main(int argc, char** argv)
     time_int.auxiliary_states[0] = 5.0 + sin(0*dt);
     time_int.auxiliary_states[1] = 5.0 + sin(1*dt);
     time_int.auxiliary_states[2] = 5.0 + sin(2*dt);
-    ftrans(time_int.auxiliary_states[0]);
-    ftrans(time_int.auxiliary_states[1]);
-    ftrans(time_int.auxiliary_states[2]);
+    trans.transform_forward(time_int.auxiliary_states[0]);
+    trans.transform_forward(time_int.auxiliary_states[1]);
+    trans.transform_forward(time_int.auxiliary_states[2]);
     q = 5.0 + sin(2*dt);
-    ftrans(q);
+    trans.transform_forward(q);
     t = 2*dt;
     std::ofstream myfile("soln.dat");
     for (auto n: range(0, nt))

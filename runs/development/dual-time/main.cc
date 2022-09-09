@@ -20,6 +20,13 @@ int main(int argc, char** argv)
         void transform_inverse(real_t& f) const { f = sqrt(f); }
     } trans;
     
+    struct conditioner_t
+    {
+        real_t fac;
+        void transform_forward(real_t& f) const { f = fac*f; }
+        void transform_inverse(real_t& f) const { f = f/fac; }
+    } conditioner{.fac=1.0};
+    
     auto rhs_calc = [&](auto& rhs_in, auto& q_in, const auto& t_in) -> void
     {
         rhs_in = 0.0;
@@ -32,7 +39,8 @@ int main(int argc, char** argv)
     int max_its = 25000;
     const real_t error_tol = 1e-6;
     auto error_norm = [](const real_t& r) -> real_t {return spade::utils::abs(r);};
-    spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
+    spade::algs::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
+    // spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, trans, conditioner);
     spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, trans);
 	
     time_int.get_outer_scheme().auxiliary_states[0] = 5.0 + sin(0*dt);
