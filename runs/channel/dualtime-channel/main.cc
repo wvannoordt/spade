@@ -131,10 +131,10 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*spade::consts::pi*delta;
     
-    const real_t targ_cfl = 5.0;
+    const real_t targ_cfl = 2.5;
     const int    nt_max   = 300001;
     const int    nt_skip  = 50000000;
-    const int    checkpoint_skip  = 5000;
+    const int    checkpoint_skip  = 10;
     
     spade::coords::identity<real_t> coords;
     
@@ -298,7 +298,7 @@ int main(int argc, char** argv)
     
     int max_its = 50;
     spade::static_math::int_const_t<3> bdf_order;
-    const real_t error_tol = 5e-5;
+    const real_t error_tol = 5e-8;
     const int ndof = grid.grid_size();
     auto error_norm = [&](const auto& r) -> real_t
     {
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
     };
     
     spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*100.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
     
     // spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
