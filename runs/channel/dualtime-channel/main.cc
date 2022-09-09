@@ -1,15 +1,8 @@
 #include <chrono>
 #include "spade.h"
-
-typedef double real_t;
-typedef spade::ctrs::array<real_t, 3> v3d;
-typedef spade::ctrs::array<int,    3> v3i;
-typedef spade::ctrs::array<int,    4> v4i;
-typedef spade::ctrs::array<spade::grid::cell_t<int>, 4> v4c;
-typedef spade::fluid_state::prim_t<real_t> prim_t;
-typedef spade::fluid_state::flux_t<real_t> flux_t;
-typedef spade::fluid_state::cons_t<real_t> cons_t;
-
+#include "typedef.h"
+#include "c2p.h"
+#include "preconditioner.h"
 #include "calc_u_bulk.h"
 #include "calc_boundary_flux.h"
 
@@ -131,10 +124,10 @@ int main(int argc, char** argv)
     bounds.min(2) =  0.0;
     bounds.max(2) =  2*spade::consts::pi*delta;
     
-    const real_t targ_cfl = 2.5;
+    const real_t targ_cfl = 5.0;
     const int    nt_max   = 300001;
     const int    nt_skip  = 50000000;
-    const int    checkpoint_skip  = 10;
+    const int    checkpoint_skip  = 1000;
     
     spade::coords::identity<real_t> coords;
     
@@ -225,32 +218,6 @@ int main(int argc, char** argv)
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
     
-    struct p2c_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef prim_t arg_type;
-        p2c_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        cons_t operator () (const prim_t& q) const
-        {
-            cons_t w;
-            spade::fluid_state::convert_state(q, w, *gas);
-            return w;
-        }
-    } p2c(air);
-    
-    struct c2p_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef cons_t arg_type;
-        c2p_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        prim_t operator () (const cons_t& w) const
-        {
-            prim_t q;
-            spade::fluid_state::convert_state(w, q, *gas);
-            return q;
-        }
-    } c2p(air);
-    
     struct get_u_t
     {
         const spade::fluid_state::perfect_gas_t<real_t>* gas;
@@ -271,15 +238,7 @@ int main(int argc, char** argv)
     const real_t dx = spade::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt     = targ_cfl*dx/umax_ini;
-    
-    auto ftrans = [&](auto& q) -> void
-    {
-        spade::algs::transform_inplace(q, p2c);
-    };
-    auto itrans = [&](auto& q) -> void
-    {
-        spade::algs::transform_inplace(q, c2p);
-    };
+
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
         rhs = 0.0;
@@ -295,7 +254,6 @@ int main(int argc, char** argv)
         });
     };
     
-    
     int max_its = 50;
     spade::static_math::int_const_t<3> bdf_order;
     const real_t error_tol = 5e-8;
@@ -309,13 +267,16 @@ int main(int argc, char** argv)
                 return f[0]*f[0] + f[1]*f[1] + f[2]*f[2] + f[3]*f[3] + f[4]*f[4];
             },
             max_op);
-        // output = sqrt(output)/ndof;
         if (group.isroot()) print("Residual:", output);
         return output;
     };
     
-    spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*100.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
+    trans_t trans(air, prim);
+    const real_t beta = 0.5;
+    preconditioner_t preconditioner(air, prim, beta);
+    
+    spade::algs::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
+    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*100.0, calc_rhs, convergence_crit, bdf_order, trans, preconditioner);
     
     // spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     

@@ -14,8 +14,22 @@ int main(int argc, char** argv)
     q = 5.0;
     real_t t = t0;
     
-    auto ftrans = [](real_t& f) -> void {f = f*f; };
-    auto itrans = [](real_t& f) -> void {f = sqrt(f); };
+    struct trans_t
+    {
+        void transform_forward(real_t& f) const { f = f*f; }
+        void transform_inverse(real_t& f) const { f = sqrt(f); }
+    } trans;
+    
+    struct conditioner_t
+    {
+        real_t fac;
+        conditioner_t(const real_t& f_in)
+        {
+            fac = f_in;
+        }
+        void transform_forward(real_t& f) const { f = fac*f; }
+        void transform_inverse(real_t& f) const { f = f/fac; }
+    } conditioner(10.0);
     
     auto rhs_calc = [&](auto& rhs_in, auto& q_in, const auto& t_in) -> void
     {
@@ -29,15 +43,17 @@ int main(int argc, char** argv)
     int max_its = 25000;
     const real_t error_tol = 1e-6;
     auto error_norm = [](const real_t& r) -> real_t {return spade::utils::abs(r);};
-    spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, ftrans, itrans);
+    spade::algs::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
+    // spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, trans, conditioner);
+    spade::time_integration::dual_time_t time_int(q, rhs, t, dt, dt/10.0, rhs_calc, convergence_crit, bdf_order, trans, conditioner);
+	
     time_int.get_outer_scheme().auxiliary_states[0] = 5.0 + sin(0*dt);
     time_int.get_outer_scheme().auxiliary_states[1] = 5.0 + sin(1*dt);
     time_int.get_outer_scheme().auxiliary_states[2] = 5.0 + sin(2*dt);
     
-    ftrans(time_int.get_outer_scheme().auxiliary_states[0]);
-    ftrans(time_int.get_outer_scheme().auxiliary_states[1]);
-    ftrans(time_int.get_outer_scheme().auxiliary_states[2]);
+    trans.transform_forward(time_int.get_outer_scheme().auxiliary_states[0]);
+    trans.transform_forward(time_int.get_outer_scheme().auxiliary_states[1]);
+    trans.transform_forward(time_int.get_outer_scheme().auxiliary_states[2]);
     
     auto& q0 = time_int.get_outer_scheme().auxiliary_states[0];
     auto& q1 = time_int.get_outer_scheme().auxiliary_states[1];

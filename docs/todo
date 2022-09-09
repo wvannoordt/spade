@@ -6,4 +6,5 @@
 [ ] Fix some of the silly nonsense present in the dual-time integration scheme
 [ ] More lightweight implementation of the time-integration schemes - less mechanistic framework. The schemes themselves are conceptual.
 [ ] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
-[ ] README
+[x] README
+[ ] Infer grid dimension from the dimension of arrays passed to constructor?
