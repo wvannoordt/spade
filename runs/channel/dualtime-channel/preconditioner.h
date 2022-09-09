@@ -16,8 +16,9 @@ struct preconditioner_t
         struct inner_trans_t
         {
             beta_t fac;
+            const gas_t* gas;
             typedef cons_t arg_type;
-            cons_t operator() (const arg_type& c)
+            cons_t operator() (const arg_type& c) const
             {
                 prim_t p;
                 cons_t w;
@@ -26,7 +27,7 @@ struct preconditioner_t
                 spade::fluid_state::convert_state(p, w, *gas);
                 return w;
             }
-        } inner_trans{.fac=factor};
+        } inner_trans{.fac=factor, .gas=gas};
         spade::algs::transform_inplace(q, inner_trans);
     }
     
