@@ -165,6 +165,7 @@ namespace spade::time_integration
             (*q) += (*k1);
             state_trans->transform_inverse(*q);
             *t += 0.5*dt;
+            
             //This is done so that the residual is physically scaled for external use.
             (*k1) /= (dt);
         }
@@ -239,7 +240,6 @@ namespace spade::time_integration
         typename implicit_solve_t,
         const int order=default_bdf_order,
         typename state_trans_t=identity_transform_t,
-        // typename conditioner_t=identity_transform_t,
         const var_cascade_policy policy=default_policy
     > struct bdf_t
     {
@@ -371,8 +371,8 @@ namespace spade::time_integration
         typename rhs_calc_t,
         typename convergence_t,
         const int bdf_order=default_bdf_order,
-        typename state_trans_t = identity_transform_t//,
-        // typename conditioner_t = identity_transform_t
+        typename state_trans_t = identity_transform_t,
+        typename conditioner_t = identity_transform_t
     > struct dual_time_t
     {
         var_state_t* q;
@@ -385,10 +385,10 @@ namespace spade::time_integration
         rhs_calc_t* rhs_calc;
         convergence_t* convergence_crit;
         const state_trans_t* trans;
-        // const conditioner_t* conditioner;
+        const conditioner_t* conditioner;
         
-        // using composite_transform_type = algs::composite_transform_t<state_trans_t, conditioner_t>;
-        // composite_transform_type composite_transform;
+        using composite_transform_type = algs::composite_transform_t<state_trans_t, conditioner_t>;
+        composite_transform_type composite_transform;
         
         typedef typename detail::get_fundamental_type_if_avail<time_state_t, var_state_t>::type coeff_t;
         typedef detail::bdf_inner_rhs_helper
@@ -398,8 +398,7 @@ namespace spade::time_integration
             residual_state_t,
             time_state_t,
             rhs_calc_t,
-            state_trans_t
-            // composite_transform_type
+            state_trans_t//composite_transform_type
         > inner_rhs_t;
         
         typedef rk2
@@ -408,8 +407,7 @@ namespace spade::time_integration
             residual_state_t,
             time_state_t,
             inner_rhs_t,
-            state_trans_t
-            // composite_transform_type
+            composite_transform_type
         > inner_scheme_t;
         
         typedef detail::dual_time_inner_update_helper
@@ -449,8 +447,8 @@ namespace spade::time_integration
             rhs_calc_t& rhs_calc_in,
             convergence_t& convergence_crit_in,
             const static_math::int_const_t<bdf_order>& order_in = static_math::int_const_t<default_bdf_order>(),
-            const state_trans_t& trans_in = identity_transform//,
-            // const conditioner_t& conditioner_in = identity_transform
+            const state_trans_t& trans_in = identity_transform,
+            const conditioner_t& conditioner_in = identity_transform
         )
         {
             q   = &q_in;
@@ -464,7 +462,7 @@ namespace spade::time_integration
             convergence_crit = &convergence_crit_in;
             inner_solver = outer_helper_t(inner_scheme, *convergence_crit);
             outer_scheme = outer_scheme_t(*q, *rhs, *t, dt, *rhs_calc, inner_solver, order_in, trans_in);
-            // composite_transform = composite_transform_type(trans_in, conditioner_in);
+            composite_transform.list.set_items(trans_in, conditioner_in);
             inner_rhs = inner_rhs_t(
                 outer_scheme.diff_coeffs,
                 outer_scheme.get_grouped_term(),
@@ -472,7 +470,6 @@ namespace spade::time_integration
                 *t,
                 dt,
                 rhs_calc_in,
-                // composite_transform
                 trans_in
             );
             inner_scheme = inner_scheme_t(
@@ -481,8 +478,7 @@ namespace spade::time_integration
                 tau,
                 dt_inner,
                 inner_rhs,
-                // composite_transform
-                trans_in
+                composite_transform
             );
             
             //get rid of this crap
