@@ -4,6 +4,7 @@
 [ ] Flux compatibility concepts
 [ ] Fix the segfault issue with the MPI communicator when not using MPI_COMM_WORLD
 [ ] Fix some of the silly nonsense present in the dual-time integration scheme
+[ ] Organize the 'core' directory a bit more sensibly
 [ ] More lightweight implementation of the time-integration schemes - less mechanistic framework. The schemes themselves are conceptual.
 [ ] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
 [x] README
