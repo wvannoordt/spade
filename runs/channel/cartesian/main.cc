@@ -225,32 +225,6 @@ int main(int argc, char** argv)
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
     
-    struct p2c_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef prim_t arg_type;
-        p2c_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        cons_t operator () (const prim_t& q) const
-        {
-            cons_t w;
-            spade::fluid_state::convert_state(q, w, *gas);
-            return w;
-        }
-    } p2c(air);
-    
-    struct c2p_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef cons_t arg_type;
-        c2p_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        prim_t operator () (const cons_t& w) const
-        {
-            prim_t q;
-            spade::fluid_state::convert_state(w, q, *gas);
-            return q;
-        }
-    } c2p(air);
-    
     struct get_u_t
     {
         const spade::fluid_state::perfect_gas_t<real_t>* gas;
@@ -271,14 +245,45 @@ int main(int argc, char** argv)
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt     = targ_cfl*dx/umax_ini;
     
-    auto ftrans = [&](auto& q) -> void
+    
+    
+    struct trans_t
     {
-        spade::algs::transform_inplace(prim, p2c);
-    };
-    auto itrans = [&](auto& q) -> void
-    {
-        spade::algs::transform_inplace(prim, c2p);
-    };
+        using gas_t = spade::fluid_state::perfect_gas_t<real_t>;
+        const gas_t* gas;
+        
+        struct p2c_t
+        {
+            const gas_t* gas;
+            typedef prim_t arg_type;
+            p2c_t(const gas_t& gas_in) {gas = &gas_in;}
+            cons_t operator () (const prim_t& q) const
+            {
+                cons_t w;
+                spade::fluid_state::convert_state(q, w, *gas);
+                return w;
+            };
+        };
+        struct c2p_t
+        {
+            const gas_t* gas;
+            typedef cons_t arg_type;
+            c2p_t(const gas_t& gas_in) {gas = &gas_in;}
+            prim_t operator () (const cons_t& w) const
+            {
+                prim_t q;
+                spade::fluid_state::convert_state(w, q, *gas);
+                return q;
+            }
+        };
+        
+        trans_t(const gas_t& gas_in) { gas = &gas_in; }
+        
+        void transform_forward (decltype(prim)& q) const { spade::algs::transform_inplace(q, p2c_t(*gas)); }
+        void transform_inverse (decltype(prim)& q) const { spade::algs::transform_inplace(q, c2p_t(*gas)); }
+    } trans(air);
+    
+    
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
         rhs = 0.0;
@@ -294,7 +299,7 @@ int main(int argc, char** argv)
         });
     };
     
-    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
+    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, trans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
