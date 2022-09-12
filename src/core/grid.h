@@ -100,7 +100,7 @@ namespace spade::grid
     <
         coords::coordinate_system coord_t,
         parallel::parallel_group par_group_t,
-        typename dimension_t=static_math::int_const_t<3>
+        const std::size_t grid_dim
     >
     class cartesian_grid_t
     {
@@ -108,15 +108,13 @@ namespace spade::grid
             typedef coord_t::coord_type dtype;
             typedef coord_t::coord_type coord_type;
             typedef coord_t coord_sys_type;
-            typedef dimension_t dim_t;
             cartesian_grid_t(
-                const ctrs::array<int,   dimension_t::value>& num_blocks_in,
-                const ctrs::array<int,   dimension_t::value>& cells_in_block_in,
-                const ctrs::array<int,   dimension_t::value>& exchange_cells_in,
-                const bound_box_t<dtype, dimension_t::value>& bounds_in,
+                const ctrs::array<int,   grid_dim>& num_blocks_in,
+                const ctrs::array<int,   grid_dim>& cells_in_block_in,
+                const ctrs::array<int,   grid_dim>& exchange_cells_in,
+                const bound_box_t<dtype, grid_dim>& bounds_in,
                 const coord_t& coord_system_in,
-                par_group_t& group_in,
-                const dimension_t& dim_v = static_math::int_const_t<3>()
+                par_group_t& group_in
                 )
             {
                 //Initialize class members
@@ -230,7 +228,7 @@ namespace spade::grid
                 }
             }
             
-            constexpr static int dim(void) {return dim_t::value;}
+            constexpr static int dim(void) {return grid_dim;}
             
             template <multiblock_grid_idx_t idx_t>_finline_ ctrs::array<dtype, 3> get_coords(const idx_t& i) const
             {
