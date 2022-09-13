@@ -15,10 +15,14 @@ namespace spade::block_config
         ctrs::array<int, grid_dim> num_blocks;
         bound_box_t<coord_val_t, grid_dim>  bounds;
         std::vector<node_type> nodes;
+        std::size_t block_count;
         
         amr_blocks_t(const ctrs::array<int, grid_dim>& num_blocks_in,
             const bound_box_t<coord_val_t, grid_dim>& bounds_in)
         {
+            //Note that the block count is set by the enumerate() function
+            block_count = 0;
+            
             num_blocks = num_blocks_in;
             bounds     = bounds_in;
             std::size_t nodes_size = 1;
@@ -61,11 +65,18 @@ namespace spade::block_config
                     nodes[i].amr_position.max(d) = amr::amr_coord_t((ijk[d]+1)%num_blocks[d], 0);
                 }
             }
+            this->enumerate();
         }
+        
+        std::size_t get_num_blocks() const { return block_count; }
         
         void enumerate()
         {
-            
+            block_count = 0;
+            for (auto& n: nodes)
+            {
+                block_count += n.count_terminal_nodes();
+            }
         }
     };
 }
