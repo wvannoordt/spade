@@ -29,6 +29,21 @@ namespace spade::amr
         std::vector<amr_node_t> subnodes;
         std::vector<amr_neighbor_t<grid_dim>> neighbors;
         amr_node_t<grid_dim>* parent;
+        bool terminal() const { return subnodes.size()==0; }
+        
+        template <const amr_block_count_mode count_mode>
+        std::size_t count_nodes() const
+        {
+            if constexpr (count_mode==amr_count_terminal)
+            {
+                if (this->terminal()) return 1;
+            }
+            std::size_t output = 0;
+            if constexpr (count_mode==amr_count_all) ++output;
+            for (auto& n: subnodes) output += n.template count_nodes<count_mode>();
+            return output;
+        }
+        
         amr_node_t(){}
     };
 }
