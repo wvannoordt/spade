@@ -8,13 +8,15 @@
 
 namespace spade::block_config
 {
-    template <typename coord_val_t, const std::size_t grid_dim>
+    template <typename coord_val_t, const std::size_t grid_dim, const amr::amr_block_count_mode = amr::amr_count_terminal>
     struct amr_blocks_t
     {
         using node_type = amr::amr_node_t<grid_dim>;
-        ctrs::array<int, grid_dim> num_blocks;
-        bound_box_t<coord_val_t, grid_dim>  bounds;
-        std::vector<node_type> nodes;
+        
+        ctrs::array<int, grid_dim>                      num_blocks;
+        bound_box_t<coord_val_t, grid_dim>              bounds;
+        std::vector<node_type>                          nodes;
+        std::vector<bound_box_t<coord_val_t, grid_dim>> block_boxes;
         
         amr_blocks_t(const ctrs::array<int, grid_dim>& num_blocks_in,
             const bound_box_t<coord_val_t, grid_dim>& bounds_in)

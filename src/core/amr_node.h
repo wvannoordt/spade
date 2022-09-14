@@ -8,6 +8,12 @@
 
 namespace spade::amr
 {
+    enum amr_block_count_mode
+    {
+        amr_count_terminal,
+        amr_count_all
+    };
+    
     template <const std::size_t grid_dim> struct amr_node_t;
     template <const std::size_t grid_dim> struct amr_neighbor_t
     {
