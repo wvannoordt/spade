@@ -24,6 +24,17 @@ namespace spade
             }
             return output;
         }
-        
     };
+    
+    template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)
+    {
+        os << "{";
+        for (auto i: range(0, ar_size))
+        {
+            os << "(" << pos.min(i) << ", " << pos.max(i) << ")";
+            if (i < ar_size-1) os << ", ";
+        }
+        os << "}";
+        return os;
+    }
 }

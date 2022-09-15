@@ -44,6 +44,13 @@ namespace spade::amr
             return output;
         }
         
+        template <const amr_block_count_mode count_mode>
+        void collect_nodes(std::vector<amr_node_t*>& node_list)
+        {
+            node_list.push_back(this);
+            for (auto& n: subnodes) n.template collect_nodes<count_mode>(node_list);
+        }
+        
         amr_node_t(){}
     };
 }

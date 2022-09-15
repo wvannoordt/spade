@@ -15,27 +15,24 @@ namespace spade::block_config
         
         ctrs::array<int, grid_dim>                      num_blocks;
         bound_box_t<coord_val_t, grid_dim>              bounds;
-        std::vector<node_type>                          nodes;
+        std::vector<node_type>                          root_nodes;
         std::vector<bound_box_t<coord_val_t, grid_dim>> block_boxes;
-        std::size_t                                     block_count;
+        std::vector<node_type*>                         all_nodes;
         
         amr_blocks_t(const ctrs::array<int, grid_dim>& num_blocks_in,
             const bound_box_t<coord_val_t, grid_dim>& bounds_in)
-        {
-            //Note that the block count is set by the enumerate() function
-            block_count = 0;
-            
+        {            
             num_blocks = num_blocks_in;
             bounds     = bounds_in;
             std::size_t nodes_size = 1;
             for (auto i: range(0, grid_dim)) nodes_size *= num_blocks[i];
-            nodes.resize(nodes_size);
-            for (auto i: range(0, nodes.size()))
+            root_nodes.resize(nodes_size);
+            for (auto i: range(0, root_nodes.size()))
             {
                 auto ijk = ctrs::expand_index(i, num_blocks);
                 auto num_periphs   = static_math::pow<3,grid_dim>::value;
                 auto num_neighbors = num_periphs - 1;
-                nodes[i].neighbors.reserve(num_neighbors);
+                root_nodes[i].neighbors.reserve(num_neighbors);
                 for (auto jt: range(0,num_periphs))
                 {
                     ctrs::array<int,grid_dim> extent = 3;
@@ -55,31 +52,50 @@ namespace spade::block_config
                         
                         //node i has neighbor j
                         amr::amr_neighbor_t<grid_dim> neighbor_relationship;
-                        neighbor_relationship.endpoint = &nodes[j];
+                        neighbor_relationship.endpoint = &root_nodes[j];
                         neighbor_relationship.edge     = dijk;
-                        nodes[i].neighbors.push_back(neighbor_relationship);
+                        root_nodes[i].neighbors.push_back(neighbor_relationship);
                     }
                 }
-                nodes[i].parent = nullptr;
+                root_nodes[i].parent = nullptr;
                 for (auto d: range(0, grid_dim))
                 {
-                    nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],                   0);
-                    nodes[i].amr_position.max(d) = amr::amr_coord_t((ijk[d]+1)%num_blocks[d], 0);
+                    root_nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],                   0);
+                    root_nodes[i].amr_position.max(d) = amr::amr_coord_t((ijk[d]+1)%num_blocks[d], 0);
                 }
             }
             this->enumerate();
         }
         
-        std::size_t get_num_blocks() const { return block_count; }
+        std::size_t get_num_blocks() const { return all_nodes.size(); }
         
+        // re-collects the global list of amr nodes and their bounding boxes,
+        // must be called after every single refinement operation
         void enumerate()
         {
-            block_count = 0;
-            for (auto& n: nodes)
+            std::size_t block_count = 0;
+            for (auto& n: root_nodes)
             {
                 block_count += n.template count_nodes<count_mode>();
             }
-            
+            all_nodes.reserve(block_count);
+            for (auto& n: root_nodes)
+            {
+                n.template collect_nodes<count_mode>(all_nodes);
+            }
+            block_boxes.resize(block_count);
+            ctrs::array<coord_val_t, grid_dim> dx;
+            for (auto i: range(0, grid_dim)) dx[i] = bounds.size(i)/num_blocks[i];
+            for (auto i: range(0, block_boxes.size()))
+            {
+                const auto& amr_bbox  = all_nodes[i]->amr_position;
+                auto& comp_bbox = block_boxes[i];
+                for (auto d: range(0, grid_dim))
+                {
+                    comp_bbox.min(d) = amr_bbox.min(d).convert_to_coordinate(bounds.min(d), dx[d]);
+                    comp_bbox.max(d) = amr_bbox.max(d).convert_to_coordinate(bounds.min(d), dx[d]);
+                }
+            }
         }
     };
 }

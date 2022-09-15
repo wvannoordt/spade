@@ -102,6 +102,19 @@ namespace spade::amr
             if (partition>rhs.partition) return true;
             return bits>=rhs.bits;
         }
+
+        template <typename base_coord_t>
+        base_coord_t convert_to_coordinate(const base_coord_t& grid_min, const base_coord_t& partition_size) const
+        {
+            base_coord_t output = grid_min + partition*partition_size;
+            base_coord_t dx = 0.5*partition_size;
+            for (auto i: range(0,get_num_bits()))
+            {
+                output += dx*get_bit(i);
+                dx *= 0.5;
+            }
+            return output;
+        }
     };
     
     template <typename T1, typename T2> static std::ostream & operator<<(std::ostream & os, const amr_exact_coord_t<T1, T2> & pos)
