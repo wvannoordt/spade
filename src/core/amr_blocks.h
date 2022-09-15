@@ -11,7 +11,8 @@ namespace spade::block_config
     template <typename coord_val_t, const std::size_t grid_dim, const amr::amr_block_count_mode count_mode = amr::amr_count_terminal>
     struct amr_blocks_t
     {
-        using node_type = amr::amr_node_t<grid_dim>;
+        using node_type      = amr::amr_node_t<grid_dim>;
+        using coord_val_type = coord_val_t;
         
         ctrs::array<int, grid_dim>                      num_blocks;
         bound_box_t<coord_val_t, grid_dim>              bounds;
@@ -60,14 +61,37 @@ namespace spade::block_config
                 root_nodes[i].parent = nullptr;
                 for (auto d: range(0, grid_dim))
                 {
-                    root_nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],                   0);
-                    root_nodes[i].amr_position.max(d) = amr::amr_coord_t((ijk[d]+1)%num_blocks[d], 0);
+                    root_nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],   num_blocks[d], 0);
+                    root_nodes[i].amr_position.max(d) = amr::amr_coord_t(ijk[d]+1, num_blocks[d], 0);
                 }
             }
             this->enumerate();
         }
         
+        //Note: these return the block bounding box in computational coordinates
+        bound_box_t<coord_val_t, grid_dim>& get_block_box (const std::size_t& lb_glob)
+        {
+            return block_boxes[lb_glob];
+        }
+        
+        //Note: these return the block bounding box in computational coordinates
+        const bound_box_t<coord_val_t, grid_dim>& get_block_box (const std::size_t& lb_glob) const
+        {
+            return block_boxes[lb_glob];
+        }
+        
         std::size_t get_num_blocks() const { return all_nodes.size(); }
+        template <typename filter_t> std::size_t get_num_blocks(const filter_t& filter) const
+        {
+            std::size_t output = 0;
+            for (const auto p: all_nodes)
+            {
+                if (filter(*p)) ++output;
+            }
+            return output;
+        }
+        
+        static constexpr std::size_t dim() { return grid_dim; }
         
         // re-collects the global list of amr nodes and their bounding boxes,
         // must be called after every single refinement operation

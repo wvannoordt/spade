@@ -25,6 +25,7 @@ namespace spade::amr
     };
     template <const std::size_t grid_dim> struct amr_node_t
     {
+        using amr_refine_t = ctrs::array<bool,3>;
         bound_box_t<amr_coord_t, grid_dim> amr_position;
         std::vector<amr_node_t> subnodes;
         std::vector<amr_neighbor_t<grid_dim>> neighbors;
@@ -42,6 +43,11 @@ namespace spade::amr
             if constexpr (count_mode==amr_count_all) ++output;
             for (auto& n: subnodes) output += n.template count_nodes<count_mode>();
             return output;
+        }
+        
+        void refine_node_recurse(const amr_refine_t& ref_type)
+        {
+            
         }
         
         template <const amr_block_count_mode count_mode>

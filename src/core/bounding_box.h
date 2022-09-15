@@ -24,6 +24,9 @@ namespace spade
             }
             return output;
         }
+        
+        dtype& operator() (const std::size_t& dim, const std::size_t& min_max) {return bnds[2*dim+min_max];}
+        const dtype& operator() (const std::size_t& dim, const std::size_t& min_max) const {return bnds[2*dim+min_max];}
     };
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)

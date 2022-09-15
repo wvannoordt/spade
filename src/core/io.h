@@ -8,6 +8,7 @@
 #include "core/print.h"
 #include "core/utils.h"
 #include "core/base_64.h"
+#include "core/block_config.h"
 
 namespace spade::io
 {
@@ -400,6 +401,56 @@ namespace spade::io
     static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const arr_t& arr, arrays_t... arrays)
     {
         return output_vtk(out_dir, out_name_no_extension, arr.get_grid(), arr, arrays...);
+    }
+    
+    template <block_config::block_configuration blocks_t, parallel::parallel_group group_t>
+    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const blocks_t& blocks, const group_t& group)
+    {
+        std::filesystem::path out_path(out_dir);
+        if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
+        out_path /= (out_name_no_extension + ".vtk");
+        std::string total_filename = out_path;
+        if (group.isroot())
+        {
+            std::ofstream out_str(total_filename);
+            const std::size_t points_per_block = static_math::pow<2,blocks.dim()>::value;
+            auto is_terminal_block = [](const auto& node) ->bool {return node.terminal();};
+            const std::size_t num_term_blocks = blocks.get_num_blocks(is_terminal_block);
+            const std::size_t num_points = points_per_block*num_term_blocks;
+            out_str << "# vtk DataFile Version 2.0\nspade output\nASCII\n";
+            out_str << "DATASET UNSTRUCTURED_GRID\nPOINTS " << num_points << " double\n";
+            ctrs::array<typename blocks_t::coord_val_type,3> x = 0.0;
+            for (auto i: range(0, blocks.get_num_blocks()))
+            {
+                if (is_terminal_block(*(blocks.all_nodes[i])))
+                {
+                    const auto bbox = blocks.get_block_box(i);
+                    for (auto min_max: range(0,2)*range(0,2)*range(0,blocks.dim()==3?2:1))
+                    {
+                        for (auto j: range(0,blocks.dim()))
+                        {
+                            x[j] = bbox(j, min_max[j]);
+                        }
+                        out_str << x[0] << " " << x[1] << " " << x[2] << "\n";
+                    }
+                }
+            }
+            out_str << "CELLS " << num_term_blocks << " " << num_term_blocks*(1+points_per_block) << "\n";
+            std::size_t ct = 0;
+            for (auto i: range(0, num_term_blocks))
+            {
+                out_str << points_per_block;
+                for (auto j: range(0,points_per_block))
+                {
+                    out_str << " " << ct++;
+                }
+                out_str << "\n";
+            }
+            out_str << "CELL_TYPES " << num_term_blocks << "\n";
+            int cell_type = (blocks.dim()==3)?11:8;
+            for (auto i: range(0,num_term_blocks)) out_str << cell_type << "\n";
+        }
+        return total_filename;
     }
     
     namespace detail

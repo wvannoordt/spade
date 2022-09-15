@@ -8,7 +8,7 @@ namespace spade::amr
     {
         using int_t = int;
         bit_repr_t  bits;
-        partition_t partition;
+        partition_t partition, num_partitions;
         
         amr_exact_coord_t()
         {
@@ -16,14 +16,16 @@ namespace spade::amr
             bits = 0;
         }
         
-        amr_exact_coord_t(const partition_t& partition_in, const bit_repr_t& bits_in)
+        amr_exact_coord_t(const partition_t& partition_in, const partition_t& num_partitions_in, const bit_repr_t& bits_in)
         {
             partition = partition_in;
+            num_partitions = num_partitions_in;
             bits = bits_in;
         }
         
         amr_exact_coord_t(const amr_exact_coord_t& rhs)
         {
+            num_partitions = rhs.num_partitions;
             partition = rhs.partition;
             bits = rhs.bits;
         }
@@ -67,6 +69,7 @@ namespace spade::amr
         {
             bits = rhs.bits;
             partition = rhs.partition;
+            num_partitions = rhs.num_partitions;
             return *this;
         }
         

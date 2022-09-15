@@ -7,9 +7,9 @@
 
 namespace spade::block_config
 {
-    template <typename T> concept block_config = requires(T t)
+    template <typename T> concept block_configuration = requires(T t)
     {
-        t;
+        typename T::node_type;
     };
     
     template <typename coord_val_t, const std::size_t grid_dim> struct cartesian_blocks_t

@@ -2,6 +2,21 @@
 #include <iostream>
 #include <array>
 
+
+//Note:
+// for (auto i: range(0,3)*range(0,2))
+// {
+//     print(i[0], i[1]);
+// }
+//
+// Results in:
+//
+// 0 0
+// 1 0
+// 2 0
+// 0 1
+// 1 1
+// 2 1
 template <typename index_t, const std::size_t idx_dim> struct md_iterator
 {
     constexpr size_t size(void) const noexcept {return idx_dim;}
