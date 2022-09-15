@@ -33,7 +33,6 @@ int main(int argc, char** argv)
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
-    spade::io::output_vtk(".", "blocks", blocks, group);
     // spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
 
     return 0;
