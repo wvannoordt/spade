@@ -126,7 +126,7 @@ int main(int argc, char** argv)
     
     std::filesystem::path out_path("checkpoint");
     if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
-    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group, spade::static_math::int_const_t<dim>());
+    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
     
     prim_t fillp = 0.0;
@@ -285,7 +285,7 @@ int main(int argc, char** argv)
         return output;
     };
     
-    spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
+    // spade::time_integration::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
     // spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt/10.0, calc_rhs, convergence_crit, bdf_order, ftrans, itrans);
     spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
