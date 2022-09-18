@@ -7,13 +7,7 @@
 #include "amr/amr_coord.h"
 
 namespace spade::amr
-{
-    enum amr_block_count_mode
-    {
-        amr_count_terminal,
-        amr_count_all
-    };
-    
+{    
     template <const std::size_t grid_dim> struct amr_node_t;
     template <const std::size_t grid_dim> struct amr_neighbor_t
     {
@@ -29,32 +23,58 @@ namespace spade::amr
         bound_box_t<amr_coord_t, grid_dim> amr_position;
         std::vector<amr_node_t> subnodes;
         std::vector<amr_neighbor_t<grid_dim>> neighbors;
+        ctrs::array<int, grid_dim> level;
         amr_node_t<grid_dim>* parent;
+        
+        static constexpr std::size_t dim() {return grid_dim;}
+        
         bool terminal() const { return subnodes.size()==0; }
         
-        template <const amr_block_count_mode count_mode>
         std::size_t count_nodes() const
         {
-            if constexpr (count_mode==amr_count_terminal)
-            {
-                if (this->terminal()) return 1;
-            }
-            std::size_t output = 0;
-            if constexpr (count_mode==amr_count_all) ++output;
-            for (auto& n: subnodes) output += n.template count_nodes<count_mode>();
+            std::size_t output = 1;
+            for (auto& n: subnodes) output += n.count_nodes();
             return output;
         }
         
         void refine_node_recurse(const amr_refine_t& ref_type)
         {
-            
+            std::size_t num_sub_nodes = 1;
+            for (auto i: range(0, dim())) num_sub_nodes *= ref_type[i]?2:1;
+            if (num_sub_nodes == 1) return;
+            subnodes.resize(num_sub_nodes);
+            auto rg = range(0,ref_type[0]?2:1)*range(0,ref_type[1]?2:1)*range(0,(ref_type[dim()-1]&&(dim()==3))?2:1);
+            int ct = 0;
+            for (auto i: rg)
+            {
+                auto& child = subnodes[ct];
+                child.parent = this;
+                child.amr_position = this->amr_position;
+                for (auto d: range(0, dim()))
+                {
+                    child.level[d] = this->level[d];
+                    if (ref_type[d])
+                    {
+                        child.level[d]++;
+                        amr_coord_t mid_coord = this->amr_position.min(d);
+                        // mid_coord.set_bit(mid_coord.get_num_bits() - child.level[d], 1);
+                        mid_coord.set_bit(child.level[d]-1, 1);
+                        // print(child.amr_position.min(d));
+                        // print(child.amr_position.max(d));
+                        // print(mid_coord);
+                        // std::cin.get();
+                        if (i[d]==1) child.amr_position.min(d) = mid_coord;
+                        else         child.amr_position.max(d) = mid_coord;
+                    }
+                }
+                ct++;
+            }
         }
         
-        template <const amr_block_count_mode count_mode>
         void collect_nodes(std::vector<amr_node_t*>& node_list)
         {
             node_list.push_back(this);
-            for (auto& n: subnodes) n.template collect_nodes<count_mode>(node_list);
+            for (auto& n: subnodes) n.collect_nodes(node_list);
         }
         
         amr_node_t(){}

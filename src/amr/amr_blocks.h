@@ -6,9 +6,9 @@
 #include "amr/amr_node.h"
 #include "core/block_config.h"
 
-namespace spade::block_config
+namespace spade::amr
 {
-    template <typename coord_val_t, const std::size_t grid_dim, const amr::amr_block_count_mode count_mode = amr::amr_count_terminal>
+    template <typename coord_val_t, const std::size_t grid_dim>
     struct amr_blocks_t
     {
         using node_type      = amr::amr_node_t<grid_dim>;
@@ -64,6 +64,7 @@ namespace spade::block_config
                     root_nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],   num_blocks[d], 0);
                     root_nodes[i].amr_position.max(d) = amr::amr_coord_t(ijk[d]+1, num_blocks[d], 0);
                 }
+                root_nodes[i].level = 0;
             }
             this->enumerate();
         }
@@ -100,13 +101,15 @@ namespace spade::block_config
             std::size_t block_count = 0;
             for (auto& n: root_nodes)
             {
-                block_count += n.template count_nodes<count_mode>();
+                block_count += n.count_nodes();
             }
+            all_nodes.clear();
             all_nodes.reserve(block_count);
             for (auto& n: root_nodes)
             {
-                n.template collect_nodes<count_mode>(all_nodes);
+                n.collect_nodes(all_nodes);
             }
+            block_boxes.clear();
             block_boxes.resize(block_count);
             ctrs::array<coord_val_t, grid_dim> dx;
             for (auto i: range(0, grid_dim)) dx[i] = bounds.size(i)/num_blocks[i];
