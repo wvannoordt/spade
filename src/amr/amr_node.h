@@ -4,7 +4,7 @@
 
 #include "core/ctrs.h"
 #include "core/bounding_box.h"
-#include "core/amr_coord.h"
+#include "amr/amr_coord.h"
 
 namespace spade::amr
 {

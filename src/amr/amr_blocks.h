@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "core/ctrs.h"
-#include "core/amr_node.h"
+#include "amr/amr_node.h"
 #include "core/block_config.h"
 
 namespace spade::block_config

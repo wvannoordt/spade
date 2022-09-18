@@ -30,6 +30,8 @@ int main(int argc, char** argv)
     // spade::block_config::cartesian_blocks_t blocks(num_blocks, bounds);
     spade::block_config::amr_blocks_t blocks(num_blocks, bounds);
     
+    spade::amr::refine(blocks, *(blocks.all_nodes[0]));
+    
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
