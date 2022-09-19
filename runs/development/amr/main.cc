@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     spade::amr::amr_blocks_t blocks(num_blocks, bounds);
     
     // v3b refine(true, true, true);
-    spade::amr::refine(blocks, *(blocks.all_nodes[0]));
+    spade::amr::refine(blocks, 0);
     
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
