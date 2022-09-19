@@ -18,7 +18,8 @@
 #include "core/linear_algebra.h"
 #include "core/time_integration.h"
 #include "core/block_config.h"
-#include "core/amr_blocks.h"
+#include "amr/amr_blocks.h"
+#include "amr/amr.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"
