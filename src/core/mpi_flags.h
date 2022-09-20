@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef MPI_ENABLE
-#define MPI_ENABLE 0
+#define MPI_ENABLE 1
 #else
 #include "mpi.h"
 #endif

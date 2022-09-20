@@ -10,6 +10,7 @@
 #include "core/typedef.h"
 #include "core/cli_args.h"
 #include "core/grid.h"
+#include "core/grid_array.h"
 #include "core/io.h"
 #include "core/parallel.h"
 #include "core/algs.h"
