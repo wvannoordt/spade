@@ -41,7 +41,9 @@ namespace spade::amr
         {
             std::size_t num_sub_nodes = 1;
             for (auto i: range(0, dim())) num_sub_nodes *= ref_type[i]?2:1;
+            //exception conditions
             if (num_sub_nodes == 1) return;
+            if (!this->terminal()) return;
             subnodes.resize(num_sub_nodes);
             auto rg = range(0,ref_type[0]?2:1)*range(0,ref_type[1]?2:1)*range(0,(ref_type[dim()-1]&&(dim()==3))?2:1);
             int ct = 0;
@@ -57,12 +59,7 @@ namespace spade::amr
                     {
                         child.level[d]++;
                         amr_coord_t mid_coord = this->amr_position.min(d);
-                        // mid_coord.set_bit(mid_coord.get_num_bits() - child.level[d], 1);
                         mid_coord.set_bit(child.level[d]-1, 1);
-                        // print(child.amr_position.min(d));
-                        // print(child.amr_position.max(d));
-                        // print(mid_coord);
-                        // std::cin.get();
                         if (i[d]==1) child.amr_position.min(d) = mid_coord;
                         else         child.amr_position.max(d) = mid_coord;
                     }

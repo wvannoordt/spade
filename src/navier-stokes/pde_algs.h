@@ -5,13 +5,7 @@
 #include "navier-stokes/convective.h"
 
 namespace spade::pde_algs
-{
-    enum domain_boundary_flux_policy_e
-    {
-        include_domain_boundary_flux,
-        exclude_domain_boundary_flux
-    };
-    
+{    
     template <typename flux_func_t> concept is_flux_functor =
     requires(const flux_func_t& f)
     {
@@ -26,6 +20,15 @@ namespace spade::pde_algs
         t0;
     };
     
+    enum block_flux_policy
+    {
+        block_flux_all,
+        block_flux_interior,
+        block_flux_boundary
+    };
+    
+    
+    
     template <
         grid::multiblock_array array1_t,
         grid::multiblock_array array2_t,
@@ -34,7 +37,12 @@ namespace spade::pde_algs
         grid::has_centering_type<array1_t, grid::cell_centered> &&
         (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&
         (dims::rank_eval<typename array1_t::array_major_dim_t>::value==0)
-    static void flux_div(const array1_t& prims, array2_t& rhs, const flux_func_t& flux_func)
+    static void flux_div(
+        const array1_t& prims,
+        array2_t& rhs,
+        const block_flux_policy& policy,
+        const ctrs::array<bool, array1_t::grid_type::dim()>& domain_boundary_flux,
+        const flux_func_t& flux_func)
     {
         typedef typename array1_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
@@ -62,6 +70,24 @@ namespace spade::pde_algs
             }
         }
     }
+    
+    template <
+        grid::multiblock_array array1_t,
+        grid::multiblock_array array2_t,
+        is_flux_functor flux_func_t>
+    requires
+        grid::has_centering_type<array1_t, grid::cell_centered> &&
+        (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&
+        (dims::rank_eval<typename array1_t::array_major_dim_t>::value==0)
+    static void flux_div(
+        const array1_t& prims,
+        array2_t& rhs,
+        const flux_func_t& flux_func)
+        {
+            const block_flux_policy policy = block_flux_all;
+            const ctrs::array<bool, array1_t::grid_type::dim()> domain_boundary_flux(true);
+            flux_div(prims, rhs, policy, domain_boundary_flux, flux_func);
+        }
     
     template <
         grid::multiblock_array array_t,

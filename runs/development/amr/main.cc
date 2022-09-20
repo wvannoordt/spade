@@ -34,6 +34,7 @@ int main(int argc, char** argv)
     
     // v3b refine(true, true, true);
     spade::amr::refine(blocks, 0);
+    spade::amr::refine(blocks, 5);
     
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
