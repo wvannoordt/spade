@@ -2,10 +2,10 @@
 #include <concepts>
 
 #include "core/ctrs.h"
+#include "core/flux_input.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"
-#include "navier-stokes/flux_input.h"
 
 namespace spade::viscous
 {

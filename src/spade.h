@@ -19,6 +19,8 @@
 #include "core/linear_algebra.h"
 #include "core/time_integration.h"
 #include "core/block_config.h"
+#include "core/pde_algs.h"
+
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
@@ -26,5 +28,4 @@
 #include "navier-stokes/viscous_laws.h"
 #include "navier-stokes/convective.h"
 #include "navier-stokes/viscous.h"
-#include "navier-stokes/pde_algs.h"
 #include "navier-stokes/navier_stokes_mms.h"

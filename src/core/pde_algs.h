@@ -1,8 +1,7 @@
 #pragma once
 
 #include "core/grid.h"
-
-#include "navier-stokes/convective.h"
+#include "core/flux_input.h"
 
 namespace spade::pde_algs
 {    
