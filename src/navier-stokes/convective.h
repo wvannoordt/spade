@@ -2,23 +2,23 @@
 #include <concepts>
 
 #include "core/ctrs.h"
-#include "core/flux_input.h"
+#include "core/fetch.h"
 
 #include "navier-stokes/fluid_state.h"
 
 namespace spade::convective
 {
-    template <typename dtype> using standard_lr_input_type = flux_input::flux_input_t
+    template <typename dtype> using standard_lr_input_type = fetch::flux_input_t
     <
-        flux_input::left_right
+        fetch::left_right
         <
-            flux_input::cell_info
+            fetch::cell_info
             <
-                flux_input::cell_state<fluid_state::prim_t<dtype>>,
-                flux_input::cell_normal<ctrs::array<dtype, 3>>
+                fetch::cell_state<fluid_state::prim_t<dtype>>,
+                fetch::cell_normal<ctrs::array<dtype, 3>>
             >
         >,
-        flux_input::face_info<>
+        fetch::face_info<>
     >;
         
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
@@ -98,18 +98,18 @@ namespace spade::convective
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef flux_input::flux_input_t
+        typedef fetch::flux_input_t
         <
-            flux_input::flux_line
+            fetch::flux_line
             <
                 4,
-                flux_input::cell_info
+                fetch::cell_info
                 <
-                    flux_input::cell_state<fluid_state::prim_t<dtype>>,
-                    flux_input::cell_normal<ctrs::array<dtype, 3>>
+                    fetch::cell_state<fluid_state::prim_t<dtype>>,
+                    fetch::cell_normal<ctrs::array<dtype, 3>>
                 >
             >,
-            flux_input::face_info<>
+            fetch::face_info<>
         > input_type;
         
         weno_3(const gas_t& gas_in) { gas = &gas_in; }

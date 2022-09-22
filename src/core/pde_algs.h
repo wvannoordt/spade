@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/grid.h"
-#include "core/flux_input.h"
+#include "core/fetch.h"
 
 namespace spade::pde_algs
 {    
@@ -57,7 +57,7 @@ namespace spade::pde_algs
             const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il);
             const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir);
             typename flux_func_t::input_type flux_data;
-            flux_input::get_flux_data(ar_grid, prims, iface, flux_data);
+            fetch::get_flux_data(ar_grid, prims, iface, flux_data);
             const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
             const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
             auto flux = flux_func.calc_flux(flux_data);
