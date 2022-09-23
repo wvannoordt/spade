@@ -10,7 +10,7 @@
 
 namespace spade::fetch
 {
-    
+    //data_types.h
     template <typename data_t, typename derived_t> struct cf_info_base_t
     {
         data_t data;
@@ -33,7 +33,7 @@ namespace spade::fetch
     template <typename data_t> struct face_state_grad  : public cf_info_base_t<data_t, face_state_grad <data_t>>{};
     template <typename data_t> struct face_normal      : public cf_info_base_t<data_t, face_normal     <data_t>>{};
 
-    //info collections
+    //collections.h
     template <typename... infos_t> struct cell_info
     {
         const static std::size_t num_params = sizeof...(infos_t);
@@ -70,7 +70,7 @@ namespace spade::fetch
         return os;
     }
     
-    //face-centered stencils
+    //stencils.h
     template <typename cell_info_t> struct left_right
     {
         cell_info_t left, right;
@@ -102,7 +102,7 @@ namespace spade::fetch
     }
     
     
-    //fetch types
+    //fetch_types.h
     template <typename cell_stencil_t, typename face_info_t> struct face_fetch_t
     {
         cell_stencil_t cell_data;
@@ -128,6 +128,7 @@ namespace spade::fetch
         return os;
     }
     
+    //retrieval.h
     namespace detail
     {
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
@@ -312,6 +313,7 @@ namespace spade::fetch
         }
     }
     
+    //fetch.h
     template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename flux_in_t>
     void get_flux_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, flux_in_t& flux_input)
     {

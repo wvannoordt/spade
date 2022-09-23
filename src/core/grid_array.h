@@ -71,7 +71,6 @@ namespace spade::grid
             major_dims = major_dims_in;
             grid_dims = create_grid_dims(grid_in, this->centering_type());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
-            array_container::fill_container(data, fill_elem);
             std::size_t n = total_idx_rank();
             for (auto i: range(0,n)) idx_coeffs[i] = 1;
             for (auto i : range(0, n))
