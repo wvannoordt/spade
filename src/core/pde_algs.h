@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/grid.h"
-#include "core/fetch.h"
+#include "fetch/fetch.h"
 
 namespace spade::pde_algs
 {    

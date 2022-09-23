@@ -10,6 +10,7 @@
 
 namespace spade::fetch
 {
+    
     template <typename data_t, typename derived_t> struct cf_info_base_t
     {
         data_t data;
@@ -31,7 +32,8 @@ namespace spade::fetch
     template <typename data_t> struct face_state       : public cf_info_base_t<data_t, face_state      <data_t>>{};
     template <typename data_t> struct face_state_grad  : public cf_info_base_t<data_t, face_state_grad <data_t>>{};
     template <typename data_t> struct face_normal      : public cf_info_base_t<data_t, face_normal     <data_t>>{};
-    
+
+    //info collections
     template <typename... infos_t> struct cell_info
     {
         const static std::size_t num_params = sizeof...(infos_t);
@@ -68,6 +70,7 @@ namespace spade::fetch
         return os;
     }
     
+    //face-centered stencils
     template <typename cell_info_t> struct left_right
     {
         cell_info_t left, right;
@@ -98,6 +101,8 @@ namespace spade::fetch
         return os;
     }
     
+    
+    //fetch types
     template <typename cell_stencil_t, typename face_info_t> struct face_fetch_t
     {
         cell_stencil_t cell_data;
@@ -108,6 +113,18 @@ namespace spade::fetch
     static std::ostream & operator<<(std::ostream & os, const face_fetch_t<cell_stencil_t, face_info_t>& ftch)
     {
         os << "Face fetch:\n >> Cell data:\n" << ftch.cell_data << "\n >> Face data:\n" << ftch.face_data;
+        return os;
+    }
+    
+    template <typename cell_stencil_t> struct cell_fetch_t
+    {
+        cell_stencil_t cell_data;
+    };
+    
+    template <typename cell_stencil_t>
+    static std::ostream & operator<<(std::ostream & os, const cell_fetch_t<cell_stencil_t>& ftch)
+    {
+        os << "Cell fetch:\n >> Cell data:\n" << ftch.cell_data;
         return os;
     }
     

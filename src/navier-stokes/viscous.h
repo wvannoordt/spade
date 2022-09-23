@@ -2,7 +2,8 @@
 #include <concepts>
 
 #include "core/ctrs.h"
-#include "core/fetch.h"
+
+#include "fetch/fetch.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"

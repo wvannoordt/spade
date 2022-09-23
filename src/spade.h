@@ -24,6 +24,8 @@
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
+#include "fetch/fetch.h"
+
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"
 #include "navier-stokes/convective.h"
