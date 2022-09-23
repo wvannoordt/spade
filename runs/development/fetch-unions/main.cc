@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     
     spade::io::output_vtk("output", "prim", prim);
     
-    spade::fetch::flux_input_t
+    spade::fetch::face_fetch_t
     <
         spade::fetch::left_right
         <
@@ -60,6 +60,8 @@ int main(int argc, char** argv)
         >,
         spade::fetch::face_info<>
     > info;
+    
+    print(info);
     
     return 0;
 }

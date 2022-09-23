@@ -2,46 +2,35 @@
 
 #include <tuple>
 #include <type_traits>
+#include <concepts>
+#include <typeinfo>
 
 #include "core/grid.h"
 #include "core/coord_system.h"
 
 namespace spade::fetch
 {
-    template <typename data_t> struct cell_state
+    template <typename data_t, typename derived_t> struct cf_info_base_t
     {
         data_t data;
     };
     
-    template <typename data_t> struct cell_normal
+    template <typename data_t, typename derived_t>
+    static std::ostream & operator<<(std::ostream & os, const cf_info_base_t<data_t, derived_t>& ftch)
     {
-        data_t data;
-    };
+        os << "Info Type-ID: " << typeid(derived_t()).name() << "\n";
+        os << "Data Type-ID: " << typeid(data_t()).name() << "\n";
+        os << "Data Value:   " << ftch.data << "\n";
+        return os;
+    }
     
-    template <typename data_t> struct cell_index
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct cell_coord
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_state
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_state_grad
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_normal
-    {
-        data_t data;
-    };
+    template <typename data_t> struct cell_state       : public cf_info_base_t<data_t, cell_state      <data_t>>{};
+    template <typename data_t> struct cell_normal      : public cf_info_base_t<data_t, cell_normal     <data_t>>{};
+    template <typename data_t> struct cell_index       : public cf_info_base_t<data_t, cell_index      <data_t>>{};
+    template <typename data_t> struct cell_coord       : public cf_info_base_t<data_t, cell_coord      <data_t>>{};
+    template <typename data_t> struct face_state       : public cf_info_base_t<data_t, face_state      <data_t>>{};
+    template <typename data_t> struct face_state_grad  : public cf_info_base_t<data_t, face_state_grad <data_t>>{};
+    template <typename data_t> struct face_normal      : public cf_info_base_t<data_t, face_normal     <data_t>>{};
     
     template <typename... infos_t> struct cell_info
     {
@@ -51,6 +40,16 @@ namespace spade::fetch
         template <const std::size_t idx> auto& item(void) {return std::get<idx>(elements).data;}
     };
     
+    template <typename... infos_t>
+    static std::ostream & operator<<(std::ostream & os, const cell_info<infos_t...>& ftch)
+    {
+        static_for<0,ftch.num_params>([&](const auto& i) -> void
+        {
+            os << "Data Item " << i.value << ":\n" << std::get<i.value>(ftch.elements) << "\n";
+        });
+        return os;
+    }
+    
     template <typename... infos_t> struct face_info
     {
         const static std::size_t num_params = sizeof...(infos_t);
@@ -59,10 +58,29 @@ namespace spade::fetch
         template <const std::size_t idx> auto& item(void) {return std::get<idx>(elements).data;}
     };
     
+    template <typename... infos_t>
+    static std::ostream & operator<<(std::ostream & os, const face_info<infos_t...>& ftch)
+    {
+        static_for<0,ftch.num_params>([&](const auto& i) -> void
+        {
+            os << "Data Item " << i.value << ":\n" << std::get<i.value>(ftch.elements) << "\n";
+        });
+        return os;
+    }
+    
     template <typename cell_info_t> struct left_right
     {
         cell_info_t left, right;
     };
+    
+    template <typename cell_info_t>
+    static std::ostream & operator<<(std::ostream & os, const left_right<cell_info_t>& ftch)
+    {
+        os << "Left-Right-stencil\nData:\n";
+        os << "Left:\n"  << ftch.left  << "\n";
+        os << "Right:\n" << ftch.right << "\n";
+        return os;
+    }
     
     template <const std::size_t stencil_size, typename cell_info_t> struct flux_line
     {
@@ -72,8 +90,8 @@ namespace spade::fetch
     template <const std::size_t stencil_size, typename cell_info_t>
     static std::ostream & operator<<(std::ostream & os, const flux_line<stencil_size, cell_info_t>& ftch)
     {
-        os << "Line-stencil, size " << stencil_size <<".\nData:\n";
-        for (auto i: range(stencil_size))
+        os << "Line-stencil, size " << stencil_size <<"\nData:\n";
+        for (auto i: range(0, stencil_size))
         {
             os << ftch[i] << "\n";
         }
