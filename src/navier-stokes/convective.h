@@ -8,7 +8,7 @@
 
 namespace spade::convective
 {
-    template <typename dtype> using standard_lr_input_type = fetch::flux_input_t
+    template <typename dtype> using standard_lr_input_type = fetch::face_fetch_t
     <
         fetch::left_right
         <
@@ -98,7 +98,7 @@ namespace spade::convective
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef fetch::flux_input_t
+        typedef fetch::face_fetch_t
         <
             fetch::flux_line
             <

@@ -13,7 +13,7 @@ namespace spade::viscous
     {
         typedef typename vlaw_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef fetch::flux_input_t
+        typedef fetch::face_fetch_t
         <
             fetch::left_right
             <

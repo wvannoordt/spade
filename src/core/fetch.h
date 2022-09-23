@@ -69,11 +69,29 @@ namespace spade::fetch
         ctrs::array<cell_info_t, stencil_size> stencil;
     };
     
-    template <typename cell_stencil_t, typename face_info_t> struct flux_input_t
+    template <const std::size_t stencil_size, typename cell_info_t>
+    static std::ostream & operator<<(std::ostream & os, const flux_line<stencil_size, cell_info_t>& ftch)
+    {
+        os << "Line-stencil, size " << stencil_size <<".\nData:\n";
+        for (auto i: range(stencil_size))
+        {
+            os << ftch[i] << "\n";
+        }
+        return os;
+    }
+    
+    template <typename cell_stencil_t, typename face_info_t> struct face_fetch_t
     {
         cell_stencil_t cell_data;
         face_info_t    face_data;
     };
+    
+    template <typename cell_stencil_t, typename face_info_t>
+    static std::ostream & operator<<(std::ostream & os, const face_fetch_t<cell_stencil_t, face_info_t>& ftch)
+    {
+        os << "Face fetch:\n >> Cell data:\n" << ftch.cell_data << "\n >> Face data:\n" << ftch.face_data;
+        return os;
+    }
     
     namespace detail
     {
