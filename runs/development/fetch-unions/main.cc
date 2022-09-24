@@ -46,12 +46,11 @@ int main(int argc, char** argv)
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
     
-    spade::io::output_vtk("output", "prim", prim);
-    
     spade::fetch::face_fetch_t
     <
-        spade::fetch::left_right
+        spade::fetch::flux_line
         <
+            4,
             spade::fetch::cell_info
             <
                 spade::fetch::cell_state<spade::fluid_state::prim_t<real_t>>,
@@ -61,6 +60,10 @@ int main(int argc, char** argv)
         spade::fetch::face_info<>
     > info;
     
+    spade::grid::cell_idx_t icell(4, 4, 0, 0);
+    spade::grid::face_idx_t iface = spade::grid::cell_to_face(icell, 1, 1);
+    
+    spade::fetch::get_flux_data(grid, prim, iface, info);
     print(info);
     
     return 0;

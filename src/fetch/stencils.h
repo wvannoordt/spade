@@ -35,7 +35,7 @@ namespace spade::fetch
         os << "Line-stencil, size " << stencil_size <<"\nData:\n";
         for (auto i: range(0, stencil_size))
         {
-            os << ftch[i] << "\n";
+            os << "Stencil location " << i << ":\n" << ftch.stencil[i] << "\n";
         }
         return os;
     }

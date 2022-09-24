@@ -7,9 +7,23 @@
 #include <sstream>
 #include <iostream>
 #include <cstdlib>
+#include <type_traits>
 
 namespace spade::utils
 {
+    template<class T, class U=
+        typename std::remove_cv<
+        typename std::remove_pointer<
+        typename std::remove_reference<
+        typename std::remove_extent<
+        T
+        >::type
+        >::type
+        >::type
+        >::type
+        > struct remove_all : remove_all<U> {};
+    template<class T> struct remove_all<T, T> { typedef T type; };
+
     template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
     {
         total += r;
@@ -22,14 +36,14 @@ namespace spade::utils
     }
     
     template <class reduction_t, class invokable_t, class param_t, class... params_t>
-    static auto reduce_over_params(const reduction_t& reduce_op, const invokable_t& func, const param_t& param, params_t... params)
+    static auto reduce_over_params(const reduction_t& reduce_op, const invokable_t& func, const param_t& param, const params_t&... params)
     {
         auto total = func(param);
         reduce_op(total, reduce_over_params(reduce_op, func, params...));
         return total;
     }
     template <class invokable_t, class param_t, class... params_t>
-    static auto reduce_over_params(const invokable_t& func, const param_t& param, params_t... params)
+    static auto reduce_over_params(const invokable_t& func, const param_t& param, const params_t&... params)
     {
         typedef decltype(func(param)) ret_type;
         return reduce_over_params(sum_reduce<ret_type,ret_type>, func, param, params...);
@@ -42,20 +56,18 @@ namespace spade::utils
     }
     
     template <class invokable_t, class param_t, class... params_t>
-    static void foreach_param(const invokable_t& func, const param_t& param, params_t... params)
+    static void foreach_param(const invokable_t& func, const param_t& param, const params_t&... params)
     {
         func(param);
-        foreach_param(params...);
+        foreach_param(func, params...);
     }
-    
-    
     
     template <typename tp1_t, typename tp2_t> constexpr static auto max(const tp1_t& t1, const tp2_t& t2)
     {
         return t1<t2?t2:t1;
     }
     
-    template <typename tp_t, typename... tps_t> constexpr static auto max(const tp_t& t, tps_t... ts)
+    template <typename tp_t, typename... tps_t> constexpr static auto max(const tp_t& t, const tps_t&... ts)
     {
         return max(t, max(ts...));
     }
@@ -65,7 +77,7 @@ namespace spade::utils
         return t1<t2?t1:t2;
     }
     
-    template <typename tp_t, typename... tps_t> constexpr static auto min(const tp_t& t, tps_t... ts)
+    template <typename tp_t, typename... tps_t> constexpr static auto min(const tp_t& t, const tps_t&... ts)
     {
         return min(t, min(ts...));
     }

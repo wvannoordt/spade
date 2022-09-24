@@ -31,7 +31,7 @@ namespace spade::pde_algs
     template <
         grid::multiblock_array array1_t,
         grid::multiblock_array array2_t,
-        is_flux_functor flux_func_t>
+        typename... flux_funcs_t>
     requires
         grid::has_centering_type<array1_t, grid::cell_centered> &&
         (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&
@@ -41,7 +41,7 @@ namespace spade::pde_algs
         array2_t& rhs,
         const block_flux_policy& policy,
         const ctrs::array<bool, array1_t::grid_type::dim()>& domain_boundary_flux,
-        const flux_func_t& flux_func)
+        const flux_funcs_t&... flux_funcs)
     {
         typedef typename array1_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
@@ -50,30 +50,34 @@ namespace spade::pde_algs
         for (auto idx: grid_range*range(0, ar_grid.dim()))
         {
             int idir = idx[4];
+            const real_type dx = ar_grid.get_dx(idir);
             grid::cell_idx_t il(idx[0], idx[1], idx[2], idx[3]);
             grid::cell_idx_t ir(idx[0], idx[1], idx[2], idx[3]);
             ir[idir] += 1;
             grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
             const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il);
             const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir);
-            typename flux_func_t::input_type flux_data;
-            fetch::get_flux_data(ar_grid, prims, iface, flux_data);
             const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
             const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
-            auto flux = flux_func.calc_flux(flux_data);
-            const real_type dx = ar_grid.get_dx(idir);
-            for (int n = 0; n < flux.size(); ++n)
+            utils::foreach_param([&](const auto& flux_func) -> void
             {
-                rhs(n, il[0], il[1], il[2], idx[3])-=jac_l*flux[n]/(dx);
-                rhs(n, ir[0], ir[1], ir[2], idx[3])+=jac_r*flux[n]/(dx);
-            }
+                using flux_func_t = decltype(flux_func);
+                typename utils::remove_all<flux_func_t>::type::input_type flux_data;
+                fetch::get_flux_data(ar_grid, prims, iface, flux_data);
+                auto flux = flux_func.calc_flux(flux_data);
+                for (int n = 0; n < flux.size(); ++n)
+                {
+                    rhs(n, il[0], il[1], il[2], idx[3])-=jac_l*flux[n]/(dx);
+                    rhs(n, ir[0], ir[1], ir[2], idx[3])+=jac_r*flux[n]/(dx);
+                }
+            }, flux_funcs...);
         }
     }
     
     template <
         grid::multiblock_array array1_t,
         grid::multiblock_array array2_t,
-        is_flux_functor flux_func_t>
+        typename... flux_funcs_t>
     requires
         grid::has_centering_type<array1_t, grid::cell_centered> &&
         (dims::rank_eval<typename array1_t::array_minor_dim_t>::value==1) &&
@@ -81,11 +85,11 @@ namespace spade::pde_algs
     static void flux_div(
         const array1_t& prims,
         array2_t& rhs,
-        const flux_func_t& flux_func)
+        const flux_funcs_t&... flux_funcs)
         {
             const block_flux_policy policy = block_flux_all;
             const ctrs::array<bool, array1_t::grid_type::dim()> domain_boundary_flux(true);
-            flux_div(prims, rhs, policy, domain_boundary_flux, flux_func);
+            flux_div(prims, rhs, policy, domain_boundary_flux, flux_funcs...);
         }
     
     template <

@@ -289,8 +289,18 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        spade::pde_algs::flux_div(q, rhs, tscheme);
-        spade::pde_algs::flux_div(prim, rhs, visc_scheme);
+        spade::pde_algs::flux_div(q, rhs, tscheme, visc_scheme);
+        // spade::pde_algs::flux_div(prim, rhs, visc_scheme);
+        
+        //Wishlist
+        // rhs = 0.0;
+        // grid.begin_exchange_array(q);
+        // spade::pde_algs::flux_div(q, rhs, interior_only, tscheme, visc_scheme);
+        // grid.end_exchange_array(q);
+        // set_channel_noslip(q);
+        // spade::pde_algs::flux_div(q, rhs, boundary_only, tscheme, visc_scheme);
+        // Wall model too!
+        
         spade::algs::transform_inplace(rhs, [&](const spade::ctrs::array<real_t, 5>& rhs_ar) -> spade::ctrs::array<real_t, 5> 
         {
             spade::ctrs::array<real_t, 5> rhs_new = rhs_ar;
