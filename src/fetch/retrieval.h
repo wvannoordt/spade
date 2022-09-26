@@ -2,79 +2,14 @@
 
 #include <tuple>
 #include <type_traits>
+#include <concepts>
+#include <typeinfo>
 
 #include "core/grid.h"
 #include "core/coord_system.h"
 
-namespace spade::flux_input
+namespace spade::fetch
 {
-    template <typename data_t> struct cell_state
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct cell_normal
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct cell_index
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct cell_coord
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_state
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_state_grad
-    {
-        data_t data;
-    };
-    
-    template <typename data_t> struct face_normal
-    {
-        data_t data;
-    };
-    
-    template <typename... infos_t> struct cell_info
-    {
-        const static std::size_t num_params = sizeof...(infos_t);
-        std::tuple<infos_t...> elements;
-        template <const std::size_t idx> const auto& item(void) const {return std::get<idx>(elements).data;}
-        template <const std::size_t idx> auto& item(void) {return std::get<idx>(elements).data;}
-    };
-    
-    template <typename... infos_t> struct face_info
-    {
-        const static std::size_t num_params = sizeof...(infos_t);
-        std::tuple<infos_t...> elements;
-        template <const std::size_t idx> const auto& item(void) const {return std::get<idx>(elements).data;}
-        template <const std::size_t idx> auto& item(void) {return std::get<idx>(elements).data;}
-    };
-    
-    template <typename cell_info_t> struct left_right
-    {
-        cell_info_t left, right;
-    };
-    
-    template <const std::size_t stencil_size, typename cell_info_t> struct flux_line
-    {
-        ctrs::array<cell_info_t, stencil_size> stencil;
-    };
-    
-    template <typename cell_stencil_t, typename face_info_t> struct flux_input_t
-    {
-        cell_stencil_t cell_data;
-        face_info_t    face_data;
-    };
-    
     namespace detail
     {
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
@@ -257,12 +192,5 @@ namespace spade::flux_input
                 get_face_info_value(grid, prims, iface, std::get<i.value>(p));
             });
         }
-    }
-    
-    template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename flux_in_t>
-    void get_flux_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, flux_in_t& flux_input)
-    {
-        detail::get_cell_stencil_data(grid, prims, iface, flux_input.cell_data);
-        detail::get_face_data(grid, prims, iface, flux_input.face_data);
     }
 }

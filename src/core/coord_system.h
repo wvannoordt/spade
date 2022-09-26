@@ -45,7 +45,7 @@ namespace spade::coords
         t(0.0);
     };
     
-        template <typename dtype> struct identity
+    template <typename dtype> struct identity
     {
         typedef dtype coord_type;
         template <ctrs::vec_nd<3,coord_type> coords_t> auto map(const coords_t& coords) const {return coords;}

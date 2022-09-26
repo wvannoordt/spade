@@ -3,9 +3,10 @@
 
 #include "core/ctrs.h"
 
+#include "fetch/fetch.h"
+
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/viscous_laws.h"
-#include "navier-stokes/flux_input.h"
 
 namespace spade::viscous
 {
@@ -13,17 +14,17 @@ namespace spade::viscous
     {
         typedef typename vlaw_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef flux_input::flux_input_t
+        typedef fetch::face_fetch_t
         <
-            flux_input::left_right
+            fetch::left_right
             <
-                flux_input::cell_info<>
+                fetch::cell_info<>
             >,
-            flux_input::face_info
+            fetch::face_info
             <
-                flux_input::face_state<fluid_state::prim_t<dtype>>,
-                flux_input::face_state_grad<ctrs::array<fluid_state::prim_t<dtype>, 3>>,
-                flux_input::face_normal<ctrs::array<dtype, 3>>
+                fetch::face_state<fluid_state::prim_t<dtype>>,
+                fetch::face_state_grad<ctrs::array<fluid_state::prim_t<dtype>, 3>>,
+                fetch::face_normal<ctrs::array<dtype, 3>>
             >
         > input_type;
         

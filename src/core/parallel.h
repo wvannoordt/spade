@@ -30,9 +30,13 @@ namespace spade::parallel
     class mpi_t
     {
         public:
-            mpi_t(int* argc, char*** argv)
+            mpi_t(int* argc, char*** argv, bool wrap_init_in = true)
             {
-                MPI_CHECK(MPI_Init(argc, argv));
+                wrap_init = wrap_init_in;
+                if (wrap_init)
+                {
+                    MPI_CHECK(MPI_Init(argc, argv));
+                }
 #if(MPI_ENABLE)
                 this->channel = MPI_COMM_WORLD;
 #else
@@ -46,7 +50,10 @@ namespace spade::parallel
             ~mpi_t(void)
             {
 #if(MPI_ENABLE)
-                MPI_Finalize();
+                if (wrap_init)
+                {
+                    MPI_Finalize();
+                }
 #endif
             }
             
@@ -121,6 +128,7 @@ namespace spade::parallel
         private:
             int g_rank, g_size;
             mpi_comm_t channel;
+            bool wrap_init;
     };
     
     struct par_buf_t

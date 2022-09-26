@@ -65,4 +65,37 @@ namespace spade::viscous_laws
         dtype prandtl;
         dtype beta;
     };
+    
+    template <typename dtype> struct power_law_t
+    {
+            typedef dtype value_type;
+            
+            dtype mu_ref;
+            dtype T_ref;
+            dtype power;
+            dtype prandtl;
+            
+            power_law_t(const dtype& mu_ref_in, const dtype& T_ref_in, const dtype& power_in, const dtype& prandtl_in)
+            {
+                mu_ref  = mu_ref_in;
+                T_ref   = T_ref_in;
+                power   = power_in;
+                prandtl = prandtl_in;
+            }
+            
+            template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
+            {
+                return mu_ref*std::pow(q.T()/T_ref, power);
+            }
+            
+            template <fluid_state::is_state_type state_t> dtype get_beta(const state_t& q) const
+            {
+                return -0.66666666667*this->get_visc(q);
+            }
+            
+            template <fluid_state::is_state_type state_t> dtype get_conductivity(const state_t& q) const
+            {
+                return this->get_visc(q)/prandtl;
+            }
+    };
 }

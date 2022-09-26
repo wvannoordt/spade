@@ -210,4 +210,16 @@ namespace spade::ctrs
             return data[(i+next)%ar_size];
         }
     };
+    
+    template <typename data_t> struct unsafe_vector_alias_t
+    {
+        typedef data_t value_type;
+        data_t* base;
+        std::size_t safe_size;
+        const data_t& operator [] (const std::size_t& idx) const {return base[idx];}
+        data_t& operator [] (const std::size_t& idx) {return base[idx];}
+        std::size_t size() const {return safe_size;}
+        unsafe_vector_alias_t(){}
+        unsafe_vector_alias_t(data_t* base_in, const std::size_t& safe_size_in){base = base_in; safe_size = safe_size_in;}
+    };
 }
