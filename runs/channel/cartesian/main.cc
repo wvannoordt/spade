@@ -134,7 +134,7 @@ int main(int argc, char** argv)
     const real_t targ_cfl = 0.25;
     const int    nt_max   = 300001;
     const int    nt_skip  = 50000000;
-    const int    checkpoint_skip  = 5000;
+    const int    checkpoint_skip  = 2500;
     
     spade::coords::identity<real_t> coords;
     

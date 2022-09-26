@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     int ct = 0;
     for (auto& p: names)
     {
-        for (auto symmetry_index: range(0,1))
+        for (auto symmetry_index: range(0,2))
         {
             if (group.isroot())
             {

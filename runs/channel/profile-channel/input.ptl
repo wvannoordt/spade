@@ -1,5 +1,5 @@
-filt_x = 17
-filt_y = 45
-filt_z = 15
+filt_x = 5
+filt_y = 5
+filt_z = 5
 output = false
 theta  = 0.35

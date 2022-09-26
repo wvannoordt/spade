@@ -125,9 +125,9 @@ int main(int argc, char** argv)
     bounds.max(2) =  2*spade::consts::pi*delta;
     
     const real_t targ_cfl = 5.0;
-    const int    nt_max   = 300001;
+    const int    nt_max   = 4001;
     const int    nt_skip  = 50000000;
-    const int    checkpoint_skip  = 1000;
+    const int    checkpoint_skip  = 500;
     
     spade::coords::identity<real_t> coords;
     
@@ -214,7 +214,8 @@ int main(int argc, char** argv)
         set_channel_noslip(prim);
     }
     
-    spade::convective::totani_lr tscheme(air);
+    spade::convective::totani_lr        tscheme(air);
+    spade::convective::pressure_diss_lr dscheme(air, 0.1);
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
     
@@ -245,6 +246,7 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         set_channel_noslip(q);
         spade::pde_algs::flux_div(q, rhs, tscheme);
+	spade::pde_algs::flux_div(q, rhs, dscheme);
         spade::pde_algs::flux_div(prim, rhs, visc_scheme);
         spade::algs::transform_inplace(rhs, [&](const spade::ctrs::array<real_t, 5>& rhs_ar) -> spade::ctrs::array<real_t, 5> 
         {
@@ -255,8 +257,8 @@ int main(int argc, char** argv)
     };
     
     int max_its = 50;
-    spade::static_math::int_const_t<3> bdf_order;
-    const real_t error_tol = 5e-8;
+    spade::static_math::int_const_t<2> bdf_order;
+    const real_t error_tol = 2e-6;
     const int ndof = grid.grid_size();
     auto error_norm = [&](const auto& r) -> real_t
     {
@@ -272,11 +274,11 @@ int main(int argc, char** argv)
     };
     
     trans_t trans(air, prim);
-    const real_t beta = 0.5;
+    const real_t beta = 1.0/0.25;
     preconditioner_t preconditioner(air, prim, beta);
     
     spade::algs::iterative_control convergence_crit(rhs, error_norm, error_tol, max_its);
-    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*100.0, calc_rhs, convergence_crit, bdf_order, trans, preconditioner);
+    spade::time_integration::dual_time_t time_int(prim, rhs, time0, dt, dt*170.0, calc_rhs, convergence_crit, bdf_order, trans, preconditioner);
     
     // spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, ftrans, itrans);
     
