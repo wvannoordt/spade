@@ -40,37 +40,59 @@ namespace spade::pde_algs
         const array1_t& prims,
         array2_t& rhs,
         const block_flux_policy& policy,
-        const ctrs::array<bool, array1_t::grid_type::dim()>& domain_boundary_flux,
+        const bound_box_t<bool,array1_t::grid_type::dim()>& domain_boundary_flux,
         const flux_funcs_t&... flux_funcs)
     {
         typedef typename array1_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
-        int i3d = ((ar_grid.dim()==3)?1:0);
-        auto grid_range = range(-1,ar_grid.get_num_cells(0))*range(-1,ar_grid.get_num_cells(1))*range(-i3d,ar_grid.get_num_cells(2))*range(0,ar_grid.get_num_local_blocks());
-        for (auto idx: grid_range*range(0, ar_grid.dim()))
+        
+        auto block_range = range(0,ar_grid.get_num_local_blocks());
+        for (auto lb_idir: block_range*range(0, ar_grid.dim()))
         {
-            int idir = idx[4];
-            const real_type dx = ar_grid.get_dx(idir);
-            grid::cell_idx_t il(idx[0], idx[1], idx[2], idx[3]);
-            grid::cell_idx_t ir(idx[0], idx[1], idx[2], idx[3]);
-            ir[idir] += 1;
-            grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
-            const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il);
-            const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir);
-            const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
-            const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
-            utils::foreach_param([&](const auto& flux_func) -> void
+            int lb_loc  = lb_idir[0];
+            int lb_glob = ar_grid.get_partition().get_global_block(lb_loc);
+            int idir = lb_idir[1];
+            bound_box_t<int,3> flux_bounds;
+            for (auto d:range(0,3))
             {
-                using flux_func_t = decltype(flux_func);
-                typename utils::remove_all<flux_func_t>::type::input_type flux_data;
-                fetch::get_flux_data(ar_grid, prims, iface, flux_data);
-                auto flux = flux_func.calc_flux(flux_data);
-                for (int n = 0; n < flux.size(); ++n)
+                flux_bounds.min(d) = (ar_grid.dim()==2 && d==2)?0:-1;
+                flux_bounds.max(d) = ar_grid.get_num_cells(d);
+            }
+            const auto& iboundary = ar_grid.is_domain_boundary(lb_glob);
+            for (auto d:range(0,ar_grid.dim()))
+            {
+                if (iboundary.min(d) && !domain_boundary_flux.min(d)) flux_bounds.min(d) = 0;
+                if (iboundary.max(d) && !domain_boundary_flux.max(d)) flux_bounds.max(d) = ar_grid.get_num_cells(d) - 1;
+            }
+            auto g0 = range(flux_bounds.min(0),flux_bounds.max(0));
+            auto g1 = range(flux_bounds.min(1),flux_bounds.max(1));
+            auto g2 = range(flux_bounds.min(2),flux_bounds.max(2));
+            
+            auto grid_range = g0*g1*g2;
+            for (auto idx: grid_range)
+            {
+                const real_type dx = ar_grid.get_dx(idir);
+                grid::cell_idx_t il(idx[0], idx[1], idx[2], lb_loc);
+                grid::cell_idx_t ir(idx[0], idx[1], idx[2], lb_loc);
+                ir[idir] += 1;
+                grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
+                const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il);
+                const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir);
+                const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
+                const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
+                utils::foreach_param([&](const auto& flux_func) -> void
                 {
-                    rhs(n, il[0], il[1], il[2], idx[3])-=jac_l*flux[n]/(dx);
-                    rhs(n, ir[0], ir[1], ir[2], idx[3])+=jac_r*flux[n]/(dx);
-                }
-            }, flux_funcs...);
+                    using flux_func_t = decltype(flux_func);
+                    typename utils::remove_all<flux_func_t>::type::input_type flux_data;
+                    fetch::get_flux_data(ar_grid, prims, iface, flux_data);
+                    auto flux = flux_func.calc_flux(flux_data);
+                    for (int n = 0; n < flux.size(); ++n)
+                    {
+                        rhs(n, il[0], il[1], il[2], il[3]) -= jac_l*flux[n]/(dx);
+                        rhs(n, ir[0], ir[1], ir[2], ir[3]) += jac_r*flux[n]/(dx);
+                    }
+                }, flux_funcs...);
+            }
         }
     }
     
@@ -87,8 +109,14 @@ namespace spade::pde_algs
         array2_t& rhs,
         const flux_funcs_t&... flux_funcs)
         {
+            const std::size_t dim = array1_t::grid_type::dim();
             const block_flux_policy policy = block_flux_all;
-            const ctrs::array<bool, array1_t::grid_type::dim()> domain_boundary_flux(true);
+            bound_box_t<bool,dim> domain_boundary_flux;
+            for (auto i: range(0,dim))
+            {
+                domain_boundary_flux.max(i) = true;
+                domain_boundary_flux.min(i) = true;
+            }
             flux_div(prims, rhs, policy, domain_boundary_flux, flux_funcs...);
         }
     

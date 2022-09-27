@@ -165,11 +165,10 @@ namespace spade::grid
                     const auto& lbi = lb;
                     auto& data = block_is_domain_boundary[lbi];
                     const auto lb_idx = ctrs::expand_index(lbi, num_blocks);
-                    for (auto& val: data) val = false;
                     for (auto d: range(0,dim()))
                     {
-                        data[2*d+0] = (lb_idx[d]==0);
-                        data[2*d+1] = (lb_idx[d]==(num_blocks[d]-1));
+                        data.min(d) = (lb_idx[d]==0);
+                        data.max(d) = (lb_idx[d]==(num_blocks[d]-1));
                     }
                 }
                 
@@ -293,7 +292,7 @@ namespace spade::grid
             std::size_t get_num_global_blocks(void) const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
             int get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}
             int get_num_exchange(const std::size_t& i) const {return exchange_cells[i];}
-            bool is_domain_boundary(const std::size_t& lb_glob, const std::size_t& dir) const {return block_is_domain_boundary[lb_glob][dir];}
+            const bound_box_t<bool, dim()>& is_domain_boundary(const std::size_t& lb_glob) const {return block_is_domain_boundary[lb_glob];}
             bound_box_t<dtype,  3> get_bounds(void) const {return bounds;}
             ctrs::array<dtype,  3> get_dx(void) const {return dx;}
             dtype get_dx(const std::size_t& i) const {return dx[i];}
@@ -461,7 +460,7 @@ namespace spade::grid
             size_t total_blocks;
             par_group_t* grid_group;
             std::vector<neighbor_relationship_t> neighbors;
-            std::vector<ctrs::array<bool, 6>> block_is_domain_boundary;
+            std::vector<bound_box_t<bool, dim()>> block_is_domain_boundary;
             std::vector<std::size_t> send_size_elems;
             std::vector<std::size_t> recv_size_elems;
             std::vector<std::vector<char>> send_bufs;

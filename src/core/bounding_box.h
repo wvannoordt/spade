@@ -8,6 +8,11 @@ namespace spade
     {
         dtype bnds[2*ar_size];
         
+        bound_box_t(){}
+        bound_box_t(const dtype& v)
+        {
+            for (int i = 0; i < 2*ar_size; ++i) bnds[i] = v;
+        }
         const dtype& min(size_t idx) const {return bnds[2*idx+0];}
         const dtype& max(size_t idx) const {return bnds[2*idx+1];}
         

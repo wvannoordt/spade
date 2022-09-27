@@ -39,4 +39,17 @@ namespace spade::fetch
         }
         return os;
     }
+    
+    template <typename cell_info_t> struct cell_mono
+    {
+        cell_info_t mono_data;
+    };
+    
+    template <typename cell_info_t>
+    static std::ostream & operator<<(std::ostream & os, const cell_mono<cell_info_t>& ftch)
+    {
+        os << "Mono-stencil\nData:\n";
+        os << ftch.mono_data << "\n";
+        return os;
+    }
 }
