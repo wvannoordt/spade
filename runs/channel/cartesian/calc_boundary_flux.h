@@ -35,7 +35,8 @@ namespace proto
         for (auto lb: range(0, grid.get_num_local_blocks()))
         {
             auto lb_glob = grid.get_partition().get_global_block(lb);
-            if (grid.is_domain_boundary(lb_glob, boundary_id))
+            const auto& idomain = grid.is_domain_boundary(lb_glob);
+            if (idomain(boundary_id/2, boundary_id%2))
             {
                 for (auto i: flx_rg)
                 {
