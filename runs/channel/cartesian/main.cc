@@ -46,7 +46,7 @@ void set_channel_noslip(auto& prims)
                         q_g.u() = -q_d.u();
                         q_g.v() = -q_d.v()*n_d[1]/n_g[1];
                         q_g.w() = -q_d.w();
-                        q_g.T() =  t_wall;
+                        q_g.T() =  2.0*t_wall - q_d.T();
                         for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                     }
                 }
@@ -220,7 +220,9 @@ int main(int argc, char** argv)
         grid.exchange_array(prim);
         set_channel_noslip(prim);
     }
-    
+
+
+    spade::convective::pressure_diss_lr dscheme(air, 0.025, 0.025);
     spade::convective::totani_lr tscheme(air);
     spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr  visc_scheme(visc_law);
@@ -289,7 +291,7 @@ int main(int argc, char** argv)
         rhs = 0.0;
         grid.exchange_array(q);
         set_channel_noslip(q);
-        spade::pde_algs::flux_div(q, rhs, tscheme, visc_scheme);
+        spade::pde_algs::flux_div(q, rhs, tscheme, visc_scheme, dscheme);
         // spade::pde_algs::flux_div(prim, rhs, visc_scheme);
         
         //Wishlist
