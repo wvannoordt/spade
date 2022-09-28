@@ -53,9 +53,9 @@ namespace spade::viscous
             tau(2,1) = visc*(face_grad[2].v() + face_grad[1].w()); //tau_zy
             tau(2,2) = visc*(face_grad[2].w() + face_grad[2].w()) + visc2*div; //tau_zz
             
-            ht[0] = q_face.u()*tau(0,0)+q_face.v()*tau(0,1)+q_face.w()*tau(0,2) - vlaw->get_conductivity(q_face)*face_grad[0].T();
-            ht[1] = q_face.u()*tau(1,0)+q_face.v()*tau(1,1)+q_face.w()*tau(1,2) - vlaw->get_conductivity(q_face)*face_grad[1].T();
-            ht[2] = q_face.u()*tau(2,0)+q_face.v()*tau(2,1)+q_face.w()*tau(2,2) - vlaw->get_conductivity(q_face)*face_grad[2].T();
+            ht[0] = q_face.u()*tau(0,0)+q_face.v()*tau(0,1)+q_face.w()*tau(0,2) + vlaw->get_conductivity(q_face)*face_grad[0].T();
+            ht[1] = q_face.u()*tau(1,0)+q_face.v()*tau(1,1)+q_face.w()*tau(1,2) + vlaw->get_conductivity(q_face)*face_grad[1].T();
+            ht[2] = q_face.u()*tau(2,0)+q_face.v()*tau(2,1)+q_face.w()*tau(2,2) + vlaw->get_conductivity(q_face)*face_grad[2].T();
             output.continuity() = 0.0;
             output.energy()     = -(n[0]*ht[0]+n[1]*ht[1]+n[2]*ht[2]);
             output.x_momentum() = -(n[0]*tau(0,0)+n[1]*tau(0,1)+n[2]*tau(0,2));

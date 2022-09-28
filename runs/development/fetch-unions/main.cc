@@ -6,7 +6,7 @@ using prim_t = spade::fluid_state::prim_t<real_t>;
 
 int main(int argc, char** argv)
 {
-    spade::parallel::mpi_t group(&argc, &argv);    
+    spade::parallel::mpi_t group(&argc, &argv);
     spade::ctrs::array<int, 2> num_blocks(2, 2);
     spade::ctrs::array<int, 2> cells_in_block(16, 16);
     spade::ctrs::array<int, 2> exchange_cells(2, 2);
@@ -16,11 +16,10 @@ int main(int argc, char** argv)
     bounds.min(1) = 0.0;
     bounds.max(1) = 1.0;
     
-    spade::coords::identity<real_t> coords;  
+    spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
-    
-    prim_t fill = 0.0;    
+    prim_t fill = 0.0;
     spade::grid::grid_array prim(grid, fill);
     spade::fluid_state::perfect_gas_t<real_t> air;
     air.R = 287.15;
