@@ -27,6 +27,7 @@ namespace spade::fluid_state
         rtype& u(void) {return data[2];}
         rtype& v(void) {return data[3];}
         rtype& w(void) {return data[4];}
+        
         rtype& operator [] (uint idx) {return data[idx];}
         
         const rtype& p(void) const {return data[0];}

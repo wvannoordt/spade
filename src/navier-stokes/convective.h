@@ -65,7 +65,8 @@ namespace spade::convective
         typedef fluid_state::flux_t<dtype> output_type;
         typedef standard_lr_input_type<dtype> input_type;
         
-        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in;}
+        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_p_in;}
+        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in, const dtype& eps_T_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_T_in;}
         
         output_type calc_flux(const input_type& input) const
         {
@@ -76,7 +77,11 @@ namespace spade::convective
             const auto& normal_r = std::get<1>(input.cell_data.right.elements).data;
             
             const dtype delta_p = ql.p()-qr.p();
-            const dtype inv_RT = 1.0/(0.25*(gas->get_R(ql)+gas->get_R(qr))*(ql.T()+qr.T()));
+            const dtype delta_T = ql.T()-qr.T();
+            const dtype pavg = 0.5*(ql.p() + qr.p());
+            const dtype Tavg = 0.5*(ql.T() + qr.T());
+            const dtype inv_RT = 1.0/(0.5*(gas->get_R(ql)+gas->get_R(qr))*Tavg);
+            const dtype p_inv_rt2 = pavg*inv_RT/Tavg;
             const dtype gamma =  0.5*(gas->get_gamma(ql)+gas->get_gamma(qr));
             const dtype k = 0.5*(ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w());
             const dtype u = 0.5*(ql.u()+qr.u());
@@ -87,11 +92,18 @@ namespace spade::convective
             output.x_momentum() = eps_p*delta_p*u*inv_RT;
             output.y_momentum() = eps_p*delta_p*v*inv_RT;
             output.z_momentum() = eps_p*delta_p*w*inv_RT;
+            
+            output.continuity() -= eps_T*delta_T*p_inv_rt2;
+            output.energy()     -= eps_T*delta_T*p_inv_rt2*(0.5*k);
+            output.x_momentum() -= eps_T*delta_T*p_inv_rt2*u;
+            output.y_momentum() -= eps_T*delta_T*p_inv_rt2*v;
+            output.z_momentum() -= eps_T*delta_T*p_inv_rt2*w;
+            
             return output;
         }
         
         const gas_t* gas;
-        dtype eps_p;
+        dtype eps_p, eps_T;
     };
     
     template <fluid_state::state_dependent_gas gas_t> struct weno_3
