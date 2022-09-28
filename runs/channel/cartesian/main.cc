@@ -23,7 +23,8 @@ void set_channel_noslip(auto& prims)
         int idc = 0;
         for (int dir = 2; dir <= 3; ++dir)
         {
-            if (grid.is_domain_boundary(lb_glob, dir))
+            const auto& idomain = grid.is_domain_boundary(lb_glob);
+            if (idomain(dir/2, dir%2))
             {
                 const auto lb_idx = spade::ctrs::expand_index(lb_glob, grid.get_num_blocks());
                 const auto nvec_out = v3i(0,2*idc-1,0);
@@ -46,7 +47,7 @@ void set_channel_noslip(auto& prims)
                         q_g.u() = -q_d.u();
                         q_g.v() = -q_d.v()*n_d[1]/n_g[1];
                         q_g.w() = -q_d.w();
-                        q_g.T() =  t_wall;
+                        q_g.T() =  2.0*t_wall - q_d.T();
                         for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                     }
                 }
