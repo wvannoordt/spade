@@ -211,6 +211,7 @@ namespace spade::ctrs
         }
     };
     
+    //only for use with external data-owning applications
     template <typename data_t> struct unsafe_vector_alias_t
     {
         typedef data_t value_type;

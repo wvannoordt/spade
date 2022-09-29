@@ -31,6 +31,7 @@ namespace spade::fluid_state
         const gas_t* gas;
         
         using inverse_t = typename array_t::alias_type;
+        
         //prim = inverse
         //cons = forward
         using i2f_t = detail::mono_state_converstion_t<array_t, gas_t, inverse_t, forward_t>;
