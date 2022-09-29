@@ -225,4 +225,9 @@ namespace spade::fluid_state
         prim.v() = v;
         prim.w() = w;
     }
+    
+    template <typename from_t, typename to_t, typename gas_t> concept state_convertible = requires(const from_t& from, to_t& to, const gas_t& gas)
+    {
+        convert_state(from, to, gas);
+    };
 }
