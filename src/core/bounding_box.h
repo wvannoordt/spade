@@ -8,6 +8,9 @@ namespace spade
     {
         dtype bnds[2*ar_size];
         
+        dtype* begin() noexcept {return &bnds[0];}
+        dtype* end()   noexcept {return &bnds[0]+2*ar_size;}
+        
         bound_box_t(){}
         bound_box_t(const dtype& v)
         {

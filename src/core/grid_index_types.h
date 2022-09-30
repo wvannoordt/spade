@@ -143,4 +143,19 @@ namespace spade::grid
         output[get_face_dir(i_face)] -= 0.5;
         return output;
     }
+    
+    int get_block_number(const cell_idx_t& i_cell)
+    {
+        return i_cell[3];
+    }
+    
+    int get_block_number(const face_idx_t& i_face)
+    {
+        return i_face[3];
+    }
+    
+    int get_block_number(const node_idx_t& i_node)
+    {
+        return i_node[3];
+    }
 }

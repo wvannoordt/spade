@@ -453,6 +453,44 @@ namespace spade::io
         return total_filename;
     }
     
+    template <grid::multiblock_grid_idx_t idx_t, grid::multiblock_grid grid_t>
+    static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const std::vector<idx_t>& indices, const grid_t& grid)
+    {
+        const auto& group = grid.group();
+        std::filesystem::path out_path(out_dir);
+        if (!std::filesystem::is_directory(out_path)) std::filesystem::create_directory(out_path);
+        out_path /= (out_name_no_extension + ".vtk");
+        std::string total_filename = out_path;
+        using coord_type = typename grid_t::coord_type;
+        std::vector<coord_type> points;
+        points.resize(3*indices.size());
+        std::size_t id = 0;
+        for (const auto& idx: indices)
+        {
+            const auto x = grid.get_coords(idx);
+            points[id++] = x[0];
+            points[id++] = x[1];
+            points[id++] = x[2];
+        }
+        const std::size_t total_points = group.sum(indices.size());
+        std::vector<coord_type> all_data;
+        group.append_root(all_data, points);
+        if (group.isroot())
+        {
+            std::ofstream out_str(total_filename);
+            out_str << "# vtk DataFile Version 2.0\nspade output\nASCII\nDATASET POLYDATA\nPOINTS ";
+            out_str << total_points << " double\n";
+            std::size_t ct = 0;
+            for (auto ll: range(0, total_points))
+            {
+                out_str << all_data[ct++] << " " << all_data[ct++] << " " << all_data[ct++] << "\n";
+            }
+            out_str << "POINT_DATA " << total_points << "\nSCALARS Data double\nLOOKUP_TABLE default\n";
+            for (auto ll: range(0, total_points)) out_str << "1\n";
+        }
+        return total_filename;
+    }
+    
     namespace detail
     {
         template <grid::multiblock_array array_t> void get_array_par_buf(parallel::par_buf_t& buf, const array_t& array)

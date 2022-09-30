@@ -27,6 +27,8 @@ namespace spade::parallel
     static mpi_data_t get_data_type(int d)         { return MPI_INT; }
     static mpi_data_t get_data_type(std::size_t d) { return MPI_UINT64_T; }
     
+    const int default_root_rank = 0;
+    
     class mpi_t
     {
         public:
@@ -59,7 +61,7 @@ namespace spade::parallel
             
             int    rank(void) const {return g_rank;}
             int    size(void) const {return g_size;}
-            bool isroot(void) const {return g_rank==0;}
+            bool isroot(void) const {return g_rank==default_root_rank;}
             const mpi_t& sync(void) const
             {
                 MPI_CHECK(MPI_Barrier(this->channel));
@@ -114,6 +116,33 @@ namespace spade::parallel
                 return sum_glob;
             }
             
+            template <typename data_t> void append_root(std::vector<data_t>& root_result, const data_t& local_data) const
+            {
+                if (this->isroot()) root_result.resize(this->g_size);
+                auto dtype = get_data_type(data_t());
+                MPI_CHECK(MPI_Gather(&local_data, 1, dtype, &root_result[0], 1, dtype, default_root_rank, this->channel));
+            }
+            
+            template <typename data_t> void append_root(std::vector<data_t>& root_result, const std::vector<data_t>& local_data) const
+            {
+                std::size_t output_size = this->sum(local_data.size());
+                if (this->isroot()) root_result.resize(output_size);
+                std::vector<int> sizes;
+                this->append_root(sizes, (int)local_data.size());
+                std::vector<int> offset;
+                if (this->isroot())
+                {
+                    offset.resize(sizes.size());
+                    offset[0] = 0;
+                    for (int i = 1; i < this->g_size; ++i)
+                    {
+                        offset[i] = offset[i-1] + sizes[i-1];
+                    }
+                }
+                auto dtype = get_data_type(data_t());
+                MPI_CHECK(MPI_Gatherv(&local_data[0], local_data.size(), dtype, &root_result[0], &sizes[0], &offset[0], dtype, default_root_rank, this->channel));
+            }
+            
             template <typename data_t> auto reduce(const data_t& data, mpi_op_t op) const
             {
                 data_t data_loc = data;
@@ -123,7 +152,7 @@ namespace spade::parallel
                 return red_glob;
             }
             
-            const mpi_comm_t& get_channel(void) const {return channel;}
+            mpi_comm_t get_channel(void) const {return channel;}
             
         private:
             int g_rank, g_size;

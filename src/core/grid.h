@@ -239,7 +239,7 @@ namespace spade::grid
             template <multiblock_grid_idx_t idx_t>_finline_ ctrs::array<dtype, 3> get_comp_coords(const idx_t& i) const
             {
                 const auto  idx_r = get_index_coord(i);
-                const int   lb    = (int)i[3];
+                const int   lb    = get_block_number(i);
                 const auto& bnd   = block_boxes[lb];
                 ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
                 for (auto d: range(0,dim()))
