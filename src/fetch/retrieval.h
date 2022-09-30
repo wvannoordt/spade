@@ -13,7 +13,7 @@ namespace spade::fetch
     namespace detail
     {
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_single_cell_info_value(
+        void get_single_cell_info_value_for_face_stencil(
             const grid_t& ar_grid,
             const array_t& prims,
             const grid::cell_idx_t& icell,
@@ -24,7 +24,7 @@ namespace spade::fetch
         }
         
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_single_cell_info_value(
+        void get_single_cell_info_value_for_face_stencil(
             const grid_t& ar_grid,
             const array_t& prims,
             const grid::cell_idx_t& icell,
@@ -36,7 +36,7 @@ namespace spade::fetch
         }
         
         template <typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_single_cell_data(
+        void get_single_cell_data_for_face_stencil(
             const grid_t& ar_grid,
             const array_t& prims,
             const grid::cell_idx_t& icell,
@@ -46,30 +46,52 @@ namespace spade::fetch
             auto& p = info.elements;
             static_for<0,cell_info_t::num_params>([&](auto i) -> void
             {
-                get_single_cell_info_value(ar_grid, prims, icell, idir, std::get<i.value>(info.elements));
+                get_single_cell_info_value_for_face_stencil(ar_grid, prims, icell, idir, std::get<i.value>(info.elements));
             });
         }
         
         template <typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, left_right<cell_info_t>& lr)
+        void get_face_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, left_right<cell_info_t>& lr)
         {
             const int idir = grid::get_face_dir(iface);
             grid::cell_idx_t il = grid::face_to_cell(iface, 0);
             grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
-            get_single_cell_data(ar_grid, prims, il, idir, lr.left);
-            get_single_cell_data(ar_grid, prims, ir, idir, lr.right);
+            get_single_cell_data_for_face_stencil(ar_grid, prims, il, idir, lr.left);
+            get_single_cell_data_for_face_stencil(ar_grid, prims, ir, idir, lr.right);
         }
         
         template <const std::size_t flux_size, typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, flux_line<flux_size, cell_info_t>& sten)
+        void get_face_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, flux_line<flux_size, cell_info_t>& sten)
         {
             const int idir = grid::get_face_dir(iface);
             static_for<0,flux_size>([&](auto i) -> void
             {
                 grid::cell_idx_t icell = grid::face_to_cell(iface, 0);
                 icell[idir] += i.value - (int)(flux_size/2) + 1;
-                get_single_cell_data(ar_grid, prims, icell, idir, sten.stencil[i.value]);
+                get_single_cell_data_for_face_stencil(ar_grid, prims, icell, idir, sten.stencil[i.value]);
             });
+        }
+        
+        
+        template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename data_t>
+        void get_single_cell_info_value_for_cell_stencil(const grid_t& ar_grid, const array_t& prims, const grid::cell_idx_t& icell, cell_state<data_t> output)
+        {
+            for (auto n: range(0,output.data.size())) output.data[n] = prims(n, icell[0], icell[1], icell[2], icell[3]);
+        }
+        
+        template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename cell_info_t>
+        void get_single_cell_data(const grid_t& grid, const array_t& prims, const grid::cell_idx_t& icell, cell_info_t& info)
+        {
+            static_for<0,cell_info_t::num_params>([&](auto i) -> void
+            {
+                get_single_cell_info_value_for_cell_stencil(grid, prims, icell, std::get<i.value>(info.elements));
+            });
+        }
+        
+        template <typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
+        void get_cell_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::cell_idx_t& icell, cell_mono<cell_info_t>& sten)
+        {
+            get_single_cell_data(ar_grid, prims, icell, sten.mono_data);
         }
         
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
@@ -94,8 +116,8 @@ namespace spade::fetch
             const grid::cell_idx_t il = grid::face_to_cell(iface, 0);
             const grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
             cell_state<output_t> ql, qr;
-            get_single_cell_info_value(ar_grid, prims, il, idir, ql);
-            get_single_cell_info_value(ar_grid, prims, ir, idir, qr);
+            get_single_cell_info_value_for_face_stencil(ar_grid, prims, il, idir, ql);
+            get_single_cell_info_value_for_face_stencil(ar_grid, prims, ir, idir, qr);
             for (int n = 0; n < output.data.size(); ++n) output.data[n] = 0.5*ql.data[n] + 0.5*qr.data[n];
         }
         
@@ -154,7 +176,7 @@ namespace spade::fetch
             cell_state<typename output_t::value_type> q;
             auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const grid::cell_idx_t& idx)
             {
-                get_single_cell_info_value(ar_grid, prims, idx, idir[0], q);
+                get_single_cell_info_value_for_face_stencil(ar_grid, prims, idx, idir[0], q);
                 for (std::size_t i = 0; i < output.data[iset].size(); ++i) output.data[iset][i] += coeff*q.data[i]*invdx[iset];
             };
             
@@ -184,7 +206,7 @@ namespace spade::fetch
         
         
         template <typename face_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
-        void get_face_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, face_info_t& face_data)
+        void get_single_face_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, face_info_t& face_data)
         {
             auto& p = face_data.elements;
             static_for<0,face_info_t::num_params>([&](auto i) -> void
