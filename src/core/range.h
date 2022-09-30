@@ -22,6 +22,7 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
     constexpr size_t size(void) const noexcept {return idx_dim;}
     index_t idx_v, start_v, end_v;
     typedef std::size_t base_type_t;
+    typedef index_t value_type;
     typename std::conditional<(idx_dim<=1), base_type_t, md_iterator<index_t,idx_dim-1>>::type next;
     template <typename... idxs_t> static void set_start_r(base_type_t& base){base = 0;}
     template <class callee_t> static void set_start_r(callee_t& arg)

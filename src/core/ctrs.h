@@ -7,6 +7,7 @@ namespace spade::ctrs
 {
     template <class T> concept basic_array = requires(T t, const int& i)
     {
+        typename T::value_type;
         t.size();
         t[i];
     };
@@ -28,6 +29,15 @@ namespace spade::ctrs
     
     template <class T> concept integral_type = std::is_integral<T>::value;
 
+    template <basic_array arr_t>
+    requires(std::floating_point<typename arr_t::value_type>)
+    constexpr static auto array_norm(const arr_t& arr)
+    {
+        using data_t = typename arr_t::value_type;
+        data_t output = data_t();
+        for (int i = 0; i < arr.size(); ++i) output += arr[i]*arr[i];
+        return std::sqrt(output);
+    }
 
     template <basic_array a1_t, basic_array a2_t> constexpr static void copy_array(const a1_t& src, a2_t& dest)
     {
@@ -104,6 +114,13 @@ namespace spade::ctrs
             return output;
         }
         
+        template <typename rhs_t> auto operator - (const array<rhs_t, ar_size>& rhs) const
+        {
+            array<decltype(dtype()+rhs_t()), ar_size> output;
+            for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
+            return output;
+        }
+        
         template <basic_array arr_t> auto& operator -= (const arr_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs[i];
@@ -147,6 +164,8 @@ namespace spade::ctrs
             return output;
         }
     };
+    
+    template <typename data_t> using v3d = array<data_t,3>;
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const array<dtype, ar_size>& arr)
     {

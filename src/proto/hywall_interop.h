@@ -14,13 +14,17 @@
 
 namespace spade::proto
 {
-    template <typename array_t, typename gas_t, typename real_t = double>
+    template <typename array_t, typename rhs_t, typename gas_t, typename real_t = double>
     requires (fluid_state::is_state_type<typename array_t::alias_type> && fluid_state::state_convertible<typename array_t::alias_type, fluid_state::prim_t<real_t>, gas_t>)
     struct hywall_binding_t
     {
+        using array_state_t = typename array_t::alias_type;
+        using coord_type    = typename array_t::grid_type::coord_type;
+        
         std::vector<grid::face_idx_t> wm_faces;
         std::vector<grid::cell_idx_t> wm_samples;
-        
+        std::vector<ctrs::v3d<coord_type>> wm_nvec_comps;
+        std::vector<ctrs::v3d<coord_type>> wm_tvec;
         std::size_t num_points;
         const gas_t* gas;
         
@@ -45,7 +49,7 @@ namespace spade::proto
         
         using state_t = typename array_t::alias_type;
         
-        hywall_binding_t(const array_t& prim_in, const gas_t& gas_in)
+        hywall_binding_t(const array_t& prim_in, const rhs_t& rhs, const gas_t& gas_in)
         {
             gas = &gas_in;
             HyWall::Initialize(prim_in.get_grid().group().get_channel(), 0);
@@ -69,6 +73,8 @@ namespace spade::proto
                 {
                     int pm  = bndy[0];
                     int xyz = bndy[1];
+                    ctrs::v3d<coord_type> nvec_comp = 0;
+                    nvec_comp[xyz] = 1-2*pm;
                     if (idomain(xyz, pm) && walls(xyz, pm))
                     {
                         bound_box_t<int, 3> cell_box;
@@ -90,9 +96,25 @@ namespace spade::proto
                             wm_faces.push_back(ijkf);
                             ijk[xyz] -= (2*pm - 1)*sampl_dist;
                             wm_samples.push_back(ijk);
+                            wm_nvec_comps.push_back(nvec_comp);
                         }
                     }
                 }
+            }
+            this->set_size(wm_faces.size());
+            for (auto n: range(0, wm_faces.size()))
+            {
+                auto ijk   = wm_samples[n];
+                auto ijkF  = wm_faces[n];
+                
+                auto xc = grid.get_coords(ijk);
+                auto xf = grid.get_coords(ijkF);
+                auto dx = xc-xf;
+                auto dist = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
+                in_dist[n]     = dist;
+                in_x[n]        = xf[0];
+                in_y[n]        = xf[1];
+                in_z[n]        = xf[2];
             }
             return wm_faces.size();
         }
@@ -101,7 +123,6 @@ namespace spade::proto
         {
             //note: storage in in_prims is p p p p p p p p p p p p u u u u u u u u u u u u u v v v v v v v...
             std::size_t num_wm_points = this->enumerate_points(q, walls);
-            this->set_size(num_wm_points);
             HyWall::SetDomainSize(num_wm_points);
             HyWall::DefineVariables();
             HyWall::PassFlowfieldVariables(&in_prims[0], num_wm_points);
@@ -144,6 +165,7 @@ namespace spade::proto
             out_tau.resize(num_points);
             out_qw.resize(num_points);
             out_fail.resize(num_points);
+            wm_tvec.resize(num_points);
         }
         
         std::size_t size() const {return num_points;}
@@ -151,6 +173,68 @@ namespace spade::proto
         void set_dt(const real_t& dt)
         {
             HyWall::SetTimeStep(dt);
+        }
+        
+        template <typename visc_t> void sample(const array_t& q, const visc_t& visc)
+        {
+            for (auto n: range(0, wm_faces.size()))
+            {
+                auto ijk = wm_samples[n];
+                
+                array_state_t state;
+                for (auto j: range(0, state.size())) state[j] = q(j, ijk[0], ijk[1], ijk[2], ijk[3]);
+                fluid_state::prim_t<real_t> prim;
+                fluid_state::cons_t<real_t> cons;
+                fluid_state::convert_state(state, prim, *gas);
+                fluid_state::convert_state(state, cons, *gas);
+                
+                ctrs::v3d<real_t> tvec(prim.u(), 0.0, prim.w());
+                tvec /= ctrs::array_norm(tvec);
+                wm_tvec[n] = tvec;
+                
+                real_t p = prim.p();
+                real_t T = prim.T();
+                real_t u = std::sqrt(prim.u()*prim.u() + prim.w()*prim.w());
+                real_t v = 0.0;
+                real_t w = 0.0;
+                real_t nu = 0.0;
+                in_prims[0*wm_faces.size() + n]  = p;
+                in_prims[1*wm_faces.size() + n]  = u;
+                in_prims[2*wm_faces.size() + n]  = v;
+                in_prims[3*wm_faces.size() + n]  = w;
+                in_prims[4*wm_faces.size() + n]  = T;
+                in_prims[5*wm_faces.size() + n]  = nu;
+                
+                in_mu [n]    = visc.get_visc(prim);
+                in_momrhs[n] = 0.0;
+                in_dpdx[n]   = 0.0;
+                in_rho[n]    = cons.rho();
+                
+                aux_strainrate[n] = 1.0;
+                aux_sensorpremult[n] = 1.0;
+            }
+        }
+        
+        void solve()
+        {
+            HyWall::Solve();
+        }
+        
+        void apply_flux(rhs_t& rhs)
+        {
+            for (auto n: range(0, wm_faces.size()))
+            {
+                auto ijkF = wm_faces[n];
+                auto ijk_l = grid::face_to_cell(ijkF, 0);
+                auto ijk_r = grid::face_to_cell(ijkF, 1);
+                //This is correct
+                rhs(2, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) += out_tau[n]*wm_tvec[n][0]*wm_nvec_comps[n][1];
+                rhs(2, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) -= out_tau[n]*wm_tvec[n][0]*wm_nvec_comps[n][1];
+                rhs(4, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) += out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
+                rhs(4, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) -= out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
+                rhs(1, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) -= out_qw[n]*wm_nvec_comps[n][1];
+                rhs(1, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) += out_qw[n]*wm_nvec_comps[n][1];
+            }
         }
         
         ~hywall_binding_t()
