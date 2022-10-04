@@ -74,9 +74,12 @@ namespace spade::fetch
         
         
         template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename data_t>
-        void get_single_cell_info_value_for_cell_stencil(const grid_t& ar_grid, const array_t& prims, const grid::cell_idx_t& icell, cell_state<data_t> output)
+        void get_single_cell_info_value_for_cell_stencil(const grid_t& ar_grid, const array_t& prims, const grid::cell_idx_t& icell, cell_state<data_t>& output)
         {
-            for (auto n: range(0,output.data.size())) output.data[n] = prims(n, icell[0], icell[1], icell[2], icell[3]);
+            for (auto n: range(0,output.data.size()))
+            {
+                output.data[n] = prims(n, icell[0], icell[1], icell[2], icell[3]);
+            }
         }
         
         template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename cell_info_t>
