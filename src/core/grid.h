@@ -34,13 +34,6 @@ namespace spade::grid
         { t.get_comp_coords(i_n) } -> ctrs::basic_array;
     };
     
-    
-    enum array_center_e
-    {
-        cell_centered=0,
-        node_centered=1
-    };
-    
     template <class T, const array_center_e ct> concept has_centering_type = (T::centering_type() == ct);
     
     template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)

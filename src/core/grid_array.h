@@ -48,6 +48,15 @@ namespace spade::grid
         {
             typedef dims::static_dims<data_t::size()> type;
         };
+        
+        template <const array_center_e centering> struct get_centering_grid_idx_rank
+        {
+            static constexpr int value = 4;
+        };
+        
+        template <> struct get_centering_grid_idx_rank<cell_centered> { static constexpr int value = 4; };
+        template <> struct get_centering_grid_idx_rank<face_centered> { static constexpr int value = 5; };
+        template <> struct get_centering_grid_idx_rank<node_centered> { static constexpr int value = 4; };
     }
     
     template <
@@ -72,8 +81,8 @@ namespace spade::grid
             grid_dims = create_grid_dims(grid_in, this->centering_type());
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             std::size_t n = total_idx_rank();
-            for (auto i: range(0,n)) idx_coeffs[i] = 1;
-            for (auto i : range(0, n))
+            for (auto i: range(0, n)) idx_coeffs[i] = 1;
+            for (auto i: range(0, n))
             {
                 for (int j =i+1; j < n; ++j)
                 {
@@ -95,7 +104,7 @@ namespace spade::grid
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         
-        constexpr static array_center_e centering_type(void) { return centering; }
+        constexpr static array_center_e centering_type() { return centering; }
         
         std::size_t get_index_extent(std::size_t i)
         {
@@ -164,14 +173,14 @@ namespace spade::grid
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
+        requires std::convertible_to<i0_t, int> &&
+        std::convertible_to<i1_t, int> &&
+        std::convertible_to<i2_t, int> &&
+        std::convertible_to<i3_t, int> &&
+        std::convertible_to<i4_t, int> &&
+        std::convertible_to<i5_t, int>
         _finline_ const fundamental_type& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
         {
-            static_assert(std::is_integral<i0_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i1_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i2_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i3_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i4_t>::value, "unwrap_idx requires integral arguments");
-            static_assert(std::is_integral<i5_t>::value, "unwrap_idx requires integral arguments");
             return data[
                 offset +
                 i0*idx_coeffs[0] + 
@@ -241,15 +250,15 @@ namespace spade::grid
             return *this;
         }
         
-        minor_dim_t get_minor_dims(void) const { return minor_dims; }
-        major_dim_t get_major_dims(void) const { return major_dims; }
-        major_dim_t get_grid_dims (void) const { return grid_dims;  }
-        auto get_total_dims(void)        const { return minor_dims*grid_dims*major_dims; }
-        const grid_t& get_grid(void) const {return *grid;}
+        minor_dim_t get_minor_dims() const { return minor_dims; }
+        major_dim_t get_major_dims() const { return major_dims; }
+        major_dim_t get_grid_dims () const { return grid_dims;  }
+        auto get_total_dims()        const { return minor_dims*grid_dims*major_dims; }
+        const grid_t& get_grid() const {return *grid;}
         
         const grid_t* grid;
         minor_dim_t minor_dims;
-        dims::dynamic_dims<4> grid_dims;
+        dims::dynamic_dims<detail::get_centering_grid_idx_rank<centering_type()>::value> grid_dims;
         major_dim_t major_dims;
         container_t data;
         std::size_t offset;

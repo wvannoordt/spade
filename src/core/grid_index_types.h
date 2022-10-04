@@ -6,6 +6,12 @@
 #include "core/ctrs.h"
 namespace spade::grid
 {
+    enum array_center_e
+    {
+        cell_centered=0,
+        node_centered=1,
+        face_centered=2
+    };
     
     template <typename derived_t, typename arith_t>
     struct arithmetic_wrapper_t
@@ -47,18 +53,21 @@ namespace spade::grid
     
     template <typename arith_t> struct cell_t : public arithmetic_wrapper_t<cell_t<arith_t>, arith_t>
     {
+        static constexpr array_center_e array_centering() {return cell_centered;}
         typedef arithmetic_wrapper_t<cell_t<arith_t>, arith_t> base_t;
         typedef arith_t value_type;
         using base_t::base_t;
     };
     template <typename arith_t> struct node_t : public arithmetic_wrapper_t<node_t<arith_t>, arith_t>
     {
+        static constexpr array_center_e array_centering() {return node_centered;}
         typedef arithmetic_wrapper_t<node_t<arith_t>, arith_t> base_t;
         typedef arith_t value_type;
         using base_t::base_t;
     };
     template <typename arith_t> struct face_t : public arithmetic_wrapper_t<face_t<arith_t>, arith_t>
     {
+        static constexpr array_center_e array_centering() {return face_centered;}
         typedef arithmetic_wrapper_t<face_t<arith_t>, arith_t> base_t;
         typedef arith_t value_type;
         using base_t::base_t;
