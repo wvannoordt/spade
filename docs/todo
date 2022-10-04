@@ -1,6 +1,6 @@
 [x] Write a global function to convert between node/face/cell indices to standardize convention
 [ ] Separate out the block topology type to handle neighbor relationships and domain boundary status
-[ ] Better separation of navier-stokes code and the general finite-volume framework code
+[x] Better separation of navier-stokes code and the general finite-volume framework code
 [ ] Flux compatibility concepts
 [ ] Fix the segfault issue with the MPI communicator when not using MPI_COMM_WORLD
 [ ] Fix some of the silly nonsense present in the dual-time integration scheme
@@ -8,4 +8,5 @@
 [ ] More lightweight implementation of the time-integration schemes - less mechanistic framework. The schemes themselves are conceptual.
 [ ] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
 [x] README
-[ ] Infer grid dimension from the dimension of arrays passed to constructor?
+[x] Infer grid dimension from the dimension of arrays passed to constructor?
+[ ] Re-work the fetch system to include unions of stencils and proper node/face/cell index centering, clean up implementation
