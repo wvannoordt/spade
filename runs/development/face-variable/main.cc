@@ -21,9 +21,9 @@ int main(int argc, char** argv)
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     
-    real_t fill1 = 0.0;
+    real_t fill = 0.0;
     
-    spade::grid::grid_array prim (grid, fill1);
+    spade::grid::face_array prim(grid, fill);
     
     // auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
     // {

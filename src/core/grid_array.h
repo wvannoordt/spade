@@ -78,7 +78,7 @@ namespace spade::grid
             grid = &grid_in;
             minor_dims = minor_dim_t();
             major_dims = major_dims_in;
-            grid_dims = create_grid_dims(grid_in, this->centering_type());
+            grid_dims = create_grid_dims<decltype(grid_in), centering>(grid_in);
             array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             std::size_t n = total_idx_rank();
             for (auto i: range(0, n)) idx_coeffs[i] = 1;
@@ -264,4 +264,17 @@ namespace spade::grid
         std::size_t offset;
         std::size_t idx_coeffs [total_idx_rank()];
     };
+    
+    template <
+        multiblock_grid grid_t,
+        typename data_alias_t,
+        dims::grid_array_dimension major_dim_t = dims::singleton_dim,
+        array_container::grid_data_container container_t = std::vector<typename detail::get_fundamental_type<data_alias_t>::type>
+        > using face_array = grid_array<grid_t, data_alias_t, major_dim_t, face_centered, container_t>;
+    template <
+        multiblock_grid grid_t,
+        typename data_alias_t,
+        dims::grid_array_dimension major_dim_t = dims::singleton_dim,
+        array_container::grid_data_container container_t = std::vector<typename detail::get_fundamental_type<data_alias_t>::type>
+        > using cell_array = grid_array<grid_t, data_alias_t, major_dim_t, cell_centered, container_t>;
 }

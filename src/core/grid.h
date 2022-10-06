@@ -58,28 +58,38 @@ namespace spade::grid
         include_exchanges=1
     };
     
-    template <multiblock_grid grid_t> static auto create_grid_dims(const grid_t& grid, const array_center_e& center_type)
+    template <multiblock_grid grid_t, const array_center_e centering>
+    requires (centering == cell_centered)
+    static auto create_grid_dims(const grid_t& grid)
     {
-        switch (center_type)
-        {
-            case cell_centered:
-            {
-                return dims::dynamic_dims<4>(
-                    grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
-                    grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
-                    grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-                    grid.get_num_local_blocks());
-            }
-            case node_centered:
-            {
-                return dims::dynamic_dims<4>(
-                    1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
-                    1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
-                    1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-                    grid.get_num_local_blocks());
-            }
-        }
-        return dims::dynamic_dims<4>(0,0,0,0);
+        return dims::dynamic_dims<4>(
+            grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
+            grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
+            grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
+            grid.get_num_local_blocks());
+    }
+    
+    template <multiblock_grid grid_t, const array_center_e centering>
+    requires (centering == node_centered)
+    static auto create_grid_dims(const grid_t& grid)
+    {
+        return dims::dynamic_dims<4>(
+            1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
+            1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
+            1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
+            grid.get_num_local_blocks());
+    }
+    
+    template <multiblock_grid grid_t, const array_center_e centering>
+    requires (centering == face_centered)
+    static auto create_grid_dims(const grid_t& grid)
+    {
+        return dims::dynamic_dims<5>(
+            1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
+            1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
+            1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
+            grid.dim(),
+            grid.get_num_local_blocks());
     }
     
     struct neighbor_relationship_t

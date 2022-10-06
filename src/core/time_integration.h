@@ -117,7 +117,7 @@ namespace spade::time_integration
         typename rhs_state_t,
         typename time_state_t,
         typename rhs_calc_t,
-        typename state_trans_t
+        typename state_trans_t = identity_transform_t
         >
     struct rk2
     {
@@ -136,7 +136,7 @@ namespace spade::time_integration
             time_state_t& t_in,
             const time_state_t& dt_in,
             rhs_calc_t& rhs_oper_in,
-            const state_trans_t& trans_in)
+            const state_trans_t& trans_in = identity_transform)
         {
             dt = dt_in;
             q  = &q_in;
