@@ -174,4 +174,10 @@ namespace spade::algs
         }
         return arr;
     }
+    
+    //prototype
+    template <typename idx_t, const std::size_t rank, typename callable_t> static void rloop(const bound_box_t<idx_t, rank>& domain, const callable_t& exec)
+    {
+        
+    }
 }
