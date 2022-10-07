@@ -204,6 +204,7 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator += (const rhs_t& rhs)
         {
+            //Note: attempted to hand-optimize this, turns out the compiler will do just fine on its own.
             for (std::size_t i = 0; i < data.size(); ++i) data[i] += rhs.data[i];
             return *this;
         }

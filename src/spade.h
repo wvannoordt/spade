@@ -20,6 +20,7 @@
 #include "core/time_integration.h"
 #include "core/block_config.h"
 #include "core/pde_algs.h"
+#include "core/timer.h"
 
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
