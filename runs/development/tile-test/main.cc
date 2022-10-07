@@ -5,7 +5,7 @@ typedef double real_t;
 
 void diffuse(auto& rhs, const auto& q)
 {
-    
+    const auto& grid = q.get_grid();
 }
 
 int main(int argc, char** argv)
@@ -31,9 +31,13 @@ int main(int argc, char** argv)
     spade::grid::cell_array phi(grid, fill);
     spade::grid::cell_array rhs(grid, fill);
     
+    spade::ctrs::array<real_t, 3> x0;
+    for (auto i: range(0,3)) x0[i] = 0.5*(bounds.min(i) + bounds.max(i));
     auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
     {
-        return 0.0;
+        spade::ctrs::array<real_t, 3> dx = x - x0;
+        real_t r = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
+        return std::exp(-15.0*r*r);
     };
     
     real_t time0 = 0.0;
@@ -49,6 +53,16 @@ int main(int argc, char** argv)
     spade::time_integration::rk2 time_int(phi, rhs, time0, dt, calc_rhs);
     
     spade::algs::fill_array(phi, ini);
-    spade::io::output_vtk("output", "phi", phi);
+    for (auto n: range(0, 10001))
+    {
+        print("nt = ", spade::utils::zfill(n, 8));
+        time_int.advance();
+        if (n%1000==0)
+        {
+            std::string fname = "phi";
+            fname += spade::utils::zfill(n, 8);
+            spade::io::output_vtk("output", fname, phi);
+        }
+    }
     return 0;
 }

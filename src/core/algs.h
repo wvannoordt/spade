@@ -31,19 +31,19 @@ namespace spade::algs
         template <class T, typename rtype> concept xyz_ijk_callable = std::is_invocable<T, ctrs::array<rtype, 3>, int, int, int, int>::value &&
         requires(T t, const ctrs::array<rtype, 3>& x, const int& i, const int& j, const int& k, const int& lb)
         {
-            {t(x,i,j,k,lb)} -> ctrs::basic_array;
+            t(x,i,j,k,lb);
         };
         
         template <class T, typename rtype> concept xyz_callable     = std::is_invocable<T, ctrs::array<rtype, 3>>::value                     &&
         requires(T t, const ctrs::array<rtype, 3>& x, const int& i, const int& j, const int& k, const int& lb)
         {
-            {t(x)} -> ctrs::basic_array;
+            t(x);
         };
         
         template <class T, typename rtype> concept ijk_callable     = std::is_invocable<T, int, int, int, int>::value                        &&
         requires(T t, const ctrs::array<rtype, 3>& x, const int& i, const int& j, const int& k, const int& lb)
         {
-            {t(i,j,k,lb)} -> ctrs::basic_array;
+            t(i,j,k,lb);
         };
         
         #pragma GCC diagnostic ignored "-Wattributes"
