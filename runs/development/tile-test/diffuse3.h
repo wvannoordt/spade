@@ -1,21 +1,5 @@
 #pragma once
 
-
-template <
-    typename index_t,
-    const std::size_t index_rank,
-    typename fcn_t,
-    const std::size_t index_val
-    >
-requires (index_val < 0)
-static void exec_loop(
-    const spade::bound_box_t<index_t, index_rank>& bds,
-    const spade::ctrs::array<index_t, index_rank>& index,
-    const fcn_t& fcn)
-{
-    fcn(index);
-}
-
 template <
     typename index_t,
     const std::size_t index_rank,
@@ -35,6 +19,21 @@ static void exec_loop(
         index[index_val] = i;
         exec_loop<index_t, index_rank, fcn_t, index_val-1>(bds, index, fcn);
     }
+}
+
+template <
+    typename index_t,
+    const std::size_t index_rank,
+    typename fcn_t,
+    const std::size_t index_val
+    >
+requires (index_val < 0)
+static void exec_loop(
+    const spade::bound_box_t<index_t, index_rank>& bds,
+    const spade::ctrs::array<index_t, index_rank>& index,
+    const fcn_t& fcn)
+{
+    fcn(index);
 }
 
 template <
