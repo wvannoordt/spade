@@ -6,6 +6,7 @@ typedef double real_t;
 #include "diffuse1.h"
 #include "diffuse2.h"
 #include "diffuse3.h"
+#include "diffuse4.h"
 
 int main(int argc, char** argv)
 {
@@ -54,7 +55,7 @@ int main(int argc, char** argv)
         tmr.stop(1);
         
         tmr.start(2);
-        diffuse3(rhs, q);
+        diffuse2(rhs, q);
         tmr.stop(2);
         
         print(tmr);

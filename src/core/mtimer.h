@@ -42,7 +42,8 @@ namespace spade::utils
         {
         	end_time[idx] = std::chrono::steady_clock::now();
             auto dur = this->duration(idx);
-            avg[idx] = (duration_t(num_samples[idx])/(num_samples[idx]+1))*avg[idx] + (duration_t(1.0)/(num_samples[idx]+1))*dur;
+            auto alpha = duration_t(num_samples[idx])/(num_samples[idx]+1);
+            avg[idx] = alpha*avg[idx] + (1.0-alpha)*dur;
             num_samples[idx]++;
         }
         
