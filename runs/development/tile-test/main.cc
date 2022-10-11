@@ -3,68 +3,9 @@
 
 typedef double real_t;
 
-template <typename fcn_t> void ijk_loop(int ni, int nj, int nk, const fcn_t& fcn)
-{
-    for (int k = 0; k < nk; ++k)
-    {
-        for (int j = 0; j < nj; ++j)
-        {
-            for (int i = 0; i < ni; ++i)
-            {
-                fcn(i, j, k);
-            }
-        }
-    }
-}
-
-void diffuse(auto& rhs, const auto& q)
-{
-    const auto& grid = q.get_grid();
-    int nlb = grid.get_num_local_blocks();
-    int nk = grid.get_num_cells(2);
-    int nj = grid.get_num_cells(1);
-    int ni = grid.get_num_cells(0);
-    const real_t a0 = -1.0/12.0;
-    const real_t a1 = 4.0/3.0;
-    const real_t a2 = -5.0/2.0;
-    const real_t a3 = 4.0/3.0;
-    const real_t a4 = -1.0/12.0;
-    for (int lb = 0; lb < nlb; ++lb)
-    {
-        auto dx = grid.get_block_box(lb).size(0)/ni;
-        auto dy = grid.get_block_box(lb).size(1)/nj;
-        auto dz = grid.get_block_box(lb).size(2)/nk;
-        auto fcn = [&](int i, int j, int k) -> void
-        {
-        // for (int k = 0; k < nk; ++k)
-        // for (auto k: range(0,nk))
-        // {
-            // for (int j = 0; j < nj; ++j)
-            // for (auto j: range(0,nj))
-            // {
-                // for (int i = 0; i < ni; ++i)
-                // for (auto i: range(0,ni))
-                // {
-        // for (auto idx: range(0,ni)*range(0,nj)*range(0,nk))
-        // {
-            // int i = idx[0];
-            // int j = idx[1];
-            // int k = idx[2];
-                    int i = idx[0];
-                    int j = idx[1];
-                    int k = idx[2];
-                    rhs(i, j, k, lb) += (a0*q(i+2,   j,   k, lb) + a1*q(i+1,   j,   k, lb) + a2*q(i, j, k, lb) + a3*q(i-1,   j,   k, lb) + a4*q(i-2,   j,   k, lb))/(dx*dx);
-                    rhs(i, j, k, lb) += (a0*q(i,   j+2,   k, lb) + a1*q(i,   j+1,   k, lb) + a2*q(i, j, k, lb) + a3*q(i,   j-1,   k, lb) + a4*q(i,   j-2,   k, lb))/(dy*dy);
-                    rhs(i, j, k, lb) += (a0*q(i,   j,   k+2, lb) + a1*q(i,   j,   k+1, lb) + a2*q(i, j, k, lb) + a3*q(i,   j,   k-1, lb) + a4*q(i,   j,   k-2, lb))/(dz*dz);
-        // }
-                // }
-            // }
-        // }
-        };
-        ctrs::array<int, 3> nijk(ni, nj, nk);
-        cell_loop(nijk, fcn);
-    }
-}
+#include "diffuse1.h"
+#include "diffuse2.h"
+#include "diffuse3.h"
 
 int main(int argc, char** argv)
 {
@@ -113,7 +54,7 @@ int main(int argc, char** argv)
         tmr.stop(1);
         
         tmr.start(2);
-        diffuse(rhs, q);
+        diffuse3(rhs, q);
         tmr.stop(2);
         
         print(tmr);
