@@ -26,4 +26,4 @@ run: main
 	./${target}
 
 clean:
-	rm -f ${target}
+	rm -f ${target} *.o
