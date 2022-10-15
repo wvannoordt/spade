@@ -21,4 +21,37 @@ We should be able to index in the following ways: let A = (v0, v1) and B = (i, j
 
 M(A,B) = M(v0, v1, B) = M(A, i, j, k, d, b) = M(v0, v1, i, j, k, d, b)
 
-This is done primarily for convenience.
+This is done primarily for convenience and to maintain legacy-style development. Essentially, everything should operate in an "expanded index" fashion.
+
+## Tiling
+How do we introduce tiling?
+To introduce tiling, we need to further sub-divide the i, j, k dimensions into i0, j0, k0, and i1, j1, k1 for memory cacheing reasons and performance.
+Consider the following simple cell-centered, single-valued  array:
+
+M(i, j, k, b)
+
+it is pretty clear that
+M(i-1, j, k, b) and M(i+1, j, k, b) are reasonably close to each other, and possibly so are
+M(i, j-1, k, b) and M(i, j+1, k, b), but we can't guarantee that
+M(i, j, k-1, b) and M(i, j, k+1, b) are close to each other
+
+Therefore we can introduce the tiling
+M(i0, j0, k0, i1, j1, k1, b)
+
+Here, we can see that we have introduced a kind of grouping of the indices, which may be notated like
+
+M({i, j, k}, b)
+
+or, in the more general case:
+
+M(v0, v1, {i, j, k}, d, b)
+
+In this case, it may make sense for the face index to have the direction in the first position:
+
+M(v0, v1, d, {i, j, k}, b)
+
+So this looks something like a composite memory map, composed of a primary memory map that is simply (v0, v1),
+and then a memory map that has mixed static/runtime bounds and some kind of tiling. perhaps something like this could be created like
+
+composite_map<composite_map<static_dim_t<3>, static_dim_t<3>>, composite_map<static_dim_t<3>, tiled_map<(something)>, dynamic_dim_t>>
+
