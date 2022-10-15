@@ -82,14 +82,30 @@ namespace spade::grid
         t;
     };
     
-    static auto get_face_dir_idx(void)
+    static int get_face_dir_idx(void)
     {
-        return 4;
+        return 3;
     }
     
-    static auto get_face_dir(const face_idx_t& i_face)
+    static face_idx_t::value_type::value_type get_face_dir(const face_idx_t& i_face)
     {
         return i_face[get_face_dir_idx()];
+    }
+    
+    
+    static int get_block_number(const cell_idx_t& i_cell)
+    {
+        return i_cell[3];
+    }
+    
+    static int get_block_number(const face_idx_t& i_face)
+    {
+        return i_face[4];
+    }
+    
+    static int get_block_number(const node_idx_t& i_node)
+    {
+        return i_node[3];
     }
     
     //i_cell is the cell index
@@ -97,8 +113,8 @@ namespace spade::grid
     //pm = 0 indicates the negative-side face, pm = 1 indicates the positive-side face
     static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
     {
-        //Note that the direction is presently the last index
-        face_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3], idir);
+        //Note that the direction is presently the second-to-last index
+        face_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], idir, (int)i_cell[3]);
         output[idir] += pm;
         return output;
     }
@@ -118,7 +134,7 @@ namespace spade::grid
     //pm = 0 indicates the negative-side ("left") face, pm = 1 indicates the positive-side ("right") face
     static cell_idx_t face_to_cell(const face_idx_t& i_face, const int& pm)
     {
-        cell_idx_t output((int)i_face[0], (int)i_face[1], (int)i_face[2], (int)i_face[3]);
+        cell_idx_t output((int)i_face[0], (int)i_face[1], (int)i_face[2], (int)get_block_number(i_face));
         output[get_face_dir(i_face)] += (pm-1);
         return output;
     }
@@ -151,20 +167,5 @@ namespace spade::grid
         ctrs::array<rtype, 3> output((rtype)i_face[0]+0.5, (rtype)i_face[1]+0.5, (rtype)i_face[2]+0.5);
         output[get_face_dir(i_face)] -= 0.5;
         return output;
-    }
-    
-    static int get_block_number(const cell_idx_t& i_cell)
-    {
-        return i_cell[3];
-    }
-    
-    static int get_block_number(const face_idx_t& i_face)
-    {
-        return i_face[3];
-    }
-    
-    static int get_block_number(const node_idx_t& i_node)
-    {
-        return i_node[3];
     }
 }

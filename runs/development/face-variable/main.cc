@@ -23,31 +23,18 @@ int main(int argc, char** argv)
     
     real_t fill = 0.0;
     
-    spade::grid::face_array prim(grid, fill);
+    spade::grid::cell_array c_alpha(grid, fill);
     
-    // auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
-    // {
-    //     const real_t shape = 1.0 - pow(x[1]/delta, 4);
-    //     const real_t turb  = du*u_tau*sin(10.0*spade::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
-    //     real_t output;
-    //     output.p() = p0;
-    //     output.T() = t0;
-    //     output.u() = (20.0*u_tau + 0.0*turb)*shape;
-    //     output.v() = (0.0        + 0.0*turb)*shape;
-    //     output.w() = (0.0        + 0.0*turb)*shape;
-    // 
-    //     int eff_i = i/nidx;
-    //     int eff_j = j/nidx;
-    //     int eff_k = k/nidx;
-    // 
-    //     const real_t per = du*u_tau*(r_amp_1[eff_i] + r_amp_2[eff_j] + r_amp_3[eff_k] + r_amp_4[lb]);
-    //     output.u() += per*shape;
-    //     output.v() += per*shape;
-    //     output.w() += per*shape;
-    // 
-    //     return output;
-    // };
+    auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
+    {
+        return std::sin(x[0]) + std::sin(x[1])*std::cos(x[2]);
+    };
     
-    // spade::algs::fill_array(prim, ini);
+    
+    spade::algs::fill_array(c_alpha, ini);
+    // c_alpha(0, 0, 0, 0) = 99.0;
+    // spade::grid::cell_idx_t ijk(0, 0, 0, 0);
+    // c_alpha(ijk) = 99.0;
+    spade::io::output_vtk("output", "c_alpha", c_alpha);
     return 0;
 }

@@ -1,0 +1,24 @@
+we want to store a variable on grid faces.
+
+faces are indexed as:
+i, j, k, idir, lb
+
+grid
+- grid_array
+  - memory map: expose an index type, convert equivalent indices to index types, eventually produce an offset relative to the base index
+  - grid array will simply forward all arguments immediately to the memory map
+  - grid array needs to have awareness of the centering of the array data and construct the memory map accordingly
+  - memory map should provide a unified interface that is agnostic of the difference between block dimension, grid dimensions, and cell dimension
+
+grid array can have centering at node, cell, or face
+
+each location of storage in the grid array can hold data of arbitrary (but rectangular) shape
+This way, we can separately index each cell variable and each grid point.
+
+Example, a face-centered array might store a 3x3 matrix at each face. Call this array M:
+M(A,B) will denote a sub-element of the data stored at cell B
+We should be able to index in the following ways: let A = (v0, v1) and B = (i, j, k, d, b):
+
+M(A,B) = M(v0, v1, B) = M(A, i, j, k, d, b) = M(v0, v1, i, j, k, d, b)
+
+This is done primarily for convenience.

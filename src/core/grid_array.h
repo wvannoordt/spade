@@ -57,6 +57,28 @@ namespace spade::grid
         template <> struct get_centering_grid_idx_rank<cell_centered> { static constexpr int value = 4; };
         template <> struct get_centering_grid_idx_rank<face_centered> { static constexpr int value = 5; };
         template <> struct get_centering_grid_idx_rank<node_centered> { static constexpr int value = 4; };
+        
+        template <typename idx_t> 
+        struct count_rank_t
+        {
+            static constexpr std::size_t value = 1;
+        };
+        
+        template <ctrs::basic_array idx_t> 
+        struct count_rank_t<idx_t>
+        {
+            static constexpr std::size_t value = idx_t::size();
+        };
+        
+        template <typename idx_t, typename... idxs_t> struct index_rank_size_t
+        {
+            static constexpr std::size_t value = count_rank_t<idx_t>::value + index_rank_size_t<idxs_t...>::value;
+        };
+        
+        template <typename idx_t> struct index_rank_size_t<idx_t>
+        {
+            static constexpr std::size_t value = count_rank_t<idx_t>::value;
+        };
     }
     
     template <
@@ -141,14 +163,14 @@ namespace spade::grid
         template <typename... idxs_t>
         _finline_ fundamental_type& operator() (idxs_t... idxs)
         {
-            static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
+            static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
         
         template <typename... idxs_t>
         _finline_ const fundamental_type& operator() (idxs_t... idxs) const
         {
-            static_assert(sizeof...(idxs_t)==total_idx_rank(), "wrong number of indices passed to indexing operator");
+            static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
             return data[offset + offst_r(0, idxs...)];
         }
         
