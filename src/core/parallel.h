@@ -7,6 +7,7 @@
 #include "core/config.h"
 #include "core/print.h"
 #include "core/mpi_flags.h"
+#include "core/aliases.h"
 
 #if (USE_SOURCE_LOCATION)
 #include <source_location>
@@ -116,20 +117,20 @@ namespace spade::parallel
                 return sum_glob;
             }
             
-            template <typename data_t> void append_root(std::vector<data_t>& root_result, const data_t& local_data) const
+            template <typename data_t> void append_root(aliases::vector<data_t>& root_result, const data_t& local_data) const
             {
                 if (this->isroot()) root_result.resize(this->g_size);
                 auto dtype = get_data_type(data_t());
                 MPI_CHECK(MPI_Gather(&local_data, 1, dtype, &root_result[0], 1, dtype, default_root_rank, this->channel));
             }
             
-            template <typename data_t> void append_root(std::vector<data_t>& root_result, const std::vector<data_t>& local_data) const
+            template <typename data_t> void append_root(aliases::vector<data_t>& root_result, const aliases::vector<data_t>& local_data) const
             {
                 std::size_t output_size = this->sum(local_data.size());
                 if (this->isroot()) root_result.resize(output_size);
-                std::vector<int> sizes;
+                aliases::vector<int> sizes;
                 this->append_root(sizes, (int)local_data.size());
-                std::vector<int> offset;
+                aliases::vector<int> offset;
                 if (this->isroot())
                 {
                     offset.resize(sizes.size());
@@ -162,9 +163,9 @@ namespace spade::parallel
     
     struct par_buf_t
     {
-        std::vector<void*>       datas;
-        std::vector<std::size_t> sizes;
-        std::vector<std::size_t> offst;
+        aliases::vector<void*>       datas;
+        aliases::vector<std::size_t> sizes;
+        aliases::vector<std::size_t> offst;
         void add(void* base, const std::size_t& size, const std::size_t offset)
         {
             sizes.push_back(size);

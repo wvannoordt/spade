@@ -14,12 +14,18 @@ namespace spade::grid
         
         //The ending index dimension (exclusive)
         t.last();
+        
+        t.size();
+        t.offset(i);
     };
     
     template <typename T> concept is_map = requires(T t)
     {
         //The total size of the iteration space
         t.size();
+        
+        //number of indices required to produce an offset
+        t.rank();
     };
     
     using default_index_t = int;
@@ -47,6 +53,8 @@ namespace spade::grid
         
         constexpr index_type first() const {return i0;}
         constexpr index_type last()  const {return i1;}
+        constexpr offset_type size() const {return last()-first();}
+        constexpr offset_type offset(const index_type& i) const {return i-first();}
     };
     
     template <typename idx_t>
@@ -62,20 +70,48 @@ namespace spade::grid
         
         index_type first() const {return i0;}
         index_type last()  const {return i1;}
+        offset_type size() const {return last()-first();}
+        offset_type offset(const index_type& i) const {return i-first();}
+        
     };
-    
-    template <is_dimension dim_t> static constexpr auto dim_size(const dim_t& dim)
-    {
-        return typename dim_t::offset_type(dim.first()-dim.last());
-    }
     
     template <is_dimension... dims_t> struct regular_map_t
     {
+        using index_type  = default_index_t; //TODO: change this to be promotion from the index types of the dimensions (later)
+        using offset_type = default_offset_t;
+        
+        constexpr static index_type rank() {return sizeof...(dims_t);}
+        
+        ctrs::array<offset_type, rank()> coeffs;
         aliases::tuple<dims_t...> dims;
-        regular_map_t(){}
+        regular_map_t()
+        {
+            //maybe do this only when the sizes are constant-eval
+            compute_coeffs();
+        }
         regular_map_t(dims_t... dims_in) //note that these are deliberately by value and not const ref!!!!!
         {
             dims = std::make_tuple(dims_in...);
+            compute_coeffs();
+        }
+        
+        void compute_coeffs()
+        {
+            coeffs[0] = 1;
+            static_for<1,rank()>([&](const auto& i) -> void
+            {
+                coeffs[i.value] = coeffs[i.value-1]*(std::get<i.value>(dims).size());
+            });
+        }
+        
+        _finline_ offset_type offset(const ctrs::array<index_type, rank()>& idx) const
+        {
+            offset_type output = offset_type(0);
+            static_for<0,rank()>([&](const auto& i) -> void
+            {
+                output += std::get<i.value>(dims).offset(idx[i.value])*coeffs[i.value];
+            });
+            return output;
         }
     };
     

@@ -12,7 +12,8 @@ int main(int argc, char** argv)
     std::vector<real_t> vec;
     
     var_map_t vmap;
-    // print(vmap.offset());
+    spade::ctrs::array<int, 2> i(2,1);
+    print(vmap.offset(i));
     
     //tiling later
     // using tiled_map_t = spade::grid::tiled_map_t<dynamic_map_t<int>, dynamic_map_t<int>, dynamic_map_t<int>>
