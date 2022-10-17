@@ -18,6 +18,7 @@
 #include "core/static_math.h"
 #include "core/grid_index_types.h"
 #include "core/grid.h"
+#include "core/mem_map.h"
 
 namespace spade::grid
 {    
@@ -89,8 +90,32 @@ namespace spade::grid
         array_container::grid_data_container container_t=std::vector<typename detail::get_fundamental_type<data_alias_t>::type>>
     struct grid_array
     {
+        constexpr static array_center_e centering_type() { return centering; }
+        static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
+        
+        typedef grid_t grid_type;
         typedef typename detail::get_fundamental_type<data_alias_t>::type fundamental_type;
+        typedef fundamental_type value_type;
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
+        typedef minor_dim_t array_minor_dim_t;
+        typedef major_dim_t array_major_dim_t;
+        typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
+        typedef data_alias_t alias_type;
+        typedef data_alias_t unwrapped_minor_type;
+        
+        typedef int variable_map_type;
+        typedef int grid_map_type;
+        typedef composite_map_t<variable_map_type, grid_map_type> mem_map_type;
+        
+        const grid_t* grid;
+        minor_dim_t minor_dims;
+        dims::dynamic_dims<detail::get_centering_grid_idx_rank<centering_type()>::value> grid_dims;
+        major_dim_t major_dims;
+        container_t data;
+        std::size_t offset;
+        std::size_t idx_coeffs [total_idx_rank()];
+        
+        
         grid_array(){}
         grid_array(
             const grid_t& grid_in,
@@ -118,15 +143,6 @@ namespace spade::grid
             }
         }
         
-        typedef grid_t grid_type;
-        typedef fundamental_type value_type;
-        typedef minor_dim_t array_minor_dim_t;
-        typedef major_dim_t array_major_dim_t;
-        typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
-        typedef data_alias_t alias_type;
-        typedef data_alias_t unwrapped_minor_type;
-        
-        constexpr static array_center_e centering_type() { return centering; }
         
         std::size_t get_index_extent(std::size_t i)
         {
@@ -143,8 +159,6 @@ namespace spade::grid
                 return major_dims.get_index_extent(i-(minor_dim_t::rank()+dims::dynamic_dims<4>::rank()));
             }
         }
-        
-        static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
         
         template <typename idx_t>
         requires std::convertible_to<idx_t, int>
@@ -278,14 +292,6 @@ namespace spade::grid
         major_dim_t get_grid_dims () const { return grid_dims;  }
         auto get_total_dims()        const { return minor_dims*grid_dims*major_dims; }
         const grid_t& get_grid() const {return *grid;}
-        
-        const grid_t* grid;
-        minor_dim_t minor_dims;
-        dims::dynamic_dims<detail::get_centering_grid_idx_rank<centering_type()>::value> grid_dims;
-        major_dim_t major_dims;
-        container_t data;
-        std::size_t offset;
-        std::size_t idx_coeffs [total_idx_rank()];
     };
     
     template <
