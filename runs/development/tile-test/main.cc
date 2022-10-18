@@ -55,7 +55,7 @@ int main(int argc, char** argv)
         tmr.stop(1);
         
         tmr.start(2);
-        diffuse2(rhs, q);
+        diffuse4(rhs, q);
         tmr.stop(2);
         
         print(tmr);
