@@ -128,9 +128,13 @@ namespace spade::grid
         using index_type  = default_index_t;
         using offset_type = default_offset_t;
         
+        aliases::tuple<maps_t...> maps;
         composite_map_t(){}
-        
-        template <typename... idxs_t> offset_type compute_offset(const idxs_t&... idxs)
+        composite_map_t(maps_t... maps_in) //indentionally not const ref!
+        {
+            maps = std::make_tuple(maps_in...);
+        }
+        template <typename... idxs_t> offset_type offset(const idxs_t&... idxs)
         {
             return 0;
         }
