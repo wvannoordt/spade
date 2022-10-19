@@ -72,7 +72,9 @@ namespace spade::ctrs
             data[i] = p;
             set_r(i+1, ps...);
         }
-        template <basic_array param, class... params> void set_r(const size_t i, const param& p)
+        template <basic_array param, class... params>
+        requires(param::size() == size())
+        void set_r(const size_t j, const param& p)
         {
             for (std::size_t i = 0; i < p.size(); i++) data[i] = p[i];
         }

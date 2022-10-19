@@ -44,7 +44,7 @@ namespace proto
                     spade::grid::face_idx_t i_f = spade::grid::cell_to_face(i_c, idir, pm);
                     auto x = grid.get_coords(i_f);
                     typename flux_func_t::input_type flux_data;
-                    spade::fetch::get_flux_data(grid, prim, i_f, flux_data);
+                    spade::fetch::get_face_data(grid, prim, i_f, flux_data);
                     // if (grid.group().isroot() && boundary_id == 3)
                     // {
                     //     const auto& ql = std::get<0>(flux_data.cell_data.left.elements).data;

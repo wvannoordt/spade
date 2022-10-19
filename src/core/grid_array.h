@@ -39,7 +39,9 @@ namespace spade::grid
         template <class T> concept is_static_1D_array = ctrs::basic_array<T> && requires (T t)
         {
             t; //todo: figure out whay the heck is going on with this
-        };        
+        };
+                
+        //todo: phase this out
         template <typename data_t> struct get_dim_type
         {
             typedef dims::singleton_dim type;
@@ -48,6 +50,17 @@ namespace spade::grid
         template <is_static_1D_array data_t> struct get_dim_type<data_t>
         {
             typedef dims::static_dims<data_t::size()> type;
+        };
+        
+        
+        template <typename data_t> struct get_variable_mem_map
+        {
+            typedef singleton_map_t type;
+        };
+        
+        template <is_static_1D_array data_t> struct get_variable_mem_map<data_t>
+        {
+            typedef regular_map_t<static_dim_t<0,data_t::size()>> type;
         };
         
         template <const array_center_e centering> struct get_centering_grid_idx_rank
@@ -103,7 +116,7 @@ namespace spade::grid
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         
-        typedef int variable_map_type;
+        typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
         typedef int grid_map_type;
         typedef composite_map_t<variable_map_type, grid_map_type> mem_map_type;
         
