@@ -134,9 +134,22 @@ namespace spade::grid
         {
             maps = std::make_tuple(maps_in...);
         }
-        template <typename... idxs_t> offset_type offset(const idxs_t&... idxs)
+        
+        template <const int cur_map, const int s_count, typename arg_t, typename... args_t>
+        requires ((s_count == 0) && !ctrs::basic_array<arg_t>)
+        void recurse_incr_offset(offset_type& cur_offset, const arg_t& arg, const args_t&... args) const
         {
+            using map_t = utils::get_pack_type<cur_map, maps_t...>::type;
+            using ar_t  = map_t::identifier_type;
+            ar_t ar;
+            //START HERE
             return 0;
+        }
+        
+        template <typename... idxs_t> offset_type offset(const idxs_t&... idxs) const
+        {
+            offset_type output = 0;
+            return recurse_incr_offset<0,0,idxs_t...>(output, idxs...);
         }
     };
     

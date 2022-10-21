@@ -193,4 +193,24 @@ namespace spade::utils
         }
         return output;
     }
+    
+    template <const std::size_t position, const std::size_t idx, typename type_t, typename... types_t>
+    struct get_pack_type_helper 
+    {
+        typedef std::conditional<position==idx, type_t, typename get_pack_type_helper<position+1, idx, types_t...>::type>::type type;
+    };
+    
+    template <const std::size_t position, const std::size_t idx, typename type_t>
+    struct get_pack_type_helper<position, idx, type_t>
+    {
+        typedef type_t type;
+    };
+    
+    
+    template <const std::size_t idx, typename... types_t>
+    requires (idx < sizeof...(types_t))
+    struct get_pack_type
+    {
+        typedef get_pack_type_helper<0,idx,types_t...>::type type;
+    };
 }
