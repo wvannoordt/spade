@@ -25,30 +25,30 @@ int main(int argc, char** argv)
     imap.compute_coeffs();
     
     spade::ctrs::array<int, 2> i(2,1);
-    print(vmap.offset(i));
+    // print(vmap.offset(i));
 
     spade::ctrs::array<int, 1> b(2);
-    print(bmap.offset(b));
+    // print(bmap.offset(b));
     
     spade::ctrs::array<int, 3> j(0, 0, 0);
-    print(imap.offset(j));
+    // print(imap.offset(j));
     
     spade::grid::composite_map_t cmap(vmap, imap, bmap);
     
-    iv<2> i0(1, 2);
-    iv<3> i1(1, 2, 3);
-    iv<1> i2(5);
+    iv<2> i0(0, 0);
+    iv<3> i1(-2, -2, -2);
+    iv<1> i2(0);
     
     // fully verbose indexing
-    print(cmap.offset(i0[0], i0[1], i1[0], i1[1], i1[2], i2[0]));
+    // print(cmap.offset(i0[0], i0[1], i1[0], i1[1], i1[2], i2[0]));
     
     // partially verbose indexing (all valid)
-    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2[0]));
-    print(cmap.offset(i0[0], i0[1], i1,                  i2[0]));
-    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
-    print(cmap.offset(i0,           i1,                  i2[0]));
-    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
-    print(cmap.offset(i0[0], i0[1], i1,                  i2));
+    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2[0]));
+    // print(cmap.offset(i0[0], i0[1], i1,                  i2[0]));
+    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
+    // print(cmap.offset(i0,           i1,                  i2[0]));
+    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
+    // print(cmap.offset(i0[0], i0[1], i1,                  i2));
     
     // compact indexing
     print(cmap.offset(i0, i1, i2));

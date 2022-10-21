@@ -63,6 +63,40 @@ namespace spade::grid
             typedef regular_map_t<static_dim_t<0,data_t::size()>> type;
         };
         
+        
+        //getting the memory map type for the grid indices
+        template <const array_center_e center, const std::size_t grid_dim> struct get_ijklb_map_type{};
+        
+        template <const std::size_t grid_dim> struct get_ijklb_map_type<cell_centered, grid_dim>
+        {
+            typedef regular_map_t<
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>> type;
+        };
+        
+        template <const std::size_t grid_dim> struct get_ijklb_map_type<node_centered, grid_dim>
+        {
+            typedef regular_map_t<
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>,
+                dynamic_dim_t<int>> type;
+        };
+        
+        template <const std::size_t grid_dim> struct get_ijklb_map_type<face_centered, grid_dim>
+        {
+            //Can I do a nicer job here?
+            typedef regular_map_t<
+                typename std::conditional<0==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<1==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<2==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<3==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<4==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type
+                > type;
+        };
+        
         template <const array_center_e centering> struct get_centering_grid_idx_rank
         {
             static constexpr int value = 4;
@@ -112,12 +146,12 @@ namespace spade::grid
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
-        typedef std::conditional<centering==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
+        typedef std::conditional<centering_type()==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         
         typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
-        typedef int grid_map_type;
+        typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type                 grid_map_type;
         typedef composite_map_t<variable_map_type, grid_map_type> mem_map_type;
         
         const grid_t* grid;

@@ -82,7 +82,7 @@ namespace spade::grid
         t;
     };
     
-    static int get_face_dir_idx(void)
+    static constexpr int get_face_dir_idx(void)
     {
         return 3;
     }

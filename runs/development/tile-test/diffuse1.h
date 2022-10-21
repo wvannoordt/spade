@@ -22,9 +22,21 @@ static void diffuse1(auto& rhs, const auto& q)
             {
                 for (int i = 0; i < ni; ++i)
                 {
-                    rhs(i, j, k, lb) += (a0*q(i+2,   j,   k, lb) + a1*q(i+1,   j,   k, lb) + a2*q(i, j, k, lb) + a3*q(i-1,   j,   k, lb) + a4*q(i-2,   j,   k, lb))/(dx*dx);
-                    rhs(i, j, k, lb) += (a0*q(i,   j+2,   k, lb) + a1*q(i,   j+1,   k, lb) + a2*q(i, j, k, lb) + a3*q(i,   j-1,   k, lb) + a4*q(i,   j-2,   k, lb))/(dy*dy);
-                    rhs(i, j, k, lb) += (a0*q(i,   j,   k+2, lb) + a1*q(i,   j,   k+1, lb) + a2*q(i, j, k, lb) + a3*q(i,   j,   k-1, lb) + a4*q(i,   j,   k-2, lb))/(dz*dz);
+                    rhs(i, j, k, lb) += (a0*q(i+2,   j,   k, lb)
+                    + a1*q(i+1,   j,   k, lb)
+                    + a2*q(i, j, k, lb)
+                    + a3*q(i-1,   j,   k, lb)
+                    + a4*q(i-2,   j,   k, lb))/(dx*dx);
+                    rhs(i, j, k, lb) += (a0*q(i,   j+2,   k, lb)
+                    + a1*q(i,   j+1,   k, lb)
+                    + a2*q(i, j, k, lb)
+                    + a3*q(i,   j-1,   k, lb)
+                    + a4*q(i,   j-2,   k, lb))/(dy*dy);
+                    rhs(i, j, k, lb) += (a0*q(i,   j,   k+2, lb)
+                    + a1*q(i, j, k+1, lb)
+                    + a2*q(i, j, k,   lb)
+                    + a3*q(i, j, k-1, lb)
+                    + a4*q(i, j, k-2, lb))/(dz*dz);
                 }
             }
         }
