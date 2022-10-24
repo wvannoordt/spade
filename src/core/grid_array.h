@@ -237,6 +237,9 @@ namespace spade::grid
             return idx_coeffs[lev]*idx + offst_r<lev+1>(idxs...);
         }
         
+        //Note: This has potential to become a bottleneck. Consider a strategy of precomputing the zero-offset, then
+        //indexing everything by simply multiplying individual indices by coefficients.
+        //Also, try incrementing the computed offset indx-for-index instead of constructing properly-ranked arrays
         template <typename... idxs_t>
         _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
@@ -245,6 +248,7 @@ namespace spade::grid
             return data[mem_map.offset(idxs...)];
         }
         
+        //Note: This has potential to become a bottleneck.
         template <typename... idxs_t>
         _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
         {
