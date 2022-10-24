@@ -44,6 +44,13 @@ namespace spade::grid
         constexpr offset_type offset(const index_type& i) const {return i-first();}
     };
     
+    template <const default_index_t i0, const default_index_t i1>
+    static std::ostream & operator<<(std::ostream & os, const static_dim_t<i0, i1>& dim)
+    {
+        os << "static dim: [" << dim.first() << " --> " << dim.last() << "]";
+        return os;
+    }
+    
     template <typename idx_t>
     requires (std::is_integral_v<idx_t>)
     struct dynamic_dim_t
@@ -62,6 +69,13 @@ namespace spade::grid
         
     };
     
+    template <typename idx_t>
+    static std::ostream & operator<<(std::ostream & os, const dynamic_dim_t<idx_t>& dim)
+    {
+        os << "dynamic dim: [" << dim.first() << " --> " << dim.last() << "]";
+        return os;
+    }
+    
     struct singleton_map_t
     {
         using index_type  = default_index_t;
@@ -77,6 +91,13 @@ namespace spade::grid
             return 0;
         }
     };
+    
+    static std::ostream & operator<<(std::ostream & os, const singleton_map_t& map)
+    {
+        os << "[singleton map]\n";
+        os << "[/singleton map]";
+        return os;
+    }
     
     template <is_dimension... dims_t> struct regular_map_t
     {
@@ -132,6 +153,19 @@ namespace spade::grid
         }
     };
     
+    template <typename... dims_t>
+    static std::ostream & operator<<(std::ostream & os, const regular_map_t<dims_t...>& map)
+    {
+        os << "[regular map]\n";
+        static_for<0,sizeof...(dims_t)>([&](const auto& i) -> void
+        {
+            os << std::get<i.value>(map.dims);
+            os << "\n";
+        });
+        os << "[/regular map]";
+        return os;
+    }
+    
     
     template <is_map... maps_t> struct composite_map_t
     {
@@ -176,7 +210,8 @@ namespace spade::grid
         template <const int cur_map, const int counter, ctrs::basic_array arg_t>
         requires (
             (arg_t::size() > 0) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()))
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
         void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg) const
@@ -188,7 +223,8 @@ namespace spade::grid
         template <const int cur_map, const int counter, typename arg_t, typename... args_t>
         requires (
             (arg_t::size() > 0)
-            && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()))
+            && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
         void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg,
@@ -203,7 +239,8 @@ namespace spade::grid
         requires (
             !ctrs::basic_array<arg_t>
             && counter==0
-            && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0)
+            && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0 &&
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
         void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg,
@@ -220,7 +257,8 @@ namespace spade::grid
         requires (
             !ctrs::basic_array<arg_t> &&
             counter>0 &&
-            ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter))
+            ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter) &&
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
         void recurse_incr_offset(
             offset_type& cur_offset,
             typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
@@ -234,7 +272,9 @@ namespace spade::grid
         //Send a full array to the indexing overload
         // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
         template <const int cur_map, const int counter, typename... args_t>
-        requires ((counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()))
+        requires (
+            (counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()) &&
+            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
         void recurse_incr_offset(
             offset_type& cur_offset,
             typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
@@ -248,6 +288,19 @@ namespace spade::grid
                 args_t...>(cur_offset, ar, args...);
         }
         
+        //increment past singleton maps
+        template <const int cur_map, const int counter, typename... args_t>
+        requires (utils::get_pack_type<cur_map, maps_t...>::type::rank() == 0)
+        void recurse_incr_offset(
+            offset_type& cur_offset,
+            const args_t&... args) const
+        {
+            recurse_incr_offset<
+                cur_map+1,
+                counter,
+                args_t...>(cur_offset, args...);
+        }
+        
         template <typename... idxs_t> offset_type offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;
@@ -255,6 +308,19 @@ namespace spade::grid
             return output;
         }
     };
+    
+    template <typename... maps_t>
+    static std::ostream & operator<<(std::ostream & os, const composite_map_t<maps_t...>& map)
+    {
+        os << "[composite map]\n";
+        static_for<0,sizeof...(maps_t)>([&](const auto& i) -> void
+        {
+            os << std::get<i.value>(map.maps);
+            os << "\n";
+        });
+        os << "[/composite map]";
+        return os;
+    }
     
     template <typename... inputs_t> struct something_to_check_validity_of_index_inputs_here
     {

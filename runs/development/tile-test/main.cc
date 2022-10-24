@@ -54,9 +54,11 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         tmr.stop(1);
         
+        print("SEG?", __FILE__, __LINE__);
         tmr.start(2);
-        diffuse4(rhs, q);
+        diffuse1(rhs, q);
         tmr.stop(2);
+        print("SEG?", __FILE__, __LINE__);
         
         print(tmr);
     };
@@ -67,6 +69,7 @@ int main(int argc, char** argv)
     spade::algs::fill_array(phi, ini);
     for (auto n: range(0, 10001))
     {
+        
         time_int.advance();
         print("nt = ", spade::utils::zfill(n, 8));
         if (n%1000==0)

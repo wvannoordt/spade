@@ -127,6 +127,17 @@ namespace spade::grid
         {
             static constexpr std::size_t value = count_rank_t<idx_t>::value;
         };
+        
+        template <typename grid_map_t, typename grid_t> void insert_grid_dims(grid_map_t& map, const grid_t& grid)
+        {
+            static_for<0, 3>([&](const auto& i) -> void
+            {
+                std::get<i.value>(map.dims).i0 = -grid.get_num_exchange(i.value);
+                std::get<i.value>(map.dims).i1 = grid.get_num_cells(i.value) + grid.get_num_exchange(i.value);
+            });
+            std::get<3>(map.dims).i0 = 0;
+            std::get<3>(map.dims).i1 = grid.get_num_local_blocks();
+        }
     }
     
     template <
@@ -161,6 +172,7 @@ namespace spade::grid
         container_t data;
         std::size_t offset;
         std::size_t idx_coeffs [total_idx_rank()];
+        mem_map_type mem_map;
         
         
         grid_array(){}
@@ -188,6 +200,8 @@ namespace spade::grid
             {
                 offset += grid_in.get_num_exchange(i)*idx_coeffs[i + minor_dim_t::rank()];
             }
+            auto& grid_map = std::get<1>(this->mem_map.maps);
+            detail::insert_grid_dims(grid_map, grid_in);
         }
         
         
@@ -222,17 +236,19 @@ namespace spade::grid
         }
         
         template <typename... idxs_t>
-        _finline_ fundamental_type& operator() (idxs_t... idxs)
+        _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
-            static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            return data[offset + offst_r(0, idxs...)];
+            // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
+            // return data[offset + offst_r(0, idxs...)];
+            return data[mem_map.offset(idxs...)];
         }
         
         template <typename... idxs_t>
-        _finline_ const fundamental_type& operator() (idxs_t... idxs) const
+        _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
         {
-            static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            return data[offset + offst_r(0, idxs...)];
+            // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
+            // return data[offset + offst_r(0, idxs...)];
+            return data[mem_map.offset(idxs...)];
         }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>

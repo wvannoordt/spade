@@ -34,7 +34,8 @@ int main(int argc, char** argv)
     spade::ctrs::array<int, 3> j(0, 0, 0);
     // print(imap.offset(j));
     
-    spade::grid::composite_map_t cmap(vmap, imap, bmap);
+    spade::grid::singleton_map_t nmap;
+    spade::grid::composite_map_t cmap(vmap, nmap, imap, nmap, bmap, nmap);
     // uni_map_t a1;
     // spade::grid::composite_map_t zmap(vmap, a1);
     // spade::grid::composite_map_t dmap(a1);
