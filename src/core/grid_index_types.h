@@ -82,30 +82,63 @@ namespace spade::grid
         t;
     };
     
-    static constexpr int get_face_dir_idx(void)
+    enum subindex_e
     {
-        return 3;
+        i_subindex,
+        j_subindex,
+        k_subindex,
+        lb_subindex,
+        dir_subindex
+    };
+    
+    template <const array_center_e centering, const subindex_e subidx> struct get_subidx
+    {
+        static constexpr int value = -1;
+    };
+    
+    //NOTE: it is currently required that i,j,k are stored next to each other!
+    template<> struct get_subidx<cell_centered, i_subindex>   {static constexpr int value =  0;};
+    template<> struct get_subidx<cell_centered, j_subindex>   {static constexpr int value =  1;};
+    template<> struct get_subidx<cell_centered, k_subindex>   {static constexpr int value =  2;};
+    template<> struct get_subidx<cell_centered, lb_subindex>  {static constexpr int value =  3;};
+    template<> struct get_subidx<cell_centered, dir_subindex> {static constexpr int value = -1;}; //invalid
+    
+    template<> struct get_subidx<face_centered, i_subindex>   {static constexpr int value =  1;};
+    template<> struct get_subidx<face_centered, j_subindex>   {static constexpr int value =  2;};
+    template<> struct get_subidx<face_centered, k_subindex>   {static constexpr int value =  3;};
+    template<> struct get_subidx<face_centered, lb_subindex>  {static constexpr int value =  4;};
+    template<> struct get_subidx<face_centered, dir_subindex> {static constexpr int value =  0;};
+    
+    template<> struct get_subidx<node_centered, i_subindex>   {static constexpr int value =  0;};
+    template<> struct get_subidx<node_centered, j_subindex>   {static constexpr int value =  1;};
+    template<> struct get_subidx<node_centered, k_subindex>   {static constexpr int value =  2;};
+    template<> struct get_subidx<node_centered, lb_subindex>  {static constexpr int value =  3;};
+    template<> struct get_subidx<node_centered, dir_subindex> {static constexpr int value = -1;}; //invalid
+    
+    static constexpr face_idx_t::value_type::value_type get_face_dir_idx()
+    {
+        return get_subidx<face_centered, dir_subindex>::value;
     }
     
     static face_idx_t::value_type::value_type get_face_dir(const face_idx_t& i_face)
     {
-        return i_face[get_face_dir_idx()];
+        return i_face[get_subidx<face_centered, dir_subindex>::value];
     }
     
     
     static int get_block_number(const cell_idx_t& i_cell)
     {
-        return i_cell[3];
+        return i_cell[get_subidx<cell_centered, lb_subindex>::value];
     }
     
     static int get_block_number(const face_idx_t& i_face)
     {
-        return i_face[4];
+        return i_face[get_subidx<face_centered, lb_subindex>::value];
     }
     
     static int get_block_number(const node_idx_t& i_node)
     {
-        return i_node[3];
+        return i_node[get_subidx<node_centered, lb_subindex>::value];
     }
     
     //i_cell is the cell index
@@ -113,9 +146,14 @@ namespace spade::grid
     //pm = 0 indicates the negative-side face, pm = 1 indicates the positive-side face
     static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
     {
-        //Note that the direction is presently the second-to-last index
-        face_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], idir, (int)i_cell[3]);
-        output[idir] += pm;
+        face_idx_t output;
+        output[get_subidx<face_centered,  i_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  i_subindex>::value];
+        output[get_subidx<face_centered,  j_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  j_subindex>::value];
+        output[get_subidx<face_centered,  k_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  k_subindex>::value];
+        output[get_subidx<face_centered, lb_subindex>::value] = (int)i_cell[get_subidx<cell_centered, lb_subindex>::value];
+        
+        //May cause an issue if i,j,k are not stored in consecution
+        output[get_subidx<face_centered,  i_subindex>::value + idir] += pm;
         return output;
     }
     
@@ -123,6 +161,8 @@ namespace spade::grid
     //offset has 3 entries that are either 0 or 1, indicating which corner of the cell to be chosen
     static node_idx_t cell_to_node(const cell_idx_t& i_cell, const ctrs::array<int,3>& offset)
     {
+        print("NOT IMPLEMENTED:", __FILE__, __LINE__);
+        abort();
         node_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3]);
         output[0] += offset[0];
         output[1] += offset[1];
@@ -134,7 +174,11 @@ namespace spade::grid
     //pm = 0 indicates the negative-side ("left") face, pm = 1 indicates the positive-side ("right") face
     static cell_idx_t face_to_cell(const face_idx_t& i_face, const int& pm)
     {
-        cell_idx_t output((int)i_face[0], (int)i_face[1], (int)i_face[2], (int)get_block_number(i_face));
+        cell_idx_t output;
+        output[get_subidx<cell_centered,  i_subindex>::value] = (int)i_face[get_subidx<face_centered,  i_subindex>::value];
+        output[get_subidx<cell_centered,  j_subindex>::value] = (int)i_face[get_subidx<face_centered,  j_subindex>::value];
+        output[get_subidx<cell_centered,  k_subindex>::value] = (int)i_face[get_subidx<face_centered,  k_subindex>::value];
+        output[get_subidx<cell_centered, lb_subindex>::value] = (int)i_face[get_subidx<face_centered, lb_subindex>::value];
         output[get_face_dir(i_face)] += (pm-1);
         return output;
     }
@@ -152,19 +196,28 @@ namespace spade::grid
     //Return the index-space coordinates of the index, used to compute the computational coordinates
     template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const cell_idx_t& i_cell)
     {
-        ctrs::array<rtype, 3> output((rtype)i_cell[0]+0.5, (rtype)i_cell[1]+0.5, (rtype)i_cell[2]+0.5);
+        ctrs::array<rtype, 3> output(
+            (rtype)i_cell[get_subidx<cell_centered, i_subindex>::value]+0.5,
+            (rtype)i_cell[get_subidx<cell_centered, j_subindex>::value]+0.5,
+            (rtype)i_cell[get_subidx<cell_centered, k_subindex>::value]+0.5);
         return output;
     }
     
     template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const node_idx_t& i_node)
     {
-        ctrs::array<rtype, 3> output((rtype)i_node[0], (rtype)i_node[1], (rtype)i_node[2]);
+        ctrs::array<rtype, 3> output(
+            (rtype)i_node[get_subidx<node_centered, i_subindex>::value],
+            (rtype)i_node[get_subidx<node_centered, j_subindex>::value],
+            (rtype)i_node[get_subidx<node_centered, k_subindex>::value]);
         return output;
     }
     
     template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const face_idx_t& i_face)
     {
-        ctrs::array<rtype, 3> output((rtype)i_face[0]+0.5, (rtype)i_face[1]+0.5, (rtype)i_face[2]+0.5);
+        ctrs::array<rtype, 3> output(
+            (rtype)i_face[get_subidx<face_centered, i_subindex>::value]+0.5,
+            (rtype)i_face[get_subidx<face_centered, j_subindex>::value]+0.5,
+            (rtype)i_face[get_subidx<face_centered, k_subindex>::value]+0.5);
         output[get_face_dir(i_face)] -= 0.5;
         return output;
     }

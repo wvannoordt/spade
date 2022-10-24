@@ -24,6 +24,7 @@ int main(int argc, char** argv)
     real_t fill = 0.0;
     
     spade::grid::cell_array c_alpha(grid, fill);
+    spade::grid::face_array f_alpha(grid, fill);
     
     auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
     {
@@ -31,10 +32,10 @@ int main(int argc, char** argv)
     };
     
     
-    spade::algs::fill_array(c_alpha, ini);
+    // spade::algs::fill_array(c_alpha, ini);
     // c_alpha(0, 0, 0, 0) = 99.0;
     // spade::grid::cell_idx_t ijk(0, 0, 0, 0);
     // c_alpha(ijk) = 99.0;
-    spade::io::output_vtk("output", "c_alpha", c_alpha);
+    // spade::io::output_vtk("output", "c_alpha", c_alpha);
     return 0;
 }
