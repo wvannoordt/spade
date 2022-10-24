@@ -128,7 +128,7 @@ namespace spade::grid
             coeffs[0] = 1;
             static_for<1,rank()>([&](const auto& i) -> void
             {
-                coeffs[i.value] = coeffs[i.value-1]*(std::get<i.value>(dims).size());
+                coeffs[i.value] = coeffs[i.value-1]*(std::get<i.value-1>(dims).size());
             });
         }
         
@@ -212,7 +212,7 @@ namespace spade::grid
             (arg_t::size() > 0) &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg) const
         {
@@ -225,7 +225,7 @@ namespace spade::grid
             (arg_t::size() > 0)
             && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg,
             const args_t&... args) const
@@ -241,7 +241,7 @@ namespace spade::grid
             && counter==0
             && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0 &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             const arg_t& arg,
             const args_t&... args) const
@@ -259,7 +259,7 @@ namespace spade::grid
             counter>0 &&
             ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter) &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
             const arg_t& arg,
@@ -275,7 +275,7 @@ namespace spade::grid
         requires (
             (counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()) &&
             (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
             // const arg_t& arg,
@@ -291,7 +291,7 @@ namespace spade::grid
         //increment past singleton maps
         template <const int cur_map, const int counter, typename... args_t>
         requires (utils::get_pack_type<cur_map, maps_t...>::type::rank() == 0)
-        void recurse_incr_offset(
+        _finline_ void recurse_incr_offset(
             offset_type& cur_offset,
             const args_t&... args) const
         {
@@ -301,7 +301,8 @@ namespace spade::grid
                 args_t...>(cur_offset, args...);
         }
         
-        template <typename... idxs_t> offset_type offset(const idxs_t&... idxs) const
+        template <typename... idxs_t> 
+        _finline_ offset_type offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;
             recurse_incr_offset<0,0,idxs_t...>(output, idxs...);

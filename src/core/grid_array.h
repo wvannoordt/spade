@@ -137,6 +137,7 @@ namespace spade::grid
             });
             std::get<3>(map.dims).i0 = 0;
             std::get<3>(map.dims).i1 = grid.get_num_local_blocks();
+            map.compute_coeffs();
         }
     }
     
@@ -202,6 +203,7 @@ namespace spade::grid
             }
             auto& grid_map = std::get<1>(this->mem_map.maps);
             detail::insert_grid_dims(grid_map, grid_in);
+            this->mem_map.compute_coeffs();
         }
         
         
@@ -221,25 +223,25 @@ namespace spade::grid
             }
         }
         
-        template <typename idx_t>
-        requires std::convertible_to<idx_t, int>
-         _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx) const
+        template <const int lev, typename idx_t>
+        requires (std::convertible_to<idx_t, int>)
+         _finline_ std::size_t offst_r(const idx_t& idx) const
         {
             return idx_coeffs[lev]*idx;
         }
         
-        template <typename idx_t, typename... idxs_t>
-        requires std::convertible_to<idx_t, int>
-        _finline_ std::size_t offst_r(const std::size_t& lev, const idx_t& idx, idxs_t... idxs) const
+        template <const int lev, typename idx_t, typename... idxs_t>
+        requires (std::convertible_to<idx_t, int>)
+        _finline_ std::size_t offst_r(const idx_t& idx, const idxs_t&... idxs) const
         {
-            return idx_coeffs[lev]*idx + offst_r(lev+1, idxs...);
+            return idx_coeffs[lev]*idx + offst_r<lev+1>(idxs...);
         }
         
         template <typename... idxs_t>
         _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
             // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            // return data[offset + offst_r(0, idxs...)];
+            // return data[offset + offst_r<0>(idxs...)];
             return data[mem_map.offset(idxs...)];
         }
         
@@ -247,9 +249,39 @@ namespace spade::grid
         _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
         {
             // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            // return data[offset + offst_r(0, idxs...)];
+            // return data[offset + offst_r<0>(idxs...)];
             return data[mem_map.offset(idxs...)];
         }
+        
+        // _finline_ fundamental_type& operator () (const int i, const int j, const int k, const int lb)
+        // {
+        //     // std::size_t off =
+        //     //     idx_coeffs[0]*(i-grid->get_num_cells(0)) +
+        //     //     idx_coeffs[1]*(j-grid->get_num_cells(1)) +
+        //     //     idx_coeffs[2]*(k-grid->get_num_cells(2)) +
+        //     //     idx_coeffs[3]*(lb);
+        //     std::size_t off = offset + 
+        //         idx_coeffs[0]*(i-grid->get_num_cells(0)) +
+        //         idx_coeffs[1]*(j-grid->get_num_cells(1)) +
+        //         idx_coeffs[2]*(k-grid->get_num_cells(2)) +
+        //         idx_coeffs[3]*(lb);
+        //     return data[off];
+        // }
+        
+        // _finline_ const fundamental_type& operator () (const int i, const int j, const int k, const int lb) const
+        // {
+        //     // std::size_t off =
+        //     //     idx_coeffs[0]*(i-grid->get_num_cells(0)) +
+        //     //     idx_coeffs[1]*(j-grid->get_num_cells(1)) +
+        //     //     idx_coeffs[2]*(k-grid->get_num_cells(2)) +
+        //     //     idx_coeffs[3]*(lb);
+        //     std::size_t off = offset + 
+        //         idx_coeffs[0]*(i) +
+        //         idx_coeffs[1]*(j) +
+        //         idx_coeffs[2]*(k) +
+        //         idx_coeffs[3]*(lb);
+        //     return data[off];
+        // }
         
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
         requires std::convertible_to<i0_t, int> &&

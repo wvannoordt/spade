@@ -54,11 +54,9 @@ int main(int argc, char** argv)
         grid.exchange_array(q);
         tmr.stop(1);
         
-        print("SEG?", __FILE__, __LINE__);
         tmr.start(2);
-        diffuse1(rhs, q);
+        diffuse4(rhs, q);
         tmr.stop(2);
-        print("SEG?", __FILE__, __LINE__);
         
         print(tmr);
     };
@@ -72,7 +70,7 @@ int main(int argc, char** argv)
         
         time_int.advance();
         print("nt = ", spade::utils::zfill(n, 8));
-        if (n%1000==0)
+        if (n>0 && n%1000==0)
         {
             std::string fname = "phi";
             fname += spade::utils::zfill(n, 8);
