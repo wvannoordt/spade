@@ -64,8 +64,8 @@ namespace spade::grid
         dynamic_dim_t(const idx_t& i0_in, const idx_t& i1_in){ i0 = i0_in; i1 = i1_in; }
         index_type first() const {return i0;}
         index_type last()  const {return i1;}
-        offset_type size() const {return last()-first();}
-        offset_type offset(const index_type& i) const {return i-first();}
+        _finline_ offset_type size() const {return last()-first();}
+        _finline_ offset_type offset(const index_type& i) const {return i-first();}
         
     };
     

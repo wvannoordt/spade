@@ -20,7 +20,7 @@ flags += -fconcepts-diagnostics-depth=3
 main:
 	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} -c diffkernel.cc -o diffkernel.o
 	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} -c main.cc -o main.o
-	${cc} *.o -o ${target}
+	${cc} *.o -g -o ${target}
 
 run: main
 	./${target}

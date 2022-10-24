@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     
     std::string frmt = "RHS: {}/{}    Exchange: {}/{}  Adv: {}/{}";
     spade::algs::fill_array(phi, ini);
-    for (auto n: range(0, 10001))
+    for (auto n: range(0, 11))
     {
         
         time_int.advance();
