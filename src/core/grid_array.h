@@ -151,7 +151,7 @@ namespace spade::grid
         typedef data_alias_t unwrapped_minor_type;
         
         typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
-        typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type                 grid_map_type;
+        typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type grid_map_type;
         typedef composite_map_t<variable_map_type, grid_map_type> mem_map_type;
         
         const grid_t* grid;

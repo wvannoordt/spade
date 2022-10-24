@@ -9,6 +9,7 @@ using var_map_t   = spade::grid::regular_map_t<static_dim_t<0,3>, static_dim_t<0
 using block_map_t = spade::grid::regular_map_t<dynamic_dim_t<int>>;
 using ijk_map_t   = spade::grid::regular_map_t<dynamic_dim_t<int>, dynamic_dim_t<int>, dynamic_dim_t<int>>;
 template <const std::size_t sz> using iv = spade::ctrs::array<int, sz>;
+using uni_map_t   = spade::grid::regular_map_t<static_dim_t<0,3>>;
 int main(int argc, char** argv)
 {
     std::vector<real_t> vec;
@@ -34,24 +35,29 @@ int main(int argc, char** argv)
     // print(imap.offset(j));
     
     spade::grid::composite_map_t cmap(vmap, imap, bmap);
+    // uni_map_t a1;
+    // spade::grid::composite_map_t zmap(vmap, a1);
+    // spade::grid::composite_map_t dmap(a1);
     
-    iv<2> i0(0, 0);
-    iv<3> i1(-2, -2, -2);
-    iv<1> i2(0);
+    iv<2> i0(1, 2);
+    iv<3> i1(3, 4, 0);
+    iv<1> i2(2);
     
     // fully verbose indexing
-    // print(cmap.offset(i0[0], i0[1], i1[0], i1[1], i1[2], i2[0]));
+    print(cmap.offset(i0[0], i0[1], i1[0], i1[1], i1[2], i2[0]));
     
+    // print(dmap.offset(1));
     // partially verbose indexing (all valid)
-    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2[0]));
-    // print(cmap.offset(i0[0], i0[1], i1,                  i2[0]));
-    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
-    // print(cmap.offset(i0,           i1,                  i2[0]));
-    // print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
-    // print(cmap.offset(i0[0], i0[1], i1,                  i2));
+    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2[0]));
+    print(cmap.offset(i0[0], i0[1], i1,                  i2[0]));
+    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
+    print(cmap.offset(i0,           i1,                  i2[0]));
+    print(cmap.offset(i0,           i1[0], i1[1], i1[2], i2));
+    print(cmap.offset(i0[0], i0[1], i1,                  i2)); 
     
     // compact indexing
     print(cmap.offset(i0, i1, i2));
+    // print(cmap.size());
     
     //tiling later
     // using tiled_map_t = spade::grid::tiled_map_t<dynamic_map_t<int>, dynamic_map_t<int>, dynamic_map_t<int>>
