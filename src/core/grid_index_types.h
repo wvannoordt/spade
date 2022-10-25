@@ -222,4 +222,41 @@ namespace spade::grid
         output[get_face_dir(i_face)] -= 0.5;
         return output;
     }
+    
+    template <const array_center_e centering>
+    requires (centering==cell_centered)
+    static cell_idx_t make_idx(const int& i, const int& j, const int& k, const int& lb)
+    {
+        cell_idx_t output;
+        output[get_subidx<cell_centered,  i_subindex>::value] = i;
+        output[get_subidx<cell_centered,  j_subindex>::value] = j;
+        output[get_subidx<cell_centered,  k_subindex>::value] = k;
+        output[get_subidx<cell_centered, lb_subindex>::value] = lb;
+        return output;
+    }
+    
+    template <const array_center_e centering>
+    requires (centering==face_centered)
+    static face_idx_t make_idx(const int& idir, const int& i, const int& j, const int& k, const int& lb)
+    {
+        face_idx_t output;
+        output[get_subidx<face_centered,dir_subindex>::value] = idir;
+        output[get_subidx<face_centered,  i_subindex>::value] = i;
+        output[get_subidx<face_centered,  j_subindex>::value] = j;
+        output[get_subidx<face_centered,  k_subindex>::value] = k;
+        output[get_subidx<face_centered, lb_subindex>::value] = lb;
+        return output;
+    }
+    
+    template <const array_center_e centering>
+    requires (centering==node_centered)
+    static node_idx_t make_idx(const int& i, const int& j, const int& k, const int& lb)
+    {
+        node_idx_t output;
+        output[get_subidx<node_centered,  i_subindex>::value] = i;
+        output[get_subidx<node_centered,  j_subindex>::value] = j;
+        output[get_subidx<node_centered,  k_subindex>::value] = k;
+        output[get_subidx<node_centered, lb_subindex>::value] = lb;
+        return output;
+    }
 }

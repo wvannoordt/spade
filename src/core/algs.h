@@ -116,6 +116,12 @@ namespace spade::algs
         };
     }
     
+    template <typename array_t, typename lb_idx_t, typename kernel_t>
+    void block_elem_loop(array_t& array, const lb_idx_t& lb, const grid::exchange_inclusion_e& exchange_policy, const kernel_t& kernel)
+    {
+        
+    }
+    
     template <class array_t, class callable_t>
     void fill_array(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
     {
@@ -130,6 +136,18 @@ namespace spade::algs
                 detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
             }
         }
+        // const std::size_t nlb = grid.get_num_local_blocks();
+        // for (auto lb: range(0, nlb))
+        // {
+        //     const auto kernel = [&](const auto& elem) -> void
+        //     {
+        //         const auto x = detail::get_coords(grid, arr, elem);
+        //         auto data = detail::forward_fillable_args(grid, func, x, elem);
+        //         detail::set_elem_value(data, arr, elem);
+        //     };
+        //     block_elem_loop(arr, lb, exchange_policy, kernel);
+        // }
+        
     }
     
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>
@@ -173,11 +191,5 @@ namespace spade::algs
             }
         }
         return arr;
-    }
-    
-    //prototype
-    template <typename idx_t, const std::size_t rank, typename callable_t> static void rloop(const bound_box_t<idx_t, rank>& domain, const callable_t& exec)
-    {
-        
     }
 }

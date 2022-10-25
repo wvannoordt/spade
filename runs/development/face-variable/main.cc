@@ -6,7 +6,7 @@ typedef double real_t;
 int main(int argc, char** argv)
 {
     spade::parallel::mpi_t group(&argc, &argv);
-    spade::ctrs::array<int, 3> num_blocks(2, 2, 2);
+    spade::ctrs::array<int, 3> num_blocks(4, 4, 4);
     spade::ctrs::array<int, 3> cells_in_block(16, 16, 16);
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
     spade::bound_box_t<real_t, 3> bounds;
@@ -26,16 +26,28 @@ int main(int argc, char** argv)
     spade::grid::cell_array c_alpha(grid, fill);
     spade::grid::face_array f_alpha(grid, fill);
     
+    print(c_alpha.mem_map);
+    print(f_alpha.mem_map);
+    
     auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
     {
         return std::sin(x[0]) + std::sin(x[1])*std::cos(x[2]);
     };
     
     
-    // spade::algs::fill_array(c_alpha, ini);
-    // c_alpha(0, 0, 0, 0) = 99.0;
-    // spade::grid::cell_idx_t ijk(0, 0, 0, 0);
-    // c_alpha(ijk) = 99.0;
+    
+    spade::utils::mtimer_t tmr("fill");
+    tmr.start();
+    spade::algs::fill_array(c_alpha, ini);
+    tmr.stop();
+    print(tmr);
+    spade::grid::cell_idx_t ijkc(0, 0, 0, 0);
+    c_alpha(ijkc) = 99.0;
+    
+    // spade::algs::fill_array(f_alpha, ini);
+    spade::grid::face_idx_t ijkf(0, 0, 0, 0, 0);
+    f_alpha(ijkf) = 99.0;
+    
     // spade::io::output_vtk("output", "c_alpha", c_alpha);
     return 0;
 }
