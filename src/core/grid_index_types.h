@@ -147,10 +147,11 @@ namespace spade::grid
     static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
     {
         face_idx_t output;
-        output[get_subidx<face_centered,  i_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  i_subindex>::value];
-        output[get_subidx<face_centered,  j_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  j_subindex>::value];
-        output[get_subidx<face_centered,  k_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  k_subindex>::value];
-        output[get_subidx<face_centered, lb_subindex>::value] = (int)i_cell[get_subidx<cell_centered, lb_subindex>::value];
+        output[get_subidx<face_centered,   i_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  i_subindex>::value];
+        output[get_subidx<face_centered,   j_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  j_subindex>::value];
+        output[get_subidx<face_centered,   k_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  k_subindex>::value];
+        output[get_subidx<face_centered,  lb_subindex>::value] = (int)i_cell[get_subidx<cell_centered, lb_subindex>::value];
+        output[get_subidx<face_centered, dir_subindex>::value] = idir;
         
         //May cause an issue if i,j,k are not stored in consecution
         output[get_subidx<face_centered,  i_subindex>::value + idir] += pm;
