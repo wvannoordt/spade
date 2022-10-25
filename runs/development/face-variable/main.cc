@@ -46,6 +46,6 @@ int main(int argc, char** argv)
     spade::grid::face_idx_t ijkf(0, 0, 0, 0, 0);
     f_alpha(ijkf) = 99.0;
     
-    // spade::io::output_vtk("output", "c_alpha", c_alpha);
+    spade::io::output_vtk("output", "c_alpha", c_alpha);
     return 0;
 }

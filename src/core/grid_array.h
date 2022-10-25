@@ -193,6 +193,21 @@ namespace spade::grid
         
     }
     
+    namespace detail
+    {
+        template <const array_center_e centering, typename bbox_t>
+        requires (centering == face_centered)
+        void set_bbox_dir_val(bbox_t& bbox, const int& dim)
+        {
+            bbox.min(get_subidx<centering, dir_subindex>::value) = 0;
+            bbox.max(get_subidx<centering, dir_subindex>::value) = dim;
+        }
+        
+        template <const array_center_e centering, typename bbox_t>
+        requires (centering != face_centered)
+        void set_bbox_dir_val(bbox_t& bbox, const int& dim) {}
+    }
+    
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
@@ -259,6 +274,10 @@ namespace spade::grid
             this->mem_map.compute_coeffs();
         }
         
+        const auto& var_map() const
+        {
+            return std::get<0>(mem_map.maps);
+        }
         
         std::size_t get_index_extent(std::size_t i)
         {
@@ -444,6 +463,29 @@ namespace spade::grid
         major_dim_t get_grid_dims () const { return grid_dims;  }
         auto get_total_dims()        const { return minor_dims*grid_dims*major_dims; }
         const grid_t& get_grid() const {return *grid;}
+        
+        auto get_grid_index_bounding_box(const grid::exchange_inclusion_e& exchange_policy) const
+        {
+            const auto& grid = get_grid();
+            int iexchg = 0;
+            if (exchange_policy == include_exchanges) iexchg = 1;
+            bound_box_t<index_integral_t, grid_map_type::rank()> output;
+            output.min(get_subidx<centering_type(),  i_subindex>::value) = -iexchg*grid.get_num_exchange(0);
+            output.max(get_subidx<centering_type(),  i_subindex>::value) = grid.get_num_cells(0) + iexchg*grid.get_num_exchange(0);
+            
+            output.min(get_subidx<centering_type(),  j_subindex>::value) = -iexchg*grid.get_num_exchange(1);
+            output.max(get_subidx<centering_type(),  j_subindex>::value) = grid.get_num_cells(1) + iexchg*grid.get_num_exchange(1);
+            
+            output.min(get_subidx<centering_type(),  k_subindex>::value) = -iexchg*grid.get_num_exchange(2);
+            output.max(get_subidx<centering_type(),  k_subindex>::value) = grid.get_num_cells(2) + iexchg*grid.get_num_exchange(2);
+            
+            output.min(get_subidx<centering_type(), lb_subindex>::value) = 0;
+            output.max(get_subidx<centering_type(), lb_subindex>::value) = grid.get_num_local_blocks();
+            
+            detail::set_bbox_dir_val<centering_type()>(output, grid_type::dim());
+            
+            return output;
+        }
     };
     
     template <

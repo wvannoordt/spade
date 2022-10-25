@@ -43,6 +43,13 @@ namespace spade::grid
             val += rhs;
             return static_cast<derived_t&>(*this);
         }
+        
+        derived_t& operator ++ ()
+        {
+            ++val;
+            return static_cast<derived_t&>(*this);
+        }
+        
         derived_t& operator -= (const arith_t& rhs)
         {
             val -= rhs;

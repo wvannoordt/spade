@@ -7,6 +7,7 @@
 #include "core/attribs.h"
 #include "core/grid.h"
 #include "core/reduce_ops.h"
+#include "core/md_loop.h"
 
 namespace spade::algs
 {
@@ -128,24 +129,35 @@ namespace spade::algs
     template <typename array_t, typename lb_idx_t, typename kernel_t>
     void block_elem_loop(array_t& array, const lb_idx_t& lb, const grid::exchange_inclusion_e& exchange_policy, const kernel_t& kernel)
     {
+        auto bound_box = array.get_grid_index_bounding_box(exchange_policy);
+        const int lb_dim = grid::get_subidx<array.centering_type(), grid::lb_subindex>::value;
         
+        //modify the bounding box to only loop over this one block
+        bound_box.min(lb_dim) = (int)(lb);
+        bound_box.max(lb_dim) = (int)(lb+1);
+        
+        md_loop(bound_box, kernel);
+    }
+    
+    template <typename data_t, typename array_t, typename elem_t>
+    requires(array_t::variable_map_type::rank()==0)
+    void set_elem_value(const data_t& data, array_t& arr, const elem_t& elem)
+    {
+        arr(elem) = data;
+    }
+    
+    template <typename data_t, typename array_t, typename elem_t>
+    requires(array_t::variable_map_type::rank()==1)
+    void set_elem_value(const data_t& data, array_t& arr, const elem_t& elem)
+    {
+        for (int i = 0; i < arr.var_map().size() ; ++i) arr(i, elem) = data[i];
     }
     
     template <class array_t, class kernel_t>
     void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
     {
         const auto& grid = arr.get_grid();
-        auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
-        for (auto maj: range(0, arr.get_major_dims().total_size()))
-        {
-            for (auto i: grid_range)
-            {
-                auto x = detail::get_coords(grid, arr, i[0], i[1], i[2], i[3]);
-                auto data = detail::forward_fillable_args(grid, kernel, x, i[0], i[1], i[2], i[3]);
-                detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
-            }
-        }
-        const std::size_t nlb = grid.get_num_local_blocks();
+        const auto nlb = grid.get_num_local_blocks();
         
         //consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
@@ -153,11 +165,10 @@ namespace spade::algs
             const auto loop_func = [&](const auto& elem) -> void
             {
                 const auto data = detail::invoke_kernel(kernel, arr, elem);
-                // detail::set_elem_value(data, arr, elem);
+                set_elem_value(data, arr, elem);
             };
-            block_elem_loop(arr, lb, exchange_policy, loop_func);
-        }
-        
+            block_elem_loop(arr, (typename array_t::index_integral_t)lb, exchange_policy, loop_func);
+        }    
     }
     
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>

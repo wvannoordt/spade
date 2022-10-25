@@ -96,3 +96,5 @@ of a gas
 - `navier_stokes_mms`: soon to be deprecated!
 
 - `viscous_laws`: contains state-dependent viscous laws for CNSE
+
+- `amr`: contains algorithms for adaptive mesh refinement

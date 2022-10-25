@@ -4,7 +4,7 @@
 
 namespace spade
 {
-    template <typename dtype, const size_t ar_size> struct bound_box_t
+    template <typename dtype, const std::size_t ar_size> struct bound_box_t
     {
         dtype bnds[2*ar_size];
         

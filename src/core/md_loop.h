@@ -9,7 +9,7 @@ namespace spade::algs
 {
     template <
         typename index_t,
-        const int index_rank,
+        const std::size_t index_rank,
         typename fcn_t,
         const int index_val
         >
@@ -30,7 +30,7 @@ namespace spade::algs
 
     template <
         typename index_t,
-        const int index_rank,
+        const std::size_t index_rank,
         typename fcn_t,
         const int index_val
         >
@@ -48,8 +48,8 @@ namespace spade::algs
         const std::size_t index_rank,
         typename fcn_t
         >
-    static void multi_loop(
-        const spade::bound_box_t<index_t, index_rank> bds,
+    static void md_loop(
+        const spade::bound_box_t<index_t, index_rank>& bds,
         const fcn_t& fcn)
     {
         spade::ctrs::array<index_t, index_rank> index;

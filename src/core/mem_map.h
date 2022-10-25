@@ -111,6 +111,8 @@ namespace spade::grid
         ctrs::array<offset_type, rank()> coeffs;
         aliases::tuple<dims_t...> dims;
         
+        std::size_t map_size;
+        
         regular_map_t()
         {
             //maybe do this only when the sizes are constant-eval
@@ -130,6 +132,11 @@ namespace spade::grid
             {
                 coeffs[i.value] = coeffs[i.value-1]*(std::get<i.value-1>(dims).size());
             });
+            map_size = 1;
+            static_for<0,rank()>([&](const auto& i) -> void
+            {
+                map_size *= std::get<i.value>(dims).size();
+            });
         }
         
         _finline_ offset_type offset(const identifier_type& idx) const
@@ -144,12 +151,7 @@ namespace spade::grid
         
         offset_type size() const
         {
-            offset_type output = 1;
-            static_for<0,rank()>([&](const auto& i) -> void
-            {
-                output *= std::get<i.value>(dims).size();
-            });
-            return output;
+            return map_size;
         }
     };
     
@@ -172,9 +174,10 @@ namespace spade::grid
         using index_type  = default_index_t;
         using offset_type = default_offset_t;
         
-        static constexpr offset_type rank() {return sizeof...(maps_t);}
+        static constexpr index_type rank() {return sizeof...(maps_t);}
         aliases::tuple<maps_t...> maps;
         ctrs::array<offset_type, rank()> coeffs;
+        std::size_t map_size;
         
         composite_map_t()
         {
@@ -194,16 +197,16 @@ namespace spade::grid
             {
                 coeffs[i.value] = std::get<i.value-1>(maps).size()*coeffs[i.value-1];
             });
+            map_size = 1;
+            static_for<0, rank()>([&](const auto& i) -> void
+            {
+                map_size *= std::get<i.value>(maps).size();
+            });
         }
         
         offset_type size() const
         {
-            offset_type output = 1;
-            static_for<0, rank()>([&](const auto& i) -> void
-            {
-                output *= std::get<i.value>(maps).size();
-            });
-            return output;
+            return map_size;
         }
         
         //increment using an array index with no further arguments
