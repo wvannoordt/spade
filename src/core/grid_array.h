@@ -106,6 +106,23 @@ namespace spade::grid
         template <> struct get_centering_grid_idx_rank<face_centered> { static constexpr int value = 5; };
         template <> struct get_centering_grid_idx_rank<node_centered> { static constexpr int value = 4; };
         
+        template <const array_center_e centering> struct get_index_type{};
+        template <> struct get_index_type<cell_centered>
+        {
+            typedef typename cell_idx_t::value_type integral_type;
+            typedef cell_idx_t array_type;
+        };
+        template <> struct get_index_type<face_centered>
+        {
+            typedef typename face_idx_t::value_type integral_type;
+            typedef face_idx_t array_type;
+        };
+        template <> struct get_index_type<node_centered>
+        {
+            typedef typename node_idx_t::value_type integral_type;
+            typedef node_idx_t array_type;
+        };
+        
         template <typename idx_t> 
         struct count_rank_t
         {
@@ -193,7 +210,8 @@ namespace spade::grid
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
-        typedef std::conditional<centering_type()==cell_centered, cell_t<int>, node_t<int>> index_integral_t;
+        typedef typename detail::get_index_type<centering_type()>::integral_type index_integral_t;
+        typedef typename detail::get_index_type<centering_type()>::array_type    index_t;
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         

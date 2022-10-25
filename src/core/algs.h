@@ -114,6 +114,15 @@ namespace spade::algs
         {
             typedef typename callable_t::arg_type type;
         };
+        
+        //SFINAE for now
+        
+        //coordinates-only
+        template <typename kernel_t, typename array_t, typename idx_t>
+        auto invoke_kernel(const kernel_t& kernel, const array_t& arr, const idx_t& idx)
+        {
+            return kernel(arr.get_grid().get_coords(idx));
+        }
     }
     
     template <typename array_t, typename lb_idx_t, typename kernel_t>
@@ -122,8 +131,8 @@ namespace spade::algs
         
     }
     
-    template <class array_t, class callable_t>
-    void fill_array(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
+    template <class array_t, class kernel_t>
+    void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
     {
         const auto& grid = arr.get_grid();
         auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
@@ -132,21 +141,22 @@ namespace spade::algs
             for (auto i: grid_range)
             {
                 auto x = detail::get_coords(grid, arr, i[0], i[1], i[2], i[3]);
-                auto data = detail::forward_fillable_args(grid, func, x, i[0], i[1], i[2], i[3]);
+                auto data = detail::forward_fillable_args(grid, kernel, x, i[0], i[1], i[2], i[3]);
                 detail::set_from_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
             }
         }
-        // const std::size_t nlb = grid.get_num_local_blocks();
-        // for (auto lb: range(0, nlb))
-        // {
-        //     const auto kernel = [&](const auto& elem) -> void
-        //     {
-        //         const auto x = detail::get_coords(grid, arr, elem);
-        //         auto data = detail::forward_fillable_args(grid, func, x, elem);
-        //         detail::set_elem_value(data, arr, elem);
-        //     };
-        //     block_elem_loop(arr, lb, exchange_policy, kernel);
-        // }
+        const std::size_t nlb = grid.get_num_local_blocks();
+        
+        //consider fundamentally separating the block dimension with the ijk dimensions!
+        for (auto lb: range(0, nlb))
+        {
+            const auto loop_func = [&](const auto& elem) -> void
+            {
+                const auto data = detail::invoke_kernel(kernel, arr, elem);
+                // detail::set_elem_value(data, arr, elem);
+            };
+            block_elem_loop(arr, lb, exchange_policy, loop_func);
+        }
         
     }
     
