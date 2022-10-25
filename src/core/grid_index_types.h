@@ -93,7 +93,7 @@ namespace spade::grid
     
     template <const array_center_e centering, const subindex_e subidx> struct get_subidx
     {
-        static constexpr int value = -1;
+        //specializations only
     };
     
     //NOTE: it is currently required that i,j,k are stored next to each other!
@@ -101,7 +101,7 @@ namespace spade::grid
     template<> struct get_subidx<cell_centered, j_subindex>   {static constexpr int value =  1;};
     template<> struct get_subidx<cell_centered, k_subindex>   {static constexpr int value =  2;};
     template<> struct get_subidx<cell_centered, lb_subindex>  {static constexpr int value =  3;};
-    template<> struct get_subidx<cell_centered, dir_subindex> {static constexpr int value = -1;}; //invalid
+    template<> struct get_subidx<cell_centered, dir_subindex> {}; //invalid
     
     template<> struct get_subidx<face_centered, i_subindex>   {static constexpr int value =  1;};
     template<> struct get_subidx<face_centered, j_subindex>   {static constexpr int value =  2;};
@@ -113,7 +113,7 @@ namespace spade::grid
     template<> struct get_subidx<node_centered, j_subindex>   {static constexpr int value =  1;};
     template<> struct get_subidx<node_centered, k_subindex>   {static constexpr int value =  2;};
     template<> struct get_subidx<node_centered, lb_subindex>  {static constexpr int value =  3;};
-    template<> struct get_subidx<node_centered, dir_subindex> {static constexpr int value = -1;}; //invalid
+    template<> struct get_subidx<node_centered, dir_subindex> {}; //invalid
     
     static constexpr face_idx_t::value_type::value_type get_face_dir_idx()
     {
