@@ -13,6 +13,8 @@ namespace spade::utils
         std::vector<time_t> start_time, end_time;
         std::vector<duration_t> avg;
         std::vector<std::size_t> num_samples;
+        std::vector<std::string> names;
+        std::map<std::string, int> name_map;
         
         mtimer_t()
         {
@@ -20,6 +22,8 @@ namespace spade::utils
             end_time.resize(1);
             avg.resize(1, 0.0);
             num_samples.resize(1, 0);
+            default_init_names();
+            create_name_map();
         }
         
         mtimer_t(const std::size_t& size)
@@ -28,10 +32,46 @@ namespace spade::utils
             end_time.resize(size);
             avg.resize(size, 0.0);
             num_samples.resize(size, 0);
+            default_init_names();
+            create_name_map();
+        }
+        
+        void rsetnames(){}
+        template <typename... strings_t> void rsetnames(const std::string& name_in, const strings_t&... names_in) {names.push_back(name_in); rsetnames(names_in...);}
+        
+        template <typename... strings_t> mtimer_t(const std::string& name_in, const strings_t&... names_in)
+        {
+            const std::size_t size = 1 + sizeof...(strings_t);
+            start_time.resize(size);
+            end_time.resize(size);
+            avg.resize(size, 0.0);
+            num_samples.resize(size, 0);
+            names.clear();
+            names.push_back(name_in);
+            rsetnames(names_in...);
+            create_name_map();
+        }
+        
+        void default_init_names()
+        {
+            names.clear();
+            for (auto i: range(0, start_time.size())) names.push_back(std::to_string(i));
+        }
+        
+        void create_name_map()
+        {
+            name_map.clear();
+            for (auto i: range(0, start_time.size()))
+            {
+                name_map.insert({this->names[i], i});
+            }
         }
         
         void start() { this->start(0); }
         void stop () { this->stop(0); }
+        
+        void start(const std::string& name_in) { this->start(name_map[name_in]); }
+        void stop (const std::string& name_in) { this->stop(name_map[name_in]); }
         
         void start(const std::size_t& idx)
         {
@@ -67,7 +107,7 @@ namespace spade::utils
         os << "Timer: elapsed/average (seconds)\n";
         for (int i = 0; i < tmr.size(); ++i)
         {
-            os << utils::pad_str(i, 5) << ":" << utils::pad_str(tmr.duration(i), 13) << "/" << utils::pad_str(tmr.average(i), 13) << "\n";
+            os << utils::pad_str(tmr.names[i], 15) << ":" << utils::pad_str(tmr.duration(i), 13) << "/" << utils::pad_str(tmr.average(i), 13) << "\n";
         }
         return os;
     }

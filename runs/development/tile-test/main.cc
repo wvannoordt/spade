@@ -42,21 +42,21 @@ int main(int argc, char** argv)
     
     real_t time0 = 0.0;
     real_t dt = 1e-5;
-    spade::utils::mtimer_t tmr(3);
+    spade::utils::mtimer_t tmr("rhs-init", "exchange", "diffuse");
     
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
-        tmr.start(0);
+        tmr.start("rhs-init");
         rhs = 0.0;
-        tmr.stop(0);
+        tmr.stop("rhs-init");
         
-        tmr.start(1);
+        tmr.start("exchange");
         grid.exchange_array(q);
-        tmr.stop(1);
+        tmr.stop("exchange");
         
-        tmr.start(2);
+        tmr.start("diffuse");
         diffuse4(rhs, q);
-        tmr.stop(2);
+        tmr.stop("diffuse");
         
         print(tmr);
     };

@@ -180,9 +180,20 @@ namespace spade::utils
             left, right
         };
     }
+    
+    static std::string to_string(const std::string& str)
+    {
+        return str;
+    }
+    
+    template <typename str_t> static std::string to_string(const str_t& str)
+    {
+        return std::to_string(str);
+    }
+    
     template <typename data_t, const padding::padding pd = padding::right> static inline std::string pad_str(const data_t& data, const std::size_t& pad_size, const char& pad_char = ' ')
     {
-        std::string output = std::to_string(data);
+        std::string output = to_string(data);
         if constexpr (pd == padding::left)
         {
             while (output.length() < pad_size) output = pad_char + output;
