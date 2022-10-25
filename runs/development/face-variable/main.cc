@@ -34,8 +34,6 @@ int main(int argc, char** argv)
         return std::sin(x[0]) + std::sin(x[1])*std::cos(x[2]);
     };
     
-    
-    
     spade::utils::mtimer_t tmr("fill");
     tmr.start();
     spade::algs::fill_array(c_alpha, ini);
