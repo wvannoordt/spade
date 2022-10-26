@@ -123,6 +123,7 @@ namespace spade::proto
         {
             //note: storage in in_prims is p p p p p p p p p p p p u u u u u u u u u u u u u v v v v v v v...
             std::size_t num_wm_points = this->enumerate_points(q, walls);
+            if (this->size() == 0) return;
             HyWall::SetDomainSize(num_wm_points);
             HyWall::DefineVariables();
             HyWall::PassFlowfieldVariables(&in_prims[0], num_wm_points);
@@ -177,6 +178,7 @@ namespace spade::proto
         
         template <typename visc_t> void sample(const array_t& q, const visc_t& visc)
         {
+            if (this->size() == 0) return;
             for (auto n: range(0, wm_faces.size()))
             {
                 auto ijk = wm_samples[n];
@@ -217,11 +219,13 @@ namespace spade::proto
         
         void solve()
         {
+            if (this->size() == 0) return;
             HyWall::Solve();
         }
         
         void apply_flux(rhs_t& rhs)
         {
+            if (this->size() == 0) return;
             for (auto n: range(0, wm_faces.size()))
             {
                 auto ijkF = wm_faces[n];
