@@ -26,11 +26,16 @@ int main(int argc, char** argv)
     bool   output = input["output"];
     v3i filt(filt_x, filt_y, filt_z);
     
-    spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
-    spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
-    spade::ctrs::array<int, 3> cells_in_block_coarse;
+    // spade::ctrs::array<int, 3> num_blocks(8, 8, 8);
+    // spade::ctrs::array<int, 3> cells_in_block(48, 48, 48);
+    // spade::ctrs::array<int, 3> cells_in_block_coarse;
+    // spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
+    
+    spade::ctrs::array<int, 3> num_blocks(4, 4, 4);
+    spade::ctrs::array<int, 3> cells_in_block(16, 16, 16);
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
     spade::ctrs::array<int, 3> exchange_cells_filt(filt[0]/2, filt[1]/2, filt[2]/2);
+    
     spade::bound_box_t<real_t, 3> bounds;
     const real_t re_tau = 180.0;
     const real_t delta = 1.0;

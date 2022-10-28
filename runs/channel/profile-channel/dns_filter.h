@@ -75,7 +75,8 @@ namespace postprocessing
             int idc = 0;
             for (int dir = 2; dir <= 3; ++dir)
             {
-                if (grid.is_domain_boundary(lb_glob, dir))
+                const auto& idomain = grid.is_domain_boundary(lb_glob);
+                if (idomain(dir/2, dir%2))
                 {
                     const auto lb_idx = spade::ctrs::expand_index(lb_glob, grid.get_num_blocks());
                     const auto nvec_out = v3i(0,2*idc-1,0);
@@ -165,7 +166,8 @@ namespace postprocessing
             spade::grid::cell_idx_t  ijk_L(i[0], i[1], i[2], i[3]);
             spade::grid::cell_idx_t  ijk_R(i[0], i[1], i[2], i[3]);
             ijk_L[1] -= 1;
-            spade::grid::face_idx_t  ijk_F((int)ijk_R[0], (int)ijk_R[1], (int)ijk_R[2], (int)ijk_R[3], 1);
+            // spade::grid::face_idx_t  ijk_F((int)ijk_R[0], (int)ijk_R[1], (int)ijk_R[2], (int)ijk_R[3], 1);
+            spade::grid::face_idx_t ijk_F = spade::grid::cell_to_face(ijk_L, 1, 1);
             const auto x  = grid.get_comp_coords(ijk_F);
             prim_t q_i_l_L, q_i_l_R, q_o_l_L, q_o_l_R;
             for (auto n: range(0,5))
