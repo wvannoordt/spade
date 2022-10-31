@@ -34,18 +34,21 @@ int main(int argc, char** argv)
         return std::sin(x[0]) + std::sin(x[1])*std::cos(x[2]);
     };
     
-    spade::utils::mtimer_t tmr("fill");
-    tmr.start();
+    spade::utils::mtimer_t tmr("fill_c", "fill_f");
+    tmr.start("fill_c");
     spade::algs::fill_array(c_alpha, ini);
-    tmr.stop();
+    tmr.stop("fill_c");
     print(tmr);
-    spade::grid::cell_idx_t ijkc(0, 0, 0, 0);
-    c_alpha(ijkc) = 99.0;
+    // spade::grid::cell_idx_t ijkc(0, 0, 0, 0);
+    // c_alpha(ijkc) = 99.0;
     
-    // spade::algs::fill_array(f_alpha, ini);
-    spade::grid::face_idx_t ijkf(0, 0, 0, 0, 0);
-    f_alpha(ijkf) = 99.0;
+    tmr.start("fill_f");
+    spade::algs::fill_array(f_alpha, ini);
+    tmr.stop("fill_f");
+    // spade::grid::face_idx_t ijkf(0, 0, 0, 0, 0);
+    // f_alpha(ijkf) = 99.0;
     
     spade::io::output_vtk("output", "c_alpha", c_alpha);
+    spade::io::output_vtk("output", "f_alpha", f_alpha);
     return 0;
 }
