@@ -11,3 +11,4 @@
 [x] Infer grid dimension from the dimension of arrays passed to constructor?
 [ ] Re-work the fetch system to include unions of stencils and proper node/face/cell index centering, clean up implementation
 [ ] Move mtimer_t to the timing namespace
+[ ] Simplify the array-type index system (probably just use a struct!)
