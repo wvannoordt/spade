@@ -21,6 +21,7 @@
 #include "core/block_config.h"
 #include "core/pde_algs.h"
 #include "core/mtimer.h"
+#include "core/subidx.h"
 
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"

@@ -227,6 +227,7 @@ namespace spade::grid
         typedef major_dim_t array_major_dim_t;
         typedef typename detail::get_index_type<centering_type()>::integral_type index_integral_t;
         typedef typename detail::get_index_type<centering_type()>::array_type    index_t;
+        typedef ctrs::array<typename grid_type::coord_type, 3> coord_point_type;
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         
