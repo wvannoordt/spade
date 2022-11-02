@@ -139,7 +139,9 @@ namespace spade::grid
             });
         }
         
-        _finline_ offset_type offset(const identifier_type& idx) const
+        template <typename input_t>
+        requires (ctrs::convertible_array<input_t, identifier_type> && ctrs::same_size<input_t, identifier_type>)
+        _finline_ offset_type offset(const input_t& idx) const
         {
             offset_type output = offset_type(0);
             static_for<0,rank()>([&](const auto& i) -> void

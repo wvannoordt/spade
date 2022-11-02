@@ -182,7 +182,7 @@ namespace spade::algs
                 const auto data = detail::invoke_kernel(kernel, arr, elem);
                 set_elem_value(data, arr, elem);
             };
-            block_elem_loop(arr, (typename array_t::index_integral_t)lb, exchange_policy, loop_func);
+            block_elem_loop(arr, (typename array_t::index_integral_type)lb, exchange_policy, loop_func);
         }    
     }
     

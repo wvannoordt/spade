@@ -14,7 +14,7 @@ namespace spade::partition
                 
             }
             
-            block_partition_t(const ctrs::array<std::size_t, 3>& num_blocks_in, parallel::mpi_t* group_in)
+            block_partition_t(const ctrs::array<int, 3>& num_blocks_in, parallel::mpi_t* group_in)
             {
                 ctrs::copy_array(num_blocks_in, num_blocks);
                 std::size_t total_blocks = num_blocks[0]*num_blocks[1]*num_blocks[2];
@@ -47,7 +47,7 @@ namespace spade::partition
             std::size_t get_global_rank (const std::size_t& lb_glob)  const { return global_block_to_rank[lb_glob]; }
             
         private:
-            ctrs::array<std::size_t, 3> num_blocks;
+            ctrs::array<int, 3> num_blocks;
             std::size_t num_local_blocks, num_global_blocks;
             std::vector<std::size_t> local_block_to_global_block;
             std::vector<std::size_t> global_block_to_local_block;

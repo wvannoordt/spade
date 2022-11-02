@@ -225,9 +225,9 @@ namespace spade::grid
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
-        typedef typename detail::get_index_type<centering_type()>::integral_type index_integral_t;
-        typedef typename detail::get_index_type<centering_type()>::array_type    index_t;
-        typedef ctrs::array<typename grid_type::coord_type, 3> coord_point_type;
+        typedef typename detail::get_index_type<centering_type()>::integral_type index_integral_type;
+        typedef typename detail::get_index_type<centering_type()>::array_type    index_type;
+        typedef typename grid_t::coord_point_type coord_point_type;
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;
         
@@ -470,7 +470,7 @@ namespace spade::grid
             const auto& grid = get_grid();
             int iexchg = 0;
             if (exchange_policy == include_exchanges) iexchg = 1;
-            bound_box_t<index_integral_t, grid_map_type::rank()> output;
+            bound_box_t<index_integral_type, grid_map_type::rank()> output;
             output.min(get_subidx<centering_type(),  i_subindex>::value) = -iexchg*grid.get_num_exchange(0);
             output.max(get_subidx<centering_type(),  i_subindex>::value) = grid.get_num_cells(0) + iexchg*grid.get_num_exchange(0);
             

@@ -111,6 +111,7 @@ namespace spade::grid
             typedef coord_t::coord_type dtype;
             typedef coord_t::coord_type coord_type;
             typedef coord_t coord_sys_type;
+            typedef ctrs::array<coord_type, 3> coord_point_type;
             cartesian_grid_t(
                 const ctrs::array<int,   grid_dim>& num_blocks_in,
                 const ctrs::array<int,   grid_dim>& cells_in_block_in,
@@ -153,7 +154,7 @@ namespace spade::grid
                 for (auto lb: range(0,grid_partition.get_num_local_blocks()))
                 {
                     auto& box = block_boxes[lb];
-                    ctrs::array<std::size_t, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb), num_blocks);
+                    ctrs::array<int, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb), num_blocks);
                     static_for<0,dim()>([&](auto i)
                     {
                         box.min(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
@@ -290,7 +291,7 @@ namespace spade::grid
             std::size_t get_num_interior_cells(void) const {return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_local_blocks();}
             
             std::size_t get_num_blocks(const std::size_t& i)   const {return num_blocks[i];}
-            ctrs::array<std::size_t, 3> get_num_blocks(void)   const {return num_blocks;}
+            ctrs::array<int, 3> get_num_blocks(void) const {return num_blocks;}
             std::size_t  get_num_local_blocks(void) const {return grid_partition.get_num_local_blocks();}
             std::size_t get_num_global_blocks(void) const {return num_blocks[0]*num_blocks[1]*num_blocks[2];}
             int get_num_cells(const std::size_t& i)    const {return cells_in_block[i];}

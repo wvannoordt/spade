@@ -28,6 +28,12 @@ namespace spade::ctrs
     };
     
     template <class T> concept integral_type = std::is_integral<T>::value;
+    
+    template <typename left_t, typename right_t> concept convertible_array =
+    basic_array<left_t> && basic_array<right_t> &&
+    std::convertible_to<typename left_t::value_type, typename right_t::value_type>;
+    
+    template <typename left_t, typename right_t> concept same_size = (left_t::size() == right_t::size());
 
     template <basic_array arr_t>
     requires(std::floating_point<typename arr_t::value_type>)
@@ -72,16 +78,12 @@ namespace spade::ctrs
             data[i] = p;
             set_r(i+1, ps...);
         }
-        template <basic_array param, class... params>
-        requires(param::size() == size())
-        void set_r(const size_t j, const param& p)
-        {
-            for (std::size_t i = 0; i < p.size(); i++) data[i] = p[i];
-        }
-        template <class... params> array(params... ps)
+        
+        template <not_basic_array... params> array(params... ps)
         {
             set_r(0, ps...);
         }
+        
         array(const dtype& val) {fill(val);}
         array(void) {}
         constexpr array(const array& rhs) = default;

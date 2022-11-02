@@ -5,6 +5,7 @@
 #include "core/config.h"
 #include "core/typedef.h"
 #include "core/consts.h"
+#include "core/util_concepts.h"
 #include "core/print.h"
 #include "core/range.h"
 #include "core/typedef.h"
