@@ -127,14 +127,14 @@ namespace spade::algs
         }
         
         template <typename kernel_t, typename array_t, typename idx_t>
-        requires (std::invocable<kernel_t, const typename array_t::index_t&, const typename array_t::coord_point_type&>)
+        requires (std::invocable<kernel_t, const typename array_t::coord_point_type&, const typename array_t::index_type&>)
         auto invoke_kernel(const kernel_t& kernel, const array_t& arr, const idx_t& idx)
         {
             return kernel(arr.get_grid().get_coords(idx), idx);
         }
         
         template <typename kernel_t, typename array_t, typename idx_t>
-        requires (std::invocable<kernel_t, const typename array_t::index_t&>)
+        requires (std::invocable<kernel_t, const typename array_t::index_type&>)
         auto invoke_kernel(const kernel_t& kernel, const array_t& arr, const idx_t& idx)
         {
             return kernel(idx);

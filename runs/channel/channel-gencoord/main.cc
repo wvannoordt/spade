@@ -20,7 +20,8 @@ void set_channel_noslip(auto& prims)
         int idc = 0;
         for (int dir = 2; dir <= 3; ++dir)
         {
-            if (grid.is_domain_boundary(lb_glob, dir))
+            const auto& idomain = grid.is_domain_boundary(lb_glob);
+            if (idomain(dir/2, dir%2))
             {
                 const auto lb_idx = spade::ctrs::expand_index(lb_glob, grid.get_num_blocks());
                 const auto nvec_out = v3i(0,2*idc-1,0);
@@ -31,8 +32,8 @@ void set_channel_noslip(auto& prims)
                 {
                     for (int nnn = 0; nnn < 2; ++nnn)
                     {
-                        v4c i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
-                        v4c i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_d(ii[0], j-(nnn+0)*nvec_out[1], ii[1], lb);
+                        spade::grid::cell_idx_t i_g(ii[0], j+(nnn+1)*nvec_out[1], ii[1], lb);
                         prim_t q_d, q_g;
                         for (auto n: range(0,5)) q_d[n] = prims(n, i_d[0], i_d[1], i_d[2], i_d[3]);
                         const auto x_g = grid.get_comp_coords(i_g);
@@ -43,7 +44,7 @@ void set_channel_noslip(auto& prims)
                         q_g.u() = -q_d.u();
                         q_g.v() = -q_d.v()*n_d[1]/n_g[1];
                         q_g.w() = -q_d.w();
-                        q_g.T() =  t_wall;
+                        q_g.T() =  2.0*t_wall - q_d.T();
                         for (auto n: range(0,5)) prims(n, i_g[0], i_g[1], i_g[2], i_g[3]) = q_g[n];
                     }
                 }
@@ -114,8 +115,7 @@ int main(int argc, char** argv)
     prim_t fill_elem1 = 0.0;
     flux_t fill_elem2 = 0.0;
     spade::grid::grid_array prim        (grid, fill_elem1);
-    spade::grid::grid_array rhs0        (grid, fill_elem2);
-    spade::grid::grid_array rhs1        (grid, fill_elem2);
+    spade::grid::grid_array rhs         (grid, fill_elem2);
     
     spade::viscous_laws::constant_viscosity_t<real_t> visc_law(1.85e-4);
     visc_law.prandtl = 0.72;
@@ -150,8 +150,13 @@ int main(int argc, char** argv)
     for (auto& p: r_amp_3) p = 1.0 - 2.0*spade::utils::unitary_random();
     for (auto& p: r_amp_4) p = 1.0 - 2.0*spade::utils::unitary_random();
     
-    auto ini = [&](const spade::ctrs::array<real_t, 3> x, const int& i, const int& j, const int& k, const int& lb) -> prim_t
+    auto ini = [&](const spade::ctrs::array<real_t, 3> x, const spade::grid::cell_idx_t& ii) -> prim_t
     {
+        const int& i =  spade::subidx::i (ii);
+        const int& j =  spade::subidx::j (ii);
+        const int& k =  spade::subidx::k (ii);
+        const int& lb = spade::subidx::lb(ii);
+        
         const real_t shape = 1.0 - pow(x[1]/delta, 4);
         const real_t turb  = du*u_tau*sin(10.0*spade::consts::pi*x[1])*cos(12*x[0])*cos(6*x[2]);
         prim_t output;
@@ -185,31 +190,6 @@ int main(int argc, char** argv)
     // spade::convective::weno_3    wscheme(air);
     spade::viscous::visc_lr visc_scheme(visc_law);
     
-    struct p2c_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef prim_t arg_type;
-        p2c_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        cons_t operator () (const prim_t& q) const
-        {
-            cons_t w;
-            spade::fluid_state::convert_state(q, w, *gas);
-            return w;
-        }
-    } p2c(air);
-    
-    struct c2p_t
-    {
-        const spade::fluid_state::perfect_gas_t<real_t>* gas;
-        typedef cons_t arg_type;
-        c2p_t(const spade::fluid_state::perfect_gas_t<real_t>& gas_in) {gas = &gas_in;}
-        prim_t operator () (const cons_t& w) const
-        {
-            prim_t q;
-            spade::fluid_state::convert_state(w, q, *gas);
-            return q;
-        }
-    } c2p(air);
     
     struct get_u_t
     {
@@ -223,19 +203,11 @@ int main(int argc, char** argv)
     } get_u(air);
     
     spade::reduce_ops::reduce_max<real_t> max_op;
-    const real_t time0    = 0.0;
+    real_t time0    = 0.0;
     const real_t dx       = spade::utils::min(dx_phys[0], dx_phys[1], dx_phys[2]);
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt       = targ_cfl*dx/umax_ini;
     
-    auto ftrans = [&](auto& q) -> void
-    {
-        spade::algs::transform_inplace(prim, p2c);
-    };
-    auto itrans = [&](auto& q) -> void
-    {
-        spade::algs::transform_inplace(prim, c2p);
-    };
     auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
     {
         rhs = 0.0;
@@ -243,10 +215,13 @@ int main(int argc, char** argv)
         set_channel_noslip(q);
         spade::pde_algs::flux_div(q, rhs, tscheme);
         spade::pde_algs::flux_div(q, rhs, visc_scheme);
-        spade::pde_algs::source_term(rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
+        spade::pde_algs::source_term(q, rhs, [&]()->v5d{return v5d(0,0,force_term,0,0);});
     };
     
-    spade::time_integration::rk2 time_int(prim, rhs0, rhs1, time0, dt, calc_rhs, ftrans, itrans);
+    cons_t transform_state;
+    spade::fluid_state::state_transform_t trans(prim, transform_state, air);
+    
+    spade::time_integration::rk2 time_int(prim, rhs, time0, dt, calc_rhs, trans);
     
     std::ofstream myfile("hist.dat");
     for (auto nti: range(0, nt_max))
