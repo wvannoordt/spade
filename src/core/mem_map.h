@@ -140,8 +140,10 @@ namespace spade::grid
         }
         
         template <typename input_t>
+#if(C20_G11)
         //TODO::why does the following line break for g++10?
-        // requires (ctrs::convertible_array<input_t, identifier_type> && ctrs::same_size<input_t, identifier_type>)
+        requires (ctrs::convertible_array<input_t, identifier_type> && ctrs::same_size<input_t, identifier_type>)
+#endif
         _finline_ offset_type offset(const input_t& idx) const
         {
             offset_type output = offset_type(0);
