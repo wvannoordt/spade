@@ -9,3 +9,7 @@ Face indices:
 | -2  | -1  |  0  |  1  |
             |
 -2    -1    0     1     2
+
+Deleting a branch:
+git push -d <remote_name> <branchname>
+git branch -d <branchname>
