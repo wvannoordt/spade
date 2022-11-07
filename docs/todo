@@ -14,3 +14,4 @@
 [ ] Simplify the array-type index system (probably just use a struct!)
 [ ] Make the indexing more efficient for memory maps (don't create temporary arrays!)
 [ ] Separate the block indexing from the block element indexing
+[ ] CRTP for basic array types
