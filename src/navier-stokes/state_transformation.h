@@ -24,22 +24,32 @@ namespace spade::fluid_state
         };
     }
     
-    template <typename array_t, typename gas_t, fluid_state::is_state_type forward_t>
-    requires (fluid_state::is_state_type<typename array_t::alias_type> && fluid_state::state_convertible<forward_t, typename array_t::alias_type, gas_t>)
+    template <typename gas_t, fluid_state::is_state_type forward_t>
     struct state_transform_t
     {
         const gas_t* gas;
         
-        using inverse_t = typename array_t::alias_type;
-        
         //prim = inverse
         //cons = forward
-        using i2f_t = detail::mono_state_converstion_t<gas_t, inverse_t, forward_t>;
-        using f2i_t = detail::mono_state_converstion_t<gas_t, forward_t, inverse_t>;
         
-        state_transform_t(const array_t& q, const forward_t& to_state, const gas_t& gas_in) { gas = &gas_in; }
+        state_transform_t(const forward_t& to_state, const gas_t& gas_in) { gas = &gas_in; }
         
-        void transform_forward (array_t& q) const { spade::algs::transform_inplace(q, i2f_t(*gas)); }
-        void transform_inverse (array_t& q) const { spade::algs::transform_inplace(q, f2i_t(*gas)); }
+        template <typename array_t>
+        requires (fluid_state::is_state_type<typename array_t::alias_type> && fluid_state::state_convertible<forward_t, typename array_t::alias_type, gas_t>)
+        void transform_forward (array_t& q) const
+        {
+            using inverse_t = typename array_t::alias_type;
+            using i2f_t = detail::mono_state_converstion_t<gas_t, inverse_t, forward_t>;
+            spade::algs::transform_inplace(q, i2f_t(*gas));
+        }
+        
+        template <typename array_t>
+        requires (fluid_state::is_state_type<typename array_t::alias_type> && fluid_state::state_convertible<forward_t, typename array_t::alias_type, gas_t>)
+        void transform_inverse (array_t& q) const
+        {
+            using inverse_t = typename array_t::alias_type;
+            using f2i_t = detail::mono_state_converstion_t<gas_t, forward_t, inverse_t>;
+            spade::algs::transform_inplace(q, f2i_t(*gas));
+        }
     };
 }
