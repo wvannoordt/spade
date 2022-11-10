@@ -28,7 +28,7 @@ namespace spade::viscous_laws
     template <typename dtype> struct constant_viscosity_t
     {
         typedef dtype value_type;
-        constant_viscosity_t(dtype visc_in) { this->visc = visc_in; this->beta = -0.66666666667*this->visc; }
+        constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in) { this->visc = visc_in; this->beta = -0.66666666667*this->visc; prandtl = prandtl_in;}
         constant_viscosity_t(void) { this->visc = dtype(); this->beta = -0.66666666667*this->visc; }
         
         template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
