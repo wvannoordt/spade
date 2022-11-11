@@ -172,10 +172,12 @@ namespace spade::fluid_state
         t.get_gamma();
     };
     
-    template <typename dtype> struct perfect_gas_t
+    template <typename dtype> struct ideal_gas_t
     {
         typedef dtype value_type;
         dtype R, gamma;
+        ideal_gas_t(){}
+        ideal_gas_t(const dtype& gamma_in, const dtype& R_in) {gamma = gamma_in; R = R_in;}
         template <is_state_type state_t> dtype get_R(const state_t& state)     const {return this->R;}
         template <is_state_type state_t> dtype get_gamma(const state_t& state) const {return this->gamma;}
         dtype get_R(void)     const {return this->R;}
