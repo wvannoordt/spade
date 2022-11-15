@@ -8,83 +8,66 @@ namespace spade::grid
 {
     enum array_center_e
     {
-        cell_centered=0,
-        node_centered=1,
-        face_centered=2
+        cell_centered,
+        node_centered,
+        face_centered,
+        edge_centered
     };
     
-    template <typename derived_t, typename arith_t>
-    struct arithmetic_wrapper_t
-    {
-        arith_t val;
-        arithmetic_wrapper_t(void) {}
-        arithmetic_wrapper_t(const arithmetic_wrapper_t& rhs) {val = rhs.val;}
-        arithmetic_wrapper_t(const arith_t& rhs) {val = rhs;}
-        
-        derived_t& operator = (const arith_t& rhs)
-        {
-            val = rhs;
-            return static_cast<derived_t&>(*this);
-        }
-        
-        derived_t& operator /= (const arith_t& rhs)
-        {
-            val /= rhs;
-            return static_cast<derived_t&>(*this);
-        }
-        derived_t& operator *= (const arith_t& rhs)
-        {
-            val *= rhs;
-            return static_cast<derived_t&>(*this);
-        }
-        
-        derived_t& operator += (const arith_t& rhs)
-        {
-            val += rhs;
-            return static_cast<derived_t&>(*this);
-        }
-        
-        derived_t& operator ++ ()
-        {
-            ++val;
-            return static_cast<derived_t&>(*this);
-        }
-        
-        derived_t& operator -= (const arith_t& rhs)
-        {
-            val -= rhs;
-            return static_cast<derived_t&>(*this);
-        }
-        operator arith_t() const { return val; }
-    };
+    using index_integral_base_t = int;
     
-    template <typename arith_t> struct cell_t : public arithmetic_wrapper_t<cell_t<arith_t>, arith_t>
+    template <typename idx_t = index_integral_base_t>
+    struct cell_idx_t : public ctrs::arithmetic_array_t<idx_t, 4, cell_idx_t<idx_t>>
     {
-        static constexpr array_center_e array_centering() {return cell_centered;}
-        typedef arithmetic_wrapper_t<cell_t<arith_t>, arith_t> base_t;
-        typedef arith_t value_type;
+        constexpr static array_center_e centering_type() {return cell_centered;}
+        using base_t = ctrs::arithmetic_array_t<idx_t, 4, cell_idx_t<idx_t>>;
         using base_t::base_t;
-    };
-    template <typename arith_t> struct node_t : public arithmetic_wrapper_t<node_t<arith_t>, arith_t>
-    {
-        static constexpr array_center_e array_centering() {return node_centered;}
-        typedef arithmetic_wrapper_t<node_t<arith_t>, arith_t> base_t;
-        typedef arith_t value_type;
-        using base_t::base_t;
-    };
-    template <typename arith_t> struct face_t : public arithmetic_wrapper_t<face_t<arith_t>, arith_t>
-    {
-        static constexpr array_center_e array_centering() {return face_centered;}
-        typedef arithmetic_wrapper_t<face_t<arith_t>, arith_t> base_t;
-        typedef arith_t value_type;
-        using base_t::base_t;
+        cell_idx_t(){}
+        idx_t& i () {return (*this)[0];}
+        idx_t& j () {return (*this)[1];}
+        idx_t& k () {return (*this)[2];}
+        idx_t& lb() {return (*this)[3];}
+        const idx_t& i () const {return (*this)[0];}
+        const idx_t& j () const {return (*this)[1];}
+        const idx_t& k () const {return (*this)[2];}
+        const idx_t& lb() const {return (*this)[3];}
     };
     
-    typedef ctrs::array<cell_t<int>, 4> cell_idx_t;
-    typedef ctrs::array<face_t<int>, 5> face_idx_t;
-    typedef ctrs::array<node_t<int>, 4> node_idx_t;
+    template <typename idx_t = index_integral_base_t>
+    struct face_idx_t : public ctrs::arithmetic_array_t<idx_t, 5, face_idx_t<idx_t>>
+    {
+        constexpr static array_center_e centering_type() {return face_centered;}
+        using base_t = ctrs::arithmetic_array_t<idx_t, 5, face_idx_t<idx_t>>;
+        using base_t::base_t;
+        face_idx_t(){}
+        idx_t& dir() {return (*this)[0];}
+        idx_t& i  () {return (*this)[1];}
+        idx_t& j  () {return (*this)[2];}
+        idx_t& k  () {return (*this)[3];}
+        idx_t& lb () {return (*this)[4];}
+        const idx_t& dir() const {return (*this)[0];}
+        const idx_t& i  () const {return (*this)[1];}
+        const idx_t& j  () const {return (*this)[2];}
+        const idx_t& k  () const {return (*this)[3];}
+        const idx_t& lb () const {return (*this)[4];}
+    };
     
-    template <>
+    template <typename idx_t = index_integral_base_t>
+    struct node_idx_t : public ctrs::arithmetic_array_t<idx_t, 4, node_idx_t<idx_t>>
+    {
+        constexpr static array_center_e centering_type() {return node_centered;}
+        using base_t = ctrs::arithmetic_array_t<idx_t, 4, node_idx_t<idx_t>>;
+        using base_t::base_t;
+        node_idx_t(){}
+        idx_t& i  () {return (*this)[0];}
+        idx_t& j  () {return (*this)[1];}
+        idx_t& k  () {return (*this)[2];}
+        idx_t& lb () {return (*this)[3];}
+        const idx_t& i  () const {return (*this)[0];}
+        const idx_t& j  () const {return (*this)[1];}
+        const idx_t& k  () const {return (*this)[2];}
+        const idx_t& lb () const {return (*this)[3];}
+    };
     
     template <typename T> concept multiblock_grid_idx_t = requires(T t)
     {
@@ -124,12 +107,12 @@ namespace spade::grid
     template<> struct get_subidx<node_centered, lb_subindex>  {static constexpr int value =  3;};
     template<> struct get_subidx<node_centered, dir_subindex> {}; //invalid
     
-    static constexpr face_idx_t::value_type::value_type get_face_dir_idx()
+    static constexpr int get_face_dir_idx()
     {
         return get_subidx<face_centered, dir_subindex>::value;
     }
     
-    static face_idx_t::value_type::value_type get_face_dir(const face_idx_t& i_face)
+    static int get_face_dir(const face_idx_t& i_face)
     {
         return i_face[get_subidx<face_centered, dir_subindex>::value];
     }

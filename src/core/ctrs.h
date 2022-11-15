@@ -108,7 +108,13 @@ namespace spade::ctrs
         
         template <basic_array rhs_t> constexpr self_type& operator = (const rhs_t& rhs)
         {
-            copy_array(rhs,*this);
+            copy_array(rhs, *this);
+            return self();
+        }
+        
+        constexpr self_type& operator = (const dtype& rhs)
+        {
+            this->fill(rhs);
             return self();
         }
         

@@ -15,48 +15,21 @@ namespace spade::fluid_state
         typename T::value_type;
     };
     
-    template <typename rtype> struct prim_t
+    template <typename rtype> struct prim_t : public ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>
     {
-        typedef rtype value_type;
-        static constexpr size_t size(void) noexcept {return 5;}
-        rtype data[size()];
-        prim_t(void){}
-        prim_t(const rtype& vl){for (std::size_t i = 0; i < size(); i++) data[i]=vl;}
-        rtype& p(void) {return data[0];}
-        rtype& T(void) {return data[1];}
-        rtype& u(void) {return data[2];}
-        rtype& v(void) {return data[3];}
-        rtype& w(void) {return data[4];}
-        
-        rtype& operator [] (uint idx) {return data[idx];}
-        
-        const rtype& p(void) const {return data[0];}
-        const rtype& T(void) const {return data[1];}
-        const rtype& u(void) const {return data[2];}
-        const rtype& v(void) const {return data[3];}
-        const rtype& w(void) const {return data[4];}
-        const rtype& operator [] (uint idx) const {return data[idx];}
-        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
-            return *this;
-        }
-        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
-            return *this;
-        }
-        
+        using base_t = ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>;        
+        using base_t::base_t;
+        prim_t(){}
+        rtype& p() {return (*this)[0];}
+        rtype& T() {return (*this)[1];}
+        rtype& u() {return (*this)[2];}
+        rtype& v() {return (*this)[3];}
+        rtype& w() {return (*this)[4];}
+        const rtype& p() const {return (*this)[0];}
+        const rtype& T() const {return (*this)[1];}
+        const rtype& u() const {return (*this)[2];}
+        const rtype& v() const {return (*this)[3];}
+        const rtype& w() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
@@ -64,48 +37,21 @@ namespace spade::fluid_state
         }
     };
 
-    template <typename rtype> struct cons_t
+    template <typename rtype> struct cons_t : public ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>
     {
-        typedef rtype value_type;
-        static constexpr size_t size(void) noexcept {return 5;}
-        rtype data[size()];
-        cons_t(void){}
-        cons_t(const rtype& vl){for (std::size_t i = 0; i < size(); i++) data[i]=vl;}
-        rtype& rho  (void) {return data[0];}
-        rtype& rho_H(void) {return data[1];}
-        rtype& rho_u(void) {return data[2];}
-        rtype& rho_v(void) {return data[3];}
-        rtype& rho_w(void) {return data[4];}
-        rtype& operator [] (uint idx) {return data[idx];}
-        
-        const rtype& rho  (void) const {return data[0];}
-        const rtype& rho_H(void) const {return data[1];}
-        const rtype& rho_u(void) const {return data[2];}
-        const rtype& rho_v(void) const {return data[3];}
-        const rtype& rho_w(void) const {return data[4];}
-        const rtype& operator [] (uint idx) const {return data[idx];}
-        
-        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
-            return *this;
-        }
-        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
-            return *this;
-        }
-        
+        using base_t = ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>;
+        using base_t::base_t;
+        cons_t(){}
+        rtype& rho  () {return (*this)[0];}
+        rtype& rho_H() {return (*this)[1];}
+        rtype& rho_u() {return (*this)[2];}
+        rtype& rho_v() {return (*this)[3];}
+        rtype& rho_w() {return (*this)[4];}
+        const rtype& rho  () const {return (*this)[0];}
+        const rtype& rho_H() const {return (*this)[1];}
+        const rtype& rho_u() const {return (*this)[2];}
+        const rtype& rho_v() const {return (*this)[3];}
+        const rtype& rho_w() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
@@ -113,47 +59,21 @@ namespace spade::fluid_state
         }
     };
     
-    template <typename rtype> struct flux_t
+    template <typename rtype> struct flux_t : public ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>
     {
-        typedef rtype value_type;
-        static constexpr size_t size(void) noexcept {return 5;}
-        rtype data[size()];
-        flux_t(void){}
-        flux_t(const rtype& vl){for (std::size_t i = 0; i < size(); i++) data[i]=vl;}
-        rtype& continuity(void) {return data[0];}
-        rtype& energy    (void) {return data[1];}
-        rtype& x_momentum(void) {return data[2];}
-        rtype& y_momentum(void) {return data[3];}
-        rtype& z_momentum(void) {return data[4];}
-        rtype& operator [] (uint idx) {return data[idx];}
-        
-        const rtype& continuity(void) const {return data[0];}
-        const rtype& energy    (void) const {return data[1];}
-        const rtype& x_momentum(void) const {return data[2];}
-        const rtype& y_momentum(void) const {return data[3];}
-        const rtype& z_momentum(void) const {return data[4];}
-        const rtype& operator [] (uint idx) const {return data[idx];}
-        
-        template <typename rhs_t> auto& operator /= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]/=rhs;
-            return *this;
-        }
-        template <typename rhs_t> auto& operator *= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i]*=rhs;
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator -= (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] -= rhs[i];
-            return *this;
-        }
-        template <ctrs::basic_array rhs_t> auto& operator += (const rhs_t& rhs)
-        {
-            for (std::size_t i = 0; i < size(); ++i) data[i] += rhs[i];
-            return *this;
-        }
+        using base_t = ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>;
+        using base_t::base_t;
+        flux_t(){}
+        rtype& continuity() {return (*this)[0];}
+        rtype& energy    () {return (*this)[1];}
+        rtype& x_momentum() {return (*this)[2];}
+        rtype& y_momentum() {return (*this)[3];}
+        rtype& z_momentum() {return (*this)[4];}
+        const rtype& continuity() const {return (*this)[0];}
+        const rtype& energy    () const {return (*this)[1];}
+        const rtype& x_momentum() const {return (*this)[2];}
+        const rtype& y_momentum() const {return (*this)[3];}
+        const rtype& z_momentum() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");
@@ -180,8 +100,8 @@ namespace spade::fluid_state
         ideal_gas_t(const dtype& gamma_in, const dtype& R_in) {gamma = gamma_in; R = R_in;}
         template <is_state_type state_t> dtype get_R(const state_t& state)     const {return this->R;}
         template <is_state_type state_t> dtype get_gamma(const state_t& state) const {return this->gamma;}
-        dtype get_R(void)     const {return this->R;}
-        dtype get_gamma(void) const {return this->gamma;}
+        dtype get_R()     const {return this->R;}
+        dtype get_gamma() const {return this->gamma;}
     };
     
     template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
@@ -196,7 +116,8 @@ namespace spade::fluid_state
        return os;
     }
 
-    template<typename ptype, typename ctype, class gas_t> static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
+    template<typename ptype, typename ctype, class gas_t>
+    static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
     {
         ptype rho = prim.p() / (gas.get_R(prim)*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
@@ -211,7 +132,8 @@ namespace spade::fluid_state
         cons.rho_w()  = rhoW;
     }
 
-    template<typename ptype, typename ctype, class gas_t> static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
+    template<typename ptype, typename ctype, class gas_t>
+    static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
     {
         ptype rho = cons.rho();
         ptype invrho = 1.0/rho;
