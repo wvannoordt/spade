@@ -53,7 +53,7 @@ namespace spade::fetch
         template <typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
         void get_face_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, left_right<cell_info_t>& lr)
         {
-            const int idir = grid::get_face_dir(iface);
+            const int idir = iface.dir();
             grid::cell_idx_t il = grid::face_to_cell(iface, 0);
             grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
             get_single_cell_data_for_face_stencil(ar_grid, prims, il, idir, lr.left);
@@ -63,7 +63,7 @@ namespace spade::fetch
         template <const std::size_t flux_size, typename cell_info_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
         void get_face_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, flux_line<flux_size, cell_info_t>& sten)
         {
-            const int idir = grid::get_face_dir(iface);
+            const int idir = iface.dir();
             static_for<0,flux_size>([&](auto i) -> void
             {
                 grid::cell_idx_t icell = grid::face_to_cell(iface, 0);
@@ -105,7 +105,7 @@ namespace spade::fetch
             face_normal<output_t>& output)
         {
             const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(iface);
-            output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface, grid::get_face_dir(iface));
+            output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface, iface.dir());
         }
         
         template <typename output_t, grid::multiblock_grid grid_t, grid::multiblock_array array_t>
@@ -115,7 +115,7 @@ namespace spade::fetch
             const grid::face_idx_t& iface,
             face_state<output_t>& output)
         {
-            const int idir = grid::get_face_dir(iface);
+            const int idir = iface.dir();
             const grid::cell_idx_t il = grid::face_to_cell(iface, 0);
             const grid::cell_idx_t ir = grid::face_to_cell(iface, 1);
             cell_state<output_t> ql, qr;
@@ -165,7 +165,7 @@ namespace spade::fetch
             const grid::face_idx_t& iface,
             face_state_grad<output_t>& output)
         {
-            const int idir0 = grid::get_face_dir(iface);
+            const int idir0 = iface.dir();
             const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
             const ctrs::array<typename grid_t::coord_type, 3> invdx
             (

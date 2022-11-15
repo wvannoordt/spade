@@ -163,7 +163,11 @@ namespace spade::pde_algs
         auto grid_range = ar_grid.get_range(sol_arr_t::centering_type(), grid::exclude_exchanges);
         for (auto idx: grid_range)
         {
-            ctrs::array<grid::cell_t<int>, 4> i(idx[0], idx[1], idx[2], idx[3]);
+            grid::cell_idx_t i;
+            i.i()  = idx[0];
+            i.j()  = idx[1];
+            i.k()  = idx[2];
+            i.lb() = idx[3];
             const ctrs::array<real_type,3> xc = ar_grid.get_comp_coords(i);
             const real_type jac = coords::calc_jacobian(ar_grid.coord_sys(), xc, i);
             

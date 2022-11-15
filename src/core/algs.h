@@ -19,8 +19,8 @@ namespace spade::algs
             grid::node_idx_t i_n(i, j, k, lb);
             return grid.get_coords(i_n);
         }
-        
         #pragma GCC diagnostic ignored "-Wattributes"
+        
         template <grid::multiblock_grid grid_t, grid::has_centering_type<grid::cell_centered> arr_t>
         _finline_ auto get_coords(const grid_t& grid, const arr_t& arr, const int& i, const int& j, const int& k, const int& lb)
         {
@@ -140,17 +140,16 @@ namespace spade::algs
         }
     }
     
-    template <typename array_t, typename lb_idx_t, typename kernel_t>
-    void block_elem_loop(array_t& array, const lb_idx_t& lb, const grid::exchange_inclusion_e& exchange_policy, const kernel_t& kernel)
+    template <typename array_t, typename kernel_t>
+    void block_loop(array_t& array, const int& lb, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy)
     {
         auto bound_box = array.get_grid_index_bounding_box(exchange_policy);
-        const int lb_dim = grid::get_subidx<array.centering_type(), grid::lb_subindex>::value;
+        const int lb_dim = array_t::index_type::lb_idx;
         
         //modify the bounding box to only loop over this one block
         bound_box.min(lb_dim) = (int)(lb);
         bound_box.max(lb_dim) = (int)(lb+1);
-        
-        md_loop(bound_box, kernel);
+        md_loop<int, 4, kernel_t, typename array_t::index_type>(bound_box, kernel);
     }
     
     template <typename data_t, typename array_t, typename elem_t>
@@ -173,7 +172,7 @@ namespace spade::algs
         const auto& grid = arr.get_grid();
         const auto nlb = grid.get_num_local_blocks();
         
-        //consider fundamentally separating the block dimension with the ijk dimensions!
+        // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
         {
             const auto loop_func = [&](const auto& elem) -> void
@@ -181,8 +180,8 @@ namespace spade::algs
                 const auto data = detail::invoke_kernel(kernel, arr, elem);
                 set_elem_value(data, arr, elem);
             };
-            block_elem_loop(arr, (typename array_t::index_integral_type)lb, exchange_policy, loop_func);
-        }    
+            block_loop(arr, lb, loop_func, exchange_policy);
+        }
     }
     
     template <grid::multiblock_array array_t, class callable_t, reduce_ops::reduce_operation<typename array_t::value_type> reduce_t>

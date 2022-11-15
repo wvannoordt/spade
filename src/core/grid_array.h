@@ -89,11 +89,11 @@ namespace spade::grid
         {
             //Can I do a nicer job here?
             typedef regular_map_t<
-                typename std::conditional<0==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<1==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<2==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<3==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<4==get_face_dir_idx(), static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type
+                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type
                 > type;
         };
         
@@ -150,20 +150,20 @@ namespace spade::grid
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
             //i
-            std::get<get_subidx<cell_centered,  i_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(0);
-            std::get<get_subidx<cell_centered,  i_subindex>::value>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0);
+            std::get<cell_idx_t::i_idx>(map.dims).i0 = -grid.get_num_exchange(0);
+            std::get<cell_idx_t::i_idx>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0);
             
             //j
-            std::get<get_subidx<cell_centered,  j_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(1);
-            std::get<get_subidx<cell_centered,  j_subindex>::value>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1);
+            std::get<cell_idx_t::j_idx>(map.dims).i0 = -grid.get_num_exchange(1);
+            std::get<cell_idx_t::j_idx>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1);
             
             //k
-            std::get<get_subidx<cell_centered,  k_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(2);
-            std::get<get_subidx<cell_centered,  k_subindex>::value>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2);
+            std::get<cell_idx_t::k_idx>(map.dims).i0 = -grid.get_num_exchange(2);
+            std::get<cell_idx_t::k_idx>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2);
             
             //lb
-            std::get<get_subidx<cell_centered, lb_subindex>::value>(map.dims).i0 = 0;
-            std::get<get_subidx<cell_centered, lb_subindex>::value>(map.dims).i1 = grid.get_num_local_blocks();
+            std::get<cell_idx_t::lb_idx>(map.dims).i0 = 0;
+            std::get<cell_idx_t::lb_idx>(map.dims).i1 = grid.get_num_local_blocks();
             
             map.compute_coeffs();
         }
@@ -173,20 +173,20 @@ namespace spade::grid
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
             //i
-            std::get<get_subidx<face_centered,  i_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(0);
-            std::get<get_subidx<face_centered,  i_subindex>::value>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0) + 1;
+            std::get<face_idx_t::i_idx>(map.dims).i0 = -grid.get_num_exchange(0);
+            std::get<face_idx_t::i_idx>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0) + 1;
             
             //j
-            std::get<get_subidx<face_centered,  j_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(1);
-            std::get<get_subidx<face_centered,  j_subindex>::value>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1) + 1;
+            std::get<face_idx_t::j_idx>(map.dims).i0 = -grid.get_num_exchange(1);
+            std::get<face_idx_t::j_idx>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1) + 1;
             
             //k
-            std::get<get_subidx<face_centered,  k_subindex>::value>(map.dims).i0 = -grid.get_num_exchange(2);
-            std::get<get_subidx<face_centered,  k_subindex>::value>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2) + 1;
+            std::get<face_idx_t::k_idx>(map.dims).i0 = -grid.get_num_exchange(2);
+            std::get<face_idx_t::k_idx>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2) + 1;
             
             //lb
-            std::get<get_subidx<face_centered, lb_subindex>::value>(map.dims).i0 = 0;
-            std::get<get_subidx<face_centered, lb_subindex>::value>(map.dims).i1 = grid.get_num_local_blocks();
+            std::get<face_idx_t::lb_idx>(map.dims).i0 = 0;
+            std::get<face_idx_t::lb_idx>(map.dims).i1 = grid.get_num_local_blocks();
             
             map.compute_coeffs();
         }
@@ -199,8 +199,8 @@ namespace spade::grid
         requires (centering == face_centered)
         void set_bbox_dir_val(bbox_t& bbox, const int& dim)
         {
-            bbox.min(get_subidx<centering, dir_subindex>::value) = 0;
-            bbox.max(get_subidx<centering, dir_subindex>::value) = dim;
+            bbox.min(face_idx_t::dir_idx) = 0;
+            bbox.max(face_idx_t::dir_idx) = dim;
         }
         
         template <const array_center_e centering, typename bbox_t>
@@ -244,6 +244,25 @@ namespace spade::grid
         std::size_t idx_coeffs [total_idx_rank()];
         mem_map_type mem_map;
         
+        const auto& var_map() const
+        {
+            return std::get<0>(mem_map.maps);
+        }
+        
+        const auto& block_map() const
+        {
+            return std::get<1>(mem_map.maps);
+        }
+        
+        auto& var_map()
+        {
+            return std::get<0>(mem_map.maps);
+        }
+        
+        auto& block_map()
+        {
+            return std::get<1>(mem_map.maps);
+        }
         
         grid_array(){}
         grid_array(
@@ -270,14 +289,9 @@ namespace spade::grid
             {
                 offset += grid_in.get_num_exchange(i)*idx_coeffs[i + minor_dim_t::rank()];
             }
-            auto& grid_map = std::get<1>(this->mem_map.maps);
+            auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
             this->mem_map.compute_coeffs();
-        }
-        
-        const auto& var_map() const
-        {
-            return std::get<0>(mem_map.maps);
         }
         
         std::size_t get_index_extent(std::size_t i)
@@ -470,19 +484,21 @@ namespace spade::grid
             const auto& grid = get_grid();
             int iexchg = 0;
             if (exchange_policy == include_exchanges) iexchg = 1;
-            bound_box_t<index_integral_type, grid_map_type::rank()> output;
-            output.min(get_subidx<centering_type(),  i_subindex>::value) = -iexchg*grid.get_num_exchange(0);
-            output.max(get_subidx<centering_type(),  i_subindex>::value) = grid.get_num_cells(0) + iexchg*grid.get_num_exchange(0);
+            bound_box_t<int, grid_map_type::rank()> output;
+            const auto& ijk_map = this->block_map();
             
-            output.min(get_subidx<centering_type(),  j_subindex>::value) = -iexchg*grid.get_num_exchange(1);
-            output.max(get_subidx<centering_type(),  j_subindex>::value) = grid.get_num_cells(1) + iexchg*grid.get_num_exchange(1);
+            output.min(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(0);
+            output.max(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(0);
             
-            output.min(get_subidx<centering_type(),  k_subindex>::value) = -iexchg*grid.get_num_exchange(2);
-            output.max(get_subidx<centering_type(),  k_subindex>::value) = grid.get_num_cells(2) + iexchg*grid.get_num_exchange(2);
+            output.min(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(1);
+            output.max(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(1);
+    
+            output.min(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(2);
+            output.max(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(2);
             
-            output.min(get_subidx<centering_type(), lb_subindex>::value) = 0;
-            output.max(get_subidx<centering_type(), lb_subindex>::value) = grid.get_num_local_blocks();
-            
+            output.min(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.dims).i0;
+            output.max(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.dims).i1;
+
             detail::set_bbox_dir_val<centering_type()>(output, grid_type::dim());
             
             return output;

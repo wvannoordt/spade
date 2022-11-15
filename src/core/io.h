@@ -98,7 +98,6 @@ namespace spade::io
             auto r1 = range(0,obj.get_num_cells(1))*range(0, obj.get_num_blocks(1));
             auto r2 = range(0,obj.get_num_cells(2))*range(0, obj.get_num_blocks(2));
 
-            typedef grid::node_t<int> gnt;
             int i, j, k, lbi, lbj, lbk, lb;
             int nlbi = obj.get_num_blocks(0);
             int nlbj = obj.get_num_blocks(1);
@@ -453,7 +452,7 @@ namespace spade::io
         return total_filename;
     }
     
-    template <grid::multiblock_grid_idx_t idx_t, grid::multiblock_grid grid_t>
+    template <typename idx_t, grid::multiblock_grid grid_t>
     static std::string output_vtk(const std::string& out_dir, const std::string& out_name_no_extension, const std::vector<idx_t>& indices, const grid_t& grid)
     {
         const auto& group = grid.group();

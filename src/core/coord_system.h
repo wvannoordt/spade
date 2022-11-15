@@ -202,7 +202,7 @@ namespace spade::coords
         const identity<dtype>& coord,
         const ctrs::array<dtype, 3>& coords,
         const idx_t& i,
-        const typename idx_t::value_type::value_type& idir)
+        const typename idx_t::value_type& idir)
     {
         ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
         output[idir]=1.0;
@@ -276,7 +276,7 @@ namespace spade::coords
     typename coord_t::coord_type calc_jacobian(
         const coord_t& coord,
         const ctrs::array<typename coord_t::coord_type, 3>& coords,
-        const ctrs::array<grid::cell_t<integral_t>, 4>& i)
+        const grid::cell_idx_t& i)
     {
         const auto jac = coord.coord_deriv(coords);
         return 1.0/(jac.det());
