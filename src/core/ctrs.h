@@ -56,19 +56,29 @@ namespace spade::ctrs
         for (std::size_t i = 0; i < arr.size(); ++i) arr[i] = val;
     }
     
+    namespace detail{struct no_type_t{};}
     
-    template<typename dtype, const size_t ar_size> struct array
+    template<typename dtype, const size_t ar_size, typename derived_t = detail::no_type_t> struct arithmetic_array_t
     {
+        using self_type = std::conditional<
+            std::is_same<derived_t, detail::no_type_t>::value,
+            arithmetic_array_t<dtype, ar_size, derived_t>,
+            derived_t>::type;
+        
         typedef dtype value_type;
         dtype data[ar_size];
         dtype& operator [] (size_t idx) {return data[idx];}
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
         constexpr static size_t size(void) {return ar_size;}
+        
+        self_type& self() { return *(static_cast<self_type*>(this)); }
+        
         template <typename ftype> void fill(const ftype& val)
         {
             for (size_t i = 0; i < this->size(); i++) data[i] = val;
         }
+        
         template <not_basic_array param> void set_r(const size_t i, const param& p)
         {
             data[i] = p;
@@ -79,89 +89,89 @@ namespace spade::ctrs
             set_r(i+1, ps...);
         }
         
-        template <not_basic_array... params> array(params... ps)
+        template <not_basic_array... params> arithmetic_array_t(params... ps)
         {
             set_r(0, ps...);
         }
         
-        array(const dtype& val) {fill(val);}
-        array(void) {}
-        constexpr array(const array& rhs) = default;
+        arithmetic_array_t(const dtype& val) {fill(val);}
+        arithmetic_array_t(void) {}
+        constexpr arithmetic_array_t(const arithmetic_array_t& rhs) = default;
         
         template <typename rhs_t>
         requires (!basic_array<rhs_t>)
-        array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        auto& operator = (const rhs_t& rhs)
         {
             this->fill(rhs);
-            return *this;
+            return self();
         }
         
-        template <basic_array rhs_t> constexpr array<dtype, ar_size>& operator = (const rhs_t& rhs)
+        template <basic_array rhs_t> constexpr self_type& operator = (const rhs_t& rhs)
         {
             copy_array(rhs,*this);
-            return *this;
+            return self();
         }
         
         template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
         template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
         
-        template <basic_array arr_t> auto& operator += (const arr_t& rhs)
+        template <basic_array arr_t> self_type& operator += (const arr_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs[i];
-            return *this;
+            return self();
         }
         
-        template <typename rhs_t> auto operator + (const array<rhs_t, ar_size>& rhs) const
+        template <typename rhs_t> auto operator + (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
-            array<decltype(dtype()+rhs_t()), ar_size> output;
+            arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
             return output;
         }
         
-        template <typename rhs_t> auto operator - (const array<rhs_t, ar_size>& rhs) const
+        template <typename rhs_t> auto operator - (const arithmetic_array_t<rhs_t, ar_size>& rhs) const
         {
-            array<decltype(dtype()+rhs_t()), ar_size> output;
+            arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
             return output;
         }
         
-        template <basic_array arr_t> auto& operator -= (const arr_t& rhs)
+        template <basic_array arr_t> self_type& operator -= (const arr_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs[i];
-            return *this;
+            return self();
         }
         
-        template <typename data_t> auto& operator *= (const data_t& rhs)
+        template <typename data_t> self_type& operator *= (const data_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] *= rhs;
-            return *this;
+            return self();
         }
         
-        template <typename data_t> auto& operator /= (const data_t& rhs)
+        template <typename data_t> self_type& operator /= (const data_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] /= rhs;
-            return *this;
+            return self();
         }
         
         auto& operator += (const dtype& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs;
-            return *this;
+            return self();
         }
         
         auto& operator -= (const dtype& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs;
-            return *this;
+            return self();
         }
         
         template <basic_array arr_t> auto& operator %= (const arr_t& rhs)
         {
             for (std::size_t i = 0; i < this->size(); i++) data[i] %= rhs[i];
-            return *this;
+            return self();
         }
         
-        bool operator == (const array<dtype,ar_size>& rhs) const
+        bool operator == (const arithmetic_array_t<dtype, ar_size, derived_t>& rhs) const
         {
             bool output = true;
             for (std::size_t i = 0; i < this->size(); i++) output = (output&&(data[i]==rhs[i]));
@@ -169,6 +179,7 @@ namespace spade::ctrs
         }
     };
     
+    template <typename data_t, const std::size_t ar_size> using array = arithmetic_array_t<data_t, ar_size>;
     template <typename data_t> using v3d = array<data_t,3>;
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const array<dtype, ar_size>& arr)
@@ -214,25 +225,6 @@ namespace spade::ctrs
         }
         return output;
     }
-    
-    template <typename data_t, const std::size_t ar_size> struct static_stack
-    {
-        data_t data[ar_size];
-        int next = 0;
-        void push(const data_t& new_data)
-        {
-            data[next++] = new_data;
-            next -= (next==ar_size)*ar_size;
-        }
-        const data_t& operator[] (const uint i) const
-        {
-            return data[(i+next)%ar_size];
-        }
-        data_t& operator[] (const uint i)
-        {
-            return data[(i+next)%ar_size];
-        }
-    };
     
     //only for use with external data-owning applications
     template <typename data_t> struct unsafe_vector_alias_t

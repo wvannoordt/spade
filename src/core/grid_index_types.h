@@ -84,6 +84,8 @@ namespace spade::grid
     typedef ctrs::array<face_t<int>, 5> face_idx_t;
     typedef ctrs::array<node_t<int>, 4> node_idx_t;
     
+    template <>
+    
     template <typename T> concept multiblock_grid_idx_t = requires(T t)
     {
         t;
