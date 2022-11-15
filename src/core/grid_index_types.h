@@ -74,39 +74,6 @@ namespace spade::grid
         t;
     };
     
-    enum subindex_e
-    {
-        i_subindex,
-        j_subindex,
-        k_subindex,
-        lb_subindex,
-        dir_subindex
-    };
-    
-    template <const array_center_e centering, const subindex_e subidx> struct get_subidx
-    {
-        //specializations only
-    };
-    
-    //NOTE: it is currently required that i,j,k are stored next to each other!
-    template<> struct get_subidx<cell_centered, i_subindex>   {static constexpr int value =  0;};
-    template<> struct get_subidx<cell_centered, j_subindex>   {static constexpr int value =  1;};
-    template<> struct get_subidx<cell_centered, k_subindex>   {static constexpr int value =  2;};
-    template<> struct get_subidx<cell_centered, lb_subindex>  {static constexpr int value =  3;};
-    template<> struct get_subidx<cell_centered, dir_subindex> {}; //invalid
-    
-    template<> struct get_subidx<face_centered, i_subindex>   {static constexpr int value =  1;};
-    template<> struct get_subidx<face_centered, j_subindex>   {static constexpr int value =  2;};
-    template<> struct get_subidx<face_centered, k_subindex>   {static constexpr int value =  3;};
-    template<> struct get_subidx<face_centered, lb_subindex>  {static constexpr int value =  4;};
-    template<> struct get_subidx<face_centered, dir_subindex> {static constexpr int value =  0;};
-    
-    template<> struct get_subidx<node_centered, i_subindex>   {static constexpr int value =  0;};
-    template<> struct get_subidx<node_centered, j_subindex>   {static constexpr int value =  1;};
-    template<> struct get_subidx<node_centered, k_subindex>   {static constexpr int value =  2;};
-    template<> struct get_subidx<node_centered, lb_subindex>  {static constexpr int value =  3;};
-    template<> struct get_subidx<node_centered, dir_subindex> {}; //invalid
-    
     static constexpr int get_face_dir_idx()
     {
         return get_subidx<face_centered, dir_subindex>::value;
@@ -139,14 +106,14 @@ namespace spade::grid
     static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
     {
         face_idx_t output;
-        output[get_subidx<face_centered,   i_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  i_subindex>::value];
-        output[get_subidx<face_centered,   j_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  j_subindex>::value];
-        output[get_subidx<face_centered,   k_subindex>::value] = (int)i_cell[get_subidx<cell_centered,  k_subindex>::value];
-        output[get_subidx<face_centered,  lb_subindex>::value] = (int)i_cell[get_subidx<cell_centered, lb_subindex>::value];
-        output[get_subidx<face_centered, dir_subindex>::value] = idir;
+        output.i()   = i_cell.i();
+        output.j()   = i_cell.j();
+        output.k()   = i_cell.k();
+        output.lb()  = i_cell.lb();
+        output.dir() = idir;
         
         //May cause an issue if i,j,k are not stored in consecution
-        output[get_subidx<face_centered,  i_subindex>::value + idir] += pm;
+        output.i(idir) += pm;
         return output;
     }
     
@@ -156,10 +123,10 @@ namespace spade::grid
     {
         print("NOT IMPLEMENTED:", __FILE__, __LINE__);
         abort();
-        node_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3]);
-        output[0] += offset[0];
-        output[1] += offset[1];
-        output[2] += offset[2];
+        // node_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3]);
+        // output[0] += offset[0];
+        // output[1] += offset[1];
+        // output[2] += offset[2];
         return output;
     }
     
