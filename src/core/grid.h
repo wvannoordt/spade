@@ -34,7 +34,7 @@ namespace spade::grid
         { t.get_comp_coords(i_n) } -> ctrs::basic_array;
     };
     
-    template <class T, const array_center_e ct> concept has_centering_type = (T::centering_type() == ct);
+    template <class T, const array_centering ct> concept has_centering_type = (T::centering_type() == ct);
     
     template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)
     {
@@ -58,7 +58,7 @@ namespace spade::grid
         include_exchanges=1
     };
     
-    template <multiblock_grid grid_t, const array_center_e centering>
+    template <multiblock_grid grid_t, const array_centering centering>
     requires (centering == cell_centered)
     static auto create_grid_dims(const grid_t& grid)
     {
@@ -69,7 +69,7 @@ namespace spade::grid
             grid.get_num_local_blocks());
     }
     
-    template <multiblock_grid grid_t, const array_center_e centering>
+    template <multiblock_grid grid_t, const array_centering centering>
     requires (centering == node_centered)
     static auto create_grid_dims(const grid_t& grid)
     {
@@ -80,7 +80,7 @@ namespace spade::grid
             grid.get_num_local_blocks());
     }
     
-    template <multiblock_grid grid_t, const array_center_e centering>
+    template <multiblock_grid grid_t, const array_centering centering>
     requires (centering == face_centered)
     static auto create_grid_dims(const grid_t& grid)
     {
@@ -260,7 +260,7 @@ namespace spade::grid
             
             const coord_t& coord_sys(void) const {return coord_system;}
             
-            md_range_t<int,4> get_range(const array_center_e& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
+            md_range_t<int,4> get_range(const array_centering& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
             {
                 int iexchg = 0;
                 int i3d = 0;

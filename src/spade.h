@@ -27,6 +27,7 @@
 #include "amr/amr.h"
 
 #include "fetch/fetch.h"
+#include "omni/omni.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/state_transformation.h"

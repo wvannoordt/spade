@@ -65,7 +65,7 @@ namespace spade::grid
         
         
         //getting the memory map type for the grid indices
-        template <const array_center_e center, const std::size_t grid_dim> struct get_ijklb_map_type{};
+        template <const array_centering center, const std::size_t grid_dim> struct get_ijklb_map_type{};
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<cell_centered, grid_dim>
         {
@@ -97,7 +97,7 @@ namespace spade::grid
                 > type;
         };
         
-        template <const array_center_e centering> struct get_centering_grid_idx_rank
+        template <const array_centering centering> struct get_centering_grid_idx_rank
         {
             static constexpr int value = 4;
         };
@@ -106,7 +106,7 @@ namespace spade::grid
         template <> struct get_centering_grid_idx_rank<face_centered> { static constexpr int value = 5; };
         template <> struct get_centering_grid_idx_rank<node_centered> { static constexpr int value = 4; };
         
-        template <const array_center_e centering> struct get_index_type{};
+        template <const array_centering centering> struct get_index_type{};
         template <> struct get_index_type<cell_centered>
         {
             typedef typename cell_idx_t::value_type integral_type;
@@ -145,7 +145,7 @@ namespace spade::grid
             static constexpr std::size_t value = count_rank_t<idx_t>::value;
         };
         
-        template <const array_center_e centering, typename grid_map_t, typename grid_t>
+        template <const array_centering centering, typename grid_map_t, typename grid_t>
         requires (centering == cell_centered)
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
@@ -168,7 +168,7 @@ namespace spade::grid
             map.compute_coeffs();
         }
         
-        template <const array_center_e centering, typename grid_map_t, typename grid_t>
+        template <const array_centering centering, typename grid_map_t, typename grid_t>
         requires (centering == face_centered)
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
@@ -195,7 +195,7 @@ namespace spade::grid
     
     namespace detail
     {
-        template <const array_center_e centering, typename bbox_t>
+        template <const array_centering centering, typename bbox_t>
         requires (centering == face_centered)
         void set_bbox_dir_val(bbox_t& bbox, const int& dim)
         {
@@ -203,7 +203,7 @@ namespace spade::grid
             bbox.max(face_idx_t::dir_idx) = dim;
         }
         
-        template <const array_center_e centering, typename bbox_t>
+        template <const array_centering centering, typename bbox_t>
         requires (centering != face_centered)
         void set_bbox_dir_val(bbox_t& bbox, const int& dim) {}
     }
@@ -212,11 +212,11 @@ namespace spade::grid
         multiblock_grid grid_t,
         typename data_alias_t,
         dims::grid_array_dimension major_dim_t=dims::singleton_dim,
-        const array_center_e centering=cell_centered,
+        const array_centering centering=cell_centered,
         array_container::grid_data_container container_t=std::vector<typename detail::get_fundamental_type<data_alias_t>::type>>
     struct grid_array
     {
-        constexpr static array_center_e centering_type() { return centering; }
+        constexpr static array_centering centering_type() { return centering; }
         static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
         
         typedef grid_t grid_type;

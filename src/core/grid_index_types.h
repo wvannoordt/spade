@@ -6,7 +6,7 @@
 #include "core/ctrs.h"
 namespace spade::grid
 {
-    enum array_center_e
+    enum array_centering
     {
         cell_centered,
         node_centered,
@@ -17,7 +17,7 @@ namespace spade::grid
 
     struct cell_idx_t : public ctrs::arithmetic_array_t<int, 4, cell_idx_t>
     {
-        constexpr static array_center_e centering_type() {return cell_centered;}
+        constexpr static array_centering centering_type() {return cell_centered;}
         using base_t = ctrs::arithmetic_array_t<int, 4, cell_idx_t>;
         using base_t::base_t;
         
@@ -41,7 +41,7 @@ namespace spade::grid
     
     struct face_idx_t : public ctrs::arithmetic_array_t<int, 5, face_idx_t>
     {
-        constexpr static array_center_e centering_type() {return face_centered;}
+        constexpr static array_centering centering_type() {return face_centered;}
         using base_t = ctrs::arithmetic_array_t<int, 5, face_idx_t>;
         using base_t::base_t;
         
@@ -68,7 +68,7 @@ namespace spade::grid
     
     struct node_idx_t : public ctrs::arithmetic_array_t<int, 4, node_idx_t>
     {
-        constexpr static array_center_e centering_type() {return node_centered;}
+        constexpr static array_centering centering_type() {return node_centered;}
         using base_t = ctrs::arithmetic_array_t<int, 4, node_idx_t>;
         using base_t::base_t;
         
