@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -8,6 +7,7 @@
 #include "HyWall.h"
 #include "PTL.h"
 
+#include "core/config.h"
 #include "navier-stokes/fluid_state.h"
 
 #include "proto/hywall_read_inputs.h"

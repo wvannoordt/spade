@@ -1,8 +1,8 @@
 #pragma once
 
 #include <type_traits>
-#include <concepts>
 
+#include "core/config.h"
 #include "core/attribs.h"
 #include "core/grid.h"
 #include "core/reduce_ops.h"

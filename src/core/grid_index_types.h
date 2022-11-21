@@ -1,7 +1,7 @@
 #pragma once
 #include <type_traits>
-#include <concepts>
 
+#include "core/config.h"
 #include "core/typedef.h"
 #include "core/ctrs.h"
 namespace spade::grid

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <concepts>
+
 #include <type_traits>
+
+#include "core/config.h"
 
 namespace spade::algs
 {    

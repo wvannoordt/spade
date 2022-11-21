@@ -3,6 +3,10 @@
 #ifndef MPI_ENABLE
 #define MPI_ENABLE 1
 #else
+#define MPI_ENABLE 0
+#endif
+
+#if(MPI_ENABLE)
 #include "mpi.h"
 #endif
 
@@ -27,6 +31,12 @@ typedef unsigned long mpi_op_t;
 typedef unsigned long request_t;
 typedef unsigned long status_t;
 typedef unsigned long mpi_native_file_t;
+
+static mpi_data_t MPI_DOUBLE    = 0;
+static mpi_data_t MPI_CHAR      = 1;
+static mpi_data_t MPI_FLOAT     = 2;
+static mpi_data_t MPI_INT       = 3;
+static mpi_data_t MPI_UINT64_T  = 4;
 #define MPI_CHECK(mycode) ;
 
 namespace spade::parallel
