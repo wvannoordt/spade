@@ -26,8 +26,6 @@ namespace spade::pde_algs
         block_flux_boundary
     };
     
-    
-    
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
