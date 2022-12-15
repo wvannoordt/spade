@@ -1,7 +1,6 @@
 #pragma once
 
-#include <concepts>
-
+#include "core/config.h"
 #include "core/grid.h"
 
 namespace spade::array_constraints

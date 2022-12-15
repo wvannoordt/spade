@@ -1,7 +1,9 @@
 #pragma once
 
 #include <type_traits>
-#include <concepts>
+#include <cmath>
+
+#include "core/config.h"
 #include "core/utils.h"
 namespace spade::ctrs
 {

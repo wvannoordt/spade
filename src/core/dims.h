@@ -1,8 +1,9 @@
 #pragma once
 
 #include <iostream>
-#include <concepts>
 #include <type_traits>
+
+#include "core/config.h"
 
 namespace spade::dims
 {

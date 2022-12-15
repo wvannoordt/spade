@@ -1,7 +1,7 @@
 #pragma once
 
+#include "core/c20.h"
 #include "navier-stokes/fluid_state.h"
-#include <concepts>
 
 
 namespace spade::viscous_laws
@@ -29,7 +29,7 @@ namespace spade::viscous_laws
     {
         typedef dtype value_type;
         constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in) { this->visc = visc_in; this->beta = -0.66666666667*this->visc; prandtl = prandtl_in;}
-        constant_viscosity_t(void) { this->visc = dtype(); this->beta = -0.66666666667*this->visc; }
+        constant_viscosity_t() { this->visc = dtype(); this->beta = -0.66666666667*this->visc; }
         
         template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
         {
@@ -46,17 +46,17 @@ namespace spade::viscous_laws
             return visc/prandtl;
         }
         
-        dtype get_visc(void) const
+        dtype get_visc() const
         {
             return visc;
         }
         
-        dtype get_beta(void) const
+        dtype get_beta() const
         {
             return beta;
         }
         
-        dtype get_conductivity(void) const
+        dtype get_conductivity() const
         {
             return visc/prandtl;
         }

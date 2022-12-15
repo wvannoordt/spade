@@ -1,9 +1,9 @@
 #pragma once
 
-#include <concepts>
 #include <vector>
 #include <type_traits>
 
+#include "core/config.h"
 #include "core/attribs.h"
 #include "core/ctrs.h"
 #include "core/typedef.h"

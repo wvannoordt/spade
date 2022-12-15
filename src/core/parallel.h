@@ -1,9 +1,9 @@
 #pragma once
 
-#include <concepts>
 #include <type_traits>
 #include <vector>
 
+#include "core/config.h"
 #include "core/config.h"
 #include "core/print.h"
 #include "core/mpi_flags.h"

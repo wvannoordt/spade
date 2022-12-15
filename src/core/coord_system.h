@@ -2,7 +2,8 @@
 
 #include <type_traits>
 #include <functional>
-#include <concepts>
+
+#include "core/config.h"
 #include "core/ctrs.h"
 #include "core/grid_index_types.h"
 #include "core/linear_algebra.h"

@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#include <concepts>
 
+#include "core/config.h"
 #include "core/ctrs.h"
 
 namespace spade::fluid_state

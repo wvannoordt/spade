@@ -7,3 +7,5 @@
 #define C20_G11 0
 #define USE_SOURCE_LOCATION 0
 #endif
+
+#include "core/c20.h"

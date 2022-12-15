@@ -1,8 +1,8 @@
 #pragma once
 
 #include <type_traits>
-#include <concepts>
 
+#include "core/config.h"
 #include "core/aliases.h" 
 
 namespace spade::grid

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <iostream>
 #include <ostream>
 
@@ -51,11 +52,11 @@ namespace detail
     
     template <typename T, typename... Ts> struct any_color
     {
-        static constexpr bool value = std::same_as<T, color::color> || any_color<Ts...>::value;
+        static constexpr bool value = std::is_same<T, color::color>::value || any_color<Ts...>::value;
     };
     template <typename T> struct any_color<T>
     {
-        static constexpr bool value = std::same_as<T, color::color>;
+        static constexpr bool value = std::is_same<T, color::color>::value;
     };
 }
 

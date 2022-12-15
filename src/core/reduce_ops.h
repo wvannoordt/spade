@@ -1,8 +1,9 @@
 #pragma once
 
-#include <concepts>
+
 #include <iostream>
 
+#include "core/config.h"
 #include "core/parallel.h"
 
 namespace spade::reduce_ops

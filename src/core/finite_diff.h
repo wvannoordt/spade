@@ -1,7 +1,6 @@
 #pragma once
 
-#include <concepts>
-
+#include "core/config.h"
 #include "core/static_math.h"
 #include "core/ctrs.h"
 
