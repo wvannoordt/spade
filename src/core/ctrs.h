@@ -190,13 +190,15 @@ namespace spade::ctrs
     template <typename data_t, const std::size_t ar_size> using array = arithmetic_array_t<data_t, ar_size>;
     template <typename data_t> using v3d = array<data_t,3>;
     
-    template <typename dtype, const size_t ar_size, typename derived_t> static std::ostream & operator<<(std::ostream & os, const arithmetic_array_t<dtype, ar_size, derived_t>& arr)
+    template <typename dtype, const size_t ar_size, typename derived_t>
+    static std::ostream &
+    operator<<(std::ostream & os, const arithmetic_array_t<dtype, ar_size, derived_t>& arr)
     {
        os << "[";
        for (size_t i = 0; i < arr.size(); i++)
        {
            os << arr.data[i];
-           if (i< arr.size()-1) os << ", ";
+           if (i < arr.size()-1) os << ", ";
        }
        os << "]";
        return os;

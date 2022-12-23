@@ -4,6 +4,7 @@
 
 #include "core/config.h"
 #include "core/aliases.h" 
+#include "core/static_for.h"
 
 namespace spade::grid
 {
@@ -128,14 +129,16 @@ namespace spade::grid
         void compute_coeffs()
         {
             coeffs[0] = 1;
-            static_for<1,rank()>([&](const auto& i) -> void
+            algs::static_for<1,rank()>([&](const auto& i) -> void
             {
-                coeffs[i.value] = coeffs[i.value-1]*(std::get<i.value-1>(dims).size());
+                const int ii = i.value;
+                coeffs[i.value] = coeffs[i.value-1]*(std::get<ii-1>(dims).size());
             });
             map_size = 1;
-            static_for<0,rank()>([&](const auto& i) -> void
+            algs::static_for<0,rank()>([&](const auto& i) -> void
             {
-                map_size *= std::get<i.value>(dims).size();
+                const int ii = i.value;
+                map_size *= std::get<ii>(dims).size();
             });
         }
         
@@ -147,9 +150,10 @@ namespace spade::grid
         _finline_ offset_type offset(const input_t& idx) const
         {
             offset_type output = offset_type(0);
-            static_for<0,rank()>([&](const auto& i) -> void
+            algs::static_for<0,rank()>([&](const auto& i) -> void
             {
-                output += std::get<i.value>(dims).offset(idx[i.value])*coeffs[i.value];
+                const int ii = i.value;
+                output += std::get<ii>(dims).offset(idx[i.value])*coeffs[i.value];
             });
             return output;
         }
@@ -164,9 +168,10 @@ namespace spade::grid
     static std::ostream & operator<<(std::ostream & os, const regular_map_t<dims_t...>& map)
     {
         os << "[regular map]\n";
-        static_for<0,sizeof...(dims_t)>([&](const auto& i) -> void
+        algs::static_for<0,sizeof...(dims_t)>([&](const auto& i) -> void
         {
-            os << std::get<i.value>(map.dims);
+            const int ii = i.value;
+            os << std::get<ii>(map.dims);
             os << "\n";
         });
         os << "[/regular map]";
@@ -189,7 +194,7 @@ namespace spade::grid
             compute_coeffs();
         }
         
-        composite_map_t(maps_t... maps_in) //indentionally not const ref!
+        composite_map_t(maps_t... maps_in) //intentionally not const ref!
         {
             maps = std::make_tuple(maps_in...);
             compute_coeffs();
@@ -198,14 +203,16 @@ namespace spade::grid
         void compute_coeffs()
         {
             coeffs[0] = 1;
-            static_for<1,rank()>([&](const auto& i) -> void
+            algs::static_for<1,rank()>([&](const auto& i) -> void
             {
-                coeffs[i.value] = std::get<i.value-1>(maps).size()*coeffs[i.value-1];
+                const int ii = i.value;
+                coeffs[i.value] = std::get<ii-1>(maps).size()*coeffs[i.value-1];
             });
             map_size = 1;
-            static_for<0, rank()>([&](const auto& i) -> void
+            algs::static_for<0, rank()>([&](const auto& i) -> void
             {
-                map_size *= std::get<i.value>(maps).size();
+                const int ii = i.value;
+                map_size *= std::get<ii>(maps).size();
             });
         }
         
@@ -215,105 +222,105 @@ namespace spade::grid
         }
         
         //increment using an array index with no further arguments
-        template <const int cur_map, const int counter, ctrs::basic_array arg_t>
-        requires (
-            (arg_t::size() > 0) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg) const
-        {
-            cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
-        }
+        // template <const int cur_map, const int counter, ctrs::basic_array arg_t>
+        // requires (
+        //     (arg_t::size() > 0) &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     const arg_t& arg) const
+        // {
+        //     cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
+        // }
         
         //increment using an array index
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            (arg_t::size() > 0)
-            && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
-            recurse_incr_offset<cur_map+1, 0, args_t...>(cur_offset, args...);
-        }
+        // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
+        // requires (
+        //     (arg_t::size() > 0)
+        //     && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     const arg_t& arg,
+        //     const args_t&... args) const
+        // {
+        //     cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
+        //     recurse_incr_offset<cur_map+1, 0, args_t...>(cur_offset, args...);
+        // }
         
         //Pull the first argument into a newly-created array
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            !ctrs::basic_array<arg_t>
-            && counter==0
-            && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0 &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            using idx_t = utils::get_pack_type<cur_map, maps_t...>::type::identifier_type;
-            idx_t ar;
-            ar[0] = arg;
-            recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
-        }
+        // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
+        // requires (
+        //     !ctrs::basic_array<arg_t>
+        //     && counter==0
+        //     && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0 &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     const arg_t& arg,
+        //     const args_t&... args) const
+        // {
+        //     using idx_t = utils::get_pack_type<cur_map, maps_t...>::type::identifier_type;
+        //     idx_t ar;
+        //     ar[0] = arg;
+        //     recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
+        // }
         
         //Pull an argument into an accumulating array
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            !ctrs::basic_array<arg_t> &&
-            counter>0 &&
-            ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            ar[counter] = arg;
-            recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
-        }
+        // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
+        // requires (
+        //     !ctrs::basic_array<arg_t> &&
+        //     counter>0 &&
+        //     ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter) &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
+        //     const arg_t& arg,
+        //     const args_t&... args) const
+        // {
+        //     ar[counter] = arg;
+        //     recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
+        // }
         
         //Send a full array to the indexing overload
         // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        template <const int cur_map, const int counter, typename... args_t>
-        requires (
-            (counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
-            // const arg_t& arg,
-            const args_t&... args) const
-        {
-            recurse_incr_offset<
-                cur_map,
-                0,
-                typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type,
-                args_t...>(cur_offset, ar, args...);
-        }
+        // template <const int cur_map, const int counter, typename... args_t>
+        // requires (
+        //     (counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()) &&
+        //     (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
+        //     // const arg_t& arg,
+        //     const args_t&... args) const
+        // {
+        //     recurse_incr_offset<
+        //         cur_map,
+        //         0,
+        //         typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type,
+        //         args_t...>(cur_offset, ar, args...);
+        // }
         
         //increment past singleton maps
-        template <const int cur_map, const int counter, typename... args_t>
-        requires (utils::get_pack_type<cur_map, maps_t...>::type::rank() == 0)
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const args_t&... args) const
-        {
-            recurse_incr_offset<
-                cur_map+1,
-                counter,
-                args_t...>(cur_offset, args...);
-        }
+        // template <const int cur_map, const int counter, typename... args_t>
+        // requires (utils::get_pack_type<cur_map, maps_t...>::type::rank() == 0)
+        // _finline_ void recurse_incr_offset(
+        //     offset_type& cur_offset,
+        //     const args_t&... args) const
+        // {
+        //     recurse_incr_offset<
+        //         cur_map+1,
+        //         counter,
+        //         args_t...>(cur_offset, args...);
+        // }
         
         template <typename... idxs_t> 
         _finline_ offset_type offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;
-            recurse_incr_offset<0,0,idxs_t...>(output, idxs...);
+            // recurse_incr_offset<0,0,idxs_t...>(output, idxs...);
             return output;
         }
     };
@@ -322,9 +329,10 @@ namespace spade::grid
     static std::ostream & operator<<(std::ostream & os, const composite_map_t<maps_t...>& map)
     {
         os << "[composite map]\n";
-        static_for<0,sizeof...(maps_t)>([&](const auto& i) -> void
+        algs::static_for<0,sizeof...(maps_t)>([&](const auto& i) -> void
         {
-            os << std::get<i.value>(map.maps);
+            const int ii = i.value;
+            os << std::get<ii>(map.maps);
             os << "\n";
         });
         os << "[/composite map]";

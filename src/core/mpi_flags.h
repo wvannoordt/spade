@@ -2,8 +2,6 @@
 
 #ifndef MPI_ENABLE
 #define MPI_ENABLE 1
-#else
-#define MPI_ENABLE 0
 #endif
 
 #if(MPI_ENABLE)

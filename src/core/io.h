@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "core/config.h"
+#include "core/static_for.h"
 #include "core/grid.h"
 #include "core/print.h"
 #include "core/utils.h"
@@ -294,7 +295,7 @@ namespace spade::io
             
             ctrs::array<int,3> ng(n_guard_i, n_guard_j, n_guard_k);
             auto box_tmp = obj.get_block_box(lb_loc);
-            static_for<0, obj.dim()>([&](auto i)->void
+            algs::static_for<0, obj.dim()>([&](auto i)->void
             {
                 box_tmp.min(i.value) -= obj.get_dx(i.value)*ng[i.value];
                 box_tmp.max(i.value) += obj.get_dx(i.value)*ng[i.value];

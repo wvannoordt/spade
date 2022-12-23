@@ -1,12 +1,18 @@
 #pragma once
-#include <type_traits>
 
-template <const int start, const int finish, typename loopCall>
-static constexpr inline void static_for(const loopCall& loopObj)
+#include <concepts>
+
+namespace spade::algs
 {
-	if constexpr (start < finish)
-	{
-		loopObj(std::integral_constant<int, start>{});
-		static_for<start+1, finish>(loopObj);
-	}
-};
+    template <const int imin, const int imax, typename callable_t>
+    requires (imin >= imax)
+    void static_for(const callable_t& func){}
+    
+    template <const int imin, const int imax, typename callable_t>
+    requires (imin < imax)
+    void static_for(const callable_t& func)
+    {
+        func(std::integral_constant<int, imin>());
+        static_for<imin+1, imax>(func);
+    }
+}

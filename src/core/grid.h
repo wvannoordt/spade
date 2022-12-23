@@ -7,9 +7,9 @@
 #include "core/attribs.h"
 #include "core/ctrs.h"
 #include "core/typedef.h"
+#include "core/static_for.h"
 #include "core/bounding_box.h"
 #include "core/range.h"
-#include "core/static_for.h"
 #include "core/coord_system.h"
 #include "core/parallel.h"
 #include "core/dims.h"
@@ -101,22 +101,25 @@ namespace spade::grid
     
     template
     <
+        ctrs::basic_array array_descriptor_t,
         coords::coordinate_system coord_t,
-        parallel::parallel_group par_group_t,
-        const std::size_t grid_dim
+        parallel::parallel_group par_group_t
     >
     class cartesian_grid_t
     {
         public:
+            
             typedef coord_t::coord_type dtype;
             typedef coord_t::coord_type coord_type;
             typedef coord_t coord_sys_type;
             typedef ctrs::array<coord_type, 3> coord_point_type;
+            constexpr static std::size_t grid_dim = array_descriptor_t::size();
+            
             cartesian_grid_t(
-                const ctrs::array<int,   grid_dim>& num_blocks_in,
-                const ctrs::array<int,   grid_dim>& cells_in_block_in,
-                const ctrs::array<int,   grid_dim>& exchange_cells_in,
-                const bound_box_t<dtype, grid_dim>& bounds_in,
+                const array_descriptor_t& num_blocks_in,
+                const array_descriptor_t& cells_in_block_in,
+                const array_descriptor_t& exchange_cells_in,
+                const bound_box_t<dtype, array_descriptor_t::size()>& bounds_in,
                 const coord_t& coord_system_in,
                 par_group_t& group_in
                 )
@@ -155,7 +158,7 @@ namespace spade::grid
                 {
                     auto& box = block_boxes[lb];
                     ctrs::array<int, 3> glob_block_idx = ctrs::expand_index(grid_partition.get_global_block(lb), num_blocks);
-                    static_for<0,dim()>([&](auto i)
+                    algs::static_for<0,dim()>([&](auto i)
                     {
                         box.min(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+0)*bounds.size(i.value)/num_blocks[i.value];
                         box.max(i.value) = bounds.min(i.value) + (glob_block_idx[i.value]+1)*bounds.size(i.value)/num_blocks[i.value];

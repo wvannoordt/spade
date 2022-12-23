@@ -3,6 +3,7 @@
 #include "core/config.h"
 #include "core/static_math.h"
 #include "core/ctrs.h"
+#include "core/static_for.h"
 
 namespace spade::finite_diff
 {
@@ -11,7 +12,7 @@ namespace spade::finite_diff
     {
         ctrs::array<coeff_t, order+1> output;
         coeff_t last = coeff_t(0.0);
-        static_for<1,order+1>([&](auto i) -> void
+        algs::static_for<1,order+1>([&](auto i) -> void
         {
             const coeff_t fact = (coeff_t)static_math::factorial<order>::value/((coeff_t)(static_math::factorial<order-i.value>::value)*((coeff_t)static_math::factorial<i.value>::value));
             output[order-i.value] = ((coeff_t)(1.0)/i.value)*static_math::pow<-1,i.value-1>::value*fact;

@@ -7,6 +7,7 @@
 #include "core/config.h"
 #include "core/grid.h"
 #include "core/coord_system.h"
+#include "core/static_for.h"
 
 namespace spade::fetch
 {
@@ -44,7 +45,7 @@ namespace spade::fetch
             cell_info_t& info)
         {
             auto& p = info.elements;
-            static_for<0,cell_info_t::num_params>([&](auto i) -> void
+            algs::static_for<0,cell_info_t::num_params>([&](auto i) -> void
             {
                 get_single_cell_info_value_for_face_stencil(ar_grid, prims, icell, idir, std::get<i.value>(info.elements));
             });
@@ -64,7 +65,7 @@ namespace spade::fetch
         void get_face_stencil_data(const grid_t& ar_grid, const array_t& prims, const grid::face_idx_t& iface, flux_line<flux_size, cell_info_t>& sten)
         {
             const int idir = iface.dir();
-            static_for<0,flux_size>([&](auto i) -> void
+            algs::static_for<0,flux_size>([&](auto i) -> void
             {
                 grid::cell_idx_t icell = grid::face_to_cell(iface, 0);
                 icell[idir] += i.value - (int)(flux_size/2) + 1;
@@ -85,7 +86,7 @@ namespace spade::fetch
         template <grid::multiblock_grid grid_t, grid::multiblock_array array_t, typename cell_info_t>
         void get_single_cell_data(const grid_t& grid, const array_t& prims, const grid::cell_idx_t& icell, cell_info_t& info)
         {
-            static_for<0,cell_info_t::num_params>([&](auto i) -> void
+            algs::static_for<0,cell_info_t::num_params>([&](auto i) -> void
             {
                 get_single_cell_info_value_for_cell_stencil(grid, prims, icell, std::get<i.value>(info.elements));
             });
@@ -212,7 +213,7 @@ namespace spade::fetch
         void get_single_face_data(const grid_t& grid, const array_t& prims, const grid::face_idx_t& iface, face_info_t& face_data)
         {
             auto& p = face_data.elements;
-            static_for<0,face_info_t::num_params>([&](auto i) -> void
+            algs::static_for<0,face_info_t::num_params>([&](auto i) -> void
             {
                 get_face_info_value(grid, prims, iface, std::get<i.value>(p));
             });

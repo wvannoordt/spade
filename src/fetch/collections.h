@@ -7,6 +7,7 @@
 #include "core/config.h"
 #include "core/grid.h"
 #include "core/coord_system.h"
+#include "core/static_for.h"
 
 namespace spade::fetch
 {
@@ -21,7 +22,7 @@ namespace spade::fetch
     template <typename... infos_t>
     static std::ostream & operator<<(std::ostream & os, const cell_info<infos_t...>& ftch)
     {
-        static_for<0,ftch.num_params>([&](const auto& i) -> void
+        algs::static_for<0,ftch.num_params>([&](const auto& i) -> void
         {
             os << "Data Item " << i.value << ":\n" << std::get<i.value>(ftch.elements) << "\n";
         });
@@ -39,7 +40,7 @@ namespace spade::fetch
     template <typename... infos_t>
     static std::ostream & operator<<(std::ostream & os, const face_info<infos_t...>& ftch)
     {
-        static_for<0,ftch.num_params>([&](const auto& i) -> void
+        algs::static_for<0,ftch.num_params>([&](const auto& i) -> void
         {
             os << "Data Item " << i.value << ":\n" << std::get<i.value>(ftch.elements) << "\n";
         });
