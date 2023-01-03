@@ -16,16 +16,20 @@
 #include "core/timing.h"
 #include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
-#include "core/time_integration.h"
+// #include "core/time_integration.h"
 #include "core/block_config.h"
 #include "core/pde_algs.h"
 #include "core/mtimer.h"
+#include "core/arith_tuple.h"
 
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
 #include "fetch/fetch.h"
 #include "omni/omni.h"
+
+#include "time-integration/explicit.h"
+#include "time-integration/integrator.h"
 
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/state_transformation.h"
