@@ -10,8 +10,11 @@ namespace spade::time_integration
         template <typename input_t> void transform_inverse(const input_t& input) const {}
     };
     
+    static identity_transform_t identity_transform;
+    
     template <
         typename time_value_t,
+        typename scheme_t,
         typename data_t,
         typename rhs_calc_t,
         typename state_trans_t = identity_transform_t>
@@ -19,16 +22,27 @@ namespace spade::time_integration
     {
         time_axis_t<time_value_t> axis;
         data_t& data;
+        scheme_t scheme;
         const rhs_calc_t& rhs_calc;
+        const state_trans_t& trans;
         
         integrator_t(
             const time_axis_t<time_value_t>& axis_in,
+            const scheme_t& scheme_in,
             data_t& data_in,
-            const rhs_calc_t& rhs_calc_in
+            const rhs_calc_t& rhs_calc_in,
+            const state_trans_t& trans_in = identity_transform
         )
              : axis{axis_in},
-             data{data_in}
-             rhs_calc{rhs_calc_in}
+             data{data_in},
+             scheme{scheme_in},
+             rhs_calc{rhs_calc_in},
+             trans{trans_in}
+        {
+            
+        }
+        
+        void advance()
         {
             
         }

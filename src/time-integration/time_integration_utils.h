@@ -35,4 +35,11 @@ namespace spade::time_integration
         var_state_t& solution(const index_type i = 0) {return solution_data[i];}
         const scheme_t& scheme() const {return scheme_data;}
     };
+    
+    //Need to modify this to allow for large copyable values
+    template <typename... integrator_datas_t>
+    auto couple(integrator_datas_t&... datas)
+    {
+        return std::forward_as_tuple(datas...);
+    }
 }

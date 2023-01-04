@@ -1,58 +1,55 @@
 #include "spade.h"
 
+using real_t = double;
+
 int main(int argc, char** argv)
 {
-    //co-evolving coupled domains
+    real_t x = 0.1d;
+    real_t r = 0.0d;
     
-    double x1 = 0.1d;
-    double r1 = 0.0d;
+    spade::time_integration::ssprk34_t alg;
     
-    float  x2 = 0.1f;
-    float  r2 = 0.0f;
+    print(alg.var_size(), alg.rhs_size());
     
-    spade::time_integration::rk2_t alg1;
-    spade::time_integration::rk4_t alg2;
-    
-    // auto q1 = spade::time_integration::make_integrator_data(std::move(x1), std::move(r1), alg1);
-    // auto q2 = spade::time_integration::make_integrator_data(std::move(x2), std::move(r2), alg2);
-    
-    auto q1 = spade::time_integration::integrator_data_t(x1, r1, alg1);
-    auto q2 = spade::time_integration::integrator_data_t(x2, r2, alg2);
+    //Note that this data should have the same lifetime as the integrator
+    spade::time_integration::integrator_data_t q(x, r, alg);
     
     spade::time_integration::time_axis_t axis(0.0, 1e-4);
     
-    // auto rhs1 = [](double& rhs, double& q, const double& t) -> void {rhs = 0.0; rhs -= q;};
-    // auto rhs2 = [](float& rhs,  float& q,  const float& t)  -> void {rhs = 0.0; rhs -= q;};
+    //use the "couple" function to build necessary types
+    //We can (in theory) extend this to an arbitrary number of integrators
     
-    //this is how we would write a single time integrator    
-    // spade::time_integration::integrator integrator1(axis, alg1, q1, rhs1);
-    // spade::time_integration::integrator integrator2(axis, alg2, q2, rhs2);
-    
-    //Note that we can't really introduce a composite integrator as a union of two single
-    //integrators, since the residual calculation depends on the unions of states
-    
-    
-    auto coupled_rhs = [](auto& rhs,  auto& q,  const auto& t)  -> void
+    struct trans_t
     {
-        auto& resid1 = spade::ctrs::get<0>(rhs);
-        auto& resid2 = spade::ctrs::get<1>(rhs);
+        void transform_forward(real_t& f) const { f = f*f; }
+        void transform_inverse(real_t& f) const { f = sqrt(f); }
+    } trans;
     
-        auto& solut1 = spade::ctrs::get<0>(q);
-        auto& solut2 = spade::ctrs::get<1>(q);
-    
-        resid1 = 0.0;
-        resid2 = 0.0;
-    
-        // etc.
+    auto calc_rhs = [&](auto& rhs, const auto& q, const auto& time) -> void
+    {
+        rhs = 0.0;
+        rhs += 2.0*q*cos(time);
     };
     
-    //use the "couple" function to build necessary types
-    //We can (in theory) extend this to an arbitrary number of 
-    spade::time_integration::integrator_t c_integrator(
+    spade::time_integration::integrator_t integrator(
         axis,
-        spade::time_integration::couple(q1, q2),
-        coupled_rhs
+        alg,
+        q,
+        calc_rhs,
+        trans
     );
+    
+    integrator.advance();
+    
+    // spade::time_integration::rk2 time_int(var, rhs, t0, dt, calc_rhs, trans);
+    // std::ofstream myfile("soln.dat");
+    // for (int i = 0; i < nt; ++i)
+    // {
+    //     time_int.advance();
+    //     myfile << time_int.time() << " " << time_int.solution() << " " << (5.0+sin(time_int.time())) << std::endl;
+    // }
+    
+    //&spade::ctrs::get<0>(data).solution(0) == &q1.solution(0) //(true!)
     
     return 0;
 }
