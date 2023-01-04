@@ -33,11 +33,11 @@ namespace spade::time_integration
             const rhs_calc_t& rhs_calc_in,
             const state_trans_t& trans_in = identity_transform
         )
-             : axis{axis_in},
-             data{data_in},
-             scheme{scheme_in},
-             rhs_calc{rhs_calc_in},
-             trans{trans_in}
+             : axis   {axis_in},
+             data     {data_in},
+             scheme   {scheme_in},
+             rhs_calc {rhs_calc_in},
+             trans    {trans_in}
         {
             
         }
