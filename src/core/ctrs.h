@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <cmath>
+#include <utility>
 
 #include "core/config.h"
 #include "core/utils.h"
@@ -67,25 +68,32 @@ namespace spade::ctrs
             arithmetic_array_t<dtype, ar_size, derived_t>,
             derived_t>::type;
         
-        typedef dtype value_type;
+        using value_type = dtype;
+        using index_type = int;
+        
         dtype data[ar_size];
-        dtype& operator [] (size_t idx) {return data[idx];}
+        dtype& operator [] (index_type idx) {return data[idx];}
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
-        constexpr static size_t size(void) {return ar_size;}
+        constexpr static index_type size(void) {return ar_size;}
         
         self_type& self() { return *(static_cast<self_type*>(this)); }
         
-        template <typename ftype> void fill(const ftype& val)
+        template <typename ftype> void fill(const ftype& val, const index_type imin, const index_type imax)
         {
-            for (size_t i = 0; i < this->size(); i++) data[i] = val;
+            for (index_type i = imin; i < imax; i++) data[i] = val;
         }
         
-        template <not_basic_array param> void set_r(const size_t i, const param& p)
+        template <typename ftype> void fill(const ftype& val)
+        {
+            fill(val, 0, this->size());
+        }
+        
+        template <not_basic_array param> void set_r(const index_type i, const param& p)
         {
             data[i] = p;
         }
-        template <not_basic_array param, class... params> void set_r(const size_t i, const param& p, params... ps)
+        template <not_basic_array param, class... params> void set_r(const index_type i, const param& p, params... ps)
         {
             data[i] = p;
             set_r(i+1, ps...);
@@ -97,6 +105,12 @@ namespace spade::ctrs
         }
         
         arithmetic_array_t(const dtype& val) {fill(val);}
+        // arithmetic_array_t(dtype&& val)
+        // {
+        //     data[0] = std::move(val);
+        //     if constexpr (this->size() > 1) this->fill(data[0], 1, this->size());
+        // }
+        
         arithmetic_array_t(void) {}
         constexpr arithmetic_array_t(const arithmetic_array_t& rhs) = default;
         
@@ -125,64 +139,64 @@ namespace spade::ctrs
         
         template <basic_array arr_t> self_type& operator += (const arr_t& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs[i];
+            for (index_type i = 0; i < this->size(); i++) data[i] += rhs[i];
             return self();
         }
         
         template <typename rhs_t> auto operator + (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
-            for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
+            for (index_type i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
             return output;
         }
         
         template <typename rhs_t> auto operator - (const arithmetic_array_t<rhs_t, ar_size>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
-            for (std::size_t i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
+            for (index_type i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
             return output;
         }
         
         template <basic_array arr_t> self_type& operator -= (const arr_t& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs[i];
+            for (index_type i = 0; i < this->size(); i++) data[i] -= rhs[i];
             return self();
         }
         
         template <typename data_t> self_type& operator *= (const data_t& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] *= rhs;
+            for (index_type i = 0; i < this->size(); i++) data[i] *= rhs;
             return self();
         }
         
         template <typename data_t> self_type& operator /= (const data_t& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] /= rhs;
+            for (index_type i = 0; i < this->size(); i++) data[i] /= rhs;
             return self();
         }
         
         auto& operator += (const dtype& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] += rhs;
+            for (index_type i = 0; i < this->size(); i++) data[i] += rhs;
             return self();
         }
         
         auto& operator -= (const dtype& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] -= rhs;
+            for (index_type i = 0; i < this->size(); i++) data[i] -= rhs;
             return self();
         }
         
         template <basic_array arr_t> auto& operator %= (const arr_t& rhs)
         {
-            for (std::size_t i = 0; i < this->size(); i++) data[i] %= rhs[i];
+            for (index_type i = 0; i < this->size(); i++) data[i] %= rhs[i];
             return self();
         }
         
         bool operator == (const arithmetic_array_t<dtype, ar_size, derived_t>& rhs) const
         {
             bool output = true;
-            for (std::size_t i = 0; i < this->size(); i++) output = (output&&(data[i]==rhs[i]));
+            for (index_type i = 0; i < this->size(); i++) output = (output&&(data[i]==rhs[i]));
             return output;
         }
     };
