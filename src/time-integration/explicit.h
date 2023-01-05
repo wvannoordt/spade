@@ -47,7 +47,7 @@ namespace spade::time_integration
         detail::sr_mat_t<
             detail::sr_vec_t<std::ratio<0>,   std::ratio<0>,   std::ratio<0>,   std::ratio<0>>,
             detail::sr_vec_t<std::ratio<1,2>, std::ratio<0>,   std::ratio<0>,   std::ratio<0>>,
-            detail::sr_vec_t<std::ratio<0>,   std::ratio<1,2>, std::ratio<1,2>, std::ratio<0>>,
+            detail::sr_vec_t<std::ratio<0>,   std::ratio<1,2>, std::ratio<0>,   std::ratio<0>>,
             detail::sr_vec_t<std::ratio<0>,   std::ratio<0>,   std::ratio<1>,   std::ratio<0>>
         >,
         detail::sr_vec_t<std::ratio<1,6>, std::ratio<1,3>, std::ratio<1,3>, std::ratio<1,6>>,

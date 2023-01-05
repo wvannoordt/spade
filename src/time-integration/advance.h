@@ -24,12 +24,12 @@ namespace spade::time_integration
         
         template <const ratio_integral_type num, const ratio_integral_type denum> struct nonzero_t<std::ratio<num, denum>>
         {
-            constexpr static bool value = (num==0);
+            constexpr static bool value = (num!=0);
         };
         
         template <const ratio_integral_type num> struct nonzero_t<std::ratio<num>>
         {
-            constexpr static bool value = (num==0);
+            constexpr static bool value = (num!=0);
         };
         
         template <typename numeric_t, typename type_t> struct coeff_value_t
@@ -64,6 +64,7 @@ namespace spade::time_integration
             sol = sol_base; //expensive!
             
             //solution augmentation loop
+            trans.transform_forward(sol);
             algs::static_for<0, i>([&](const auto& jj) -> void
             {
                 const int j = jj.value;
@@ -73,27 +74,25 @@ namespace spade::time_integration
                 {
                     constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
                     auto& resid_j = data.residual(j); //"k_j"
-                    print(coeff);
                     resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
                     sol += resid_j;
                     resid_j /= (dt*coeff);
                 }
             });
+            trans.transform_inverse(sol);
             
             //by now, the solution has been augmented to accommodate the
             //evaluation of the ith residual
             auto& cur_resid = data.residual(i);
             using dt_coeff_value_t = typename scheme_t::dt_type::elem_t<i>;
             constexpr numeric_type time_coeff = detail::coeff_value_t<numeric_type, dt_coeff_value_t>::value();
-            print(time_coeff);
             axis.time() += time_coeff*dt;
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });
-        print(data.residual(0), data.residual(1), data.residual(2), data.residual(3));
         
         //residual accumulation
-        auto& new_solution = data.solution(0);
+        auto& new_solution = data.solution(0); //solution is updated in place
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
@@ -102,10 +101,11 @@ namespace spade::time_integration
             if constexpr (detail::nonzero_t<accum_coeff_value_t>::value)
             {
                 constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, accum_coeff_value_t>::value();
-                print(coeff);
                 auto& resid = data.residual(i);
                 resid *= (coeff*dt);
+                trans.transform_forward(new_solution);
                 new_solution += resid;
+                trans.transform_inverse(new_solution);
                 resid /= (coeff*dt);
             }
         });

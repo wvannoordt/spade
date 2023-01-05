@@ -47,5 +47,8 @@ namespace spade::time_integration
         {
             integrate_advance(axis, data, scheme, rhs_calc, trans);
         }
+        
+        data_t::solution_type& solution() {return data.solution(0);}
+        const time_value_t& time() {return axis.time();}
     };
 }
