@@ -45,7 +45,7 @@ namespace spade::time_integration
         
         void advance()
         {
-            // integrate_advance(axis, data, scheme, rhs_calc, trans);
+            integrate_advance(axis, data, scheme, rhs_calc, trans);
         }
     };
 }

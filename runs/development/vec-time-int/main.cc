@@ -7,9 +7,7 @@ int main(int argc, char** argv)
     real_t x = 0.1d;
     real_t r = 0.0d;
     
-    spade::time_integration::ssprk34_t alg;
-    
-    print(alg.var_size(), alg.rhs_size());
+    spade::time_integration::rk4_t alg;
     
     //Note that this data should have the same lifetime as the integrator
     spade::time_integration::integrator_data_t q(x, r, alg);

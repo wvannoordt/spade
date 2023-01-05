@@ -9,9 +9,13 @@ namespace spade::time_integration
 {
     template <typename time_value_t> struct time_axis_t
     {
-        time_value_t t0, dt;
-        time_axis_t(const time_value_t& t0_in, const time_value_t& dt_in): t0{t0_in}, dt{dt_in}
+        time_value_t t, dt;
+        time_axis_t(const time_value_t& t0_in, const time_value_t& dt_in): t{t0_in}, dt{dt_in}
         {}
+        const time_value_t& timestep() const {return dt;}
+        time_value_t& timestep() {return dt;}
+        const time_value_t& time() const {return t;}
+        time_value_t& time() {return t;}
     };
     
     template <typename var_state_t, typename rhs_state_t, typename scheme_t>
@@ -22,9 +26,13 @@ namespace spade::time_integration
         const scheme_t& scheme_data;
         
         using index_type = int;
+        using solution_type = var_state_t;
+        using residual_type = rhs_state_t;
+        using scheme_type   = scheme_t;
         
         integrator_data_t(const var_state_t& q, const rhs_state_t& r, const scheme_t& scheme_in) : scheme_data{scheme_in}
         {
+            //need to improve this
             solution_data = q;
             residual_data = r;
         }
