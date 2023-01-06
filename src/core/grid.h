@@ -13,7 +13,6 @@
 #include "core/coord_system.h"
 #include "core/parallel.h"
 #include "core/dims.h"
-#include "core/array_container.h"
 #include "core/partition.h"
 #include "core/static_math.h"
 #include "core/grid_index_types.h"

@@ -12,12 +12,14 @@
 #include "core/coord_system.h"
 #include "core/parallel.h"
 #include "core/dims.h"
-#include "core/array_container.h"
 #include "core/partition.h"
 #include "core/static_math.h"
 #include "core/grid_index_types.h"
 #include "core/grid.h"
 #include "core/mem_map.h"
+
+// #include "core/array_container.h" //deprecated
+#include "array-containers/ac_vector_wrapper.h"
 
 namespace spade::grid
 {    
@@ -207,12 +209,15 @@ namespace spade::grid
         void set_bbox_dir_val(bbox_t& bbox, const int& dim) {}
     }
     
+    template <typename data_t> using default_container_t = array_containers::vector_wrapper<data_t>;
+    
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
         dims::grid_array_dimension major_dim_t=dims::singleton_dim,
         const array_centering centering=cell_centered,
-        array_container::grid_data_container container_t=std::vector<typename detail::get_fundamental_type<data_alias_t>::type>>
+        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
+        >
     struct grid_array
     {
         constexpr static array_centering centering_type() { return centering; }
@@ -273,7 +278,7 @@ namespace spade::grid
             minor_dims = minor_dim_t();
             major_dims = major_dims_in;
             grid_dims = create_grid_dims<decltype(grid_in), centering>(grid_in);
-            array_container::resize_container(data, minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
+            data.resize(minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
             std::size_t n = total_idx_rank();
             for (auto i: range(0, n)) idx_coeffs[i] = 1;
             for (auto i: range(0, n))
@@ -508,12 +513,12 @@ namespace spade::grid
         multiblock_grid grid_t,
         typename data_alias_t,
         dims::grid_array_dimension major_dim_t = dims::singleton_dim,
-        array_container::grid_data_container container_t = std::vector<typename detail::get_fundamental_type<data_alias_t>::type>
+        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
         > using face_array = grid_array<grid_t, data_alias_t, major_dim_t, face_centered, container_t>;
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
         dims::grid_array_dimension major_dim_t = dims::singleton_dim,
-        array_container::grid_data_container container_t = std::vector<typename detail::get_fundamental_type<data_alias_t>::type>
+        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
         > using cell_array = grid_array<grid_t, data_alias_t, major_dim_t, cell_centered, container_t>;
 }

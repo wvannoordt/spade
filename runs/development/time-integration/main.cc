@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     //Note that this data should have the same lifetime as the integrator
     spade::time_integration::integrator_data_t q(x, r, alg);
     
-    spade::time_integration::time_axis_t axis(0.0, 1e-4);
+    spade::time_integration::time_axis_t axis(0.0, 1e-2);
     
     //use the "couple" function to build necessary types
     //We can (in theory) extend this to an arbitrary number of integrators
