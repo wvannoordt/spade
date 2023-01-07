@@ -12,11 +12,6 @@ namespace spade::time_integration
     namespace detail
     {
         using ratio_integral_type = decltype(std::deci::num);
-        template <typename T> concept has_fundamental_type = requires(T t) {typename T::fundamental_type;} && std::floating_point<typename T::fundamental_type>;
-        
-        template <typename query_t> struct get_numeric_type{};
-        template <std::floating_point query_t>  struct get_numeric_type<query_t> { using type = query_t; };
-        template <has_fundamental_type query_t> struct get_numeric_type<query_t> { using type = typename query_t::fundamental_type; };
         
         template <typename val_t> struct nonzero_t
         {
@@ -53,14 +48,13 @@ namespace spade::time_integration
     
     //explicit RK scheme (TODO: implement concept for this)
     template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename trans_t>
-    requires (std::floating_point<typename data_t::solution_type> || detail::has_fundamental_type<typename data_t::solution_type>)
     void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const trans_t& trans)
     {
         //Number of RHS evaluations
         const int num_stages = scheme_t::table_type::rows();
         
         //Get the basic numeric type from the solution
-        using numeric_type = detail::get_numeric_type<typename data_t::solution_type>::type;
+        using numeric_type = typename axis_t::value_type;
         
         //Timestep
         const auto& dt = axis.timestep();

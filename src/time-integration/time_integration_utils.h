@@ -9,6 +9,7 @@ namespace spade::time_integration
 {
     template <typename time_value_t> struct time_axis_t
     {
+        using value_type = time_value_t;
         time_value_t t, dt;
         time_axis_t(const time_value_t& t0_in, const time_value_t& dt_in): t{t0_in}, dt{dt_in}
         {}

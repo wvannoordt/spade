@@ -25,6 +25,7 @@ namespace spade::ctrs
     template <typename... elems_t> struct arith_tuple
     {
         aliases::tuple<elems_t...> data;
+        arith_tuple(){}
         arith_tuple(const elems_t&... elems)
         {
             data = std::make_tuple(elems...);
@@ -77,7 +78,7 @@ namespace spade::ctrs
             algs::static_for<0,sizeof...(elems_t)>([&](const auto& i) -> void
             {
                 const int ii = i.value;
-                get<ii>(data) *= detail::access_const_elem<ii>(rhs);
+                get<ii>(data) /= detail::access_const_elem<ii>(rhs);
             });
             return *this;
         }

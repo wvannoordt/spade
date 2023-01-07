@@ -1,0 +1,27 @@
+Config
+{
+    cfl       = 0.3
+    nt_max    = 1500
+    nt_skip   = 100
+    ck_skip   = 1000
+    nx_cell   = 32
+    ny_cell   = 32
+    nx_blck   = 4
+    ny_blck   = 4
+    nguard    = 2
+    xmin      = -1.0
+    xmax      =  1.0
+    ymin      = -1.0
+    ymax      =  1.0
+    init_file = none
+    output    = true
+}
+Fluid
+{
+    u0      = 0.5
+    deltau  = 0.5
+    gamma   = 1.4
+    b       = 0.2
+    cp      = 2.5
+    theta_d = 0.0
+}

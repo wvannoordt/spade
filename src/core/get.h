@@ -9,4 +9,10 @@ namespace spade::ctrs
         if constexpr (requires {tup.get_tuple();}) return std::get<i>(tup.get_tuple());
         else return std::get<i>(tup);
     }
+    
+    template <const int i, typename tuple_t> auto& get(tuple_t& tup)
+    {
+        if constexpr (requires {tup.get_tuple();}) return std::get<i>(tup.get_tuple());
+        else return std::get<i>(tup);
+    }
 }
