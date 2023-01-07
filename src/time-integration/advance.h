@@ -47,6 +47,8 @@ namespace spade::time_integration
         {
             constexpr static numeric_t value() {return numeric_t(num);}
         };
+        
+        template <typename idx_t> const int idx_val = utils::remove_all<idx_t>::type::value;
     }
     
     //explicit RK scheme (TODO: implement concept for this)
@@ -54,24 +56,42 @@ namespace spade::time_integration
     requires (std::floating_point<typename data_t::solution_type> || detail::has_fundamental_type<typename data_t::solution_type>)
     void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const trans_t& trans)
     {
+        //Number of RHS evaluations
         const int num_stages = scheme_t::table_type::rows();
+        
+        //Get the basic numeric type from the solution
         using numeric_type = detail::get_numeric_type<typename data_t::solution_type>::type;
+        
+        //Timestep
         const auto& dt = axis.timestep();
+        
+        //Computing the residuals
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
-            const auto& sol_base = data.solution(0); //The first solution is the solution at the previous timestep
             
-            auto& sol = data.solution(1); //all RK schemes only need a single solution array.
+            //We won't update this copy of the solution during the RHS evaluations
+            const auto& sol_base = data.solution(0);
+            
+            //The solution used when we evaluate the RHS
+            auto& sol = data.solution(1);
             sol = sol_base; //expensive!
             
             //solution augmentation loop
+            //Begin by applying the forward transform
             trans.transform_forward(sol);
             algs::static_for<0, i>([&](const auto& jj) -> void
             {
                 const int j = jj.value;
                 using table_t = scheme_t::table_type;
-                using coeff_value_t = typename table_t::elem_t<i>::elem_t<j>;
+                
+                //Note that this is a temporary workaround owing to a bug in GCC 10.2
+                using coeff_value_t_1 = typename table_t::elem_t<detail::idx_val<decltype(ii)>>;
+                using coeff_value_t = typename coeff_value_t_1::elem_t<detail::idx_val<decltype(jj)>>;
+                
+                //Using GCC 11+, below is valid
+                //using coeff_value_t = typename table_t::elem_t<i>::elem_t<j>;
+                
                 if constexpr (detail::nonzero_t<coeff_value_t>::value)
                 {
                     constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
@@ -83,30 +103,41 @@ namespace spade::time_integration
             });
             trans.transform_inverse(sol);
             
-            //by now, the solution has been augmented to accommodate the
+            //By now, the solution has been augmented to accommodate the
             //evaluation of the ith residual
             auto& cur_resid = data.residual(i);
             using dt_coeff_value_t = typename scheme_t::dt_type::elem_t<i>;
             constexpr numeric_type time_coeff = detail::coeff_value_t<numeric_type, dt_coeff_value_t>::value();
+            
+            //Evaluate the residual at t + c*dt
             axis.time() += time_coeff*dt;
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });
         
-        //residual accumulation
         auto& new_solution = data.solution(0); //solution is updated in place
+        
+        //Residual accumulation loop
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
             using accum_coeff_value_t = typename scheme_t::accum_type::elem_t<i>;
+            
+            //We skip over any zero coefficients
             if constexpr (detail::nonzero_t<accum_coeff_value_t>::value)
             {
                 constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, accum_coeff_value_t>::value();
                 auto& resid = data.residual(i);
+                
+                //Multiply the residual by the accumulation coefficient
                 resid *= (coeff*dt);
+                
+                //Update the transformed solution
                 trans.transform_forward(new_solution);
                 new_solution += resid;
                 trans.transform_inverse(new_solution);
+                
+                //Divide to avoid modifying the residual unduly (may be unnecessary!)
                 resid /= (coeff*dt);
             }
         });
