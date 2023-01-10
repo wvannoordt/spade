@@ -6,6 +6,8 @@
 
 #include "core/config.h"
 #include "core/utils.h"
+#include "core/const_index.h"
+
 namespace spade::ctrs
 {
     template <class T> concept basic_array = requires(T t, const int& i)
@@ -61,7 +63,7 @@ namespace spade::ctrs
     
     namespace detail{struct no_type_t{};}
     
-    template<typename dtype, const size_t ar_size, typename derived_t = detail::no_type_t> struct arithmetic_array_t
+    template<typename dtype, const std::size_t ar_size, typename derived_t = detail::no_type_t> struct arithmetic_array_t
     {
         using self_type = std::conditional<
             std::is_same<derived_t, detail::no_type_t>::value,
@@ -73,6 +75,22 @@ namespace spade::ctrs
         
         dtype data[ar_size];
         dtype& operator [] (index_type idx) {return data[idx];}
+        const dtype& operator [] (index_type idx) const {return data[idx];}
+        
+        template <udci::integral_t ii>
+        requires(ii < ar_size)
+        dtype& operator[] (const udci::idx_const_t<ii>& idx) {return data[ii];}
+        
+        template <udci::integral_t ii>
+        requires(ii < ar_size)
+        const dtype& operator[] (const udci::idx_const_t<ii>& idx) const {return data[ii];}
+        
+        template <udci::integral_t ii>
+        const dtype& operator[] (const udci::idx_const_t<ii>& idx) const
+        {
+            static_assert(ii<ar_size, "constant literal index must be less than array size"); return data[ii];
+        }
+        
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
         constexpr static index_type size(void) {return ar_size;}

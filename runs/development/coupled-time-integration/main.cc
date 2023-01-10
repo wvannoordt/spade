@@ -60,6 +60,5 @@ int main(int argc, char** argv)
             << numsol1 << "\n";
         integrator.advance();
     }
-    
     return 0;
 }
