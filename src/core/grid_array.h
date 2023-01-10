@@ -22,7 +22,7 @@
 #include "array-containers/ac_vector_wrapper.h"
 
 namespace spade::grid
-{    
+{
     namespace detail
     {
         template <class T> concept has_value_type = requires(T t) {typename T::value_type;};
@@ -52,7 +52,6 @@ namespace spade::grid
         {
             typedef dims::static_dims<data_t::size()> type;
         };
-        
         
         template <typename data_t> struct get_variable_mem_map
         {
@@ -346,6 +345,32 @@ namespace spade::grid
             // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
             // return data[offset + offst_r<0>(idxs...)];
             return data[mem_map.offset(idxs...)];
+        }
+        
+        void set_elem(const index_type& idx, const alias_type& alias)
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                for (int i = 0; i < alias.size(); ++i) (*this)(i, idx) = alias[i];
+            }
+            if constexpr (!ctrs::basic_array<alias_type>)
+            {
+                (*this)(idx) = alias;
+            }
+        }
+        
+        alias_type get_elem(const index_type& idx) const
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                alias_type output;
+                for (int i = 0; i < output.size(); ++i) output[i] = (*this)(i, idx);
+                return output;
+            }
+            if constexpr (!ctrs::basic_array<alias_type>)
+            {
+                return (*this)(idx);
+            }
         }
         
         // _finline_ fundamental_type& operator () (const int i, const int j, const int k, const int lb)

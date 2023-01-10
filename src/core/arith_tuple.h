@@ -82,5 +82,15 @@ namespace spade::ctrs
             });
             return *this;
         }
+        
+        template <udci::integral_t ii>
+        requires((ii < sizeof...(elems_t)) && (ii >= 0))
+        auto& operator[] (const udci::idx_const_t<ii>& idx)
+        {return std::get<ii>(data);}
+        
+        template <udci::integral_t ii>
+        requires((ii < sizeof...(elems_t)) && (ii >= 0))
+        const auto& operator[] (const udci::idx_const_t<ii>& idx) const
+        {return std::get<ii>(data);}
     };
 }
