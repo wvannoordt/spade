@@ -152,20 +152,6 @@ namespace spade::algs
         md_loop<int, 4, kernel_t, typename array_t::index_type>(bound_box, kernel);
     }
     
-    template <typename data_t, typename array_t, typename elem_t>
-    requires(array_t::variable_map_type::rank()==0)
-    void set_elem_value(const data_t& data, array_t& arr, const elem_t& elem)
-    {
-        arr(elem) = data;
-    }
-    
-    template <typename data_t, typename array_t, typename elem_t>
-    requires(array_t::variable_map_type::rank()==1)
-    void set_elem_value(const data_t& data, array_t& arr, const elem_t& elem)
-    {
-        for (int i = 0; i < arr.var_map().size() ; ++i) arr(i, elem) = data[i];
-    }
-    
     template <class array_t, class kernel_t>
     void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
     {
@@ -178,7 +164,7 @@ namespace spade::algs
             const auto loop_func = [&](const auto& elem) -> void
             {
                 const auto data = detail::invoke_kernel(kernel, arr, elem);
-                set_elem_value(data, arr, elem);
+                arr.set_elem(elem, data);
             };
             block_loop(arr, lb, loop_func, exchange_policy);
         }

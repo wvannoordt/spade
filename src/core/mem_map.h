@@ -8,339 +8,150 @@
 
 namespace spade::grid
 {
-    template <typename T> concept is_dimension = requires(T t, const typename T::index_type& i)
+    template <const int i0, const int i1> struct static_dim_t
     {
-        //The starting index dimension (inclusive)
-        t.first();
-        
-        //The ending index dimension (exclusive)
-        t.last();
-        
-        t.size();
-        t.offset(i);
+        static constexpr std::size_t size() {return i1-i0;}
+        static constexpr int start()        {return i0;}
+        static constexpr int end()          {return i1;}
+        static constexpr int rank()         {return 1;}
+        static constexpr int num_coeffs()  {return 1;}
     };
-    
-    template <typename T> concept is_map = requires(T t)
+
+    template <typename integral_t=int> struct dynamic_dim_t
     {
-        //The total size of the iteration space
-        t.size();
-        
-        //number of indices required to produce an offset
-        t.rank();
-    };
-    
-    using default_index_t = int;
-    using default_offset_t = std::size_t;
-    
-    template <const default_index_t i0, const default_index_t i1> struct static_dim_t
-    {
-        using index_type = default_index_t;
-        using offset_type = default_offset_t;
-        
-        static_dim_t(){}
-        
-        constexpr index_type first() const {return i0;}
-        constexpr index_type last()  const {return i1;}
-        constexpr offset_type size() const {return last()-first();}
-        constexpr offset_type offset(const index_type& i) const {return i-first();}
-    };
-    
-    template <const default_index_t i0, const default_index_t i1>
-    static std::ostream & operator<<(std::ostream & os, const static_dim_t<i0, i1>& dim)
-    {
-        os << "static dim: [" << dim.first() << " --> " << dim.last() << "]";
-        return os;
-    }
-    
-    template <typename idx_t>
-    requires (std::is_integral_v<idx_t>)
-    struct dynamic_dim_t
-    {
-        using index_type = idx_t;
-        using offset_type = default_offset_t;
-        
-        idx_t i0, i1;
-        
+        integral_t i0, i1;
+        std::size_t size()  const           {return i1-i0;}
+        integral_t  start() const           {return i0;}
+        integral_t  end()   const           {return i1;}
+        static constexpr int rank()        {return 1;}
+        static constexpr int num_coeffs()  {return 1;}
         dynamic_dim_t(){}
-        dynamic_dim_t(const idx_t& i0_in, const idx_t& i1_in){ i0 = i0_in; i1 = i1_in; }
-        index_type first() const {return i0;}
-        index_type last()  const {return i1;}
-        _finline_ offset_type size() const {return last()-first();}
-        _finline_ offset_type offset(const index_type& i) const {return i-first();}
-        
+        dynamic_dim_t(integral_t i0_in, integral_t i1_in):i0{i0_in},i1{i1_in} {}
     };
-    
-    template <typename idx_t>
-    static std::ostream & operator<<(std::ostream & os, const dynamic_dim_t<idx_t>& dim)
+
+    namespace detail
     {
-        os << "dynamic dim: [" << dim.first() << " --> " << dim.last() << "]";
-        return os;
+        template <typename dim_t, typename... dims_t> struct rank_sum_t
+        {
+            constexpr static int value = dim_t::rank() + rank_sum_t<dims_t...>::value;
+        };
+        
+        template <typename dim_t> struct rank_sum_t<dim_t> {constexpr static int value = dim_t::rank();};
+        
+        template <typename dim_t, typename... dims_t> struct coeff_count_sum_t
+        {
+            constexpr static int value = dim_t::num_coeffs() + coeff_count_sum_t<dims_t...>::value;
+        };
+        
+        template <typename dim_t> struct coeff_count_sum_t<dim_t> {constexpr static int value = dim_t::num_coeffs();};
     }
-    
-    struct singleton_map_t
+
+    using offset_type = long int;
+
+    template <typename... dims_t> struct recti_view_t
     {
-        using index_type  = default_index_t;
-        using offset_type = default_offset_t;
-        
-        static constexpr offset_type size() {return 1;}
-        static constexpr index_type  rank() {return 0;}
-        
-        using identifier_type = ctrs::array<index_type, 0>;
-        
-        _finline_ offset_type offset(const identifier_type& idx) const
+        constexpr static int rank()        {return detail::rank_sum_t<dims_t...>::value;}
+        constexpr static int num_views()   {return sizeof...(dims_t);}
+        constexpr static int num_coeffs() {return detail::coeff_count_sum_t<dims_t...>::value;}
+        std::tuple<dims_t...> views;
+        recti_view_t(){}
+        recti_view_t(dims_t... views_in)
         {
-            return 0;
-        }
-    };
-    
-    static std::ostream & operator<<(std::ostream & os, const singleton_map_t& map)
-    {
-        os << "[singleton map]\n";
-        os << "[/singleton map]";
-        return os;
-    }
-    
-    template <is_dimension... dims_t> struct regular_map_t
-    {
-        using index_type  = default_index_t; //TODO: change this to be promotion from the index types of the dimensions (later)
-        using offset_type = default_offset_t;
-        
-        constexpr static index_type rank() {return sizeof...(dims_t);}
-        
-        using identifier_type = ctrs::array<index_type, rank()>;
-        
-        ctrs::array<offset_type, rank()> coeffs;
-        aliases::tuple<dims_t...> dims;
-        
-        std::size_t map_size;
-        
-        regular_map_t()
-        {
-            //maybe do this only when the sizes are constant-eval
-            compute_coeffs();
+            views = std::make_tuple(views_in...);
         }
         
-        regular_map_t(dims_t... dims_in) //note that these are deliberately by value and not const ref!!!!!
+        using coeff_array_t = ctrs::array<int, num_coeffs()>;
+        coeff_array_t get_extent_array() const { return get_extent_array([](const auto& vw) -> auto {return vw.size();});}
+        template <typename accessor_t> coeff_array_t get_extent_array(const accessor_t& accessor) const
         {
-            dims = std::make_tuple(dims_in...);
-            compute_coeffs();
-        }
-        
-        void compute_coeffs()
-        {
-            coeffs[0] = 1;
-            algs::static_for<1,rank()>([&](const auto& i) -> void
+            coeff_array_t output;
+            int idx = 0;
+            algs::static_for<0,num_views()>([&](const auto& ii) -> void
             {
-                const int ii = i.value;
-                coeffs[i.value] = coeffs[i.value-1]*(std::get<ii-1>(dims).size());
-            });
-            map_size = 1;
-            algs::static_for<0,rank()>([&](const auto& i) -> void
-            {
-                const int ii = i.value;
-                map_size *= std::get<ii>(dims).size();
-            });
-        }
-        
-        template <typename input_t>
-#if(C20_G11)
-        //TODO::why does the following line break for g++10?
-        requires (ctrs::convertible_array<input_t, identifier_type> && ctrs::same_size<input_t, identifier_type>)
-#endif
-        _finline_ offset_type offset(const input_t& idx) const
-        {
-            offset_type output = offset_type(0);
-            algs::static_for<0,rank()>([&](const auto& i) -> void
-            {
-                const int ii = i.value;
-                output += std::get<ii>(dims).offset(idx[i.value])*coeffs[i.value];
+                const int i = ii.value;
+                const auto& view = std::get<i>(views);
+                if constexpr (requires{view.size();})
+                {
+                    output[idx++] = accessor(view);
+                }
+                else
+                {
+                    auto sub_coeffs = view.get_extent_array(accessor);
+                    for (const auto& c: sub_coeffs) output[idx++] = c;
+                }
             });
             return output;
         }
-        
-        offset_type size() const
-        {
-            return map_size;
-        }
     };
-    
-    template <typename... dims_t>
-    static std::ostream & operator<<(std::ostream & os, const regular_map_t<dims_t...>& map)
+    template <typename map_t> struct mem_map_t
     {
-        os << "[regular map]\n";
-        algs::static_for<0,sizeof...(dims_t)>([&](const auto& i) -> void
-        {
-            const int ii = i.value;
-            os << std::get<ii>(map.dims);
-            os << "\n";
-        });
-        os << "[/regular map]";
-        return os;
-    }
-    
-    
-    template <is_map... maps_t> struct composite_map_t
-    {
-        using index_type  = default_index_t;
-        using offset_type = default_offset_t;
-        
-        static constexpr index_type rank() {return sizeof...(maps_t);}
-        aliases::tuple<maps_t...> maps;
-        ctrs::array<offset_type, rank()> coeffs;
-        std::size_t map_size;
-        
-        composite_map_t()
+        map_t map;
+        ctrs::array<std::size_t, map_t::num_coeffs()> i_coeff;
+        int offset_base;
+        mem_map_t(){}
+        mem_map_t(const map_t& map_in):map{map_in}
         {
             compute_coeffs();
-        }
-        
-        composite_map_t(maps_t... maps_in) //intentionally not const ref!
-        {
-            maps = std::make_tuple(maps_in...);
-            compute_coeffs();
+            compute_offset_base();        
         }
         
         void compute_coeffs()
         {
-            coeffs[0] = 1;
-            algs::static_for<1,rank()>([&](const auto& i) -> void
+            auto sizes = map.get_extent_array();
+            for (int i = 0; i < i_coeff.size(); ++i)
             {
-                const int ii = i.value;
-                coeffs[i.value] = std::get<ii-1>(maps).size()*coeffs[i.value-1];
-            });
-            map_size = 1;
-            algs::static_for<0, rank()>([&](const auto& i) -> void
+                i_coeff[i] = 1;
+                for (int j = 0; j < i; ++j) i_coeff[i] *= sizes[j];
+            }
+        }
+        
+        void compute_offset_base()
+        {
+            offset_base = 0;
+            auto sizes = map.get_extent_array([](const auto& vw) -> auto {return -vw.start();});
+            int idx = 0;
+            for (const auto& ii: sizes) offset_base += i_coeff[idx++]*ii;
+        }
+        
+        template <
+            const int ar_idx,
+            const int coeff_idx,
+            typename offset_t,
+            typename idx_t, typename... idxs_t>
+        void rec_off_calc(offset_t& offset, const idx_t& idx, const idxs_t&... idxs) const
+        {
+            if constexpr (ctrs::basic_array<idx_t>)
             {
-                const int ii = i.value;
-                map_size *= std::get<ii>(maps).size();
-            });
+                offset += idx[ar_idx]*i_coeff[coeff_idx];
+                if constexpr(ar_idx == idx_t::size()-1)
+                {
+                    if constexpr (sizeof...(idxs) > 0)
+                    {
+                        rec_off_calc<0,coeff_idx+1>(offset, idxs...);
+                    }
+                }
+                else
+                {
+                    rec_off_calc<ar_idx+1,coeff_idx+1>(offset, idx, idxs...);
+                }
+            }
+            else
+            {
+                offset += idx*i_coeff[coeff_idx];
+                if constexpr (sizeof...(idxs) > 0)
+                {
+                    rec_off_calc<0,coeff_idx+1>(offset, idxs...);
+                }
+            }
         }
         
-        offset_type size() const
-        {
-            return map_size;
-        }
-        
-        //increment using an array index with no further arguments
-        template <const int cur_map, const int counter, ctrs::basic_array arg_t>
-        requires (
-            (arg_t::size() > 0) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg) const
-        {
-            cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
-        }
-        
-        //increment using an array index
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            (arg_t::size() > 0)
-            && (utils::get_pack_type<cur_map, maps_t...>::type::rank() == arg_t::size()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            cur_offset += coeffs[cur_map]*std::get<cur_map>(maps).offset(arg);
-            recurse_incr_offset<cur_map+1, 0, args_t...>(cur_offset, args...);
-        }
-        
-        //Pull the first argument into a newly-created array
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            !ctrs::basic_array<arg_t>
-            && counter==0
-            && utils::get_pack_type<cur_map, maps_t...>::type::rank()>0 &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            using idx_t = utils::get_pack_type<cur_map, maps_t...>::type::identifier_type;
-            idx_t ar;
-            ar[0] = arg;
-            recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
-        }
-        
-        //Pull an argument into an accumulating array
-        template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        requires (
-            !ctrs::basic_array<arg_t> &&
-            counter>0 &&
-            ((utils::get_pack_type<cur_map, maps_t...>::type::rank())>counter) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
-            const arg_t& arg,
-            const args_t&... args) const
-        {
-            ar[counter] = arg;
-            recurse_incr_offset<cur_map, counter+1, args_t...>(cur_offset, ar, args...);
-        }
-        
-        //Send a full array to the indexing overload
-        // template <const int cur_map, const int counter, typename arg_t, typename... args_t>
-        template <const int cur_map, const int counter, typename... args_t>
-        requires (
-            (counter >= utils::get_pack_type<cur_map, maps_t...>::type::rank()) &&
-            (utils::get_pack_type<cur_map, maps_t...>::type::rank()>0))
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type& ar,
-            // const arg_t& arg,
-            const args_t&... args) const
-        {
-            recurse_incr_offset<
-                cur_map,
-                0,
-                typename utils::get_pack_type<cur_map, maps_t...>::type::identifier_type,
-                args_t...>(cur_offset, ar, args...);
-        }
-        
-        //increment past singleton maps
-        template <const int cur_map, const int counter, typename... args_t>
-        requires (utils::get_pack_type<cur_map, maps_t...>::type::rank() == 0)
-        _finline_ void recurse_incr_offset(
-            offset_type& cur_offset,
-            const args_t&... args) const
-        {
-            recurse_incr_offset<
-                cur_map+1,
-                counter,
-                args_t...>(cur_offset, args...);
-        }
-        
-        template <typename... idxs_t> 
-        _finline_ offset_type offset(const idxs_t&... idxs) const
+        template <typename... idxs_t>
+        requires (true)
+        offset_type compute_offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;
-            recurse_incr_offset<0,0,idxs_t...>(output, idxs...);
-            return output;
+            rec_off_calc<0,0>(output, idxs...);
+            return output + offset_base;
         }
-    };
-    
-    template <typename... maps_t>
-    static std::ostream & operator<<(std::ostream & os, const composite_map_t<maps_t...>& map)
-    {
-        os << "[composite map]\n";
-        algs::static_for<0,sizeof...(maps_t)>([&](const auto& i) -> void
-        {
-            const int ii = i.value;
-            os << std::get<ii>(map.maps);
-            os << "\n";
-        });
-        os << "[/composite map]";
-        return os;
-    }
-    
-    template <typename... inputs_t> struct something_to_check_validity_of_index_inputs_here
-    {
-        static constexpr bool value = true;
     };
 }

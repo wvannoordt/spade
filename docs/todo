@@ -3,15 +3,19 @@
 [x] Better separation of navier-stokes code and the general finite-volume framework code
 [ ] Flux compatibility concepts
 [ ] Fix the segfault issue with the MPI communicator when not using MPI_COMM_WORLD
-[ ] Fix some of the silly nonsense present in the dual-time integration scheme
-[ ] Organize the 'core' directory a bit more sensibly
-[ ] More lightweight implementation of the time-integration schemes - less mechanistic framework. The schemes themselves are conceptual.
-[ ] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
+[x] Fix some of the silly nonsense present in the dual-time integration scheme
+[x] Organize the 'core' directory a bit more sensibly
+[x] More lightweight implementation of the time-integration schemes - less mechanistic framework. The schemes themselves are conceptual.
+[x] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
 [x] README
 [x] Infer grid dimension from the dimension of arrays passed to constructor?
 [ ] Re-work the fetch system to include unions of stencils and proper node/face/cell index centering, clean up implementation
-[ ] Move mtimer_t to the timing namespace
-[ ] Simplify the array-type index system (probably just use a struct!)
+[x] Move mtimer_t to the timing namespace
+[x] Simplify the array-type index system (probably just use a struct!)
 [ ] Make the indexing more efficient for memory maps (don't create temporary arrays!)
-[ ] Separate the block indexing from the block element indexing
-[ ] CRTP for basic array types
+[x] Separate the block indexing from the block element indexing
+[x] CRTP for basic array types
+[ ] Improve the implementation of the md_loop algorithm to be able to use any kind of index
+[ ] re-write range and md_iterator to use literal-constant indexing
+[ ] Implement CUDA kernel version of md_loop
+[ ] Implement tiling map for use with OpenMP/thread pooling

@@ -55,12 +55,12 @@ namespace spade::grid
         
         template <typename data_t> struct get_variable_mem_map
         {
-            typedef singleton_map_t type;
+            // typedef singleton_map_t type;
         };
         
         template <is_static_1D_array data_t> struct get_variable_mem_map<data_t>
         {
-            typedef regular_map_t<static_dim_t<0,data_t::size()>> type;
+            typedef recti_view_t<static_dim_t<0,data_t::size()>> type;
         };
         
         
@@ -69,7 +69,7 @@ namespace spade::grid
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<cell_centered, grid_dim>
         {
-            typedef regular_map_t<
+            typedef recti_view_t<
                 dynamic_dim_t<int>,
                 dynamic_dim_t<int>,
                 dynamic_dim_t<int>,
@@ -78,7 +78,7 @@ namespace spade::grid
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<node_centered, grid_dim>
         {
-            typedef regular_map_t<
+            typedef recti_view_t<
                 dynamic_dim_t<int>,
                 dynamic_dim_t<int>,
                 dynamic_dim_t<int>,
@@ -88,7 +88,7 @@ namespace spade::grid
         template <const std::size_t grid_dim> struct get_ijklb_map_type<face_centered, grid_dim>
         {
             //Can I do a nicer job here?
-            typedef regular_map_t<
+            typedef recti_view_t<
                 typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
                 typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
                 typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
@@ -150,22 +150,20 @@ namespace spade::grid
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
             //i
-            std::get<cell_idx_t::i_idx>(map.dims).i0 = -grid.get_num_exchange(0);
-            std::get<cell_idx_t::i_idx>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0);
+            std::get<cell_idx_t::i_idx>(map.views).i0 = -grid.get_num_exchange(0);
+            std::get<cell_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0);
             
             //j
-            std::get<cell_idx_t::j_idx>(map.dims).i0 = -grid.get_num_exchange(1);
-            std::get<cell_idx_t::j_idx>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1);
+            std::get<cell_idx_t::j_idx>(map.views).i0 = -grid.get_num_exchange(1);
+            std::get<cell_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1);
             
             //k
-            std::get<cell_idx_t::k_idx>(map.dims).i0 = -grid.get_num_exchange(2);
-            std::get<cell_idx_t::k_idx>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2);
+            std::get<cell_idx_t::k_idx>(map.views).i0 = -grid.get_num_exchange(2);
+            std::get<cell_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2);
             
             //lb
-            std::get<cell_idx_t::lb_idx>(map.dims).i0 = 0;
-            std::get<cell_idx_t::lb_idx>(map.dims).i1 = grid.get_num_local_blocks();
-            
-            map.compute_coeffs();
+            std::get<cell_idx_t::lb_idx>(map.views).i0 = 0;
+            std::get<cell_idx_t::lb_idx>(map.views).i1 = grid.get_num_local_blocks();
         }
         
         template <const array_centering centering, typename grid_map_t, typename grid_t>
@@ -173,22 +171,20 @@ namespace spade::grid
         void insert_grid_dims(grid_map_t& map, const grid_t& grid)
         {
             //i
-            std::get<face_idx_t::i_idx>(map.dims).i0 = -grid.get_num_exchange(0);
-            std::get<face_idx_t::i_idx>(map.dims).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0) + 1;
+            std::get<face_idx_t::i_idx>(map.views).i0 = -grid.get_num_exchange(0);
+            std::get<face_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0) + 1;
             
             //j
-            std::get<face_idx_t::j_idx>(map.dims).i0 = -grid.get_num_exchange(1);
-            std::get<face_idx_t::j_idx>(map.dims).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1) + 1;
+            std::get<face_idx_t::j_idx>(map.views).i0 = -grid.get_num_exchange(1);
+            std::get<face_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1) + 1;
             
             //k
-            std::get<face_idx_t::k_idx>(map.dims).i0 = -grid.get_num_exchange(2);
-            std::get<face_idx_t::k_idx>(map.dims).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2) + 1;
+            std::get<face_idx_t::k_idx>(map.views).i0 = -grid.get_num_exchange(2);
+            std::get<face_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2) + 1;
             
             //lb
-            std::get<face_idx_t::lb_idx>(map.dims).i0 = 0;
-            std::get<face_idx_t::lb_idx>(map.dims).i1 = grid.get_num_local_blocks();
-            
-            map.compute_coeffs();
+            std::get<face_idx_t::lb_idx>(map.views).i0 = 0;
+            std::get<face_idx_t::lb_idx>(map.views).i1 = grid.get_num_local_blocks();
         }
         
     }
@@ -236,7 +232,7 @@ namespace spade::grid
         
         typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
         typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type grid_map_type;
-        typedef composite_map_t<variable_map_type, grid_map_type> mem_map_type;
+        typedef mem_map_t<recti_view_t<variable_map_type, grid_map_type>> mem_map_type;
         
         const grid_t* grid;
         minor_dim_t minor_dims;
@@ -245,26 +241,26 @@ namespace spade::grid
         container_t data;
         std::size_t offset;
         std::size_t idx_coeffs [total_idx_rank()];
-        mem_map_type mem_map;
+        mem_map_type mem_view;
         
         const auto& var_map() const
         {
-            return std::get<0>(mem_map.maps);
+            return std::get<0>(mem_view.map.views);
         }
         
         const auto& block_map() const
         {
-            return std::get<1>(mem_map.maps);
+            return std::get<1>(mem_view.map.views);
         }
         
         auto& var_map()
         {
-            return std::get<0>(mem_map.maps);
+            return std::get<0>(mem_view.map.views);
         }
         
         auto& block_map()
         {
-            return std::get<1>(mem_map.maps);
+            return std::get<1>(mem_view.map.views);
         }
         
         grid_array(){}
@@ -294,7 +290,8 @@ namespace spade::grid
             }
             auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
-            this->mem_map.compute_coeffs();
+            this->mem_view.compute_coeffs();
+            this->mem_view.compute_offset_base();
         }
         
         std::size_t get_index_extent(std::size_t i)
@@ -335,7 +332,7 @@ namespace spade::grid
         {
             // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
             // return data[offset + offst_r<0>(idxs...)];
-            return data[mem_map.offset(idxs...)];
+            return data[mem_view.compute_offset(idxs...)];
         }
         
         //Note: This has potential to become a bottleneck.
@@ -344,7 +341,7 @@ namespace spade::grid
         {
             // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
             // return data[offset + offst_r<0>(idxs...)];
-            return data[mem_map.offset(idxs...)];
+            return data[mem_view.compute_offset(idxs...)];
         }
         
         void set_elem(const index_type& idx, const alias_type& alias)
@@ -516,17 +513,17 @@ namespace spade::grid
             bound_box_t<int, grid_map_type::rank()> output;
             const auto& ijk_map = this->block_map();
             
-            output.min(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(0);
-            output.max(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(0);
+            output.min(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.views).i0 + iexchg*grid.get_num_exchange(0);
+            output.max(index_type::i_idx) = std::get<index_type::i_idx>(ijk_map.views).i1 - iexchg*grid.get_num_exchange(0);
             
-            output.min(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(1);
-            output.max(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(1);
+            output.min(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.views).i0 + iexchg*grid.get_num_exchange(1);
+            output.max(index_type::j_idx) = std::get<index_type::j_idx>(ijk_map.views).i1 - iexchg*grid.get_num_exchange(1);
     
-            output.min(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.dims).i0 + iexchg*grid.get_num_exchange(2);
-            output.max(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.dims).i1 - iexchg*grid.get_num_exchange(2);
+            output.min(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.views).i0 + iexchg*grid.get_num_exchange(2);
+            output.max(index_type::k_idx) = std::get<index_type::k_idx>(ijk_map.views).i1 - iexchg*grid.get_num_exchange(2);
             
-            output.min(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.dims).i0;
-            output.max(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.dims).i1;
+            output.min(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.views).i0;
+            output.max(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.views).i1;
 
             detail::set_bbox_dir_val<centering_type()>(output, grid_type::dim());
             
