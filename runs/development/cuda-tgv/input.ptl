@@ -1,0 +1,33 @@
+Config
+{
+    cfl        = 0.2
+    nt_max     = 1500
+    nt_skip    = 1000
+    ck_skip    = 1000
+    nx_cell    = 32
+    ny_cell    = 32
+    nz_cell    = 32
+    nx_blck    = 2
+    ny_blck    = 2
+    nz_blck    = 2
+    nguard     = 2
+    xmin       = 0.0
+    xmax       = 6.28318530718
+    ymin       = 0.0
+    ymax       = 6.28318530718
+    zmin       = 0.0
+    zmax       = 6.28318530718
+    init_file  = none
+    do_output  = true
+    output_rhs = true
+}
+Fluid
+{
+    u0       = 1.0
+    rho0     = 1.0
+    p0       = 10.0
+    T0       = 300.0
+    reynolds = 1600
+    prandtl  = 0.72
+    mach     = 0.08
+}
