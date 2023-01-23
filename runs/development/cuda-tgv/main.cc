@@ -94,11 +94,6 @@ int main(int argc, char** argv)
     flux_t fill2 = 0.0;
     spade::grid::grid_array rhs  (grid, fill2);
     
-    print("gah");
-    spade::grid::cell_idx_t ii(0,0,0,1);
-    prim(0, ii) = 1.0;
-    return 1;
-    
     //Bull, J. R., Jameson, A. (2015).
     //Simulation of the Taylor-Green vortex using high-order flux reconstruction schemes.
     //AIAA Journal, 53 (9), 2750–2761. https://doi.org/10.2514/1.J053766

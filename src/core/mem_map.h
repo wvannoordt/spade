@@ -146,7 +146,7 @@ namespace spade::grid
         }
         
         template <typename... idxs_t>
-        requires (true)
+        requires (true) //todo: ensure index dimension consistency
         offset_type compute_offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;

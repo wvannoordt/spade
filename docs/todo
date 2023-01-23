@@ -12,7 +12,7 @@
 [ ] Re-work the fetch system to include unions of stencils and proper node/face/cell index centering, clean up implementation
 [x] Move mtimer_t to the timing namespace
 [x] Simplify the array-type index system (probably just use a struct!)
-[ ] Make the indexing more efficient for memory maps (don't create temporary arrays!)
+[x] Make the indexing more efficient for memory maps (don't create temporary arrays!)
 [x] Separate the block indexing from the block element indexing
 [x] CRTP for basic array types
 [ ] Improve the implementation of the md_loop algorithm to be able to use any kind of index
