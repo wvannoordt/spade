@@ -18,4 +18,7 @@
 [ ] Improve the implementation of the md_loop algorithm to be able to use any kind of index
 [ ] re-write range and md_iterator to use literal-constant indexing
 [ ] Implement CUDA kernel version of md_loop
-[ ] Implement tiling map for use with OpenMP/thread pooling
+[x] Implement tiling map for use with OpenMP/thread pooling
+[ ] Remove all traces of old memory map implementation
+[ ] Rewrite io namespace to use new memory mapping
+[ ] Rewrite exchange function to use new memory mapping

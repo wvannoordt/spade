@@ -1,81 +1,36 @@
-#include <chrono>
-#include "spade.h"
+#include <spade.h>
 
-typedef double real_t;
-
-#include "diffuse1.h"
-#include "diffuse2.h"
-#include "diffuse3.h"
-#include "diffuse4.h"
+namespace spade::grid
+{
+    
+}
 
 int main(int argc, char** argv)
 {
-    spade::parallel::mpi_t group(&argc, &argv);
-    spade::ctrs::array<int, 3> num_blocks(20, 20, 20);
-    spade::ctrs::array<int, 3> cells_in_block(16, 16, 16);
-    spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
-    spade::bound_box_t<real_t, 3> bounds;
+    spade::mem_map::static_dim_t<0, 1> m_vr;
+    spade::mem_map::dynamic_dim_t m_x(-2, 22);
+    spade::mem_map::dynamic_dim_t m_y(-2, 22);
+    spade::mem_map::dynamic_dim_t m_z(-2, 22);
+    spade::mem_map::dynamic_dim_t m_lb(0, 12);
+    spade::mem_map::tile_uni_dim_t<2, spade::mem_map::dynamic_dim_t<int>> uni_x(m_x);
+    spade::mem_map::tile_uni_dim_t<2, spade::mem_map::dynamic_dim_t<int>> uni_y(m_y);
+    spade::mem_map::tile_uni_dim_t<2, spade::mem_map::dynamic_dim_t<int>> uni_z(m_z);
+    spade::mem_map::tiled_dim_t m_ijk(uni_x, uni_y, uni_z);
+    // spade::grid::recti_view_t rct(m_vr, m_ijk, m_lb);
+    spade::mem_map::recti_view_t rct(m_ijk, m_lb);
+    spade::mem_map::mem_map_t map(rct);
     
-    bounds.min(0) = 0.0;
-    bounds.max(0) = 1.0;
-    bounds.min(1) = 0.0;
-    bounds.max(1) = 1.0;
-    bounds.min(2) = 0.0;
-    bounds.max(2) = 1.0;
-    
-    spade::coords::identity<real_t> coords;
-    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
-    
-    real_t fill = 0.0;
-    
-    spade::grid::cell_array phi(grid, fill);
-    spade::grid::cell_array rhs(grid, fill);
-    
-    spade::ctrs::array<real_t, 3> x0;
-    for (auto i: range(0,3)) x0[i] = 0.5*(bounds.min(i) + bounds.max(i));
-    auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> real_t
-    {
-        spade::ctrs::array<real_t, 3> dx = x - x0;
-        real_t r = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
-        return std::exp(-15.0*r*r);
-    };
-    
-    real_t time0 = 0.0;
-    real_t dt = 1e-5;
-    spade::utils::mtimer_t tmr("rhs-init", "exchange", "diffuse");
-    
-    auto calc_rhs = [&](auto& rhs, auto& q, const auto& t) -> void
-    {
-        tmr.start("rhs-init");
-        rhs = 0.0;
-        tmr.stop("rhs-init");
-        
-        tmr.start("exchange");
-        grid.exchange_array(q);
-        tmr.stop("exchange");
-        
-        tmr.start("diffuse");
-        diffuse4(rhs, q);
-        tmr.stop("diffuse");
-        
-        print(tmr);
-    };
-    
-    spade::time_integration::rk2 time_int(phi, rhs, time0, dt, calc_rhs);
-    
-    std::string frmt = "RHS: {}/{}    Exchange: {}/{}  Adv: {}/{}";
-    spade::algs::fill_array(phi, ini);
-    for (auto n: range(0, 11))
-    {
-        
-        time_int.advance();
-        print("nt = ", spade::utils::zfill(n, 8));
-        if (n>0 && n%1000==0)
-        {
-            std::string fname = "phi";
-            fname += spade::utils::zfill(n, 8);
-            spade::io::output_vtk("output", fname, phi);
-        }
-    }
+    using tile_type = decltype(m_ijk);
+    // print(rct.get_extent_array());
+    // print(map.i_coeff);
+    // print(tile_type::tile_size<0>, tile_type::tile_size<1>, tile_type::tile_size<2>);
+    // print(spade::grid::get_dim_from_map<0>(map.map).num_coeffs());
+    // print(spade::grid::get_dim_from_map<1>(map.map).num_coeffs());
+    // print(spade::grid::get_dim_from_map<2>(map.map).num_coeffs());
+    // print(spade::grid::get_dim_from_map<3>(map.map).num_coeffs());
+    // print(spade::grid::get_dim_from_map<4>(map.map).num_coeffs());
+    spade::grid::cell_idx_t ii(-2,-2,-2,0);
+    auto ofst = map.compute_offset(ii);
+    print(ofst);
     return 0;
 }

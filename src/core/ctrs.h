@@ -129,7 +129,7 @@ namespace spade::ctrs
         //     if constexpr (this->size() > 1) this->fill(data[0], 1, this->size());
         // }
         
-        arithmetic_array_t(void) {}
+        arithmetic_array_t() {}
         constexpr arithmetic_array_t(const arithmetic_array_t& rhs) = default;
         
         template <typename rhs_t>

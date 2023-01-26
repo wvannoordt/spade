@@ -60,7 +60,7 @@ namespace spade::grid
         
         template <is_static_1D_array data_t> struct get_variable_mem_map<data_t>
         {
-            typedef recti_view_t<static_dim_t<0,data_t::size()>> type;
+            typedef mem_map::recti_view_t<mem_map::static_dim_t<0,data_t::size()>> type;
         };
         
         
@@ -69,31 +69,31 @@ namespace spade::grid
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<cell_centered, grid_dim>
         {
-            typedef recti_view_t<
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>> type;
+            typedef mem_map::recti_view_t<
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>> type;
         };
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<node_centered, grid_dim>
         {
-            typedef recti_view_t<
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>,
-                dynamic_dim_t<int>> type;
+            typedef mem_map::recti_view_t<
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>,
+                mem_map::dynamic_dim_t<int>> type;
         };
         
         template <const std::size_t grid_dim> struct get_ijklb_map_type<face_centered, grid_dim>
         {
             //Can I do a nicer job here?
-            typedef recti_view_t<
-                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type,
-                typename std::conditional<0==face_idx_t::dir_idx, static_dim_t<0, grid_dim>, dynamic_dim_t<int>>::type
+            typedef mem_map::recti_view_t<
+                typename std::conditional<0==face_idx_t::dir_idx, mem_map::static_dim_t<0, grid_dim>, mem_map::dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, mem_map::static_dim_t<0, grid_dim>, mem_map::dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, mem_map::static_dim_t<0, grid_dim>, mem_map::dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, mem_map::static_dim_t<0, grid_dim>, mem_map::dynamic_dim_t<int>>::type,
+                typename std::conditional<0==face_idx_t::dir_idx, mem_map::static_dim_t<0, grid_dim>, mem_map::dynamic_dim_t<int>>::type
                 > type;
         };
         
@@ -232,7 +232,7 @@ namespace spade::grid
         
         typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
         typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type grid_map_type;
-        typedef mem_map_t<recti_view_t<variable_map_type, grid_map_type>> mem_map_type;
+        typedef mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>> mem_map_type;
         
         const grid_t* grid;
         minor_dim_t minor_dims;
@@ -245,22 +245,22 @@ namespace spade::grid
         
         const auto& var_map() const
         {
-            return std::get<0>(mem_view.map.views);
+            return std::get<0>(mem_view.mmap.views);
         }
         
         const auto& block_map() const
         {
-            return std::get<1>(mem_view.map.views);
+            return std::get<1>(mem_view.mmap.views);
         }
         
         auto& var_map()
         {
-            return std::get<0>(mem_view.map.views);
+            return std::get<0>(mem_view.mmap.views);
         }
         
         auto& block_map()
         {
-            return std::get<1>(mem_view.map.views);
+            return std::get<1>(mem_view.mmap.views);
         }
         
         grid_array(){}
@@ -324,14 +324,9 @@ namespace spade::grid
             return idx_coeffs[lev]*idx + offst_r<lev+1>(idxs...);
         }
         
-        //Note: This has potential to become a bottleneck. Consider a strategy of precomputing the zero-offset, then
-        //indexing everything by simply multiplying individual indices by coefficients.
-        //Also, try incrementing the computed offset indx-for-index instead of constructing properly-ranked arrays
         template <typename... idxs_t>
         _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
-            // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            // return data[offset + offst_r<0>(idxs...)];
             return data[mem_view.compute_offset(idxs...)];
         }
         
@@ -339,8 +334,6 @@ namespace spade::grid
         template <typename... idxs_t>
         _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
         {
-            // static_assert(detail::index_rank_size_t<idxs_t...>::value == total_idx_rank(), "wrong number of indices passed to indexing operator");
-            // return data[offset + offst_r<0>(idxs...)];
             return data[mem_view.compute_offset(idxs...)];
         }
         
