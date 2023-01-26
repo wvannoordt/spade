@@ -69,6 +69,11 @@ namespace spade::pde_algs
             auto grid_range = g0*g1*g2;
             for (auto idx: grid_range)
             {
+            //Note: the implementation below is about 10% faster!
+            // ctrs::array<int, 3> idx;
+            // for (idx[2] = flux_bounds.min(2); idx[2]<flux_bounds.max(2); idx[2]++) {
+            // for (idx[1] = flux_bounds.min(1); idx[1]<flux_bounds.max(1); idx[1]++) {
+            // for (idx[0] = flux_bounds.min(0); idx[0]<flux_bounds.max(0); idx[0]++) {
                 const real_type dx = ar_grid.get_dx(idir);
                 grid::cell_idx_t il(idx[0], idx[1], idx[2], lb_loc);
                 grid::cell_idx_t ir(idx[0], idx[1], idx[2], lb_loc);
@@ -91,6 +96,7 @@ namespace spade::pde_algs
                     }
                 }, flux_funcs...);
             }
+            // }}}
         }
     }
     
