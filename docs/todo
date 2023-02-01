@@ -9,7 +9,6 @@
 [x] Variadic flux implementation -- union of the flux information and remove indexing for the retrieval of the flux info (index based on type!)
 [x] README
 [x] Infer grid dimension from the dimension of arrays passed to constructor?
-[ ] Re-work the fetch system to include unions of stencils and proper node/face/cell index centering, clean up implementation
 [x] Move mtimer_t to the timing namespace
 [x] Simplify the array-type index system (probably just use a struct!)
 [x] Make the indexing more efficient for memory maps (don't create temporary arrays!)
@@ -22,3 +21,5 @@
 [ ] Remove all traces of old memory map implementation
 [ ] Rewrite io namespace to use new memory mapping
 [ ] Rewrite exchange function to use new memory mapping
+[ ] Develop OMNI system
+[ ] Boundary conditions in pde_algs

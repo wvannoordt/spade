@@ -126,9 +126,9 @@ namespace spade::grid
     static cell_idx_t face_to_cell(const face_idx_t& i_face, const int& pm)
     {
         cell_idx_t output;
-        output.i() = i_face.i();
-        output.j() = i_face.j();
-        output.k() = i_face.k();
+        output.i() =  i_face.i();
+        output.j() =  i_face.j();
+        output.k() =  i_face.k();
         output.lb() = i_face.lb();
         output.i(i_face.dir()) += (pm-1);
 

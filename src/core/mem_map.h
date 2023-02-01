@@ -48,6 +48,22 @@ namespace spade::mem_map
 
     using offset_type = long int;
 
+    struct empty_view_t
+    {
+        constexpr static int rank()        {return 0;}
+        constexpr static int num_views()   {return 0;}
+        constexpr static int num_coeffs()  {return 0;}
+        using coeff_array_t = ctrs::array<int, 0>;
+        coeff_array_t get_extent_array() const
+        {
+            return coeff_array_t();
+        }
+        coeff_array_t get_lower_bound_array() const
+        {
+            return coeff_array_t();
+        }
+    };
+
     template <typename... dims_t> struct recti_view_t
     {
         constexpr static int rank()        {return detail::rank_sum_t<dims_t...>::value;}

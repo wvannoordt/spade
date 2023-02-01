@@ -55,7 +55,7 @@ namespace spade::grid
         
         template <typename data_t> struct get_variable_mem_map
         {
-            // typedef singleton_map_t type;
+            typedef mem_map::empty_view_t type;
         };
         
         template <is_static_1D_array data_t> struct get_variable_mem_map<data_t>
