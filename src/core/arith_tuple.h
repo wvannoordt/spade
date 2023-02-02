@@ -36,6 +36,9 @@ namespace spade::ctrs
             data = std::make_tuple(elems...);
         }
         
+        template <udci::integral_t ii> const auto& operator [] (const udci::idx_const_t<ii>& idx) const { return get<ii>(data); }
+        template <udci::integral_t ii> auto& operator [] (const udci::idx_const_t<ii>& idx) { return get<ii>(data); }
+        
         auto& get_tuple() {return data;}
         const auto& get_tuple() const {return data;}
         

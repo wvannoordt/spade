@@ -50,6 +50,7 @@ namespace spade::mem_map
 
     struct empty_view_t
     {
+        std::tuple<> views;
         constexpr static int rank()        {return 0;}
         constexpr static int num_views()   {return 0;}
         constexpr static int num_coeffs()  {return 0;}
@@ -183,41 +184,48 @@ namespace spade::mem_map
         {
             const auto& view = std::get<view_idx>(view_collection.views);
             
-            //  0   1   2   3   4   5   6   7
-            //  +   +   +   + [ +   +   + ] +
-            //                  0   1   2
-            //  0   1   2   3   4           5
-            
-            //Here we have hit a match
-            if constexpr (idx == cur_pos)
+            if constexpr(view.rank()==0)
             {
-                //if the current dimension is singular, just return it
-                //otherwise, it's a multi-dimension and we simply return
-                //the first element
-                if constexpr (requires{view.size();}) { return view; }
-                else { return std::get<0>(view.views); }
+                return recurse_dim_retrieve<idx, view_idx+1, cur_pos>(view_collection);
             }
             else
             {
-                //Simply increment to the next view
-                if constexpr (requires{view.size();})
+                //  0   1   2   3   4   5   6   7
+                //  +   +   +   + [ +   +   + ] +
+                //                  0   1   2
+                //  0   1   2   3   4           5
+                
+                //Here we have hit a match
+                if constexpr (idx == cur_pos)
                 {
-                    return recurse_dim_retrieve<idx, view_idx+1, cur_pos+1>(view_collection);
+                    //if the current dimension is singular, just return it
+                    //otherwise, it's a multi-dimension and we simply return
+                    //the first element
+                    if constexpr (requires{view.size();}) { return view; }
+                    else { return std::get<0>(view.views); }
                 }
                 else
                 {
-                    //check if the index in question is inside the current multiview
-                    const int num_views = view.num_views();
-                    if constexpr (idx >= cur_pos+num_views)
+                    //Simply increment to the next view
+                    if constexpr (requires{view.size();})
                     {
-                        //if not, simply continue pase the end of the multiview
-                        return recurse_dim_retrieve<idx, view_idx+1, cur_pos+num_views>(view_collection);
+                        return recurse_dim_retrieve<idx, view_idx+1, cur_pos+1>(view_collection);
                     }
                     else
                     {
-                        //if so, then we index into the multiview but relative to its
-                        //starting position (which is the current position)
-                        return recurse_dim_retrieve<idx-cur_pos, 0, 0>(view);
+                        //check if the index in question is inside the current multiview
+                        const int num_views = view.num_views();
+                        if constexpr (idx >= cur_pos+num_views)
+                        {
+                            //if not, simply continue pase the end of the multiview
+                            return recurse_dim_retrieve<idx, view_idx+1, cur_pos+num_views>(view_collection);
+                        }
+                        else
+                        {
+                            //if so, then we index into the multiview but relative to its
+                            //starting position (which is the current position)
+                            return recurse_dim_retrieve<idx-cur_pos, 0, 0>(view);
+                        }
                     }
                 }
             }
@@ -338,7 +346,6 @@ namespace spade::mem_map
             
             //logic for incrementing the
             //coefficient index...
-            
             if constexpr (ctrs::basic_array<idx_t>)
             {
                 if constexpr(ar_idx == idx_t::size()-1)

@@ -138,6 +138,13 @@ namespace spade::algs
         {
             return kernel(idx);
         }
+        
+        template <typename kernel_t, typename array_t, typename idx_t>
+        requires (std::invocable<kernel_t>)
+        auto invoke_kernel(const kernel_t& kernel, const array_t& arr, const idx_t& idx)
+        {
+            return kernel();
+        }
     }
     
     template <typename array_t, typename kernel_t>
