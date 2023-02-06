@@ -98,4 +98,34 @@ namespace spade::viscous_laws
                 return this->get_visc(q)/prandtl;
             }
     };
+    
+    template <typename state_t, typename visc_func_t, typename beta_func_t, typename cond_func_t> struct udf_t
+    {
+            typedef typename state_t::value_type value_type;
+            
+            const visc_func_t& vfunc;
+            const beta_func_t& bfunc;
+            const cond_func_t& cfunc;
+            
+            udf_t(const state_t& state, const visc_func_t& v_in, const beta_func_t& b_in, const cond_func_t& c_in)
+            : vfunc{v_in},
+            bfunc{b_in},
+            cfunc{c_in}
+            {}
+            
+            value_type get_visc(const state_t& q) const
+            {
+                return vfunc(q);
+            }
+            
+            value_type get_beta(const state_t& q) const
+            {
+                return bfunc(q);
+            }
+            
+            value_type get_conductivity(const state_t& q) const
+            {
+                return cfunc(q);
+            }
+    };
 }

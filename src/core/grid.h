@@ -199,7 +199,7 @@ namespace spade::grid
                         lb_nd += delta_lb;
                         lb_nd += this->num_blocks;
                         lb_nd %= this->num_blocks;
-                        std::size_t lb_glob_neigh = ctrs::collapse_index(lb_nd, this->num_blocks);                        
+                        std::size_t lb_glob_neigh = ctrs::collapse_index(lb_nd, this->num_blocks);
                         int rank_here  = grid_partition.get_global_rank(lb_glob);
                         int rank_neigh = grid_partition.get_global_rank(lb_glob_neigh);
                         
