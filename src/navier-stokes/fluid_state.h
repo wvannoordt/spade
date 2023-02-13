@@ -125,8 +125,8 @@ namespace spade::fluid_state
         ptype rhoU = rho*prim.u();
         ptype rhoV = rho*prim.v();
         ptype rhoW = rho*prim.w();
-        cons.rho()   = rho;
-        cons.rho_H() = rhoE;
+        cons.rho()    = rho;
+        cons.rho_H()  = rhoE;
         cons.rho_u()  = rhoU;
         cons.rho_v()  = rhoV;
         cons.rho_w()  = rhoW;
