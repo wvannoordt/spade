@@ -22,7 +22,7 @@
 #include "array-containers/ac_vector_wrapper.h"
 
 namespace spade::grid
-{
+{    
     namespace detail
     {
         template <class T> concept has_value_type = requires(T t) {typename T::value_type;};
@@ -105,23 +105,6 @@ namespace spade::grid
         template <> struct get_centering_grid_idx_rank<cell_centered> { static constexpr int value = 4; };
         template <> struct get_centering_grid_idx_rank<face_centered> { static constexpr int value = 5; };
         template <> struct get_centering_grid_idx_rank<node_centered> { static constexpr int value = 4; };
-        
-        template <const array_centering centering> struct get_index_type{};
-        template <> struct get_index_type<cell_centered>
-        {
-            typedef typename cell_idx_t::value_type integral_type;
-            typedef cell_idx_t array_type;
-        };
-        template <> struct get_index_type<face_centered>
-        {
-            typedef typename face_idx_t::value_type integral_type;
-            typedef face_idx_t array_type;
-        };
-        template <> struct get_index_type<node_centered>
-        {
-            typedef typename node_idx_t::value_type integral_type;
-            typedef node_idx_t array_type;
-        };
         
         template <typename idx_t> 
         struct count_rank_t
@@ -224,8 +207,8 @@ namespace spade::grid
         typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
         typedef minor_dim_t array_minor_dim_t;
         typedef major_dim_t array_major_dim_t;
-        typedef typename detail::get_index_type<centering_type()>::integral_type index_integral_type;
-        typedef typename detail::get_index_type<centering_type()>::array_type    index_type;
+        typedef typename get_index_type<centering_type()>::integral_type index_integral_type;
+        typedef typename get_index_type<centering_type()>::array_type    index_type;
         typedef typename grid_t::coord_point_type coord_point_type;
         typedef data_alias_t alias_type;
         typedef data_alias_t unwrapped_minor_type;

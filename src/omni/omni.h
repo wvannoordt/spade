@@ -5,3 +5,4 @@
 #include "omni/info.h"
 #include "omni/geom.h"
 #include "omni/stencil.h"
+#include "omni/data.h"

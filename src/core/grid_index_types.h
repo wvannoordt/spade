@@ -173,4 +173,21 @@ namespace spade::grid
         output[i_face.dir_idx] -= 0.5;
         return output;
     }
+    
+    template <const array_centering centering> struct get_index_type{};
+    template <> struct get_index_type<cell_centered>
+    {
+        typedef typename cell_idx_t::value_type integral_type;
+        typedef cell_idx_t array_type;
+    };
+    template <> struct get_index_type<face_centered>
+    {
+        typedef typename face_idx_t::value_type integral_type;
+        typedef face_idx_t array_type;
+    };
+    template <> struct get_index_type<node_centered>
+    {
+        typedef typename node_idx_t::value_type integral_type;
+        typedef node_idx_t array_type;
+    };
 }
