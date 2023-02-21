@@ -14,6 +14,18 @@ namespace spade::grid
         edge_centered
     };
     
+    template <const array_centering ctr> struct get_complement_centering {};
+    template <> struct get_complement_centering<edge_centered> {constexpr static array_centering value = node_centered;};
+    template <> struct get_complement_centering<face_centered> {constexpr static array_centering value = cell_centered;};
+    template <> struct get_complement_centering<node_centered> {constexpr static array_centering value = edge_centered;};
+    template <> struct get_complement_centering<cell_centered> {constexpr static array_centering value = face_centered;};
+    
+    template <const array_centering ctr> struct get_dual_centering {};
+    template <> struct get_dual_centering<edge_centered> {constexpr static array_centering value = face_centered;};
+    template <> struct get_dual_centering<face_centered> {constexpr static array_centering value = edge_centered;};
+    template <> struct get_dual_centering<node_centered> {constexpr static array_centering value = cell_centered;};
+    template <> struct get_dual_centering<cell_centered> {constexpr static array_centering value = node_centered;};
+    
 
     struct cell_idx_t : public ctrs::arithmetic_array_t<int, 4, cell_idx_t>
     {

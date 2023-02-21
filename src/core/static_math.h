@@ -30,4 +30,10 @@ namespace spade::static_math
             std::conditional<(i2==0), int_const_t<1>, int_const_t<i1>>::type::value*
             std::conditional<(i2<=1), int_const_t<1>, pow<i1, i2-1>>::type::value;
     };
+    
+    template <const int val, const int modu> struct mod
+    {
+        constexpr static int baseval = (val - modu*(val/modu));
+        constexpr static int value = (baseval<0)?(baseval+modu):baseval;
+    };
 }

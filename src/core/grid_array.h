@@ -245,7 +245,7 @@ namespace spade::grid
         {
             return std::get<1>(mem_view.mmap.views);
         }
-        
+
         grid_array(){}
         grid_array(
             const grid_t& grid_in,
@@ -306,13 +306,13 @@ namespace spade::grid
         {
             return idx_coeffs[lev]*idx + offst_r<lev+1>(idxs...);
         }
-        
+
         template <typename... idxs_t>
         _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
             return data[mem_view.compute_offset(idxs...)];
         }
-        
+
         //Note: This has potential to become a bottleneck.
         template <typename... idxs_t>
         _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
