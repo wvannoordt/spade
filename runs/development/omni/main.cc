@@ -39,9 +39,15 @@ int main(int argc, char** argv)
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     spade::fluid_state::prim_t<real_t> fill = 0.0;
-
+    fill.p() = 101.315;
+    fill.T() = 302.13;
+    fill.u() = 65.4;
+    fill.v() = 0.005;
+    fill.w() = 0.134;
     spade::grid::grid_array prim (grid, fill);
-
+    
+    spade::algs::fill_array(prim, [&](){return fill;});
+    
     local::kernel0_t k0;
 
     using stencil_t = local::kernel0_t::stencil_type;
@@ -101,7 +107,20 @@ int main(int argc, char** argv)
     print("c =", local::kernel2_t::stencil_type::num_cell());
     print("n =", local::kernel2_t::stencil_type::num_node());
     
-    // print(w.cell(0_c));
+    dt2_t z;
+    auto& kk = z.cell(0_c);
+    print_type(kk);
+    print_type(spade::omni::access<spade::omni::info::value>(kk));
+    print_type(spade::omni::access<spade::omni::info::metric>(kk));
+    
+    auto& ee = spade::omni::access<spade::omni::info::metric>(kk);
+    ee.fill(33.03);
+    
+    // print(spade::omni::access<spade::omni::info::value>(kk));
+    print(spade::omni::access<spade::omni::info::metric>(kk));
+    
+    const spade::grid::cell_idx_t ii(3, 3, 3, 0);
+    print(prim.get_elem(ii));
     
     // ++p;
     

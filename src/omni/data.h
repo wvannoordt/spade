@@ -11,6 +11,8 @@ namespace spade::omni
     template <const int i0, const int i1, typename info_list_t, typename array_t, const grid::array_centering center>
     struct info_list_data_t
     {
+        constexpr static grid::array_centering info_center = center;
+        using array_type = array_t;
         using info_type = typename info_list_t::info_elem<i0>;
         using data_type = typename info_type::array_data_type<array_t, center>;
         data_type data;
@@ -37,10 +39,100 @@ namespace spade::omni
         info_list_data_t<0, stencil_info_t::num_infos(), stencil_info_t, array_t, centering_at_i0_elem> data;
         next_type next;
         
-        template <udci::integral_t ii> const auto& cell(const udci::idx_const_t<ii>& idx) {return next;};
-        template <udci::integral_t ii> const auto& face(const udci::idx_const_t<ii>& idx) {return next;};
-        template <udci::integral_t ii> const auto& node(const udci::idx_const_t<ii>& idx) {return next;};
-        template <udci::integral_t ii> const auto& edge(const udci::idx_const_t<ii>& idx) {return next;};
+        //const qualified
+        template <const grid::array_centering ctr, udci::integral_t ii>
+        const auto& seek_element(const udci::idx_const_t<ii>& idx) const
+        {
+            if constexpr(ii == 0 && ctr == centering_at_i0_elem)
+            {
+                return data;
+            }
+            else if constexpr (ctr == centering_at_i0_elem)
+            {
+                return next.template seek_element<ctr>(udci::idx_const_t<ii-1>());
+            }
+            else
+            {
+                return next.template seek_element<ctr>(udci::idx_const_t<ii>());
+            }
+        }
+        
+        //not const qualified
+        template <const grid::array_centering ctr, udci::integral_t ii>
+        auto& seek_element(const udci::idx_const_t<ii>& idx)
+        {
+            if constexpr(ii == 0 && ctr == centering_at_i0_elem)
+            {
+                return data;
+            }
+            else if constexpr (ctr == centering_at_i0_elem)
+            {
+                return next.template seek_element<ctr>(udci::idx_const_t<ii-1>());
+            }
+            else
+            {
+                return next.template seek_element<ctr>(udci::idx_const_t<ii>());
+            }
+        }
+        
+        
+        //const qualified
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_cell())
+        constexpr const auto& cell(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::cell_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_face())
+        constexpr const auto& face(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::face_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_node())
+        constexpr const auto& node(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::node_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_edge())
+        constexpr const auto& edge(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::edge_centered>(idx);
+        }
+        
+        //not const qualified
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_cell())
+        constexpr auto& cell(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::cell_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_face())
+        constexpr auto& face(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::face_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_node())
+        constexpr auto& node(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::node_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < stencil_t::num_edge())
+        constexpr auto& edge(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::edge_centered>(idx);
+        }
     };
     
     template <const int i0, typename stencil_t, typename array_t>
