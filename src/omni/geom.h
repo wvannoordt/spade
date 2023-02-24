@@ -74,5 +74,31 @@ namespace spade::omni
                 static_math::mod<dj, 2>::value,
                 static_math::mod<dk, 2>::value
                 >::centering();
+        
+        template<grid::grid_index index_t>
+        requires((index_t::centering_type() == grid::cell_centered) || (index_t::centering_type() == grid::node_centered))
+        constexpr static auto compute_index(const index_t& i)
+        {
+            using output_type = typename grid::get_index_type<index_t::centering_type()>::array_type;
+            static_assert(output_type::centering_type() != grid::edge_centered, "edge centering not implemented");
+            
+            // START HERE
+            
+            return 0;
+        }
+        
+        template<grid::grid_index index_t>
+        requires((index_t::centering_type() == grid::face_centered) || (index_t::centering_type() == grid::edge_centered))
+        constexpr static auto compute_index(const index_t& i, const int dir)
+        {
+            static_assert(index_t::centering_type() != grid::edge_centered, "edge centering not implemented");
+            
+            using output_type = typename grid::get_index_type<index_t::centering_type()>::array_type;
+            static_assert(output_type::centering_type() != grid::edge_centered, "edge centering not implemented");
+            
+            // START HERE
+            
+            return 0;
+        }
     };
 }

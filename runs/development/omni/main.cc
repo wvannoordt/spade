@@ -121,6 +121,7 @@ int main(int argc, char** argv)
     
     const spade::grid::cell_idx_t ii(3, 3, 3, 0);
     print(prim.get_elem(ii));
+    print(ii);
     
     // ++p;
     

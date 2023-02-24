@@ -27,6 +27,11 @@ namespace spade::grid
     template <> struct get_dual_centering<cell_centered> {constexpr static array_centering value = node_centered;};
     
 
+    template <typename T> concept grid_index = requires(T t)
+    {
+        { T::centering_type() } -> std::same_as<array_centering>;
+    };
+    
     struct cell_idx_t : public ctrs::arithmetic_array_t<int, 4, cell_idx_t>
     {
         constexpr static array_centering centering_type() {return cell_centered;}
