@@ -164,4 +164,22 @@ namespace local
             >
         >;
     };
+    
+    struct kernel3_t
+    {
+        using stencil_type = spade::omni::stencil_t
+        <
+            spade::grid::cell_centered,
+            spade::omni::elem_t
+            <
+                spade::omni::offset_t<-2, -2, 0>,
+                spade::omni::info_list_t
+                <
+                    spade::omni::info::value,
+                    spade::omni::info::gradient,
+                    spade::omni::info::metric
+                >
+            >
+        >;
+    };
 }

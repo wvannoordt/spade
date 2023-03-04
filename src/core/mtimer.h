@@ -4,7 +4,7 @@
 
 #include "typedef.h"
 
-namespace spade::utils
+namespace spade::timing
 {
     template <typename duration_t = real_t> struct mtimer_t
     {

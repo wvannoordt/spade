@@ -63,7 +63,7 @@ namespace spade::omni
     
     template <const int di, const int dj, const int dk> struct offset_t
     {
-        constexpr static bool is_1d = ((dj==0) && (di==0) && (di!=0));
+        constexpr static bool is_1d = ((dj==0) && (dk==0));
         
         //if we are at a node of type 'center', what kind of node is at the given offset?
         template <const grid::array_centering center>
@@ -74,31 +74,71 @@ namespace spade::omni
                 static_math::mod<dj, 2>::value,
                 static_math::mod<dk, 2>::value
                 >::centering();
-        
+
         template<grid::grid_index index_t>
         requires((index_t::centering_type() == grid::cell_centered) || (index_t::centering_type() == grid::node_centered))
         constexpr static auto compute_index(const index_t& i)
         {
-            using output_type = typename grid::get_index_type<index_t::centering_type()>::array_type;
+            const int di_div = static_math::moddiv<di,2>::value;
+            const int dj_div = static_math::moddiv<dj,2>::value;
+            const int dk_div = static_math::moddiv<dk,2>::value;
+            
+            const int di_mod = static_math::mod<di,2>::value;
+            const int dj_mod = static_math::mod<dj,2>::value;
+            const int dk_mod = static_math::mod<dk,2>::value;
+            
+            using output_type = typename grid::get_index_type<relative_node_centering<index_t::centering_type()>>::array_type;
             static_assert(output_type::centering_type() != grid::edge_centered, "edge centering not implemented");
-            
+            static_assert(output_type::centering_type() != grid::node_centered, "node centering not implemented");
             // START HERE
-            
-            return 0;
+            index_t output;
+            output.lb() = i.lb();
+            output.i() = i.i() + di_div;
+            output.j() = i.j() + dj_div;
+            output.k() = i.k() + dk_div;
+            if constexpr (output_type::centering_type() == grid::face_centered)
+            {
+                return cell_to_face(output, dj_mod+2*dk_mod, 1);
+            }
+            else if constexpr (output_type::centering_type() == grid::node_centered)
+            {
+                //GARBAGE! needs implementing
+                return cell_to_node(output,ctrs::array<int,3>());
+            }
+            else
+            {
+                return output;
+            }
         }
         
         template<grid::grid_index index_t>
-        requires((index_t::centering_type() == grid::face_centered) || (index_t::centering_type() == grid::edge_centered))
-        constexpr static auto compute_index(const index_t& i, const int dir)
+        requires(((index_t::centering_type() == grid::face_centered) || (index_t::centering_type() == grid::edge_centered)) && is_1d)
+        constexpr static auto compute_index(const index_t& i)
         {
+            const int di_div = static_math::moddiv<di,2>::value;
+            const int di_mod = static_math::mod<di,2>::value;
+            
             static_assert(index_t::centering_type() != grid::edge_centered, "edge centering not implemented");
             
-            using output_type = typename grid::get_index_type<index_t::centering_type()>::array_type;
+            using output_type = typename grid::get_index_type<relative_node_centering<index_t::centering_type()>>::array_type;
             static_assert(output_type::centering_type() != grid::edge_centered, "edge centering not implemented");
             
             // START HERE
-            
-            return 0;
+            index_t output;
+            output.lb()    = i.lb();
+            output.i()     = i.i();
+            output.j()     = i.j();
+            output.k()     = i.k();
+            output.dir()   = i.dir();
+            output.i(i.dir()) += di_div;
+            if constexpr (output_type::centering_type() == grid::cell_centered)
+            {
+                return face_to_cell(output, 1);
+            }
+            else
+            {
+                return output;
+            }
         }
     };
 }

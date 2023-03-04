@@ -186,18 +186,18 @@ namespace spade::algs
         const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const auto& grid = arr.get_grid();
-        auto grid_range = grid.get_range(arr.centering_type(), exchange_policy);
-        typename detail::converted_elem<array_t, callable_t>::type init_data;
-        detail::unwrap_to_minor_element_type(init_data, arr, 0, 0, 0, 0, 0);
+        const auto nlb = grid.get_num_local_blocks();
+        const typename array_t::index_type ii = 0;
+        auto init_data = arr.get_elem(ii);
         reduce_oper.init(func(init_data));
-        for (auto maj: range(0, arr.get_major_dims().total_size()))
+        for (auto lb: range(0, nlb))
         {
-            for (auto i: grid_range)
+            const auto loop_func = [&](const auto& elem) -> void
             {
-                typename detail::converted_elem<array_t, callable_t>::type data;
-                detail::unwrap_to_minor_element_type(data, arr, i[0], i[1], i[2], i[3], maj);
+                const auto data = arr.get_elem(elem);
                 reduce_oper.reduce_elem(func(data));
-            }
+            };
+            block_loop(arr, lb, loop_func, exchange_policy);
         }
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
     }

@@ -83,6 +83,34 @@ namespace spade::grid
         const int& lb () const {return (*this)[lb_idx];}
     };
     
+    struct edge_idx_t : public ctrs::arithmetic_array_t<int, 5, edge_idx_t>
+    {
+        //CURRENTLY UNIMPLEMENTED!!!
+        constexpr static array_centering centering_type() {return edge_centered;}
+        using base_t = ctrs::arithmetic_array_t<int, 5, edge_idx_t>;
+        using base_t::base_t;
+        
+        static constexpr int dir_idx = 0;
+        static constexpr int i_idx =   1;
+        static constexpr int j_idx =   2;
+        static constexpr int k_idx =   3;
+        static constexpr int lb_idx =  4;
+        
+        edge_idx_t(){}
+        int& dir() {return (*this)[dir_idx];}
+        int& i  () {return (*this)[i_idx];}
+        int& i (const int& idx) {return (*this)[i_idx + idx];}
+        int& j  () {return (*this)[j_idx];}
+        int& k  () {return (*this)[k_idx];}
+        int& lb () {return (*this)[lb_idx];}
+        const int& dir() const {return (*this)[dir_idx];}
+        const int& i  () const {return (*this)[i_idx];}
+        const int& i (const int& idx) const {return (*this)[i_idx + idx];}
+        const int& j  () const {return (*this)[j_idx];}
+        const int& k  () const {return (*this)[k_idx];}
+        const int& lb () const {return (*this)[lb_idx];}
+    };
+    
     struct node_idx_t : public ctrs::arithmetic_array_t<int, 4, node_idx_t>
     {
         constexpr static array_centering centering_type() {return node_centered;}
@@ -187,7 +215,7 @@ namespace spade::grid
             (rtype)i_face.i()+0.5,
             (rtype)i_face.j()+0.5,
             (rtype)i_face.k()+0.5);
-        output[i_face.dir_idx] -= 0.5;
+        output[i_face.dir()] -= 0.5;
         return output;
     }
     
@@ -206,5 +234,10 @@ namespace spade::grid
     {
         typedef typename node_idx_t::value_type integral_type;
         typedef node_idx_t array_type;
+    };
+    template <> struct get_index_type<edge_centered>
+    {
+        typedef typename node_idx_t::value_type integral_type;
+        typedef edge_idx_t array_type;
     };
 }

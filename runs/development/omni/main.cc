@@ -26,15 +26,15 @@ int main(int argc, char** argv)
     using real_t = double;
     spade::parallel::mpi_t group(&argc, &argv);
     spade::ctrs::array<int, 3> num_blocks(2, 2, 2);
-    spade::ctrs::array<int, 3> cells_in_block(12, 12, 12);
+    spade::ctrs::array<int, 3> cells_in_block(10, 10, 10);
     spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
     spade::bound_box_t<real_t, 3> bounds;
     bounds.min(0) = 0.0;
-    bounds.max(0) = 1.0;
+    bounds.max(0) = 2.0;
     bounds.min(1) = 0.0;
-    bounds.max(1) = 1.0;
+    bounds.max(1) = 2.0;
     bounds.min(2) = 0.0;
-    bounds.max(2) = 1.0;
+    bounds.max(2) = 2.0;
 
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
@@ -119,11 +119,71 @@ int main(int argc, char** argv)
     // print(spade::omni::access<spade::omni::info::value>(kk));
     print(spade::omni::access<spade::omni::info::metric>(kk));
     
-    const spade::grid::cell_idx_t ii(3, 3, 3, 0);
-    print(prim.get_elem(ii));
-    print(ii);
+    print();
+    print("===========");
     
-    // ++p;
+    print(spade::static_math::moddiv<-2, 2>::value);
+    print("=================");
+    print(-7/4, spade::static_math::moddiv<-7, 4>::value, -2);
+    print(-6/4, spade::static_math::moddiv<-6, 4>::value, -2);
+    print(-5/4, spade::static_math::moddiv<-5, 4>::value, -2);
+    print(-4/4, spade::static_math::moddiv<-4, 4>::value, -1);
+    print(-3/4, spade::static_math::moddiv<-3, 4>::value, -1);
+    print(-2/4, spade::static_math::moddiv<-2, 4>::value, -1);
+    print(-1/4, spade::static_math::moddiv<-1, 4>::value, -1);
+    print( 0/4, spade::static_math::moddiv< 0, 4>::value,  0);
+    print( 1/4, spade::static_math::moddiv< 1, 4>::value,  0);
+    print( 2/4, spade::static_math::moddiv< 2, 4>::value,  0);
+    print( 3/4, spade::static_math::moddiv< 3, 4>::value,  0);
+    print( 4/4, spade::static_math::moddiv< 4, 4>::value,  1);
+    print( 5/4, spade::static_math::moddiv< 5, 4>::value,  1);
+    print( 6/4, spade::static_math::moddiv< 6, 4>::value,  1);
+    print( 7/4, spade::static_math::moddiv< 7, 4>::value,  1);
+    print("=================");
+    
+    auto modtest = [](auto i0v, auto i1v)
+    {
+        const int i0 = i0v.value;
+        const int i1 = i1v.value;
+        print();
+        print("intrinsic:", i0, "=", i0/i1, "*", i1, "+", i0%i1, "=", i1*(i0/i1)+(i0%i1));
+        print("modular:  ", i0, "=",
+            spade::static_math::moddiv<i0,i1>::value, "*", i1,
+            "+", spade::static_math::mod<i0,i1>::value, "=",
+            i1*(spade::static_math::moddiv<i0,i1>::value)+(spade::static_math::mod<i0,i1>::value));
+        print();
+    };
+    modtest(32_c, 3_c);
+    modtest(9_c, 5_c);
+    modtest(-16_c, 8_c);
+    modtest(-5_c, 2_c);
+    modtest(-3_c, 9_c);
+    
+    {
+        print("==============");
+        const spade::grid::cell_idx_t ii(0, 0, 0, 0);
+        using offs0_t = spade::omni::offset_t<-1,  0,  0>;
+        using offs1_t = spade::omni::offset_t< 0, -1,  0>;
+        using offs2_t = spade::omni::offset_t< 0,  0, -1>;
+        const auto jj0 = offs0_t::compute_index(ii);
+        const auto jj1 = offs1_t::compute_index(ii);
+        const auto jj2 = offs2_t::compute_index(ii);
+        print(ii);
+        print(jj0, jj1, jj2);
+        print(grid.get_coords(ii));
+        print(grid.get_coords(jj0));
+        print(grid.get_coords(jj1));
+        print(grid.get_coords(jj2));
+    }
+    
+    {
+        print("==============");
+        const spade::grid::face_idx_t ii(2, 0, 0, 0);
+        using offs0_t = spade::omni::offset_t<1,  0,  0>;
+        const auto jj0 = offs0_t::compute_index(ii);
+        print(ii, jj0);
+        print(grid.get_coords(ii), grid.get_coords(jj0));
+    }
     
     return 0;
 }
