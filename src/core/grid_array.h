@@ -484,8 +484,8 @@ namespace spade::grid
         auto get_grid_index_bounding_box(const grid::exchange_inclusion_e& exchange_policy) const
         {
             const auto& grid = get_grid();
-            int iexchg = 0;
-            if (exchange_policy == include_exchanges) iexchg = 1;
+            int iexchg = 1;
+            if (exchange_policy == include_exchanges) iexchg = 0;
             bound_box_t<int, grid_map_type::rank()> output;
             const auto& ijk_map = this->block_map();
             
@@ -500,7 +500,7 @@ namespace spade::grid
             
             output.min(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.views).i0;
             output.max(index_type::lb_idx) = std::get<index_type::lb_idx>(ijk_map.views).i1;
-
+            
             detail::set_bbox_dir_val<centering_type()>(output, grid_type::dim());
             
             return output;
