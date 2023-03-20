@@ -168,7 +168,7 @@ namespace spade::utils
         srand(seed);
     }
     
-    template <typename out_t=double> static inline out_t unitary_random(void)
+    template <typename out_t=double> static inline out_t unitary_random()
     {
         return ((out_t) rand() / (RAND_MAX));
     }
