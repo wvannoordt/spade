@@ -4,6 +4,7 @@
 
 template <typename thing_t> void print_type(const thing_t& t)
 {
+    //g++ only
     std::string pf(__PRETTY_FUNCTION__);
     std::size_t start = std::string("void print_type(const thing_t&) [with thing_t = ").length();
     std::size_t end = pf.length()-1;
@@ -184,6 +185,11 @@ int main(int argc, char** argv)
         print(ii, jj0);
         print(grid.get_coords(ii), grid.get_coords(jj0));
     }
+
+
+    spade::io::output_vtk("output", "prim", prim);
+
+    using o4_type = local::kernel2_t::stencil_type;
     
     return 0;
 }

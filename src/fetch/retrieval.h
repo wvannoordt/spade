@@ -32,7 +32,7 @@ namespace spade::fetch
             const int& idir,
             cell_normal<output_t>& output)
         {
-            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(icell);
+            const auto xyz_c = ar_grid.get_comp_coords(icell);
             output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, icell, idir);
         }
         
@@ -105,7 +105,7 @@ namespace spade::fetch
             const grid::face_idx_t& iface,
             face_normal<output_t>& output)
         {
-            const ctrs::array<typename grid_t::dtype,3> xyz_c = ar_grid.get_comp_coords(iface);
+            const auto xyz_c = ar_grid.get_comp_coords(iface);
             output.data = coords::calc_normal_vector(ar_grid.coord_sys(), xyz_c, iface, iface.dir());
         }
         

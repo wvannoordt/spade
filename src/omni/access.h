@@ -7,8 +7,6 @@
 
 namespace spade::omni
 {
-    //Probably doesn't need 
-    //data_t is info_list_data_t
     template <typename info_t, typename data_t>
     const typename info_t::array_data_type<typename data_t::array_type, data_t::info_center>&
     access(const data_t& data)

@@ -7,6 +7,7 @@
 #include "core/ctrs.h"
 #include "core/grid_index_types.h"
 #include "core/linear_algebra.h"
+#include "core/point.h"
 
 namespace spade::coords
 {
@@ -171,14 +172,15 @@ namespace spade::coords
     template <typename dtype> struct cyl_coords
     {
         typedef dtype coord_type;
+        using point_type = point_t<dtype>;
         cyl_coords(void){}
-        ctrs::array<dtype, 3> map(const ctrs::array<dtype, 3>& x) const
+        point_type map(const point_type& x) const
         {
-            return ctrs::array<dtype, 3>(x[0], x[1]*cos(x[2]), x[1]*sin(x[2]));
+            return point_type(x[0], x[1]*cos(x[2]), x[1]*sin(x[2]));
         }
         
         linear_algebra::dense_mat<dtype, 3>
-        coord_deriv(const ctrs::array<dtype, 3>& x) const
+        coord_deriv(const point_type& x) const
         {
             // x = x
             // y = r*cos(q)
@@ -201,7 +203,7 @@ namespace spade::coords
     template <typename dtype, typename idx_t>
     ctrs::array<dtype, 3> calc_normal_vector(
         const identity<dtype>& coord,
-        const ctrs::array<dtype, 3>& coords,
+        const point_t<dtype>& coords,
         const idx_t& i,
         const typename idx_t::value_type& idir)
     {
@@ -213,7 +215,7 @@ namespace spade::coords
     template <typename dtype, typename idx_t>
     dtype calc_jacobian(
         const identity<dtype>& coord,
-        const ctrs::array<dtype, 3>& coords,
+        const point_t<dtype>& coords,
         idx_t& i)
     {
         return 1.0;
@@ -222,7 +224,7 @@ namespace spade::coords
     template <diagonal_coordinate_system coord_t, typename idx_t>
     ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
         const coord_t& coord,
-        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i,
         const typename idx_t::value_type::value_type& idir)
     {
@@ -241,7 +243,7 @@ namespace spade::coords
     template <dense_coordinate_system coord_t, typename idx_t>
     ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
         const coord_t& coord,
-        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i,
         const typename idx_t::value_type::value_type& idir)
         {
@@ -267,7 +269,7 @@ namespace spade::coords
     template <diagonal_coordinate_system coord_t, typename idx_t>
     typename coord_t::coord_type calc_jacobian(
         const coord_t& coord,
-        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i)
     {
         return 1.0/(coord.xcoord.coord_deriv(coords[0])*coord.ycoord.coord_deriv(coords[1])*coord.zcoord.coord_deriv(coords[2]));
@@ -276,7 +278,7 @@ namespace spade::coords
     template <dense_coordinate_system coord_t, typename integral_t>
     typename coord_t::coord_type calc_jacobian(
         const coord_t& coord,
-        const ctrs::array<typename coord_t::coord_type, 3>& coords,
+        const point_t<typename coord_t::coord_type>& coords,
         const grid::cell_idx_t& i)
     {
         const auto jac = coord.coord_deriv(coords);

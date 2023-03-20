@@ -18,7 +18,6 @@
 #include "core/grid.h"
 #include "core/mem_map.h"
 
-// #include "core/array_container.h" //deprecated
 #include "array-containers/ac_vector_wrapper.h"
 
 namespace spade::grid

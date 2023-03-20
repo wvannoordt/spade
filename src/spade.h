@@ -17,7 +17,6 @@
 #include "core/timing.h"
 #include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
-// #include "core/time_integration.h"
 #include "core/block_config.h"
 #include "core/pde_algs.h"
 #include "core/mtimer.h"

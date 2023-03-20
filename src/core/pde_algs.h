@@ -79,8 +79,8 @@ namespace spade::pde_algs
                 grid::cell_idx_t ir(idx[0], idx[1], idx[2], lb_loc);
                 ir[idir] += 1;
                 grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
-                const ctrs::array<real_type,3> xyz_comp_l = ar_grid.get_comp_coords(il);
-                const ctrs::array<real_type,3> xyz_comp_r = ar_grid.get_comp_coords(ir);
+                const auto xyz_comp_l = ar_grid.get_comp_coords(il);
+                const auto xyz_comp_r = ar_grid.get_comp_coords(ir);
                 const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
                 const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
                 utils::foreach_param([&](const auto& flux_func) -> void

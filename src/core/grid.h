@@ -108,7 +108,7 @@ namespace spade::grid
             using dtype            = coord_t::coord_type;
             using coord_type       = coord_t::coord_type;
             using coord_sys_type   = coord_t;
-            using coord_point_type = ctrs::array<coord_type, 3>;
+            using coord_point_type = coords::point_t<coord_type>;
             constexpr static std::size_t grid_dim = array_descriptor_t::size();
             
             cartesian_grid_t(
@@ -234,18 +234,19 @@ namespace spade::grid
             
             constexpr static int dim(void) {return grid_dim;}
             
-            template <typename idx_t>_finline_ ctrs::array<dtype, 3> get_coords(const idx_t& i) const
+            template <typename idx_t>_finline_ coord_point_type get_coords(const idx_t& i) const
             {
                 return coord_system.map(this->get_comp_coords(i));
             }
             
-            template <typename idx_t>_finline_ ctrs::array<dtype, 3> get_comp_coords(const idx_t& i) const
+            template <typename idx_t>_finline_ coord_point_type get_comp_coords(const idx_t& i) const
             {
                 const auto  idx_r = get_index_coord(i);
                 const int   lb    = i.lb();
                 const auto& bnd   = block_boxes[lb];
-                ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
-                for (auto d: range(0,dim()))
+                coord_point_type output;
+                output[2] = 0.0;
+                for (int d = 0; d < dim(); ++d)
                 {
                     output[d] = bnd.min(d)+idx_r[d]*this->get_dx(d);
                 }
