@@ -345,36 +345,6 @@ namespace spade::grid
             }
         }
         
-        // _finline_ fundamental_type& operator () (const int i, const int j, const int k, const int lb)
-        // {
-        //     // std::size_t off =
-        //     //     idx_coeffs[0]*(i-grid->get_num_cells(0)) +
-        //     //     idx_coeffs[1]*(j-grid->get_num_cells(1)) +
-        //     //     idx_coeffs[2]*(k-grid->get_num_cells(2)) +
-        //     //     idx_coeffs[3]*(lb);
-        //     std::size_t off = offset + 
-        //         idx_coeffs[0]*(i-grid->get_num_cells(0)) +
-        //         idx_coeffs[1]*(j-grid->get_num_cells(1)) +
-        //         idx_coeffs[2]*(k-grid->get_num_cells(2)) +
-        //         idx_coeffs[3]*(lb);
-        //     return data[off];
-        // }
-        
-        // _finline_ const fundamental_type& operator () (const int i, const int j, const int k, const int lb) const
-        // {
-        //     // std::size_t off =
-        //     //     idx_coeffs[0]*(i-grid->get_num_cells(0)) +
-        //     //     idx_coeffs[1]*(j-grid->get_num_cells(1)) +
-        //     //     idx_coeffs[2]*(k-grid->get_num_cells(2)) +
-        //     //     idx_coeffs[3]*(lb);
-        //     std::size_t off = offset + 
-        //         idx_coeffs[0]*(i) +
-        //         idx_coeffs[1]*(j) +
-        //         idx_coeffs[2]*(k) +
-        //         idx_coeffs[3]*(lb);
-        //     return data[off];
-        // }
-        
         template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
         requires std::convertible_to<i0_t, int> &&
         std::convertible_to<i1_t, int> &&

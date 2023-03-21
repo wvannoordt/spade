@@ -8,6 +8,9 @@ namespace spade::coords
 {
     template <typename float_t> struct point_t : public ctrs::arithmetic_array_t<float_t, 3, point_t<float_t>>
     {
+        using base_t = ctrs::arithmetic_array_t<float_t, 3, point_t<float_t>>;
+        using base_t::base_t;
+        
         float_t& x() { return (*this)[0]; }
         float_t& y() { return (*this)[1]; }
         float_t& z() { return (*this)[2]; }

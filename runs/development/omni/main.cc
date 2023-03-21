@@ -201,5 +201,8 @@ int main(int argc, char** argv)
     o4_data_type data;
     spade::omni::retrieve(prim, iface, data);
     print(spade::omni::access<spade::omni::info::gradient>(data.face(0_c)));
+    
+    using point_type = decltype(grid)::coord_point_type;
+    point_type x{0.1, 0.2, 0.3};
     return 0;
 }

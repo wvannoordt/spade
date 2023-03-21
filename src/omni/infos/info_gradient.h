@@ -59,7 +59,8 @@ namespace spade::omni
                     apply_coeff_at(idir[ii], -0.25, ic);
                     ic[idir[ii]] += 1;
                 }
-                
+                using real_type = typename array_t::value_type;
+                static_assert(std::same_as<typename utils::remove_all<decltype(ar_grid.get_coord_sys())>::type, coords::identity<real_type>>, "gradient transformation required for general coordinates");
                 // const auto& x_face = ar_grid.get_comp_coords(iface);
                 // transform_gradient(ar_grid, iface, out);
             }
