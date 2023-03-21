@@ -1,15 +1,16 @@
-#include <spade.h>
-
-#include "k1.h"
-
+#include <iostream>
+#include <string>
 template <typename thing_t> void print_type(const thing_t& t)
 {
     //g++ only
     std::string pf(__PRETTY_FUNCTION__);
     std::size_t start = std::string("void print_type(const thing_t&) [with thing_t = ").length();
     std::size_t end = pf.length()-1;
-    print(pf.substr(start, end-start));
+    std::cout << pf.substr(start, end-start) << std::endl;
 }
+#include <spade.h>
+
+#include "k1.h"
 
 void print_cen(const spade::grid::array_centering& ac)
 {
@@ -179,7 +180,7 @@ int main(int argc, char** argv)
     
     {
         print("==============");
-        const spade::grid::face_idx_t ii(2, 0, 0, 0);
+        const spade::grid::face_idx_t ii(2, 0, 0, 0, 0);
         using offs0_t = spade::omni::offset_t<1,  0,  0>;
         const auto jj0 = offs0_t::compute_index(ii);
         print(ii, jj0);
@@ -187,9 +188,12 @@ int main(int argc, char** argv)
     }
 
 
-    spade::io::output_vtk("output", "prim", prim);
+    // spade::io::output_vtk("output", "prim", prim);
 
-    using o4_type = local::kernel2_t::stencil_type;
-    
+    using o4_type      = local::kernel2_t::stencil_type;
+    using o4_data_type = spade::omni::stencil_data_t<o4_type, array_t>;
+    const spade::grid::face_idx_t iface(0, 0, 0, 0, 0);
+    o4_data_type data;
+    spade::omni::retrieve(prim, iface, data);
     return 0;
 }

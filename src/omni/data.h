@@ -11,6 +11,7 @@ namespace spade::omni
     template <const int i0, const int i1, typename info_list_t, typename array_t, const grid::array_centering center>
     struct info_list_data_t
     {
+        constexpr static int num_info_elems() { return i1; }
         constexpr static grid::array_centering info_center = center;
         using array_type = array_t;
         using info_type = typename info_list_t::info_elem<i0>;
@@ -24,6 +25,23 @@ namespace spade::omni
     {
         
     };
+    
+    namespace detail
+    {
+        template <const int idx, const int pos, typename info_list_t>
+        requires(idx == pos)
+        auto& get_info_list_data_at(info_list_t& list)
+        {
+            return list;
+        }
+        
+        template <const int idx, const int pos, typename info_list_t>
+        requires(idx > pos)
+        auto& get_info_list_data_at(info_list_t& list)
+        {
+            return get_info_list_data_at<idx, pos+1>(list.next);
+        }
+    }
     
     template <const int i0, const int i1, typename stencil_t, typename array_t>
     struct stencil_data_sublist_t
@@ -74,7 +92,6 @@ namespace spade::omni
                 return next.template seek_element<ctr>(udci::idx_const_t<ii>());
             }
         }
-        
         
         //const qualified
         template <udci::integral_t ii>
@@ -144,4 +161,20 @@ namespace spade::omni
 
     template <typename stencil_t, typename array_t>
     using stencil_data_t = stencil_data_sublist_t<0, stencil_t::num_elements(), stencil_t, array_t>;
+    
+    namespace detail
+    {
+        template <const int idx, const int pos, typename list_t>
+        requires(idx == pos)
+        auto& get_info_list_at(list_t& list)
+        {
+            return list.data;
+        }
+        template <const int idx, const int pos=0, typename list_t>
+        requires(idx > pos)
+        auto& get_info_list_at(list_t& list)
+        {
+            return get_info_list_at<idx, pos+1>(list.next);
+        }
+    }
 }
