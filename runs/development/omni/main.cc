@@ -47,10 +47,10 @@ int main(int argc, char** argv)
     spade::algs::fill_array(prim, [](const point_type& x)
     {
         spade::fluid_state::prim_t<real_t> output;
-        output.T() = 1 *x[0] + 2 *x[1] + 3 *x[2];
-        output.p() = 4 *x[0] + 5 *x[1] + 6 *x[2];
-        output.v() = 7 *x[0] + 8 *x[1] + 9 *x[2];
-        output.u() = 10*x[0] + 11*x[1] + 12*x[2];
+        output.p() = 1 *x[0] + 2 *x[1] + 3 *x[2];
+        output.T() = 4 *x[0] + 5 *x[1] + 6 *x[2];
+        output.u() = 7 *x[0] + 8 *x[1] + 9 *x[2];
+        output.v() = 10*x[0] + 11*x[1] + 12*x[2];
         output.w() = 13*x[0] + 14*x[1] + 15*x[2];
         return output;
     });
