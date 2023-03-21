@@ -2,8 +2,8 @@
 
 namespace spade::omni
 {
-    template <typename index_t, typename array_t, typename stencil_data_t>
-    void retrieve(const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    template <typename index_t, typename array_t, typename direction_t, typename stencil_data_t>
+    void retrieve_impl(const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
     {
         const int num_elem = stencil_data_t::stencil_type::num_elements();
         algs::static_for<0,num_elem>([&](const auto& ii)
@@ -21,8 +21,28 @@ namespace spade::omni
                 using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
                 
                 // compute the requisite information
-                info_type::compute(array, idx, info_list_data.data);
+                if constexpr (requires{info_type::compute(array, idx, direction, info_list_data.data);})
+                {
+                    info_type::compute(array, idx, direction, info_list_data.data);
+                }
+                else
+                {
+                    info_type::compute(array, idx, info_list_data.data);
+                }
             });
         });
+    }
+
+    template <typename index_t, typename array_t, typename stencil_data_t>
+    requires(requires{index_t().dir();})
+    void retrieve(const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    {
+        retrieve_impl(array, idx_center, idx_center.dir(), data);
+    }
+
+    template <typename index_t, typename array_t, typename stencil_data_t>
+    void retrieve(const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    {
+        retrieve_impl(array, idx_center, info::undirected, data);
     }
 }

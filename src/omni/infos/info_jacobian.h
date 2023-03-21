@@ -19,7 +19,10 @@ namespace spade::omni
                 const index_t& idx,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
-                print("jacobian");
+                const auto& grid = array.get_grid();
+
+                //Need to refactor coordinate systems to handle these as member functions
+                out = grid.get_coord_sys().calc_jacobian(grid.get_comp_coords(idx));
             }
         };
     }

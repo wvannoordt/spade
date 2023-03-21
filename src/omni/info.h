@@ -13,6 +13,11 @@ namespace spade::omni
         {
             constexpr static bool info_tag = true;
         };
+
+        static struct undirected_tag_t{} undirected;
+
+        consteval static bool is_direction(const int& i)              {return true;}
+        consteval static bool is_direction(const undirected_tag_t& i) {return false;}
     }
 
     template <typename... infos_t>

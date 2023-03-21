@@ -17,9 +17,11 @@ namespace spade::omni
             static void compute(
                 const array_t& array,
                 const index_t& idx,
+                const int& dir,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
-                print("normal");
+                out = 0;
+                out[dir] = 1;
             }
         };
     }

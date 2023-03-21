@@ -451,6 +451,7 @@ namespace spade::grid
             }
             
             const partition::block_partition_t& get_partition(void) const { return grid_partition; }
+            const coord_t& get_coord_sys() const { return coord_system; }
         private:
             partition::block_partition_t grid_partition;
             bool is3d;

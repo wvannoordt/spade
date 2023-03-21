@@ -23,3 +23,5 @@
 [ ] Rewrite exchange function to use new memory mapping
 [ ] Develop OMNI system
 [ ] Boundary conditions in pde_algs
+[ ] Re-work the coordinate systems to have transforms etc. as member functions
+[ ] Introduce and omni-info for interpolated value with specified order-of-accuracy
