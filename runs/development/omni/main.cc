@@ -41,14 +41,19 @@ int main(int argc, char** argv)
     spade::coords::identity<real_t> coords;
     spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
     spade::fluid_state::prim_t<real_t> fill = 0.0;
-    fill.p() = 101.315;
-    fill.T() = 302.13;
-    fill.u() = 65.4;
-    fill.v() = 0.005;
-    fill.w() = 0.134;
     spade::grid::grid_array prim (grid, fill);
     
-    spade::algs::fill_array(prim, [&](){return fill;});
+    using point_type = typename decltype(grid)::coord_point_type;
+    spade::algs::fill_array(prim, [](const point_type& x)
+    {
+        spade::fluid_state::prim_t<real_t> output;
+        output.T() = 1 *x[0] + 2 *x[1] + 3 *x[2];
+        output.p() = 4 *x[0] + 5 *x[1] + 6 *x[2];
+        output.v() = 7 *x[0] + 8 *x[1] + 9 *x[2];
+        output.u() = 10*x[0] + 11*x[1] + 12*x[2];
+        output.w() = 13*x[0] + 14*x[1] + 15*x[2];
+        return output;
+    });
     
     local::kernel0_t k0;
 
@@ -195,5 +200,6 @@ int main(int argc, char** argv)
     const spade::grid::face_idx_t iface(0, 0, 0, 0, 0);
     o4_data_type data;
     spade::omni::retrieve(prim, iface, data);
+    print(spade::omni::access<spade::omni::info::gradient>(data.face(0_c)));
     return 0;
 }
