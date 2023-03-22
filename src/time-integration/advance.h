@@ -47,9 +47,12 @@ namespace spade::time_integration
     }
     
     //explicit RK scheme (TODO: implement concept for this)
-    template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename trans_t>
-    void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const trans_t& trans)
+    template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t>
+    void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const boundary_t& boundary, const trans_t& trans)
     {
+        //Note that we assume that the boundary has been set before we begin integration.
+        //Note also that the boundary pertains to the untransformed state
+
         //Number of RHS evaluations
         const int num_stages = scheme_t::table_type::rows();
         
@@ -105,6 +108,7 @@ namespace spade::time_integration
             
             //Evaluate the residual at t + c*dt
             axis.time() += time_coeff*dt;
+            boundary(sol, axis.time());
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });
@@ -137,5 +141,6 @@ namespace spade::time_integration
         });
         
         axis.time() += dt;
+        boundary(new_solution, axis.time());
     }
 }
