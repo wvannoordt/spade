@@ -27,6 +27,7 @@
 
 #include "fetch/fetch.h"
 #include "omni/omni.h"
+#include "omni/prefab.h"
 
 #include "time-integration/explicit.h"
 #include "time-integration/integrator.h"

@@ -111,7 +111,7 @@ int main(int argc, char** argv)
         spade::convective::totani_lr tscheme(air);
         spade::viscous::visc_lr  visc_scheme(visc_law);
         
-        //Convective
+        // Convective
         auto num_conv = [&](){spade::pde_algs::flux_div(prim, rhs, tscheme);};
         auto ana_conv = [&]()
         {
@@ -127,6 +127,7 @@ int main(int argc, char** argv)
             });
         };
         
+        // Viscous
         auto num_visc = [&](){spade::pde_algs::flux_div(prim, rhs, visc_scheme);};
         auto ana_visc = [&]()
         {

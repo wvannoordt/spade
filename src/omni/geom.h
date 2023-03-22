@@ -122,8 +122,6 @@ namespace spade::omni
             
             using output_type = typename grid::get_index_type<relative_node_centering<index_t::centering_type()>>::array_type;
             static_assert(output_type::centering_type() != grid::edge_centered, "edge centering not implemented");
-            
-            // START HERE
             index_t output;
             output.lb()    = i.lb();
             output.i()     = i.i();

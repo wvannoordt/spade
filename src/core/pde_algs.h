@@ -2,6 +2,7 @@
 
 #include "core/grid.h"
 #include "fetch/fetch.h"
+#include "omni/omni.h"
 
 namespace spade::pde_algs
 {    
@@ -86,9 +87,13 @@ namespace spade::pde_algs
                 utils::foreach_param([&](const auto& flux_func) -> void
                 {
                     using flux_func_t = decltype(flux_func);
-                    typename utils::remove_all<flux_func_t>::type::input_type flux_data;
-                    fetch::get_face_data(ar_grid, prims, iface, flux_data);
-                    auto flux = flux_func.calc_flux(flux_data);
+                    using omni_type   = utils::remove_all<flux_func_t>::type::omni_type;
+                    using input_type  = omni::stencil_data_t<omni_type, sol_arr_t>;
+                    input_type flux_data;
+                    // fetch::get_face_data(ar_grid, prims, iface, flux_data);
+                    // auto flux = flux_func.calc_flux(flux_data);
+                    omni::retrieve(prims, iface, flux_data);
+                    auto flux = flux_func(flux_data);
                     for (int n = 0; n < flux.size(); ++n)
                     {
                         rhs(n, il[0], il[1], il[2], il[3]) -= jac_l*flux[n]/(dx);

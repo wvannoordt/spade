@@ -2,50 +2,63 @@
 
 #include "core/config.h"
 #include "core/ctrs.h"
-#include "omni/omni.h"
+#include "fetch/fetch.h"
 
 #include "navier-stokes/fluid_state.h"
 
 namespace spade::convective
-{       
+{
+    template <typename dtype> using standard_lr_input_type = fetch::face_fetch_t
+    <
+        fetch::left_right
+        <
+            fetch::cell_info
+            <
+                fetch::cell_state<fluid_state::prim_t<dtype>>,
+                fetch::cell_normal<ctrs::array<dtype, 3>>
+            >
+        >,
+        fetch::face_info<>
+    >;
+        
     template <fluid_state::state_dependent_gas gas_t> struct totani_lr
     {
-        using float_t     = typename gas_t::value_type;
-        using output_type = fluid_state::flux_t<float_t>;
-        using omni_type   = omni::prefab::lr_t<omni::info::value, omni::info::metric>;
+        typedef typename gas_t::value_type dtype;
+        typedef fluid_state::flux_t<dtype> output_type;
+        typedef standard_lr_input_type<dtype> input_type;
         
-        totani_lr(const gas_t& gas_in) : gas{gas_in}{}
+        totani_lr(const gas_t& gas_in) {gas = &gas_in;}
         
         
-        output_type operator() (const auto& input_data) const
+        output_type calc_flux(const input_type& input) const
         {
             output_type output;
-            const auto& ql       = omni::access<omni::info::value> (input_data.cell(0_c));
-            const auto& qr       = omni::access<omni::info::value> (input_data.cell(1_c));
-            const auto& normal_l = omni::access<omni::info::metric>(input_data.cell(0_c));
-            const auto& normal_r = omni::access<omni::info::metric>(input_data.cell(1_c));
+            const auto& ql       = std::get<0>(input.cell_data.left.elements).data;
+            const auto& qr       = std::get<0>(input.cell_data.right.elements).data;
+            const auto& normal_l = std::get<1>(input.cell_data.left.elements).data;
+            const auto& normal_r = std::get<1>(input.cell_data.right.elements).data;
             
-            float_t un_l = normal_l[0]*ql.u()+normal_l[1]*ql.v()+normal_l[2]*ql.w();
-            float_t un_r = normal_r[0]*qr.u()+normal_r[1]*qr.v()+normal_r[2]*qr.w();
+            dtype un_l = normal_l[0]*ql.u()+normal_l[1]*ql.v()+normal_l[2]*ql.w();
+            dtype un_r = normal_r[0]*qr.u()+normal_r[1]*qr.v()+normal_r[2]*qr.w();
             
-            float_t rho_l = ql.p()/(gas.get_R(ql)*ql.T());
-            float_t rho_r = qr.p()/(gas.get_R(qr)*qr.T());
+            dtype rho_l = ql.p()/(gas->get_R(ql)*ql.T());
+            dtype rho_r = qr.p()/(gas->get_R(qr)*qr.T());
             
-            float_t e_l = ql.p()/(rho_l*(gas.get_gamma(ql)-float_t(1.0)));
-            float_t e_r = qr.p()/(rho_r*(gas.get_gamma(qr)-float_t(1.0)));
+            dtype e_l = ql.p()/(rho_l*(gas->get_gamma(ql)-dtype(1.0)));
+            dtype e_r = qr.p()/(rho_r*(gas->get_gamma(qr)-dtype(1.0)));
             
-            float_t c = float_t(0.25)*(rho_l+rho_r)*(un_l+un_r);
+            dtype c = 0.25*(rho_l+rho_r)*(un_l+un_r);
             output.continuity() = c;
-            output.energy()     = float_t(0.5)*c*(e_l + e_r + ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w()) + float_t(0.5)*(un_l*qr.p() + un_r*ql.p());
-            output.x_momentum() = float_t(0.5)*c*(ql.u()+qr.u()) + float_t(0.5)*(normal_l[0]*ql.p()+normal_r[0]*qr.p());
-            output.y_momentum() = float_t(0.5)*c*(ql.v()+qr.v()) + float_t(0.5)*(normal_l[1]*ql.p()+normal_r[1]*qr.p());
-            output.z_momentum() = float_t(0.5)*c*(ql.w()+qr.w()) + float_t(0.5)*(normal_l[2]*ql.p()+normal_r[2]*qr.p());
+            output.energy()     = 0.5*c*(e_l + e_r + ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w()) + 0.5*(un_l*qr.p() + un_r*ql.p());
+            output.x_momentum() = 0.5*c*(ql.u()+qr.u()) + 0.5*(normal_l[0]*ql.p()+normal_r[0]*qr.p());
+            output.y_momentum() = 0.5*c*(ql.v()+qr.v()) + 0.5*(normal_l[1]*ql.p()+normal_r[1]*qr.p());
+            output.z_momentum() = 0.5*c*(ql.w()+qr.w()) + 0.5*(normal_l[2]*ql.p()+normal_r[2]*qr.p());
             return output;
         }
         
-        const gas_t& gas;
+        const gas_t* gas;
     };
-    /*
+    
     template <fluid_state::state_dependent_gas gas_t> struct pressure_diss_lr
     {
         typedef typename gas_t::value_type dtype;
@@ -194,5 +207,4 @@ namespace spade::convective
         
         const gas_t* gas;
     };
-    */
 }
