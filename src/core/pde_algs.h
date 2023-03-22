@@ -42,10 +42,11 @@ namespace spade::pde_algs
         const bound_box_t<bool,sol_arr_t::grid_type::dim()>& domain_boundary_flux,
         const flux_funcs_t&... flux_funcs)
     {
-        typedef typename sol_arr_t::value_type real_type;
+        using real_type = sol_arr_t::value_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
-        
+
         auto block_range = range(0,ar_grid.get_num_local_blocks());
+
         for (auto lb_idir: block_range*range(0, ar_grid.dim()))
         {
             int lb_loc  = lb_idir[0];
