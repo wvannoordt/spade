@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/grid.h"
-#include "fetch/fetch.h"
 #include "omni/omni.h"
 
 namespace spade::pde_algs
@@ -129,29 +128,10 @@ namespace spade::pde_algs
         }
         flux_div(prims, rhs, policy, domain_boundary_flux, flux_funcs...);
     }
-
-    template <typename T> concept variate_source_term = fetch::fetch_type<typename T::input_type, fetch::fetch_cell> && requires (T t)
-    {
-        typename T::input_type;
-        typename T::output_type;
-    };
     
     namespace detail
     {
         template <grid::multiblock_array sol_arr_t, typename source_term_t>
-        requires (variate_source_term<source_term_t>)
-        auto eval_source_term(const grid::cell_idx_t& ijk, const sol_arr_t& q, const source_term_t& source_term_func)
-        {
-            using out_t = typename source_term_t::output_type;
-            using in_t  = typename source_term_t::input_type;
-            in_t input;
-            fetch::get_cell_data(q.get_grid(), q, ijk, input);
-            out_t output = source_term_func(input);
-            return output;
-        }
-        
-        template <grid::multiblock_array sol_arr_t, typename source_term_t>
-        requires (!variate_source_term<source_term_t>)
         auto eval_source_term(const grid::cell_idx_t& ijk, const sol_arr_t& q, const source_term_t& source_term_func)
         {
             return source_term_func();

@@ -25,7 +25,6 @@
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
-#include "fetch/fetch.h"
 #include "omni/omni.h"
 #include "omni/prefab.h"
 
