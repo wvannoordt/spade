@@ -68,11 +68,6 @@ namespace spade::pde_algs
             auto grid_range = g0*g1*g2;
             for (auto idx: grid_range)
             {
-            //Note: the implementation below is about 10% faster!
-            // ctrs::array<int, 3> idx;
-            // for (idx[2] = flux_bounds.min(2); idx[2]<flux_bounds.max(2); idx[2]++) {
-            // for (idx[1] = flux_bounds.min(1); idx[1]<flux_bounds.max(1); idx[1]++) {
-            // for (idx[0] = flux_bounds.min(0); idx[0]<flux_bounds.max(0); idx[0]++) {
                 const real_type dx = ar_grid.get_dx(idir);
                 grid::cell_idx_t il(idx[0], idx[1], idx[2], lb_loc);
                 grid::cell_idx_t ir(idx[0], idx[1], idx[2], lb_loc);
@@ -82,24 +77,23 @@ namespace spade::pde_algs
                 const auto xyz_comp_r = ar_grid.get_comp_coords(ir);
                 const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
                 const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
-                utils::foreach_param([&](const auto& flux_func) -> void
+                utils::foreach_param([&](const auto& flux_func)
                 {
                     using flux_func_t = decltype(flux_func);
                     using omni_type   = utils::remove_all<flux_func_t>::type::omni_type;
                     using input_type  = omni::stencil_data_t<omni_type, sol_arr_t>;
+
                     input_type flux_data;
-                    // fetch::get_face_data(ar_grid, prims, iface, flux_data);
-                    // auto flux = flux_func.calc_flux(flux_data);
                     omni::retrieve(prims, iface, flux_data);
                     auto flux = flux_func(flux_data);
+
                     for (int n = 0; n < flux.size(); ++n)
                     {
-                        rhs(n, il[0], il[1], il[2], il[3]) -= jac_l*flux[n]/(dx);
-                        rhs(n, ir[0], ir[1], ir[2], ir[3]) += jac_r*flux[n]/(dx);
+                        rhs(n, il) -= jac_l*flux[n]/(dx);
+                        rhs(n, ir) += jac_r*flux[n]/(dx);
                     }
                 }, flux_funcs...);
             }
-            // }}}
         }
     }
     
