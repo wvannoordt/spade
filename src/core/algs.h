@@ -52,6 +52,8 @@ namespace spade::algs
     {
         const auto& grid = arr.get_grid();
         const auto nlb = grid.get_num_local_blocks();
+
+        const auto kernel = omni::to_omni(func);
         
         // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))

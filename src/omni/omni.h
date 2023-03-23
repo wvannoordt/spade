@@ -16,3 +16,5 @@
 #include "omni/infos/info_metric.h"
 #include "omni/infos/info_normal.h"
 #include "omni/infos/info_value.h"
+
+#include "omni/convert.h"

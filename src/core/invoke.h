@@ -11,11 +11,11 @@ namespace spade::algs
     auto invoke_at(const array_t& array, const idx_t& i, const kernel_t& kernel)
     {
         //todo: generalize this to a collection of kernels!!
-        const auto converted_kernel = omni::convert_to_omni(kernel);
-        using omni_type   = decltype(converted_kernel)::omni_type;
+
+        using omni_type   = kernel_t::omni_type;
         using input_type  = omni::stencil_data_t<omni_type, array_t>;
         input_type data;
         omni::retrieve(array, i, data);
-        return converted_kernel(data);
+        return kernel(data);
     }
 }

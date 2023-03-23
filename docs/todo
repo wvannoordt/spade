@@ -25,3 +25,4 @@
 [ ] Boundary conditions in pde_algs
 [ ] Re-work the coordinate systems to have transforms etc. as member functions
 [ ] Introduce and omni-info for interpolated value with specified order-of-accuracy
+[ ] Re-work the lambda-omni conversion to account for unions
