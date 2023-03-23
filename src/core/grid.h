@@ -12,7 +12,6 @@
 #include "core/range.h"
 #include "core/coord_system.h"
 #include "core/parallel.h"
-#include "core/dims.h"
 #include "core/partition.h"
 #include "core/static_math.h"
 #include "core/grid_index_types.h"
@@ -34,11 +33,9 @@ namespace spade::grid
     
     template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)
     {
-        { t.get_major_dims() } -> dims::grid_array_dimension;
-        { t.get_minor_dims() } -> dims::grid_array_dimension;
-        { t.get_grid_dims()  } -> dims::grid_array_dimension;
-        { t.get_grid()       } -> multiblock_grid;
-        t.unwrap_idx(a, i, j, k, lb, b);
+        t;
+        t.var_map();
+        t.block_map();
     };
     
     template <typename T0, typename T1> concept elementwise_compatible = multiblock_array<T0> && multiblock_array<T1> &&
@@ -53,40 +50,6 @@ namespace spade::grid
         exclude_exchanges=0,
         include_exchanges=1
     };
-    
-    template <multiblock_grid grid_t, const array_centering centering>
-    requires (centering == cell_centered)
-    static auto create_grid_dims(const grid_t& grid)
-    {
-        return dims::dynamic_dims<4>(
-            grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
-            grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
-            grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-            grid.get_num_local_blocks());
-    }
-    
-    template <multiblock_grid grid_t, const array_centering centering>
-    requires (centering == node_centered)
-    static auto create_grid_dims(const grid_t& grid)
-    {
-        return dims::dynamic_dims<4>(
-            1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
-            1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
-            1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-            grid.get_num_local_blocks());
-    }
-    
-    template <multiblock_grid grid_t, const array_centering centering>
-    requires (centering == face_centered)
-    static auto create_grid_dims(const grid_t& grid)
-    {
-        return dims::dynamic_dims<5>(
-            1+grid.get_num_cells(0)+grid.get_num_exchange(0)*2,
-            1+grid.get_num_cells(1)+grid.get_num_exchange(1)*2,
-            1+grid.get_num_cells(2)+grid.get_num_exchange(2)*2,
-            grid.dim(),
-            grid.get_num_local_blocks());
-    }
     
     struct neighbor_relationship_t
     {
@@ -366,7 +329,7 @@ namespace spade::grid
                 std::vector<std::size_t> num_send_bytes(grid_group->size(), 0);
                 std::vector<std::size_t> num_recv_bytes(grid_group->size(), 0);
                 
-                std::size_t cell_elem_size = sizeof(array_data_t)*array.get_minor_dims().total_size();
+                std::size_t cell_elem_size = array.cell_element_size()*sizeof(typename array_t::value_type);
                 
                 for (auto p:range(0, grid_group->size()))
                 {
@@ -377,29 +340,27 @@ namespace spade::grid
                 }
                 
                 std::vector<std::size_t> offsets(grid_group->size(), 0);
+                ctrs::array<int, array_t::variable_map_type::rank()> vv = 0;
                 
                 //pack
                 for (auto& neigh_edge: neighbors)
                 {
-                    for (auto maj: range(0,array.get_major_dims().total_size()))
+                    if (neigh_edge.rank_start==grid_group->rank())
                     {
-                        if (neigh_edge.rank_start==grid_group->rank())
+                        std::vector<char>& send_buf_loc = send_bufs[neigh_edge.rank_end];
+                        std::size_t& send_offset_loc = offsets[neigh_edge.rank_end];
+                        std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_start);
+                        auto bounds = this->get_send_index_bounds(neigh_edge.edge_vec);
+                        std::size_t copy_size = bounds.size(0)*cell_elem_size;
+                        for (int k = bounds.min(2); k < bounds.max(2); ++k)
                         {
-                            std::vector<char>& send_buf_loc = send_bufs[neigh_edge.rank_end];
-                            std::size_t& send_offset_loc = offsets[neigh_edge.rank_end];
-                            std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_start);
-                            auto bounds = this->get_send_index_bounds(neigh_edge.edge_vec);
-                            std::size_t copy_size = bounds.size(0)*cell_elem_size;                            
-                            for (int k = bounds.min(2); k < bounds.max(2); ++k)
+                            for (int j = bounds.min(1); j < bounds.max(1); ++j)
                             {
-                                for (int j = bounds.min(1); j < bounds.max(1); ++j)
-                                {
-                                    std::copy(
-                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj)),
-                                        (char*)(&array.unwrap_idx(0,bounds.max(0),j,k,lb_loc,maj)),
-                                        (char*)(&(send_buf_loc[send_offset_loc])));
-                                    send_offset_loc += copy_size;
-                                }
+                                std::copy(
+                                    (char*)(&array(vv,bounds.min(0),j,k,lb_loc)),
+                                    (char*)(&array(vv,bounds.max(0),j,k,lb_loc)),
+                                    (char*)(&(send_buf_loc[send_offset_loc])));
+                                send_offset_loc += copy_size;
                             }
                         }
                     }
@@ -424,26 +385,23 @@ namespace spade::grid
                 //unpack
                 for (auto& neigh_edge: neighbors)
                 {
-                    for (auto maj: range(0,array.get_major_dims().total_size()))
+                    if (neigh_edge.rank_end==grid_group->rank())
                     {
-                        if (neigh_edge.rank_end==grid_group->rank())
+                        std::vector<char>& recv_buf_loc = recv_bufs[neigh_edge.rank_start];
+                        std::size_t& recv_offset_loc = offsets[neigh_edge.rank_start];
+                        std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_end);
+                        auto bounds = this->get_recv_index_bounds(neigh_edge.edge_vec);
+                        std::size_t copy_size = bounds.size(0)*cell_elem_size;
+                        for (int k = bounds.min(2); k < bounds.max(2); ++k)
                         {
-                            std::vector<char>& recv_buf_loc = recv_bufs[neigh_edge.rank_start];
-                            std::size_t& recv_offset_loc = offsets[neigh_edge.rank_start];
-                            std::size_t lb_loc = grid_partition.get_local_block(neigh_edge.lb_glob_end);
-                            auto bounds = this->get_recv_index_bounds(neigh_edge.edge_vec);
-                            std::size_t copy_size = bounds.size(0)*cell_elem_size;
-                            for (int k = bounds.min(2); k < bounds.max(2); ++k)
+                            for (int j = bounds.min(1); j < bounds.max(1); ++j)
                             {
-                                for (int j = bounds.min(1); j < bounds.max(1); ++j)
-                                {
-                                    std::copy(
-                                        (char*)(&(recv_buf_loc[recv_offset_loc])),
-                                        (char*)(&(recv_buf_loc[recv_offset_loc]))+copy_size,
-                                        (char*)(&array.unwrap_idx(0,bounds.min(0),j,k,lb_loc,maj)));
-                                        
-                                    recv_offset_loc += copy_size;
-                                }
+                                std::copy(
+                                    (char*)(&(recv_buf_loc[recv_offset_loc])),
+                                    (char*)(&(recv_buf_loc[recv_offset_loc]))+copy_size,
+                                    (char*)(&array(vv,bounds.min(0),j,k,lb_loc)));
+                                    
+                                recv_offset_loc += copy_size;
                             }
                         }
                     }

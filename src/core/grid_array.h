@@ -11,7 +11,6 @@
 #include "core/range.h"
 #include "core/coord_system.h"
 #include "core/parallel.h"
-#include "core/dims.h"
 #include "core/partition.h"
 #include "core/static_math.h"
 #include "core/grid_index_types.h"
@@ -38,20 +37,9 @@ namespace spade::grid
         
         template <class T> concept is_static_1D_array = ctrs::basic_array<T> && requires (T t)
         {
-            t; //todo: figure out whay the heck is going on with this
+            t.size(); //todo: figure out whay the heck is going on with this
         };
                 
-        //todo: phase this out
-        template <typename data_t> struct get_dim_type
-        {
-            typedef dims::singleton_dim type;
-        };
-        
-        template <is_static_1D_array data_t> struct get_dim_type<data_t>
-        {
-            typedef dims::static_dims<data_t::size()> type;
-        };
-        
         template <typename data_t> struct get_variable_mem_map
         {
             typedef mem_map::empty_view_t type;
@@ -191,38 +179,28 @@ namespace spade::grid
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
-        dims::grid_array_dimension major_dim_t=dims::singleton_dim,
         const array_centering centering=cell_centered,
         array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
         >
     struct grid_array
     {
         constexpr static array_centering centering_type() { return centering; }
-        static constexpr std::size_t total_idx_rank(void) {return minor_dim_t::rank()+dims::dynamic_dims<4>::rank()+major_dim_t::rank();}
         
-        typedef grid_t grid_type;
-        typedef typename detail::get_fundamental_type<data_alias_t>::type fundamental_type;
-        typedef fundamental_type value_type;
-        typedef typename detail::get_dim_type<data_alias_t>::type minor_dim_t;
-        typedef minor_dim_t array_minor_dim_t;
-        typedef major_dim_t array_major_dim_t;
-        typedef typename get_index_type<centering_type()>::integral_type index_integral_type;
-        typedef typename get_index_type<centering_type()>::array_type    index_type;
-        typedef typename grid_t::coord_point_type coord_point_type;
-        typedef data_alias_t alias_type;
-        typedef data_alias_t unwrapped_minor_type;
+        using grid_type           = grid_t;
+        using fundamental_type    = detail::get_fundamental_type<data_alias_t>::type;
+        using value_type          = fundamental_type;
+        using index_integral_type = get_index_type<centering_type()>::integral_type;
+        using index_type          = get_index_type<centering_type()>::array_type;
+        using coord_point_type    = grid_t::coord_point_type;
+        using alias_type          = data_alias_t;
         
-        typedef typename detail::get_variable_mem_map<data_alias_t>::type variable_map_type;
-        typedef typename detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type grid_map_type;
-        typedef mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>> mem_map_type;
+        using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
+        using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
+        using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
         
         const grid_t* grid;
-        minor_dim_t minor_dims;
-        dims::dynamic_dims<detail::get_centering_grid_idx_rank<centering_type()>::value> grid_dims;
-        major_dim_t major_dims;
         container_t data;
         std::size_t offset;
-        std::size_t idx_coeffs [total_idx_rank()];
         mem_map_type mem_view;
         
         const auto& var_map() const
@@ -245,65 +223,21 @@ namespace spade::grid
             return std::get<1>(mem_view.mmap.views);
         }
 
+        std::size_t cell_element_size() {return mem_map::map_size(var_map());}
+
         grid_array(){}
         grid_array(
             const grid_t& grid_in,
-            const data_alias_t& fill_elem,
-            const major_dim_t& major_dims_in=dims::singleton_dim())
+            const data_alias_t& fill_elem
+            )
         {
             grid = &grid_in;
-            minor_dims = minor_dim_t();
-            major_dims = major_dims_in;
-            grid_dims = create_grid_dims<decltype(grid_in), centering>(grid_in);
-            data.resize(minor_dims.total_size()*grid_dims.total_size()*major_dims.total_size());
-            std::size_t n = total_idx_rank();
-            for (auto i: range(0, n)) idx_coeffs[i] = 1;
-            for (auto i: range(0, n))
-            {
-                for (int j =i+1; j < n; ++j)
-                {
-                    idx_coeffs[j] *= this->get_index_extent(i);
-                }
-            }
-            offset = 0;
-            for (auto i: range(0,dims::dynamic_dims<4>::rank()-1))
-            {
-                offset += grid_in.get_num_exchange(i)*idx_coeffs[i + minor_dim_t::rank()];
-            }
             auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
             this->mem_view.compute_coeffs();
             this->mem_view.compute_offset_base();
-        }
-        
-        std::size_t get_index_extent(std::size_t i)
-        {
-            if (i < minor_dim_t::rank())
-            {
-                return minor_dims.get_index_extent(i);
-            }
-            else if (i < minor_dim_t::rank()+dims::dynamic_dims<4>::rank())
-            {
-                return grid_dims.get_index_extent(i-minor_dim_t::rank());
-            }
-            else
-            {
-                return major_dims.get_index_extent(i-(minor_dim_t::rank()+dims::dynamic_dims<4>::rank()));
-            }
-        }
-        
-        template <const int lev, typename idx_t>
-        requires (std::convertible_to<idx_t, int>)
-         _finline_ std::size_t offst_r(const idx_t& idx) const
-        {
-            return idx_coeffs[lev]*idx;
-        }
-        
-        template <const int lev, typename idx_t, typename... idxs_t>
-        requires (std::convertible_to<idx_t, int>)
-        _finline_ std::size_t offst_r(const idx_t& idx, const idxs_t&... idxs) const
-        {
-            return idx_coeffs[lev]*idx + offst_r<lev+1>(idxs...);
+            auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
+            data.resize(total_size);
         }
 
         template <typename... idxs_t>
@@ -344,47 +278,7 @@ namespace spade::grid
                 return (*this)(idx);
             }
         }
-        
-        template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
-        requires std::convertible_to<i0_t, int> &&
-        std::convertible_to<i1_t, int> &&
-        std::convertible_to<i2_t, int> &&
-        std::convertible_to<i3_t, int> &&
-        std::convertible_to<i4_t, int> &&
-        std::convertible_to<i5_t, int>
-        _finline_ fundamental_type& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5)
-        {
-            return data[
-                offset +
-                i0*idx_coeffs[0] + 
-                i1*idx_coeffs[minor_dim_t::rank()+0]+
-                i2*idx_coeffs[minor_dim_t::rank()+1]+
-                i3*idx_coeffs[minor_dim_t::rank()+2]+
-                i4*idx_coeffs[minor_dim_t::rank()+3]//+
-                // i5*idx_coeffs[minor_dim_t::rank()+4]
-            ];
-        }
-        
-        template <typename i0_t, typename i1_t, typename i2_t, typename i3_t, typename i4_t, typename i5_t>
-        requires std::convertible_to<i0_t, int> &&
-        std::convertible_to<i1_t, int> &&
-        std::convertible_to<i2_t, int> &&
-        std::convertible_to<i3_t, int> &&
-        std::convertible_to<i4_t, int> &&
-        std::convertible_to<i5_t, int>
-        _finline_ const fundamental_type& unwrap_idx(const i0_t& i0, const i1_t& i1, const i2_t& i2, const i3_t& i3, const i4_t& i4, const i5_t& i5) const
-        {
-            return data[
-                offset +
-                i0*idx_coeffs[0] + 
-                i1*idx_coeffs[minor_dim_t::rank()+0]+
-                i2*idx_coeffs[minor_dim_t::rank()+1]+
-                i3*idx_coeffs[minor_dim_t::rank()+2]+
-                i4*idx_coeffs[minor_dim_t::rank()+3]//+
-                // i5*idx_coeffs[minor_dim_t::rank()+4]
-            ];
-        }
-        
+
         template <multiblock_array rhs_t>
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator -= (const rhs_t& rhs)
@@ -443,11 +337,7 @@ namespace spade::grid
             for (std::size_t i = 0; i < data.size(); ++i) data[i] = v;
             return *this;
         }
-        
-        minor_dim_t get_minor_dims() const { return minor_dims; }
-        major_dim_t get_major_dims() const { return major_dims; }
-        major_dim_t get_grid_dims () const { return grid_dims;  }
-        auto get_total_dims()        const { return minor_dims*grid_dims*major_dims; }
+
         const grid_t& get_grid() const {return *grid;}
         
         auto get_grid_index_bounding_box(const grid::exchange_inclusion_e& exchange_policy) const
@@ -479,13 +369,11 @@ namespace spade::grid
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
-        dims::grid_array_dimension major_dim_t = dims::singleton_dim,
         array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
-        > using face_array = grid_array<grid_t, data_alias_t, major_dim_t, face_centered, container_t>;
+        > using face_array = grid_array<grid_t, data_alias_t, face_centered, container_t>;
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
-        dims::grid_array_dimension major_dim_t = dims::singleton_dim,
         array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
-        > using cell_array = grid_array<grid_t, data_alias_t, major_dim_t, cell_centered, container_t>;
+        > using cell_array = grid_array<grid_t, data_alias_t, cell_centered, container_t>;
 }

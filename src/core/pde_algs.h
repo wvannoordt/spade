@@ -31,9 +31,7 @@ namespace spade::pde_algs
         grid::multiblock_array rhs_arr_t,
         typename... flux_funcs_t>
     requires
-        grid::has_centering_type<sol_arr_t, grid::cell_centered> &&
-        (dims::rank_eval<typename sol_arr_t::array_minor_dim_t>::value==1) &&
-        (dims::rank_eval<typename sol_arr_t::array_major_dim_t>::value==0)
+        grid::has_centering_type<sol_arr_t, grid::cell_centered>
     static void flux_div(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
@@ -110,9 +108,7 @@ namespace spade::pde_algs
         grid::multiblock_array rhs_arr_t,
         typename... flux_funcs_t>
     requires
-        grid::has_centering_type<sol_arr_t, grid::cell_centered> &&
-        (dims::rank_eval<typename sol_arr_t::array_minor_dim_t>::value==1) &&
-        (dims::rank_eval<typename sol_arr_t::array_major_dim_t>::value==0)
+        grid::has_centering_type<sol_arr_t, grid::cell_centered>
     static void flux_div(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
@@ -143,9 +139,7 @@ namespace spade::pde_algs
         grid::multiblock_array rhs_arr_t,
         typename source_term_t>
     requires
-        grid::has_centering_type<sol_arr_t, grid::cell_centered> &&
-        (dims::rank_eval<typename sol_arr_t::array_minor_dim_t>::value==1) &&
-        (dims::rank_eval<typename sol_arr_t::array_major_dim_t>::value==0)
+        grid::has_centering_type<sol_arr_t, grid::cell_centered>
     static void source_term(const sol_arr_t& q, rhs_arr_t& rhs, const source_term_t& source_term_func)
     {
         typedef typename sol_arr_t::value_type real_type;

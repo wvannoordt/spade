@@ -93,6 +93,10 @@ namespace spade::ctrs
         
         dtype* begin() noexcept {return &data[0];}
         dtype* end()   noexcept {return &data[0]+ar_size;}
+
+        const dtype* begin() const noexcept {return &data[0];}
+        const dtype* end()   const noexcept {return &data[0]+ar_size;}
+
         constexpr static index_type size(void) {return ar_size;}
         
         self_type& self() { return *(static_cast<self_type*>(this)); }

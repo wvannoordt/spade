@@ -69,7 +69,7 @@ namespace spade::mem_map
     {
         constexpr static int rank()        {return detail::rank_sum_t<dims_t...>::value;}
         constexpr static int num_views()   {return sizeof...(dims_t);}
-        constexpr static int num_coeffs() {return detail::coeff_count_sum_t<dims_t...>::value;}
+        constexpr static int num_coeffs()  {return detail::coeff_count_sum_t<dims_t...>::value;}
         std::tuple<dims_t...> views;
         recti_view_t(){}
         recti_view_t(dims_t... views_in) : views(std::make_tuple(views_in...)) {}
@@ -378,4 +378,12 @@ namespace spade::mem_map
             return output + offset_base;
         }
     };
+
+    template <typename view_t> static constexpr std::size_t map_size(const view_t& view)
+    {
+        std::size_t out = 1;
+        const auto sizes = view.get_extent_array();
+        for (const auto p:sizes) out *= p;
+        return out;
+    }
 }

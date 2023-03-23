@@ -28,13 +28,14 @@ int main(int argc, char** argv)
     std::vector<real_t> dx_all;
     for (int l = 0; l < nx.size(); ++l)
     {
+        
         spade::ctrs::array<int, 3> cells_in_block(nx[l], nx[l], nx[l]);
         spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
         const auto dV = grid.get_dx(0)*grid.get_dx(1)*grid.get_dx(2);
+
         spade::grid::grid_array prim   (grid, pfill);
         spade::grid::grid_array rhs    (grid, ffill);
         spade::grid::grid_array rhs_ana(grid, ffill);
-        
         using grid_type = decltype(grid);
         
         enum syms {xs,ys,zs};
@@ -182,7 +183,6 @@ int main(int argc, char** argv)
         v_er_2_all.push_back(v_er_2);
         v_er_i_all.push_back(v_er_i);
     }
-    
     std::vector<decltype(ffill)> c_er_2_ord;
     std::vector<decltype(ffill)> c_er_i_ord;
     std::vector<decltype(ffill)> v_er_2_ord;
@@ -230,6 +230,5 @@ int main(int argc, char** argv)
         print(">> LInf:");
         for (auto oo: v_er_i_ord) print("  ", oo);
     }
-    
     return 0;
 }

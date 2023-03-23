@@ -176,7 +176,6 @@ namespace spade::io
             };
             
             if (num_node_centered_arrays>0) out_str << "POINT_DATA " << obj.get_range(grid::node_centered, grid::exclude_exchanges).size() << "\n";
-            // (output_array_data(arrays),...);
             utils::foreach_param(output_array_data, arrays...);
             current_centering = grid::cell_centered;
             if (num_cell_centered_arrays>0) out_str << "CELL_DATA "  << obj.get_range(grid::cell_centered, grid::exclude_exchanges).size() << "\n";
