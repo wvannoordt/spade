@@ -7,7 +7,7 @@ namespace spade::omni
     template <typename T> concept has_omni_interface = requires(T t)
     {
         //this may not be the best way to specify this
-        T::omni_type();
+        typename T::omni_type;
     };
 
     namespace detail
