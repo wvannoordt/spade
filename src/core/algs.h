@@ -53,14 +53,15 @@ namespace spade::algs
         const auto& grid = arr.get_grid();
         const auto nlb = grid.get_num_local_blocks();
 
-        const auto kernel = omni::to_omni(func);
+        const grid::array_centering ctr = array_t::centering_type();
+        const auto kernel = omni::to_omni<ctr>(func, arr);
         
         // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
         {
             const auto loop_func = [&](const auto& elem) -> void
             {
-                const auto data = invoke_at(func, arr, elem);
+                const auto data = invoke_at(arr, elem, kernel);
                 arr.set_elem(elem, data);
             };
             block_loop(arr, lb, loop_func, exchange_policy);

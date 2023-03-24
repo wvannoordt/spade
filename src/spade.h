@@ -11,7 +11,6 @@
 #include "core/grid.h"
 #include "core/grid_array.h"
 #include "core/exchange.h"
-#include "core/io.h"
 #include "core/parallel.h"
 #include "core/algs.h"
 #include "core/timing.h"
@@ -27,6 +26,8 @@
 
 #include "omni/omni.h"
 #include "omni/prefab.h"
+
+#include "io/io.h"
 
 #include "time-integration/explicit.h"
 #include "time-integration/integrator.h"

@@ -19,7 +19,7 @@ namespace spade::omni
                 const index_t& idx,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
-                out = array.get_grid.get_coords(idx);
+                out = array.get_grid().get_coords(idx);
             }
         };
     }

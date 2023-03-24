@@ -12,7 +12,7 @@ namespace spade::omni
 
     namespace detail
     {
-        template <typename index_t, typename kernel_t, typename info_data_t, typename... extracts_t>
+        template <typename kernel_t, typename info_data_t, typename... extracts_t>
         static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
         {
             if constexpr (requires {kernel(args...);})
@@ -21,19 +21,43 @@ namespace spade::omni
             }
             else
             {
-                return invoke_call(kernel, info_list, args..., info_list.data);
+                return invoke_call(kernel, info_list.next, args..., info_list.data);
             }
         }
     }
 
-    template <typename array_t, typename index_t, std::invocable<info::coord::array_data_type<array_t, index_t>> kernel_t> auto type_test(const kernel_t& k) {return info_list_t<info::coord>();}
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable<
+            info::coord::array_data_type<array_t, index_t::centering_type()>
+            > kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<info::coord>();
+    }
+
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable<
+            info::coord::array_data_type<array_t, index_t::centering_type()>,
+            info::index::array_data_type<array_t, index_t::centering_type()>
+            > kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<info::coord, info::index>();
+    }
 
     //converts a lambda to an omni object
     template <typename kernel_t, typename array_t, typename index_t>
     struct omni_lambda_wrapper_t
     {
         const kernel_t& kernel;
-        using omni_type = prefab::mono_t<index_t::centering_type(), decltype(type_test(kernel_t()))>;
+        using info_list_type = decltype(lamda_info_list(array_t(), index_t(), kernel));
+        using omni_type = stencil_t<index_t::centering_type(), elem_t<offset_t<0, 0, 0>, info_list_type>>;
         omni_lambda_wrapper_t(const kernel_t& kernel_in, const array_t&, const index_t&) : kernel{kernel_in}{}
         auto operator() (const auto& input_data) const
         {
@@ -42,9 +66,11 @@ namespace spade::omni
         }
     };
 
-    template <typename kernel_t> static auto to_omni(const kernel_t& func)
+    template <const grid::array_centering ctr, typename kernel_t, typename array_t> static auto to_omni(const kernel_t& func, const array_t& array)
     {
-        if constexpr (omni::has_omni_interface<kernel_t>) {return kernel;}
-        else { return omni::omni_lambda_wrapper_t(kernel, array, i); }
+        using index_type = grid::get_index_type<ctr>::array_type;
+        index_type i = 0;
+        if constexpr (omni::has_omni_interface<kernel_t>) {return func;}
+        else { return omni::omni_lambda_wrapper_t(func, array, i); }
     }
 }
