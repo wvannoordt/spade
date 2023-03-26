@@ -39,7 +39,8 @@ namespace spade::pde_algs
         const bound_box_t<bool,sol_arr_t::grid_type::dim()>& domain_boundary_flux,
         const flux_funcs_t&... flux_funcs)
     {
-        using real_type = sol_arr_t::value_type;
+        using real_type  = sol_arr_t::value_type;
+        using alias_type = sol_arr_t::alias_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
 
         auto block_range = range(0,ar_grid.get_num_local_blocks());
@@ -87,10 +88,19 @@ namespace spade::pde_algs
                     omni::retrieve(prims, iface, flux_data);
                     auto flux = flux_func(flux_data);
 
-                    for (int n = 0; n < flux.size(); ++n)
+                    //todo: fix this garbage
+                    if constexpr (ctrs::basic_array<alias_type>)
                     {
-                        rhs(n, il) -= jac_l*flux[n]/(dx);
-                        rhs(n, ir) += jac_r*flux[n]/(dx);
+                        for (int n = 0; n < flux.size(); ++n)
+                        {
+                            rhs(n, il) -= jac_l*flux[n]/(dx);
+                            rhs(n, ir) += jac_r*flux[n]/(dx);
+                        }
+                    }
+                    else
+                    {
+                        rhs(il) -= jac_l*flux/(dx);
+                        rhs(ir) += jac_r*flux/(dx);
                     }
                 }, flux_funcs...);
             }

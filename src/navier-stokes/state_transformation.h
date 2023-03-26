@@ -23,7 +23,7 @@ namespace spade::fluid_state
             {
                 // This is the worst thing in the whole universe,
                 // if you're an employer and you are seeing this then please realize that
-                // I was young and naive when I wrote this
+                // I was young and hopelessly naive when I wrote this
                 auto state = omni::access<omni::info::value>(input.template seek_element<centr>(0_c));
                 from_t& q = algs::unsafe_cast<from_t>(state);
                 to_t w;

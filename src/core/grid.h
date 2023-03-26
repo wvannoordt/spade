@@ -343,6 +343,7 @@ namespace spade::grid
                 ctrs::array<int, array_t::variable_map_type::rank()> vv = 0;
                 
                 //pack
+                
                 for (auto& neigh_edge: neighbors)
                 {
                     if (neigh_edge.rank_start==grid_group->rank())
@@ -400,12 +401,12 @@ namespace spade::grid
                                     (char*)(&(recv_buf_loc[recv_offset_loc])),
                                     (char*)(&(recv_buf_loc[recv_offset_loc]))+copy_size,
                                     (char*)(&array(vv,bounds.min(0),j,k,lb_loc)));
-                                    
                                 recv_offset_loc += copy_size;
                             }
                         }
                     }
                 }
+                
             }
             
             const partition::block_partition_t& get_partition(void) const { return grid_partition; }

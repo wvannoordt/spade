@@ -312,59 +312,71 @@ namespace spade::mem_map
         }
         
         template <
-            const int ar_idx,
-            const int coeff_idx,
-            const int dim_idx,
+            const int ar_idx,    //for the current provided index, what element are we currently concerned with?
+            const int coeff_idx, //What is the index of the coefficient to be multiplied?
+            const int dim_idx,   //Which dimension are we considering?
             typename offset_t,
             typename idx_t, typename... idxs_t>
         void rec_off_calc(offset_t& offset, const idx_t& idx, const idxs_t&... idxs) const
         {
-            const auto idx_val = [&]()->auto
+            constexpr bool skip_index = [&]()
             {
-                if constexpr (ctrs::basic_array<idx_t>) return idx[ar_idx];
-                else return idx;
+                if constexpr (ctrs::basic_array<idx_t>) { return (idx_t::size()==0); }
+                else { return false; }
             }();
-            
-            const auto& dim = get_dim_from_map<dim_idx>(mmap);
-            
-            //need to detect the current dimension somehow.
-            const int next_coeff = dim.num_coeffs();
-            
-            if constexpr(next_coeff == 1)
+            if constexpr (skip_index)
             {
-                //increment the offset according to a conventional index
-                offset += idx_val*i_coeff[coeff_idx];
+                rec_off_calc<0, coeff_idx, dim_idx>(offset, idxs...);
             }
             else
             {
-                const int idx_val_maj = (idx_val-dim.dim.start()) >> dim.exp();
-                const int idx_val_min = (idx_val-dim.dim.start()) & dim.mask();
-                //tiling logic
-                offset += idx_val_min*i_coeff[coeff_idx];
-                offset += idx_val_maj*i_coeff[coeff_idx+1];
-            }
-            
-            //logic for incrementing the
-            //coefficient index...
-            if constexpr (ctrs::basic_array<idx_t>)
-            {
-                if constexpr(ar_idx == idx_t::size()-1)
+                const auto idx_val = [&]()->auto
                 {
-                    if constexpr (sizeof...(idxs) > 0)
+                    if constexpr (ctrs::basic_array<idx_t>) return idx[ar_idx];
+                    else return idx;
+                }();
+                
+                const auto& dim = get_dim_from_map<dim_idx>(mmap);
+                
+                //need to detect the current dimension somehow.
+                const int next_coeff = dim.num_coeffs();
+                
+                if constexpr(next_coeff == 1)
+                {
+                    //increment the offset according to a conventional index
+                    offset += idx_val*i_coeff[coeff_idx];
+                }
+                else
+                {
+                    const int idx_val_maj = (idx_val-dim.dim.start()) >> dim.exp();
+                    const int idx_val_min = (idx_val-dim.dim.start()) & dim.mask();
+                    //tiling logic
+                    offset += idx_val_min*i_coeff[coeff_idx];
+                    offset += idx_val_maj*i_coeff[coeff_idx+1];
+                }
+                
+                //logic for incrementing the
+                //coefficient index...
+                if constexpr (ctrs::basic_array<idx_t>)
+                {
+                    if constexpr(ar_idx == idx_t::size()-1)
                     {
-                        rec_off_calc<0, coeff_idx+next_coeff, dim_idx+1>(offset, idxs...);
+                        if constexpr (sizeof...(idxs) > 0)
+                        {
+                            rec_off_calc<0, coeff_idx+next_coeff, dim_idx+1>(offset, idxs...);
+                        }
+                    }
+                    else
+                    {
+                        rec_off_calc<ar_idx+1, coeff_idx+next_coeff, dim_idx+1>(offset, idx, idxs...);
                     }
                 }
                 else
                 {
-                    rec_off_calc<ar_idx+1, coeff_idx+next_coeff, dim_idx+1>(offset, idx, idxs...);
-                }
-            }
-            else
-            {
-                if constexpr (sizeof...(idxs) > 0)
-                {
-                    rec_off_calc<0,coeff_idx+next_coeff, dim_idx+1>(offset, idxs...);
+                    if constexpr (sizeof...(idxs) > 0)
+                    {
+                        rec_off_calc<0,coeff_idx+next_coeff, dim_idx+1>(offset, idxs...);
+                    }
                 }
             }
         }
