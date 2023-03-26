@@ -108,7 +108,7 @@ namespace spade::time_integration
             
             //Evaluate the residual at t + c*dt
             axis.time() += time_coeff*dt;
-            boundary(sol, axis.time());
+            if constexpr (i > 0) boundary(sol, axis.time());
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });
@@ -139,7 +139,7 @@ namespace spade::time_integration
                 resid /= (coeff*dt);
             }
         });
-        
+
         axis.time() += dt;
         boundary(new_solution, axis.time());
     }

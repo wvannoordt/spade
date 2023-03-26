@@ -16,14 +16,13 @@ compflags += -DMPI_ENABLE=${MPI_ENABLE}
 sanny := 0
 
 flags :=
-# flags += -fconcepts-diagnostics-depth=3 -ftemplate-depth=20 -ftemplate-backtrace-limit=0
 flags += -fconcepts-diagnostics-depth=3
 ifeq (${sanny},1)
 flags += -fsanitize=undefined,address -fstack-protector-all
 endif
 
 main:
-	${cc} -std=c++20 -O3 ${flags} ${compflags} -I${SPADE} main.cc -o ${target}
+	${cc} -std=c++20 -O3 ${flags} ${compflags} -I${SPADE} -I${SYMD}/src main.cc -o ${target}
 
 run: main
 	./${target}

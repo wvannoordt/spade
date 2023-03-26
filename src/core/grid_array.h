@@ -223,7 +223,7 @@ namespace spade::grid
             return std::get<1>(mem_view.mmap.views);
         }
 
-        std::size_t cell_element_size() {return mem_map::map_size(var_map());}
+        std::size_t cell_element_size() const {return mem_map::map_size(var_map());}
 
         grid_array(){}
         grid_array(
