@@ -148,6 +148,10 @@ namespace spade::pde_algs
     {
         typedef typename sol_arr_t::value_type real_type;
         const grid::multiblock_grid auto& ar_grid = rhs.get_grid();
+
+        const grid::array_centering ctr = sol_arr_t::centering_type();
+        const auto kernel = omni::to_omni<ctr>(source_term_func, q);
+
         auto grid_range = ar_grid.get_range(sol_arr_t::centering_type(), grid::exclude_exchanges);
         for (auto idx: grid_range)
         {
@@ -156,10 +160,15 @@ namespace spade::pde_algs
             i.j()  = idx[1];
             i.k()  = idx[2];
             i.lb() = idx[3];
-            const ctrs::array<real_type,3> xc = ar_grid.get_comp_coords(i);
+            const auto xc = ar_grid.get_comp_coords(i);
             const real_type jac = coords::calc_jacobian(ar_grid.coord_sys(), xc, i);
-            
-            const ctrs::basic_array auto source_term = detail::eval_source_term(i, q, source_term_func);
+            using kernel_t    = decltype(kernel);
+            using omni_type   = utils::remove_all<kernel_t>::type::omni_type;
+            using input_type  = omni::stencil_data_t<omni_type, sol_arr_t>;
+
+            input_type source_data;
+            omni::retrieve(q, i, source_data);
+            auto source_term = kernel(source_data);
             for (auto n: range(0, source_term.size()))
             {
                 rhs(n, i[0], i[1], i[2], i[3])+=source_term[n]/jac;

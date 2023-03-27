@@ -109,7 +109,8 @@ namespace spade::proto
                 
                 auto xc = grid.get_coords(ijk);
                 auto xf = grid.get_coords(ijkF);
-                auto dx = xc-xf;
+                auto dx = xc;
+                dx -= xf;
                 auto dist = std::sqrt(dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2]);
                 in_dist[n]     = dist;
                 in_x[n]        = xf[0];

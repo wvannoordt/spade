@@ -45,23 +45,23 @@ namespace spade::convective
         
         const gas_t& gas;
     };
-    /*
+    
     template <fluid_state::state_dependent_gas gas_t> struct pressure_diss_lr
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        typedef standard_lr_input_type<dtype> input_type;
+        using omni_type = omni::prefab::lr_t<omni::info::value, omni::info::metric>;
         
         pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_p_in;}
         pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in, const dtype& eps_T_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_T_in;}
         
-        output_type calc_flux(const input_type& input) const
+        output_type operator() (const auto& input) const
         {
             output_type output;
-            const auto& ql       = std::get<0>(input.cell_data.left.elements).data;
-            const auto& qr       = std::get<0>(input.cell_data.right.elements).data;
-            const auto& normal_l = std::get<1>(input.cell_data.left.elements).data;
-            const auto& normal_r = std::get<1>(input.cell_data.right.elements).data;
+            const auto& ql       = omni::access<omni::info::value >(input.cell(0_c));
+            const auto& qr       = omni::access<omni::info::value >(input.cell(1_c));
+            const auto& normal_l = omni::access<omni::info::metric>(input.cell(0_c));
+            const auto& normal_r = omni::access<omni::info::metric>(input.cell(1_c));
             
             const dtype delta_p = ql.p()-qr.p();
             const dtype delta_T = ql.T()-qr.T();
@@ -93,6 +93,7 @@ namespace spade::convective
         dtype eps_p, eps_T;
     };
     
+    /*
     template <fluid_state::state_dependent_gas gas_t> struct weno_3
     {
         typedef typename gas_t::value_type dtype;
