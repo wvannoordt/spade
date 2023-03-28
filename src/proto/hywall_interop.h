@@ -27,6 +27,7 @@ namespace spade::proto
         std::vector<ctrs::v3d<coord_type>> wm_tvec;
         std::size_t num_points;
         const gas_t* gas;
+        const array_t::grid_type::group_type& group;
         
         std::vector<real_t> in_prims;
         
@@ -50,6 +51,7 @@ namespace spade::proto
         using state_t = typename array_t::alias_type;
         
         hywall_binding_t(const array_t& prim_in, const rhs_t& rhs, const gas_t& gas_in)
+        : group{prim_in.get_grid().group()}
         {
             gas = &gas_in;
             HyWall::Initialize(prim_in.get_grid().group().get_channel(), 0);
@@ -90,7 +92,7 @@ namespace spade::proto
                         auto rg2 = range(cell_box.min(2), cell_box.max(2));
                         for (auto i: rg0*rg1*rg2)
                         {
-                            const int sampl_dist = 3;
+                            const int sampl_dist = 6;
                             grid::cell_idx_t ijk(i[0], i[1], i[2], lb_loc);
                             grid::face_idx_t ijkf = grid::cell_to_face(ijk, xyz, pm);
                             wm_faces.push_back(ijkf);
@@ -169,6 +171,25 @@ namespace spade::proto
             out_fail.resize(num_points);
             wm_tvec.resize(num_points);
         }
+
+        real_t avg(const auto& vec) const
+        {
+            std::size_t num = group.sum(vec.size());
+            real_t sum = 0.0;
+            for (const auto& p: vec) sum += p;
+            sum = group.sum(sum);
+            return sum/num;
+        }
+
+        real_t mean_tau() const
+        {
+            return this->avg(out_tau);
+        }
+
+        real_t mean_qw () const
+        {
+            return this->avg(out_qw);
+        }
         
         std::size_t size() const {return num_points;}
         
@@ -224,7 +245,7 @@ namespace spade::proto
             HyWall::Solve();
         }
         
-        void apply_flux(rhs_t& rhs)
+        void apply_flux(rhs_t& rhs) const
         {
             if (this->size() == 0) return;
             for (auto n: range(0, wm_faces.size()))
