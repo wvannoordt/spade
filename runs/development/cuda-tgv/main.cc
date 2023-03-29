@@ -99,7 +99,9 @@ int main(int argc, char** argv)
     //AIAA Journal, 53 (9), 2750–2761. https://doi.org/10.2514/1.J053766
     
     //define the initial condition
-    auto ini = [&](const spade::ctrs::array<real_t, 3> x) -> prim_t
+    using point_type = decltype(grid)::coord_point_type;
+    // auto ini = [&](const point_type& x) -> prim_t
+    auto ini = [&](const spade::coords::point_t<real_t>& x) -> prim_t
     {
         prim_t output;
         output.p() = p0 + rho0*u0*u0*(std::cos(2*x[0]/L) + std::cos(2*x[1]/L))*(std::cos(2*x[2]/L) + 2.0);
@@ -109,8 +111,10 @@ int main(int argc, char** argv)
         output.w() = 0.0;
         return output;
     };
+
     //fill the initial condition
     spade::algs::fill_array(prim, ini);
+    /*
     
     //fill the guards
     grid.exchange_array(prim);
@@ -125,11 +129,11 @@ int main(int argc, char** argv)
     }
     
     //using the 2nd-order centered KEEP scheme
-    spade::convective::totani_lr        tscheme(air);
+    spade::convective::totani_lr tscheme(air);
     
     //viscous scheme
     const real_t visc = rho0*u0*L/reynolds;
-    spade::viscous_laws::constant_viscosity_t<real_t> visc_law(visc, prandtl);
+    spade::viscous_laws::constant_viscosity_t visc_law(visc, prandtl, air);
     spade::viscous::visc_lr  vscheme(visc_law);
     
     if (group.isroot())
@@ -160,20 +164,24 @@ int main(int argc, char** argv)
     
     
     //calculate timestep
-    real_t time0 = 0.0;
-    const real_t dx = spade::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
+    real_t time0          = 0.0;
+    const real_t dx       = spade::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
-    const real_t dt     = targ_cfl*dx/umax_ini;
+    const real_t dt       = targ_cfl*dx/umax_ini;
     
     //define the conservative variable transformation
     cons_t transform_state;
     spade::fluid_state::state_transform_t trans(transform_state, air);
     
+    auto bc = [&](auto& q, const auto& t)
+    {
+        grid.exchange_array(q);
+    };
+    
     //define the residual calculation
-    auto calc_rhs = [&](auto& rhs_in, auto& q, const auto& t) -> void
+    auto calc_rhs = [&](auto& rhs_in, const auto& q, const auto& t) -> void
     {
         rhs_in = 0.0;
-        grid.exchange_array(q);
         //compute the convective terms
         spade::pde_algs::flux_div(q, rhs_in, tscheme, vscheme);
     };
@@ -182,10 +190,10 @@ int main(int argc, char** argv)
     spade::time_integration::time_axis_t axis(time0, dt);
     spade::time_integration::rk4_t alg;
     spade::time_integration::integrator_data_t q(prim, rhs, alg);
-    spade::time_integration::integrator_t time_int(axis, alg, q, calc_rhs, trans);
+    spade::time_integration::integrator_t time_int(axis, alg, q, calc_rhs, bc, trans);
     
     
-    spade::utils::mtimer_t tmr("advance");
+    spade::timing::mtimer_t tmr("advance");
     
     //time loop
     for (auto nt: range(0, nt_max+1))
@@ -248,5 +256,6 @@ int main(int argc, char** argv)
             return 155;
         }
     }
+    */
     return 0;
 }

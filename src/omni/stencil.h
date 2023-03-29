@@ -35,10 +35,9 @@ namespace spade::omni
             const int ii,
             const grid::array_centering ctr,
             const grid::array_centering query,
-            typename idx_elem_t,
-            typename... idx_list_t
+            typename idx_elem_t
         >
-        struct node_count_helper_t<ii-1, ii, ctr, query, idx_elem_t, idx_list_t...>
+        struct node_count_helper_t<ii-1, ii, ctr, query, idx_elem_t>
         {
             constexpr static int value = icount_t<ctr, query, idx_elem_t>::value;
         };
@@ -70,5 +69,6 @@ namespace spade::omni
         constexpr static int num_face() {return count_type<grid::face_centered>;}
         constexpr static int num_cell() {return count_type<grid::cell_centered>;}
         constexpr static int num_node() {return count_type<grid::node_centered>;}
+        constexpr static int num_edge() {return count_type<grid::edge_centered>;}
     };
 }

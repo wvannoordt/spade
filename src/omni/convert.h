@@ -13,16 +13,16 @@ namespace spade::omni
     namespace detail
     {
         template <typename kernel_t, typename info_data_t, typename... extracts_t>
+        requires(std::invocable<kernel_t, extracts_t...>)
         static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
         {
-            if constexpr (requires {kernel(args...);})
-            {
-                return kernel(args...);
-            }
-            else
-            {
-                return invoke_call(kernel, info_list.next, args..., info_list.data);
-            }
+            return kernel(args...);
+        }
+
+        template <typename kernel_t, typename info_data_t, typename... extracts_t>
+        static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+        {
+            return invoke_call(kernel, info_list.next, args..., info_list.data);
         }
     }
 

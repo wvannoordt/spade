@@ -2,6 +2,18 @@
 
 namespace spade::omni
 {
+    // template <typename array_t, typename index_t, typename direction_t, typename data_t>
+    // void invoke_compute(const array_t& array, const index_t& idx, const direction_t& direction, data_t&)
+    // {
+    //     info_type::compute(array, idx, direction, info_list_data.data);
+    // }
+
+    // template <typename array_t, typename index_t, typename direction_t, typename data_t>
+    // void invoke_compute(const array_t& array, const index_t& idx, const direction_t& direction, data_t&)
+    // {
+    //     info_type::compute(array, idx, direction, info_list_data.data);
+    // }
+
     template <typename index_t, typename array_t, typename direction_t, typename stencil_data_t>
     void retrieve_impl(const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
     {
