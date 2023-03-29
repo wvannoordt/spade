@@ -54,6 +54,11 @@ namespace spade::grid
         const int& j () const {return (*this)[j_idx];}
         const int& k () const {return (*this)[k_idx];}
         const int& lb() const {return (*this)[lb_idx];}
+
+        bool operator == (const cell_idx_t& rhs) const
+        {
+            return (i() == rhs.i()) && (j() == rhs.j()) && (k() == rhs.k()) && (lb() == rhs.lb());
+        }
     };
     
     struct face_idx_t : public ctrs::arithmetic_array_t<int, 5, face_idx_t>
@@ -81,6 +86,11 @@ namespace spade::grid
         const int& j  () const {return (*this)[j_idx];}
         const int& k  () const {return (*this)[k_idx];}
         const int& lb () const {return (*this)[lb_idx];}
+
+        bool operator == (const face_idx_t& rhs) const
+        {
+            return (i() == rhs.i()) && (j() == rhs.j()) && (k() == rhs.k()) && (lb() == rhs.lb()) && (dir() == rhs.dir());
+        }
     };
     
     struct edge_idx_t : public ctrs::arithmetic_array_t<int, 5, edge_idx_t>

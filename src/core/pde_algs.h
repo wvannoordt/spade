@@ -87,7 +87,7 @@ namespace spade::pde_algs
                     input_type flux_data;
                     omni::retrieve(prims, iface, flux_data);
                     auto flux = flux_func(flux_data);
-
+                    
                     //todo: fix this garbage
                     if constexpr (ctrs::basic_array<alias_type>)
                     {
