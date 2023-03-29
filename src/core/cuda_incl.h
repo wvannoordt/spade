@@ -1,11 +1,19 @@
 #pragma once
 
 #ifdef __NVCC__
-#define _sp_cuda_ 1
+#define _spade_cuda_ 1
 #else
-#define _sp_cuda_ 0
+#define _spade_cuda_ 0
 #endif
 
-#if (_sp_cuda_)
+#if (_spade_cuda_)
+
+#define _spade_device_ __device__
+#define _spade_hybrid_ __host__ __device__
+
+#else
+
+#define _spade_device_
+#define _spade_hybrid_
 
 #endif

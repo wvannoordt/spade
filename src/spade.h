@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/cuda_incl.h"
 #include "core/config.h"
 #include "core/typedef.h"
 #include "core/consts.h"

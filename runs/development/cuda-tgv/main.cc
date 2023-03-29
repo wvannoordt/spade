@@ -114,7 +114,6 @@ int main(int argc, char** argv)
 
     //fill the initial condition
     spade::algs::fill_array(prim, ini);
-    /*
     
     //fill the guards
     grid.exchange_array(prim);
@@ -256,6 +255,6 @@ int main(int argc, char** argv)
             return 155;
         }
     }
-    */
+
     return 0;
 }
