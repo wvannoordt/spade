@@ -72,6 +72,8 @@ namespace spade::grid
             using coord_type       = coord_t::coord_type;
             using coord_sys_type   = coord_t;
             using coord_point_type = coords::point_t<coord_type>;
+            using group_type       = par_group_t;
+
             constexpr static std::size_t grid_dim = array_descriptor_t::size();
             
             cartesian_grid_t(
