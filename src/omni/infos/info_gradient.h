@@ -8,8 +8,9 @@ namespace spade::omni
     {
         struct gradient : public info_base<gradient> // floating-point types only, and need to be able to specify the order-of-accuracy later
         {
-            constexpr static bool supports_undirected = true;
-            constexpr static bool supports_directed   = true;
+
+            constexpr static bool requires_direction = false;
+            
             template <typename array_t, const grid::array_centering center>
             using array_data_type
             = ctrs::array<typename array_t::alias_type, array_t::grid_type::coord_point_type::size()>;

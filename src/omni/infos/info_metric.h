@@ -8,8 +8,8 @@ namespace spade::omni
     {
         struct metric : public info_base<metric>
         {
-            constexpr static bool supports_undirected = false;
-            constexpr static bool supports_directed   = true;
+            constexpr static bool requires_direction = true;
+
             template <typename array_t, const grid::array_centering center>
             using array_data_type = ctrs::array<typename array_t::grid_type::coord_type,3>;
             

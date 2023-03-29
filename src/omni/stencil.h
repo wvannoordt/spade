@@ -18,8 +18,6 @@ namespace spade::omni
         
         template
         <
-            const int idx,
-            const int ar_size,
             const grid::array_centering ctr,
             const grid::array_centering query,
             typename idx_elem_t,
@@ -27,17 +25,16 @@ namespace spade::omni
         >
         struct node_count_helper_t
         {
-            constexpr static int value = icount_t<ctr, query, idx_elem_t>::value + node_count_helper_t<idx+1, ar_size, ctr, query, idx_list_t...>::value;
+            constexpr static int value = icount_t<ctr, query, idx_elem_t>::value + node_count_helper_t<ctr, query, idx_list_t...>::value;
         };
         
         template
         <
-            const int ii,
             const grid::array_centering ctr,
             const grid::array_centering query,
             typename idx_elem_t
         >
-        struct node_count_helper_t<ii-1, ii, ctr, query, idx_elem_t>
+        struct node_count_helper_t<ctr, query, idx_elem_t>
         {
             constexpr static int value = icount_t<ctr, query, idx_elem_t>::value;
         };
@@ -64,7 +61,7 @@ namespace spade::omni
         constexpr static grid::array_centering center() { return center_val; }
         
         template <const grid::array_centering ctr>
-        static constexpr int count_type = detail::node_count_helper_t<0, sizeof...(idx_list_t), center_val, ctr, idx_list_t...>::value;
+        static constexpr int count_type = detail::node_count_helper_t<center_val, ctr, idx_list_t...>::value;
         
         constexpr static int num_face() {return count_type<grid::face_centered>;}
         constexpr static int num_cell() {return count_type<grid::cell_centered>;}

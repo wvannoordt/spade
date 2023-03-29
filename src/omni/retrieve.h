@@ -1,18 +1,21 @@
 #pragma once
 
+#include "omni/info.h"
+
 namespace spade::omni
 {
-    // template <typename array_t, typename index_t, typename direction_t, typename data_t>
-    // void invoke_compute(const array_t& array, const index_t& idx, const direction_t& direction, data_t&)
-    // {
-    //     info_type::compute(array, idx, direction, info_list_data.data);
-    // }
+    template <typename info_t, typename array_t, typename index_t, typename direction_t, typename data_t>
+    requires (info_t::requires_direction)
+    void invoke_compute(const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
+    {
+        info_t::compute(array, index, direction, data);
+    }
 
-    // template <typename array_t, typename index_t, typename direction_t, typename data_t>
-    // void invoke_compute(const array_t& array, const index_t& idx, const direction_t& direction, data_t&)
-    // {
-    //     info_type::compute(array, idx, direction, info_list_data.data);
-    // }
+    template <typename info_t, typename array_t, typename index_t, typename direction_t, typename data_t>
+    void invoke_compute(const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
+    {
+        info_t::compute(array, index, data);
+    }
 
     template <typename index_t, typename array_t, typename direction_t, typename stencil_data_t>
     void retrieve_impl(const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
@@ -31,16 +34,8 @@ namespace spade::omni
                 const int j = jj.value;
                 auto& info_list_data = detail::get_info_list_data_at<j,0>(info_list);
                 using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-                
-                // compute the requisite information
-                if constexpr (requires{info_type::compute(array, idx, direction, info_list_data.data);})
-                {
-                    info_type::compute(array, idx, direction, info_list_data.data);
-                }
-                else
-                {
-                    info_type::compute(array, idx, info_list_data.data);
-                }
+                constexpr bool use_dir = requires{info_type::compute(array, idx, direction, info_list_data.data);};
+                invoke_compute<info_type>(array, idx, direction, info_list_data.data);
             });
         });
     }

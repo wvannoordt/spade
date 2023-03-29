@@ -8,8 +8,8 @@ namespace spade::omni
     {
         struct normal : public info_base<normal> // only supported at locations centered at faces, expressed in index space
         {
-            constexpr static bool supports_undirected = false;
-            constexpr static bool supports_directed   = true;
+            constexpr static bool requires_direction = true;
+            
             template <typename array_t, const grid::array_centering center>
             using array_data_type = ctrs::array<int, array_t::grid_type::coord_point_type::size()>;
             
