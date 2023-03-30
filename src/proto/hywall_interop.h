@@ -26,6 +26,7 @@ namespace spade::proto
         std::vector<ctrs::v3d<coord_type>> wm_nvec_comps;
         std::vector<ctrs::v3d<coord_type>> wm_tvec;
         std::size_t num_points;
+        real_t dx;
         const gas_t* gas;
         const array_t::grid_type::group_type& group;
         
@@ -55,6 +56,7 @@ namespace spade::proto
         {
             gas = &gas_in;
             HyWall::Initialize(prim_in.get_grid().group().get_channel(), 0);
+            dx = prim_in.get_grid().get_dx(1);
         }
         
         void read(PTL::PropertySection& input_section)
@@ -253,13 +255,20 @@ namespace spade::proto
                 auto ijkF = wm_faces[n];
                 auto ijk_l = grid::face_to_cell(ijkF, 0);
                 auto ijk_r = grid::face_to_cell(ijkF, 1);
+
+                fluid_state::flux_t<real_t> flux;
+                flux.continuity() = 0.0;
+                flux.energy()     = -out_qw[n] *wm_nvec_comps[n][1];
+                flux.x_momentum() =  out_tau[n]*wm_tvec[n][0]*wm_nvec_comps[n][1];
+                flux.y_momentum() =  0.0;
+                flux.z_momentum() =  out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
+
                 //This is correct
-                rhs(2, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) += out_tau[n]*wm_tvec[n][0]*wm_nvec_comps[n][1];
-                rhs(2, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) -= out_tau[n]*wm_tvec[n][0]*wm_nvec_comps[n][1];
-                rhs(4, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) += out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
-                rhs(4, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) -= out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
-                rhs(1, ijk_l[0], ijk_l[1], ijk_l[2], ijk_l[3]) -= out_qw[n]*wm_nvec_comps[n][1];
-                rhs(1, ijk_r[0], ijk_r[1], ijk_r[2], ijk_r[3]) += out_qw[n]*wm_nvec_comps[n][1];
+                for (int iii = 0; iii < flux.size(); ++iii)
+                {
+                    rhs(iii, ijk_l) += flux[iii]/dx;
+                    rhs(iii, ijk_r) -= flux[iii]/dx;
+                }
             }
         }
         
