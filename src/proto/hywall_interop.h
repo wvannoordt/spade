@@ -26,6 +26,7 @@ namespace spade::proto
         std::vector<ctrs::v3d<coord_type>> wm_nvec_comps;
         std::vector<ctrs::v3d<coord_type>> wm_tvec;
         std::size_t num_points;
+        int sampling_distance;
         real_t dx;
         const gas_t* gas;
         const array_t::grid_type::group_type& group;
@@ -51,8 +52,8 @@ namespace spade::proto
         
         using state_t = typename array_t::alias_type;
         
-        hywall_binding_t(const array_t& prim_in, const rhs_t& rhs, const gas_t& gas_in)
-        : group{prim_in.get_grid().group()}
+	  hywall_binding_t(const array_t& prim_in, const rhs_t& rhs, const gas_t& gas_in, const int& sampling_distance_in)
+        : group{prim_in.get_grid().group()}, sampling_distance{sampling_distance_in}
         {
             gas = &gas_in;
             HyWall::Initialize(prim_in.get_grid().group().get_channel(), 0);
@@ -94,7 +95,7 @@ namespace spade::proto
                         auto rg2 = range(cell_box.min(2), cell_box.max(2));
                         for (auto i: rg0*rg1*rg2)
                         {
-                            const int sampl_dist = 6;
+                            const int sampl_dist = sampling_distance;
                             grid::cell_idx_t ijk(i[0], i[1], i[2], lb_loc);
                             grid::face_idx_t ijkf = grid::cell_to_face(ijk, xyz, pm);
                             wm_faces.push_back(ijkf);
