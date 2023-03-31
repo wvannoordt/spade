@@ -263,7 +263,7 @@ namespace spade::proto
                 flux.y_momentum() =  0.0;
                 flux.z_momentum() =  out_tau[n]*wm_tvec[n][2]*wm_nvec_comps[n][1];
 
-                //This is correct
+                //This is correct 2023-03-30
                 for (int iii = 0; iii < flux.size(); ++iii)
                 {
                     rhs(iii, ijk_l) += flux[iii]/dx;
