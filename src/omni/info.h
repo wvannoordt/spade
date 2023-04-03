@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "core/grid_index_types.h"
 #include "core/utils.h"
 #include "core/grid.h"
@@ -25,8 +27,8 @@ namespace spade::omni
     struct info_list_t
     {
         constexpr static int num_infos() {return sizeof...(infos_t);}
-
-        template <const int idx>
-        using info_elem = typename utils::get_pack_type<idx, infos_t...>::type;
+        template <typename info_t> constexpr static bool contains = (std::same_as<info_t, infos_t> || ...);
+        template <const int idx>   using info_elem = typename utils::get_pack_type<idx, infos_t...>::type;
+        template <typename add_t>  using expand_list = info_list_t<infos_t..., add_t>;
     };
 }
