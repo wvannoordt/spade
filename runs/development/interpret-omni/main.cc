@@ -115,8 +115,6 @@ int main(int argc, char** argv)
         return output;
     });
 
-    spade::io::output_vtk("temp", "io", prim);
-
     //The two stencils disagree on the definition of c0, so when we union the stencils, things run amok
     using ou_t = spade::omni::stencil_union<o1_t, o2_t>;
 
