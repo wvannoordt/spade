@@ -14,7 +14,7 @@ namespace spade::omni
             using query_info_t         = typename element_t::info_type;
 
             constexpr static bool s1_has_element = stencil1_t::template contains_at<query_offset_t>;
-            using true_t                         = stencil_insert_at<stencil1_t, query_offset_t, query_info_t>; //something compilicated
+            using true_t                         = stencil_insert_at<stencil1_t, query_offset_t, query_info_t>;
             using false_t                        = stencil1_t::template extend<elem_t<query_offset_t, query_info_t>>;
             using merged_t                       = typename std::conditional<s1_has_element, true_t, false_t>::type;
             using type                           = typename stencil_union_t<merged_t, stencil2_t, remaining-1>::type;

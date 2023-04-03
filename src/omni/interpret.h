@@ -7,6 +7,5 @@
 
 namespace spade::omni
 {
-    // todo
-    // template <>
+    
 }
