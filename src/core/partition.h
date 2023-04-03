@@ -21,6 +21,8 @@ namespace spade::partition
                 num_local_blocks = total_blocks/group_in->size();
                 if (group_in->rank() < (total_blocks%group_in->size())) num_local_blocks++;
                 local_block_to_global_block.resize(num_local_blocks);
+
+                //the sign change from the -1 is intentional
                 global_block_to_local_block.resize(total_blocks,-1);
                 global_block_to_rank.resize(total_blocks);
                 std::size_t current_rank = 0;

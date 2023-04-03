@@ -11,7 +11,7 @@ cc := $(shell which g++)
 endif
 
 ifndef use_cuda
-use_cuda := 1
+use_cuda := 0
 endif
 
 ifeq (${use_cuda},1)

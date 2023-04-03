@@ -58,6 +58,93 @@ int main(int argc, char** argv)
     print(o1_inf_t::contains<met_t>, o2_inf_t::contains<met_t>, o3_inf_t::contains<met_t>, "->", ou_inf_t::contains<met_t>);
     print(o1_inf_t::contains<nor_t>, o2_inf_t::contains<nor_t>, o3_inf_t::contains<nor_t>, "->", ou_inf_t::contains<nor_t>);
 
+    {
+        using stencil1_t = spade::omni::stencil_t<spade::grid::face_centered, spade::omni::elem_t<spade::omni::offset_t<0,0,0>, spade::omni::info_list_t<val_t>>>;
+        using stencil2_t = spade::omni::stencil_t<spade::grid::face_centered, spade::omni::elem_t<spade::omni::offset_t<0,0,0>, spade::omni::info_list_t<gra_t, met_t, val_t>>>;
+        using stu_t = spade::omni::stencil_union<stencil1_t, stencil2_t>;
+        print("test 1");
+        print_type(stu_t());
+    }
+
+    {
+        using stencil1_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,13>, spade::omni::info_list_t<val_t, met_t>>
+        >;
+        using stencil2_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<2,0,0>,   spade::omni::info_list_t<val_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,   spade::omni::info_list_t<val_t, gra_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,-10,0>, spade::omni::info_list_t<val_t>>
+        >;
+        using stu_t = spade::omni::stencil_union<stencil1_t, stencil2_t>;
+        print("test 2");
+        print_type(stu_t());
+    }
+
+    {
+        using stencil1_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,13>, spade::omni::info_list_t<val_t, met_t>>
+        >;
+        using stu_t = spade::omni::stencil_union<stencil1_t, stencil1_t>;
+        print("test 3");
+        print_type(stu_t());
+        print(std::same_as<stencil1_t, stu_t>);
+        print(std::same_as<stencil1_t, spade::omni::stencil_union<stencil1_t>>);
+    }
+
+    {
+        using stencil1_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,13>, spade::omni::info_list_t<val_t, met_t>>
+        >;
+
+        using stencil2_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,13>, spade::omni::info_list_t<val_t, met_t>>
+        >;
+
+        using stencil3_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t, met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,13>, spade::omni::info_list_t<val_t, met_t>>
+        >;
+
+        using stu_t = spade::omni::stencil_union<stencil1_t, stencil2_t, stencil3_t>;
+        print("test 4");
+        print_type(stu_t());
+        print(std::same_as<stu_t, stencil1_t>);
+        print(std::same_as<stu_t, stencil2_t>);
+        print(std::same_as<stu_t, stencil3_t>);
+    }
+
+    {
+        using stencil1_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<val_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,1>,  spade::omni::info_list_t<val_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,2>,  spade::omni::info_list_t<val_t>>
+        >;
+
+        using stencil2_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<1,0,1>,  spade::omni::info_list_t<met_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,2>,  spade::omni::info_list_t<met_t>>
+        >;
+
+        using stencil3_t = spade::omni::stencil_t<spade::grid::face_centered,
+            spade::omni::elem_t<spade::omni::offset_t<0,0,0>,  spade::omni::info_list_t<gra_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<1,0,1>,  spade::omni::info_list_t<gra_t>>,
+            spade::omni::elem_t<spade::omni::offset_t<0,2,0>,  spade::omni::info_list_t<gra_t>>
+        >;
+
+        using stu_t = spade::omni::stencil_union<stencil1_t, stencil2_t, stencil3_t>;
+        print("test 5");
+        print_type(stu_t());
+    }
 
     return 0;
 }
