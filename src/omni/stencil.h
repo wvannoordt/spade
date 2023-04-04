@@ -95,8 +95,73 @@ namespace spade::omni
         {
             using type = accum_t;
         };
+
+        //There is almost certainly a better way of doing this
+        template <typename istencil_t, const grid::array_centering ctr, const int idx, const int found, const int remaining>
+        struct stencil_seek_offset_impl
+        {
+            static_assert(idx < istencil_t::template count_type<ctr>, "seek index must not exceed the number of elements on stencil");
+            constexpr static int query_idx = istencil_t::num_elements() - remaining;
+            //if the centering of the query element matches the centering being sought, but not right index
+            using match_type   = typename stencil_seek_offset_impl<istencil_t, ctr, idx, found+1, remaining-1>::type;
+
+            //if the centering of the query element doesn't match the centering being sought
+            using nomatch_type = typename stencil_seek_offset_impl<istencil_t, ctr, idx, found,   remaining-1>::type;
+
+            using element_type                = istencil_t::template stencil_element<query_idx>;
+            using offset_type                 = typename element_type::position_type;
+
+            constexpr static grid::array_centering query_centering 
+                = offset_type::template relative_node_centering<istencil_t::center()>;
+
+            constexpr static bool center_match = (ctr == query_centering);
+            constexpr static bool total_match  = center_match && (found == idx);
+
+            using next_type = typename std::conditional<center_match, match_type, nomatch_type>::type;
+            using end_type  = offset_type;
+            using type = typename std::conditional<total_match, end_type, next_type>::type;
+        };
+
+        template <typename istencil_t, const grid::array_centering ctr, const int idx, const int found>
+        struct stencil_seek_offset_impl<istencil_t, ctr, idx, found, 0>
+        {
+            //invalid, never realized thanks to the static_assert in the general case
+            using type = int;
+        };
     }
 
     template <typename istencil_t, typename cur_offset_t, typename new_info_list_t> using stencil_insert_at
         = typename detail::sten_insert_list_impl<istencil_t, cur_offset_t, new_info_list_t, istencil_t::num_elements(), stencil_t<istencil_t::center()>>::type;
+
+    template <typename istencil_t, const grid::array_centering ctr, const int idx> using offset_at
+        = typename detail::stencil_seek_offset_impl<istencil_t, ctr, idx, 0, istencil_t::num_elements()>::type;
+    
+    namespace detail
+    {
+        // This is one of the worst implementations I have ever constructed. If the compiler melts a machine,
+        // It could very well be this implementation
+        template <typename istencil_t, const grid::array_centering ctr, typename offset_query_t, const int tsize, const int remaining>
+        struct stencil_index_of_offset_impl
+        {
+            constexpr static int idx    = istencil_t::template count_type<ctr> - remaining;
+            using elem_offset_type      = offset_at<istencil_t, ctr, idx>;
+            constexpr static bool found = std::same_as<offset_query_t, elem_offset_type>;
+            constexpr static int value  = found ? idx : stencil_index_of_offset_impl<istencil_t, ctr, offset_query_t, tsize, remaining-1>::value;
+        };
+
+        template <typename istencil_t, const grid::array_centering ctr, typename offset_query_t, const int tsize>
+        struct stencil_index_of_offset_impl<istencil_t, ctr, offset_query_t, tsize, 0>
+        {
+            constexpr static int value  = -1;
+        };
+    }
+
+    template <typename istencil_t, typename offset_query_t> constexpr static int index_of
+        = detail::stencil_index_of_offset_impl<
+            istencil_t,
+            offset_query_t::template relative_node_centering<istencil_t::center()>,
+            offset_query_t,
+            istencil_t::template count_type<offset_query_t::template relative_node_centering<istencil_t::center()>>,
+            istencil_t::template count_type<offset_query_t::template relative_node_centering<istencil_t::center()>>
+            >::value;
 }

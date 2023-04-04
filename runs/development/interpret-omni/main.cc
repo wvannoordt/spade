@@ -125,11 +125,11 @@ int main(int argc, char** argv)
 
     // print_type(ou_t());
     print("==========================================");
-    print_type(d1_t());
+    print_type(o1_t());
     print("==========================================");
-    print_type(d2_t());
+    print_type(o2_t());
     print("==========================================");
-    print_type(du_t());
+    print_type(ou_t());
     print("==========================================");
 
     spade::grid::face_idx_t j;
@@ -152,15 +152,23 @@ int main(int argc, char** argv)
     print(spade::omni::access<spade::omni::info::value>(data.cell(2_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(data.cell(2_c)));
     print(spade::omni::access<spade::omni::info::value>(data.cell(3_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(data.cell(3_c)));
 
-    /*
+
     print("relative to stencil 1:");
     print(spade::omni::access<spade::omni::info::value>(dat1.cell(0_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(dat1.cell(0_c)));
     print(spade::omni::access<spade::omni::info::value>(dat1.cell(1_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(dat1.cell(1_c)));
 
     print("relative to stencil 2:");
+    print(spade::omni::access<spade::omni::info::value>(dat2.cell(1_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(dat2.cell(1_c)));
     print(spade::omni::access<spade::omni::info::value>(dat2.cell(2_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(dat2.cell(2_c)));
-    print(spade::omni::access<spade::omni::info::value>(dat2.cell(3_c)), "@ addr", &spade::omni::access<spade::omni::info::value>(dat2.cell(3_c)));
-    */
+    
+    using of1_t = spade::omni::offset_at<o1_t, spade::grid::cell_centered, 0>;
+    using of2_t = spade::omni::offset_at<o2_t, spade::grid::cell_centered, 1>;
+
+    const int i1 = spade::omni::index_of<ou_t, of1_t>;
+    const int i2 = spade::omni::index_of<ou_t, of2_t>;
+    print_type(of1_t());
+    print_type(of2_t());
+    print(i1, i2);
     
     return 0;
 }

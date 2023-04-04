@@ -116,6 +116,13 @@ namespace spade::parallel
                 MPI_CHECK(MPI_Allreduce(&sum_loc, &sum_glob, 1, dtype, MPI_SUM, this->channel));
                 return sum_glob;
             }
+
+            template <typename data_t> auto sum(const std::vector<data_t>& data) const
+            {
+                data_t sumval = data_t();
+                for (const auto& e: data) sumval += e;
+                return this->sum(sumval);
+            }
             
             template <typename data_t> void append_root(aliases::vector<data_t>& root_result, const data_t& local_data) const
             {

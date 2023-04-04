@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/grid_index_types.h"
+
 #include "omni/info.h"
 #include "omni/stencil.h"
 #include "omni/info_union.h"
@@ -7,7 +9,10 @@
 
 namespace spade::omni
 {
-    //Note that input_t could be an alias itself!
+    // Wraps a stencil-data instance with a type that 
+    // effectively re-numbers the elements for the sake of 
+    // nesting.
+    // Note that input_t could be an alias itself!
     template <typename interpret_t, typename input_t>
     struct stencil_alias_t
     {
@@ -15,6 +20,85 @@ namespace spade::omni
         using native_stencil_type = typename input_t::stencil_type;
         const input_t& native;
         stencil_alias_t(const input_t& native_in) : native{native_in}{}
+
+        //const qualified
+        template <const grid::array_centering ctr, udci::integral_t ii>
+        const auto& seek_element(const udci::idx_const_t<ii>& idx) const
+        {
+            // strategy: generate as much heat as possible during compilation so the
+            // data center doesn't get too cold
+            using offset_type     = offset_at<interpret_t, ctr, ii>;
+            constexpr int trans_i = index_of<native_stencil_type, offset_type>;
+            return native.template seek_element<ctr>(udci::idx_const_t<trans_i>());
+        }
+        
+        //not const qualified
+        template <const grid::array_centering ctr, udci::integral_t ii>
+        auto& seek_element(const udci::idx_const_t<ii>& idx)
+        {
+            using offset_type     = offset_at<interpret_t, ctr, ii>;
+            constexpr int trans_i = index_of<native_stencil_type, offset_type>;
+            return native.template seek_element<ctr>(udci::idx_const_t<trans_i>());
+        }
+        
+        //const qualified
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_cell())
+        constexpr const auto& cell(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::cell_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_face())
+        constexpr const auto& face(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::face_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_node())
+        constexpr const auto& node(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::node_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_edge())
+        constexpr const auto& edge(const udci::idx_const_t<ii>& idx) const
+        {
+            return seek_element<grid::edge_centered>(idx);
+        }
+        
+        //not const qualified
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_cell())
+        constexpr auto& cell(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::cell_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_face())
+        constexpr auto& face(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::face_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_node())
+        constexpr auto& node(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::node_centered>(idx);
+        }
+        
+        template <udci::integral_t ii>
+        requires (ii < interpret_t::num_edge())
+        constexpr auto& edge(const udci::idx_const_t<ii>& idx)
+        {
+            return seek_element<grid::edge_centered>(idx);
+        }
+
     };
 
     template <typename interpret_t, typename input_t>
