@@ -106,4 +106,11 @@ namespace spade::omni
     {
         return stencil_alias_t<interpret_t, input_t>(input);
     }
+
+    template <typename interpret_t, typename input_t>
+    requires (std::same_as<typename input_t::stencil_type, interpret_t>)
+    auto interpret_stencil(const input_t& input)
+    {
+        return input;
+    }
 }
