@@ -1,6 +1,7 @@
 #pragma once
 
 #include "omni/stencil.h"
+#include "omni/convert.h"
 
 namespace spade::omni
 {
@@ -38,4 +39,21 @@ namespace spade::omni
     }
 
     template <typename... stencils_t> using stencil_union = typename detail::multi_sten_union_t<stencils_t...>::type;
+
+    namespace detail
+    {
+        template <typename kernel_t, typename... kernels_t>
+        struct combine_omni_impl
+        {
+            using type = stencil_union<typename kernel_t::omni_type, typename combine_omni_impl<kernels_t...>::type>;
+        };
+
+        template <typename kernel_t>
+        struct combine_omni_impl<kernel_t>
+        {
+            using type = typename kernel_t::omni_type;
+        };
+    }
+
+    template <typename... kernels_t> using combine_omni_stencils = typename detail::combine_omni_impl<kernels_t...>::type;
 }

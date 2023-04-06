@@ -327,7 +327,6 @@ namespace spade::grid
                 const std::size_t num_neighs = static_math::pow<3,dim()>::value;
                 
                 typedef typename array_t::value_type array_data_t;
-                
                 std::vector<std::size_t> num_send_bytes(grid_group->size(), 0);
                 std::vector<std::size_t> num_recv_bytes(grid_group->size(), 0);
                 

@@ -90,6 +90,11 @@ namespace spade::timing
         
         duration_t duration() const { return this->duration(0); }
         duration_t average () const { return this->average(0); }
+
+        duration_t duration(const std::string& name_in) const
+        {
+            return this->duration(name_map.at(name_in));
+        }
         
         duration_t duration(const std::size_t& idx) const
         {
