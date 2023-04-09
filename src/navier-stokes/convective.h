@@ -93,6 +93,7 @@ namespace spade::convective
         dtype eps_p, eps_T;
     };
     
+    //DELETE THE OLD IMPLEMENTATION!
     /*
     template <fluid_state::state_dependent_gas gas_t> struct weno_3
     {

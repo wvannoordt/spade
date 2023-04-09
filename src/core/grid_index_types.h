@@ -11,7 +11,8 @@ namespace spade::grid
         cell_centered,
         node_centered,
         face_centered,
-        edge_centered
+        edge_centered,
+        agno_centered  //'agnostic' centering
     };
     
     template <const array_centering ctr> struct get_complement_centering {};

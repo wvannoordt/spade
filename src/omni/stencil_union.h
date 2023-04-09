@@ -9,6 +9,11 @@ namespace spade::omni
     {
         template <typename stencil1_t, typename stencil2_t, const int remaining> struct stencil_union_t
         {
+            constexpr static bool st_eq = (stencil1_t::center() == stencil2_t::center()) && (stencil2_t::center() != grid::agno_centered);
+            constexpr static bool ag_1  = (stencil1_t::center() == grid::agno_centered)  && (stencil2_t::center() != grid::agno_centered);
+            constexpr static bool ag_2  = (stencil2_t::center() == grid::agno_centered)  && (stencil1_t::center() != grid::agno_centered);
+            static_assert(st_eq || ag_1 || ag_2, "Attempted to union two incompatible stencils");
+
             constexpr static int index = stencil2_t::num_elements() - remaining;
             using element_t            = stencil2_t::template stencil_element<index>;
             using query_offset_t       = typename element_t::position_type;
@@ -25,8 +30,34 @@ namespace spade::omni
         {
             using type = stencil1_t;
         };
+    
+        template <const grid::array_centering c0, const grid::array_centering c1>
+        struct most_specific_centering
+        {
+            //This is wrong, but the static assert in the stencil_union_t will give a better error message
+            constexpr static grid::array_centering value = c0;
+        };
+        
+        template <const grid::array_centering c0>
+        requires (c0 != grid::agno_centered)
+        struct most_specific_centering<c0, grid::agno_centered>
+        {
+            constexpr static grid::array_centering value = c0;
+        };
 
-        template <typename stencil1_t, typename stencil2_t>   using stencil_binary_union = typename detail::stencil_union_t<stencil1_t, stencil2_t, stencil2_t::num_elements()>::type;
+        template <const grid::array_centering c0>
+        requires (c0 != grid::agno_centered)
+        struct most_specific_centering<grid::agno_centered, c0>
+        {
+            constexpr static grid::array_centering value = c0;
+        };
+
+        template <typename stencil1_t, typename stencil2_t>   using stencil_binary_union
+        = typename detail::stencil_union_t<
+            typename stencil1_t::recenter<most_specific_centering<stencil1_t::center(), stencil2_t::center()>::value>,
+            stencil2_t,
+            stencil2_t::num_elements()
+            >::type;
 
         template <typename stencil_t, typename... stencils_t> struct multi_sten_union_t
         {

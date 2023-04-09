@@ -53,6 +53,23 @@ namespace spade::omni
         
         info_list_data_t<0, stencil_info_t::num_infos(), stencil_info_t, array_t, centering_at_i0_elem> data;
         next_type next;
+
+        template <typename offset_query_t> const auto& element_at() const
+        {
+            if constexpr (std::same_as<offset_query_t, stencil_ofst_t>) {return data;}
+            else {return next.template element_at<offset_query_t>();}
+        }
+
+        template <typename offset_query_t> auto& element_at()
+        {
+            if constexpr (std::same_as<offset_query_t, stencil_ofst_t>) {return data;}
+            else {return next.template element_at<offset_query_t>();}
+        }
+
+        auto& root() {return element_at<offset_t<0,0,0>>();}
+        const auto& root() const {return element_at<offset_t<0,0,0>>();}
+
+        
         
         //const qualified
         template <const grid::array_centering ctr, udci::integral_t ii>

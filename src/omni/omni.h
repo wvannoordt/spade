@@ -22,3 +22,5 @@
 #include "omni/stencil_union.h"
 
 #include "omni/interpret.h"
+
+#include "omni/make_kernel.h"

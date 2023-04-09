@@ -168,7 +168,7 @@ int main(int argc, char** argv)
             spade::reduce_ops::reduce_sum<real_t> sum_op;
             for (int i = 0; i < l2_error.size(); ++i)
             {
-                li_error[i] = spade::algs::transform_reduce(rhs, [=](const spade::fluid_state::flux_t<real_t>& rhsi) {return rhsi[i];}, max_op);
+                li_error[i] = spade::algs::transform_reduce(rhs, [=](const spade::fluid_state::flux_t<real_t>& rhsi) {return spade::utils::abs(rhsi[i]);}, max_op);
                 l2_error[i] = std::sqrt(dV*spade::algs::transform_reduce(rhs, [=](const spade::fluid_state::flux_t<real_t>& rhsi) {return rhsi[i]*rhsi[i];}, sum_op));
             }
             return std::make_pair(l2_error, li_error);

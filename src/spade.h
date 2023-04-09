@@ -39,3 +39,4 @@
 #include "navier-stokes/convective.h"
 #include "navier-stokes/viscous.h"
 #include "navier-stokes/navier_stokes_mms.h"
+#include "navier-stokes/subgrid_scale.h"

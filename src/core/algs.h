@@ -69,6 +69,28 @@ namespace spade::algs
         return arr;
     }
 
+    template <grid::multiblock_array source_t, grid::multiblock_array dest_t, class callable_t>
+    auto& transform_to(const source_t& source, dest_t& dest, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    {
+        const auto& grid = source.get_grid();
+        const auto nlb = grid.get_num_local_blocks();
+
+        const grid::array_centering ctr = source_t::centering_type();
+        const auto kernel = omni::to_omni<ctr>(func, source);
+        
+        // consider fundamentally separating the block dimension with the ijk dimensions!
+        for (auto lb: range(0, nlb))
+        {
+            const auto loop_func = [&](const auto& elem)
+            {
+                const auto data = invoke_at(source, elem, kernel);
+                dest.set_elem(elem, data);
+            };
+            block_loop(source, lb, loop_func, exchange_policy);
+        }
+        return dest;
+    }
+
 
     template <class array_t, class kernel_t>
     void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)

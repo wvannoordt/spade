@@ -21,6 +21,9 @@ namespace spade::omni
         const input_t& native;
         stencil_alias_t(const input_t& native_in) : native{native_in}{}
 
+        auto& root() {return native.root();}
+        const auto& root() const {return native.root();}
+
         //const qualified
         template <const grid::array_centering ctr, udci::integral_t ii>
         const auto& seek_element(const udci::idx_const_t<ii>& idx) const

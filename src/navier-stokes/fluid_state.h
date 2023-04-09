@@ -23,11 +23,13 @@ namespace spade::fluid_state
         rtype& p() {return (*this)[0];}
         rtype& T() {return (*this)[1];}
         rtype& u() {return (*this)[2];}
+        rtype& u(const int i) {return (*this)[2+i];}
         rtype& v() {return (*this)[3];}
         rtype& w() {return (*this)[4];}
         const rtype& p() const {return (*this)[0];}
         const rtype& T() const {return (*this)[1];}
         const rtype& u() const {return (*this)[2];}
+        const rtype& u(const int i) const {return (*this)[2+i];}
         const rtype& v() const {return (*this)[3];}
         const rtype& w() const {return (*this)[4];}
         static std::string name(uint idx)

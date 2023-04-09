@@ -12,9 +12,10 @@ namespace spade::viscous
 {
     template <viscous_laws::viscous_law vlaw_t> struct visc_lr
     {
-        using float_t     = vlaw_t::value_type;
-        using output_type = fluid_state::flux_t<float_t>;
-        using omni_type   = omni::prefab::face_mono_t<omni::info::value, omni::info::gradient, omni::info::metric>;
+        using float_t       = vlaw_t::value_type;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using own_omni_type = omni::prefab::face_mono_t<omni::info::value, omni::info::gradient, omni::info::metric>;
+        using omni_type     = omni::stencil_union<own_omni_type, vlaw_t::omni_type>;
         
         visc_lr(const vlaw_t& vlaw_in) : vlaw{vlaw_in} {}
         

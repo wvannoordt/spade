@@ -72,6 +72,7 @@ namespace spade::omni
 
         //adds a stencil point to the list (even if it already exists)
         template <typename new_elem_t> using extend = stencil_t<center_val, idx_list_t..., new_elem_t>;
+        template <const grid::array_centering new_center> using recenter = stencil_t<new_center, idx_list_t...>;
     };
 
     namespace detail

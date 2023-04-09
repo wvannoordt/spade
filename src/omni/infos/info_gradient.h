@@ -65,6 +65,40 @@ namespace spade::omni
                 // const auto& x_face = ar_grid.get_comp_coords(iface);
                 // transform_gradient(ar_grid, iface, out);
             }
+
+            template <typename array_t, typename index_t>
+            requires((index_t::centering_type() == grid::cell_centered) && (grid::cell_centered == array_t::centering_type()))
+            static void compute(
+                const array_t& array,
+                const index_t& idx,
+                array_data_type<array_t, index_t::centering_type()>& out)
+            {
+                const auto& ar_grid = array.get_grid();
+                using grid_t = utils::remove_all<decltype(ar_grid)>::type;
+                const ctrs::array<typename grid_t::coord_type, 3> invdx
+                (
+                    1.0/ar_grid.get_dx(0), //todo: update with block index
+                    1.0/ar_grid.get_dx(1),
+                    1.0/ar_grid.get_dx(2)
+                );
+
+                auto ic = idx;
+                
+                out = 0.0;
+                for (int dir = 0; dir < ar_grid.dim(); ++dir)
+                {
+                    ic.i(dir) += 1;
+                    out[dir]  += array.get_elem(ic);
+                    ic.i(dir) -= 2;
+                    out[dir]  -= array.get_elem(ic);
+                    ic.i(dir) += 1;
+                    out[dir]  *= 0.5*invdx[dir];
+                }
+                using real_type = typename array_t::value_type;
+                static_assert(std::same_as<typename utils::remove_all<decltype(ar_grid.get_coord_sys())>::type, coords::identity<real_type>>, "gradient transformation required for general coordinates");
+                // const auto& x_face = ar_grid.get_comp_coords(iface);
+                // transform_gradient(ar_grid, iface, out);
+            }
         };
     }
 }
