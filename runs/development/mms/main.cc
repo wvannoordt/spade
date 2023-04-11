@@ -107,10 +107,10 @@ int main(int argc, char** argv)
         spade::fluid_state::ideal_gas_t<real_t> air;
         air.R = rgas;
         air.gamma = gamma;
-        spade::viscous_laws::constant_viscosity_t visc_law(mu, prandtl, air);
+        spade::viscous_laws::constant_viscosity_t visc_law(mu, prandtl);
 
         spade::convective::totani_lr tscheme(air);
-        spade::viscous::visc_lr  visc_scheme(visc_law);
+        spade::viscous::visc_lr  visc_scheme(visc_law, air);
         
         // Convective
         auto num_conv = [&](){spade::pde_algs::flux_div(prim, rhs, tscheme);};

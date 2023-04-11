@@ -1,3 +1,14 @@
+#include <iostream>
+
+template <typename thing_t> void print_type(const thing_t& t)
+{
+    //g++ only
+    std::string pf(__PRETTY_FUNCTION__);
+    std::size_t start = std::string("void print_type(const thing_t&) [with thing_t = ").length();
+    std::size_t end = pf.length()-1;
+    std::cout << pf.substr(start, end-start) << std::endl;
+}
+
 #include "symd.h"
 #include "spade.h"
 
@@ -29,6 +40,8 @@ int main(int argc, char** argv)
     std::vector<decltype(ffill)> er_2_all;
     std::vector<decltype(ffill)> er_i_all;
     std::vector<real_t> dx_all;
+
+    
     for (int l = 0; l < nx.size(); ++l)
     {
         
@@ -119,6 +132,7 @@ int main(int argc, char** argv)
         er_2_all.push_back(er_2);
         er_i_all.push_back(er_i);
     }
+
     std::vector<decltype(ffill)> er_2_ord;
     std::vector<decltype(ffill)> er_i_ord;
     

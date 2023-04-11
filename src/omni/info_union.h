@@ -42,4 +42,21 @@ namespace spade::omni
     //Only useful thing in this header
     template <typename... infos_t>
     using info_union = typename detail::multi_union_t<infos_t...>::type;
+
+    namespace detail
+    {
+        template <typename kernel_t, typename... kernels_t>
+        struct combine_info_impl
+        {
+            using type = info_union<typename kernel_t::info_type, typename combine_info_impl<kernels_t...>::type>;
+        };
+
+        template <typename kernel_t>
+        struct combine_info_impl<kernel_t>
+        {
+            using type = typename kernel_t::info_type;
+        };
+    }
+
+    template <typename... kernels_t> using combine_infos = typename detail::combine_info_impl<kernels_t...>::type;
 }
