@@ -8,11 +8,14 @@
 
 namespace spade::convective
 {       
-    template <fluid_state::state_dependent_gas gas_t> struct totani_lr
+    template <typename gas_t> struct totani_lr
     {
-        using float_t     = typename gas_t::value_type;
-        using output_type = fluid_state::flux_t<float_t>;
-        using omni_type   = omni::prefab::lr_t<omni::info::value, omni::info::metric>;
+        using float_t       = typename gas_t::value_type;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using sub_info_type = typename gas_t::info_type;
+        using info_type     = omni::info_union<own_info_type, sub_info_type>;
+        using omni_type     = omni::prefab::lr_t<info_type>;
         
         totani_lr(const gas_t& gas_in) : gas{gas_in}{}
         
@@ -28,11 +31,11 @@ namespace spade::convective
             float_t un_l = normal_l[0]*ql.u()+normal_l[1]*ql.v()+normal_l[2]*ql.w();
             float_t un_r = normal_r[0]*qr.u()+normal_r[1]*qr.v()+normal_r[2]*qr.w();
             
-            float_t rho_l = ql.p()/(gas.get_R(ql)*ql.T());
-            float_t rho_r = qr.p()/(gas.get_R(qr)*qr.T());
+            float_t rho_l = ql.p()/(gas.get_R(input_data.cell(0_c))*ql.T());
+            float_t rho_r = qr.p()/(gas.get_R(input_data.cell(1_c))*qr.T());
             
-            float_t e_l = ql.p()/(rho_l*(gas.get_gamma(ql)-float_t(1.0)));
-            float_t e_r = qr.p()/(rho_r*(gas.get_gamma(qr)-float_t(1.0)));
+            float_t e_l = ql.p()/(rho_l*(gas.get_gamma(input_data.cell(0_c))-float_t(1.0)));
+            float_t e_r = qr.p()/(rho_r*(gas.get_gamma(input_data.cell(1_c))-float_t(1.0)));
             
             float_t c = float_t(0.25)*(rho_l+rho_r)*(un_l+un_r);
             output.continuity() = c;
@@ -46,11 +49,11 @@ namespace spade::convective
         const gas_t& gas;
     };
     
-    template <fluid_state::state_dependent_gas gas_t> struct pressure_diss_lr
+    template <typename gas_t> struct pressure_diss_lr
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        using omni_type = omni::prefab::lr_t<omni::info::value, omni::info::metric>;
+        using omni_type = omni::prefab::lr_t<omni::info_list_t<omni::info::value, omni::info::metric>>;
         
         pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_p_in;}
         pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in, const dtype& eps_T_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_T_in;}
@@ -67,9 +70,9 @@ namespace spade::convective
             const dtype delta_T = ql.T()-qr.T();
             const dtype pavg = 0.5*(ql.p() + qr.p());
             const dtype Tavg = 0.5*(ql.T() + qr.T());
-            const dtype inv_RT = 1.0/(0.5*(gas->get_R(ql)+gas->get_R(qr))*Tavg);
+            const dtype inv_RT = 1.0/(0.5*(gas->get_R(input.cell(0_c))+gas->get_R(input.cell(1_c)))*Tavg);
             const dtype p_inv_rt2 = pavg*inv_RT/Tavg;
-            const dtype gamma =  0.5*(gas->get_gamma(ql)+gas->get_gamma(qr));
+            const dtype gamma =  0.5*(gas->get_gamma(input.cell(0_c))+gas->get_gamma(input.cell(1_c)));
             const dtype k = 0.5*(ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w());
             const dtype u = 0.5*(ql.u()+qr.u());
             const dtype v = 0.5*(ql.v()+qr.v());
@@ -95,7 +98,7 @@ namespace spade::convective
     
     //DELETE THE OLD IMPLEMENTATION!
     /*
-    template <fluid_state::state_dependent_gas gas_t> struct weno_3
+    template <typename gas_t> struct weno_3
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;

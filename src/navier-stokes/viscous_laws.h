@@ -12,7 +12,7 @@ namespace spade::viscous_laws
         typename T::value_type;
         t.get_visc();          // mu
         t.get_beta();          // -2/3 * mu
-        t.get_conductivity();  // cp * mu/Pr
+        t.get_diffuse();  // cp * mu/Pr
     };
     
     template <class T> concept state_dependent_viscosity = std::floating_point<typename T::value_type>
@@ -21,7 +21,7 @@ namespace spade::viscous_laws
         typename T::value_type;
         t.get_visc(q);
         t.get_beta(q);
-        t.get_conductivity(q);
+        t.get_diffuse(q);
     };
     
     template <class T> concept viscous_law = state_dependent_viscosity<T> || state_independent_viscosity<T>;
@@ -32,55 +32,37 @@ namespace spade::viscous_laws
         derived_t&       self()       {return *static_cast<      derived_t*>(this);}
         const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
-        using omni_type = omni::prefab::mono_t<grid::agno_centered, infos_t...>;
+        using info_type = omni::info_list_t<infos_t...>;
 
         auto get_visc        (const auto& input) const
         {
-            return omni::invoke_call([&](const auto&... args){return this->self().get_visc        (args...);}, input);
+            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_visc        (args...);}, input);
         }
 
         auto get_beta        (const auto& input) const
         {
-            return omni::invoke_call([&](const auto&... args){return this->self().get_beta        (args...);}, input);
+            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_beta        (args...);}, input);
         }
 
-        auto get_conductivity(const auto& input) const
+        auto get_diffuse(const auto& input) const
         {
-            return omni::invoke_call([&](const auto&... args){return this->self().get_conductivity(args...);}, input);
+            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_diffuse(args...);}, input);
         }
     };
     
-    template <typename dtype, typename gas_t> struct constant_viscosity_t
-    : public visc_law_interface_t<constant_viscosity_t<dtype, gas_t>, omni::info::value>
+    template <typename dtype> struct constant_viscosity_t
+    : public visc_law_interface_t<constant_viscosity_t<dtype>>
     {
-        using base_t = visc_law_interface_t<constant_viscosity_t<dtype, gas_t>, omni::info::value>;
+        using base_t = visc_law_interface_t<constant_viscosity_t<dtype>>;
         using base_t::get_visc;
         using base_t::get_beta;
-        using base_t::get_conductivity;
-        using base_t::omni_type;
+        using base_t::get_diffuse;
+        using base_t::info_type;
 
         typedef dtype value_type;
-        const gas_t& gas;
-        constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in, const gas_t& gas_in)
-        : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl{prandtl_in}, gas{gas_in}
+        constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in)
+        : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl{prandtl_in}
         { }
-        
-        template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
-        {
-            return visc;
-        }
-        
-        template <fluid_state::is_state_type state_t> dtype get_beta(const state_t& q) const
-        {
-            return beta;
-        }
-        
-        template <fluid_state::is_state_type state_t> dtype get_conductivity(const state_t& q) const
-        {
-            const auto gam = gas.get_gamma(q);
-            const auto r   = gas.get_R(q);
-            return (gam*r/(gam-1.0))*visc/prandtl;
-        }
         
         dtype get_visc() const
         {
@@ -92,11 +74,9 @@ namespace spade::viscous_laws
             return beta;
         }
         
-        dtype get_conductivity() const
+        dtype get_diffuse() const
         {
-            const auto gam = gas.get_gamma();
-            const auto r   = gas.get_R();
-            return (gam*r/(gam-1.0))*visc/prandtl;
+            return visc/prandtl;
         }
         
         dtype visc;
@@ -104,24 +84,23 @@ namespace spade::viscous_laws
         dtype beta;
     };
     
-    template <typename dtype, typename gas_t> struct power_law_t
-    : public visc_law_interface_t<power_law_t<dtype, gas_t>, omni::info::value>
+    template <typename dtype> struct power_law_t
+    : public visc_law_interface_t<power_law_t<dtype>, omni::info::value>
     {
             typedef dtype value_type;
-            const gas_t gas;
             dtype mu_ref;
             dtype T_ref;
             dtype power;
             dtype prandtl;
 
-            using base_t = visc_law_interface_t<power_law_t<dtype, gas_t>, omni::info::value>;
+            using base_t = visc_law_interface_t<power_law_t<dtype>, omni::info::value>;
             using base_t::get_visc;
             using base_t::get_beta;
-            using base_t::get_conductivity;
-            using base_t::omni_type;
+            using base_t::get_diffuse;
+            using base_t::info_type;
             
-            power_law_t(const dtype& mu_ref_in, const dtype& T_ref_in, const dtype& power_in, const dtype& prandtl_in, const gas_t& gas_in)
-            : mu_ref{mu_ref_in}, T_ref{T_ref_in}, power{power_in}, prandtl{prandtl_in}, gas{gas_in}
+            power_law_t(const dtype& mu_ref_in, const dtype& T_ref_in, const dtype& power_in, const dtype& prandtl_in)
+            : mu_ref{mu_ref_in}, T_ref{T_ref_in}, power{power_in}, prandtl{prandtl_in}
             { }
             
             template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
@@ -134,11 +113,9 @@ namespace spade::viscous_laws
                 return -0.66666666667*this->get_visc(q);
             }
             
-            template <fluid_state::is_state_type state_t> dtype get_conductivity(const state_t& q) const
+            template <fluid_state::is_state_type state_t> dtype get_diffuse(const state_t& q) const
             {
-                const auto gam = gas.get_gamma();
-                const auto r   = gas.get_R();
-                return (gam*r/(gam-1.0))*this->get_visc(q)/prandtl;
+                return this->get_visc(q)/prandtl;
             }
     };
     
@@ -150,8 +127,8 @@ namespace spade::viscous_laws
             using base_t = visc_law_interface_t<udf_t<state_t, visc_func_t, beta_func_t, cond_func_t>, omni::info::value>;
             using base_t::get_visc;
             using base_t::get_beta;
-            using base_t::get_conductivity;
-            using base_t::omni_type;
+            using base_t::get_diffuse;
+            using base_t::info_type;
             
             const visc_func_t& vfunc;
             const beta_func_t& bfunc;
@@ -173,7 +150,7 @@ namespace spade::viscous_laws
                 return bfunc(q);
             }
             
-            value_type get_conductivity(const state_t& q) const
+            value_type get_diffuse(const state_t& q) const
             {
                 return cfunc(q);
             }

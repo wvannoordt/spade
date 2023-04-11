@@ -21,6 +21,7 @@
 #include "core/pde_algs.h"
 #include "core/mtimer.h"
 #include "core/arith_tuple.h"
+#include "core/avg.h"
 
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
@@ -33,6 +34,7 @@
 #include "time-integration/explicit.h"
 #include "time-integration/integrator.h"
 
+#include "navier-stokes/gas.h"
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/state_transformation.h"
 #include "navier-stokes/viscous_laws.h"

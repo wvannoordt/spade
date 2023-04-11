@@ -16,12 +16,19 @@ namespace spade::omni
         using array_type = array_t;
         using info_type = typename info_list_t::info_elem<i0>;
         using data_type = typename info_type::array_data_type<array_t, center>;
+        using list_type = info_list_t;
         data_type data;
         info_list_data_t<i0+1, i1, info_list_t, array_t, center> next;
     };
     
     template <const int i0, typename info_list_t, typename array_t, const grid::array_centering center>
-    struct info_list_data_t<i0, i0, info_list_t, array_t, center> {};
+    struct info_list_data_t<i0, i0, info_list_t, array_t, center>
+    {
+        constexpr static int num_info_elems() { return 0; }
+        constexpr static grid::array_centering info_center = center;
+        using array_type = array_t;
+        using list_type  = info_list_t;
+    };
     
     namespace detail
     {

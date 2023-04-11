@@ -4,17 +4,10 @@
 #include "core/config.h"
 #include "core/ctrs.h"
 
+#include "navier-stokes/gas.h"
+
 namespace spade::fluid_state
-{
-    
-    template <class T> concept is_state_type = requires(T t, size_t idx)
-    {
-        t[idx];
-        T::size();
-        t.name(0);
-        typename T::value_type;
-    };
-    
+{   
     template <typename rtype> struct prim_t : public ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>
     {
         using base_t = ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>;        
@@ -94,18 +87,6 @@ namespace spade::fluid_state
         t.get_gamma();
     };
     
-    template <typename dtype> struct ideal_gas_t
-    {
-        typedef dtype value_type;
-        dtype R, gamma;
-        ideal_gas_t(){}
-        ideal_gas_t(const dtype& gamma_in, const dtype& R_in) {gamma = gamma_in; R = R_in;}
-        template <is_state_type state_t> dtype get_R(const state_t& state)     const {return this->R;}
-        template <is_state_type state_t> dtype get_gamma(const state_t& state) const {return this->gamma;}
-        dtype get_R()     const {return this->R;}
-        dtype get_gamma() const {return this->gamma;}
-    };
-    
     template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
     {
        os << "{";
@@ -121,9 +102,9 @@ namespace spade::fluid_state
     template<typename ptype, typename ctype, class gas_t>
     static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
     {
-        ptype rho = prim.p() / (gas.get_R(prim)*prim.T());
+        ptype rho = prim.p() / (gas.get_R()*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
-        ptype rhoE = 0.5*rhoU2 + (prim.p()/((gas.get_gamma(prim) - 1.0)));
+        ptype rhoE = 0.5*rhoU2 + (prim.p()/((gas.get_gamma() - 1.0)));
         ptype rhoU = rho*prim.u();
         ptype rhoV = rho*prim.v();
         ptype rhoW = rho*prim.w();
@@ -143,8 +124,8 @@ namespace spade::fluid_state
         ptype v = invrho*cons.rho_v();
         ptype w = invrho*cons.rho_w();
         ptype rhoU2 = rho*(u*u+v*v+w*w);
-        ptype p = (gas.get_gamma(prim) - 1.0)*(cons.rho_H() - 0.5*rhoU2);
-        ptype T = p/(gas.get_R(prim)*rho);
+        ptype p = (gas.get_gamma() - 1.0)*(cons.rho_H() - 0.5*rhoU2);
+        ptype T = p/(gas.get_R()*rho);
         prim.p() = p;
         prim.T() = T;
         prim.u() = u;

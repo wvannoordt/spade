@@ -2,6 +2,8 @@
 
 #include <concepts>
 
+#include "omni/access.h"
+
 namespace spade::omni
 {
     template <typename T> concept has_omni_interface = requires(T t)
@@ -10,17 +12,28 @@ namespace spade::omni
         typename T::omni_type;
     };
 
-    template <typename kernel_t, typename info_data_t, typename... extracts_t>
-    requires(std::invocable<kernel_t, extracts_t...>)
-    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+    template <typename list_t, typename kernel_t, typename info_data_t, typename... extracts_t>
+    requires(sizeof...(extracts_t) == list_t::num_infos())
+    static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
         return kernel(args...);
     }
 
-    template <typename kernel_t, typename info_data_t, typename... extracts_t>
-    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+    template <typename list_t, typename kernel_t, typename info_data_t, typename... extracts_t>
+    static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
-        return invoke_call(kernel, info_list.next, args..., info_list.data);
+        constexpr int idx   = sizeof...(extracts_t);
+        using info_type     = list_t;
+        using query_type    = info_type::template info_elem<idx>;
+        const auto& new_arg = access<query_type>(info_list);
+        return invoke_call(list_t(), kernel, info_list, args..., new_arg);
+    }
+
+    template <typename kernel_t, typename info_data_t>
+    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list)
+    {
+        using info_type = typename info_data_t::list_type;
+        return invoke_call(info_type(), kernel, info_list);
     }
 
     template <
