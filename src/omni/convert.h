@@ -10,20 +10,17 @@ namespace spade::omni
         typename T::omni_type;
     };
 
-    namespace detail
+    template <typename kernel_t, typename info_data_t, typename... extracts_t>
+    requires(std::invocable<kernel_t, extracts_t...>)
+    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
-        template <typename kernel_t, typename info_data_t, typename... extracts_t>
-        requires(std::invocable<kernel_t, extracts_t...>)
-        static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
-        {
-            return kernel(args...);
-        }
+        return kernel(args...);
+    }
 
-        template <typename kernel_t, typename info_data_t, typename... extracts_t>
-        static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
-        {
-            return invoke_call(kernel, info_list.next, args..., info_list.data);
-        }
+    template <typename kernel_t, typename info_data_t, typename... extracts_t>
+    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+    {
+        return invoke_call(kernel, info_list.next, args..., info_list.data);
     }
 
     template <
@@ -74,7 +71,7 @@ namespace spade::omni
         auto operator() (const auto& input_data) const
         {
             const auto elem = input_data.template seek_element<index_t::centering_type()>(0_c);
-            return detail::invoke_call(kernel, elem);
+            return invoke_call(kernel, elem);
         }
     };
 
