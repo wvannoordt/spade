@@ -50,11 +50,6 @@ namespace spade::omni
     template <const grid::array_centering center_val, typename... idx_list_t>
     struct stencil_t
     {
-        constexpr static bool is_directed()
-        {
-            // return idx_list_t::offset::is_1d && ...;
-            return false;
-        }
         template <typename offset_query_t> static constexpr bool contains_at = (std::same_as<typename idx_list_t::position_type, offset_query_t> || ...);
         
         template <const int idx> using stencil_element = typename utils::get_pack_type<idx, idx_list_t...>::type;

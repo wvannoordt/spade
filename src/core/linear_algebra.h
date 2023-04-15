@@ -19,8 +19,10 @@ namespace spade::linear_algebra
     {
         typedef ctrs::array<data_t, mat_size> vector_type;
         typedef data_t value_type;
+        constexpr static std::size_t size() {return mat_size;}
         data_t m[mat_size*mat_size];
-        dense_mat(void){}
+        dense_mat(){}
+        dense_mat(const value_type& init) {for (int iii = 0; iii < mat_size*mat_size; ++iii) m[iii] = init;}
         dense_mat(const std::initializer_list<std::initializer_list<data_t>>& init_list)
         {
             std::size_t i = 0;
@@ -85,6 +87,18 @@ namespace spade::linear_algebra
             return (*this)(0,0)*((*this)(1,1)*(*this)(2,2) - (*this)(1,2)*(*this)(2,1))
                 +  (*this)(0,1)*((*this)(1,2)*(*this)(2,0) - (*this)(1,0)*(*this)(2,2))
                 +  (*this)(0,2)*((*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0));
+        }
+
+        template <typename kern_t> dense_mat& fill(const kern_t& kern)
+        {
+            for (int j = 0; j < mat_size; ++j)
+            {
+                for (int i = 0; i < mat_size; ++i)
+                {
+                    (*this)(i,j) = kern(i,j);
+                }
+            }
+            return *this;
         }
     };
     

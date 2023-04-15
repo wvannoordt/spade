@@ -54,20 +54,20 @@ int main(int argc, char** argv)
         spade::grid::grid_array rhs_ana(grid, ffill);
         using grid_type = decltype(grid);
         
-        enum syms {xs,ys,zs};
+        enum syms {xs,ys,zs,uis,xis};
         
-        symd::var_t<xs> x;
-        symd::var_t<ys> y;
-        symd::var_t<zs> z;
+        symd::var_t<xs>  x;
+        symd::var_t<ys>  y;
+        symd::var_t<zs>  z;
         
         
         //Test functions
         const real_t alpha  = spade::consts::pi;
-        auto p              = 5.0+2.0*symd::cos(3.0*alpha*x)*symd::sin(2.0*alpha*y)+symd::sin(4.0*alpha*z);
-        auto T              = 10.0+2.0*symd::cos(2.0*alpha*x)*symd::sin(3.0*alpha*y)+symd::sin(4.0*alpha*z);
-        auto u              = symd::sin(3.0*alpha*x)*symd::cos(2.0*alpha*y)*symd::cos(2.0*alpha*z);
-        auto v              = symd::cos(3.0*alpha*x)*symd::cos(2.0*alpha*y)*symd::cos(3.0*alpha*z);
-        auto w              = symd::sin(3.0*alpha*x)*symd::sin(2.0*alpha*y)*symd::cos(4.0*alpha*z);
+        auto p              = symd::one();
+        auto T              = symd::one();
+        auto u              = symd::cos(3.0*alpha*x)+symd::sin(2.0*alpha*y);
+        auto v              = symd::sin(3.0*alpha*x)-symd::cos(2.0*alpha*y);
+        auto w              = symd::zero();
 
         spade::algs::fill_array(prim, [=](const grid_type::coord_point_type& xg)
         {
@@ -80,23 +80,78 @@ int main(int argc, char** argv)
             return output;
         });
 
-        auto mut = symd::ddx(u, x) + symd::ddx(v, y) + symd::ddx(w, z);
+        auto xj  = [&](const auto& jj)
+        {
+            if      constexpr (jj.value == 0) {return x;}
+            else if constexpr (jj.value == 1) {return y;}
+            else                              {return z;}
+        };
+
+        auto ui  = [&](const auto& ii)
+        {
+            if      constexpr (ii.value == 0) {return u;}
+            else if constexpr (ii.value == 1) {return v;}
+            else                              {return w;}
+        };
+
+        auto gij = [&](const auto& ii, const auto& jj)
+        {
+            return symd::ddx(ui(ii), xj(jj));
+        };
+
+        auto g2ij = [&](const auto& ii, const auto& jj)
+        {
+            return gij(ii, 0_c)*gij(0_c, jj) + gij(ii, 1_c)*gij(1_c, jj) + gij(ii, 2_c)*gij(2_c, jj);
+        };
+
+        auto sdij = [&](const auto& ii, const auto& jj)
+        {
+            auto base = 0.5*(g2ij(ii, jj) + g2ij(jj, ii));
+            if constexpr (ii.value == jj.value)
+            {
+                return base - 0.33333333333*(g2ij(0_c, 0_c) + g2ij(1_c, 1_c) + g2ij(2_c, 2_c));
+            }
+            else return base;
+        };
+
+        auto sij = [&](const auto& ii, const auto& jj)
+        {
+            return 0.5*(symd::ddx(ui(ii), xj(jj)) + symd::ddx(ui(jj), xj(ii)));
+        };
+
+        auto sym_sum = [&](const auto& thing)
+        {
+            return thing(0_c, 0_c)*thing(0_c, 0_c) + thing(0_c, 1_c)*thing(0_c, 1_c) + thing(0_c, 2_c)*thing(0_c, 2_c)
+                +  thing(1_c, 0_c)*thing(1_c, 0_c) + thing(1_c, 1_c)*thing(1_c, 1_c) + thing(1_c, 2_c)*thing(1_c, 2_c)
+                +  thing(2_c, 0_c)*thing(2_c, 0_c) + thing(2_c, 1_c)*thing(2_c, 1_c) + thing(2_c, 2_c)*thing(2_c, 2_c);
+        };
+
+        auto sum_sdij = sym_sum(sdij);
+        auto sum_sij  = sym_sum(sij);
+
+        auto n1 = symd::sqrt(sum_sdij*sum_sdij*sum_sdij);
+        auto n2 = symd::sqrt(sum_sij*sum_sij*sum_sij*sum_sij*sum_sij);
+        auto n3 = symd::sqrt(symd::sqrt(sum_sdij*sum_sdij*sum_sdij*sum_sdij*sum_sdij));
+        
+        auto nut = (cw*cw*delta*delta)*n1/(n2 + n3);
         
         grid.exchange_array(prim);
         
         // eddy visc.
-        auto num_mut = [&]()
+        auto num_nut = [&]()
         {
             using eddy_t = decltype(eddy_visc);
             auto kernel = spade::omni::make_kernel([](const eddy_t& eddy, const auto& info){return eddy.get_mut(info);}, eddy_visc);
             spade::algs::transform_to(prim, rhs, kernel);
+            spade::io::output_vtk("output", "num", rhs);
         };
-        auto ana_mut = [&]()
+        auto ana_nut = [&]()
         {
             spade::algs::fill_array(rhs_ana, [=](const grid_type::coord_point_type& xg)
             {
-                return mut(x=xg[0], y=xg[1], z=xg[2]);
+                return nut(x=xg[0], y=xg[1], z=xg[2]);
             });
+            spade::io::output_vtk("output", "ana", rhs_ana);
         };
         
         auto run_test = [&](const auto& num_func, const auto& ana_func)
@@ -126,7 +181,7 @@ int main(int argc, char** argv)
             return std::make_pair(l2_error, li_error);
         };
         
-        auto [er_2, er_i] = run_test(num_mut, ana_mut);
+        auto [er_2, er_i] = run_test(num_nut, ana_nut);
         
         dx_all.push_back(std::pow(dV, 1.0/3.0));
         er_2_all.push_back(er_2);
