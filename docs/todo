@@ -18,11 +18,12 @@
 [ ] re-write range and md_iterator to use literal-constant indexing
 [ ] Implement CUDA kernel version of md_loop
 [x] Implement tiling map for use with OpenMP/thread pooling
-[ ] Remove all traces of old memory map implementation
-[ ] Rewrite io namespace to use new memory mapping
-[ ] Rewrite exchange function to use new memory mapping
-[ ] Develop OMNI system
+[x] Remove all traces of old memory map implementation
+[x] Rewrite io namespace to use new memory mapping
+[x] Rewrite exchange function to use new memory mapping
+[x] Develop OMNI system
 [ ] Boundary conditions in pde_algs
 [ ] Re-work the coordinate systems to have transforms etc. as member functions
 [ ] Introduce and omni-info for interpolated value with specified order-of-accuracy
 [ ] Re-work the lambda-omni conversion to account for unions
+[ ] Generalize OMNI point-operation for multi-interface mode

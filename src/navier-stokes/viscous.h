@@ -10,7 +10,7 @@
 
 namespace spade::viscous
 {
-    template <viscous_laws::viscous_law vlaw_t, typename gas_model_t> struct visc_lr
+    template <typename vlaw_t, typename gas_model_t> struct visc_lr
     {
         using float_t       = vlaw_t::value_type;
         using output_type   = fluid_state::flux_t<float_t>;

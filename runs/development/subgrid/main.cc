@@ -31,8 +31,12 @@ int main(int argc, char** argv)
     real_t                             ffill = 0.0; //scalar eddy viscosity
     const real_t cw    = 1.0;
     const real_t delta = 1.0;
-    spade::subgrid_scale::wale_t eddy_visc(cw, delta);
-
+    const real_t gamma = 1.0;
+    const real_t rgas  = 1.0;
+    spade::fluid_state::ideal_gas_t<real_t> air(gamma, rgas);
+    spade::subgrid_scale::wale_t eddy_visc(air, cw, delta, 0.9);
+    spade::viscous_laws::constant_viscosity_t<real_t> visc(1.0, 1.0);
+    spade::viscous_laws::sgs_visc_t(visc, eddy_visc);
     using prim_t = decltype(pfill);
     
     std::vector<int> nx{8, 12, 24, 32, 40};
@@ -63,11 +67,12 @@ int main(int argc, char** argv)
         
         //Test functions
         const real_t alpha  = spade::consts::pi;
-        auto p              = symd::one();
+        auto p              = symd::cos(3.0*alpha*x)+symd::sin(2.0*alpha*y) + 10.0;
         auto T              = symd::one();
         auto u              = symd::cos(3.0*alpha*x)+symd::sin(2.0*alpha*y);
         auto v              = symd::sin(3.0*alpha*x)-symd::cos(2.0*alpha*y);
         auto w              = symd::zero();
+        auto rho            = p/(rgas*T);
 
         spade::algs::fill_array(prim, [=](const grid_type::coord_point_type& xg)
         {
@@ -133,23 +138,23 @@ int main(int argc, char** argv)
         auto n2 = symd::sqrt(sum_sij*sum_sij*sum_sij*sum_sij*sum_sij);
         auto n3 = symd::sqrt(symd::sqrt(sum_sdij*sum_sdij*sum_sdij*sum_sdij*sum_sdij));
         
-        auto nut = (cw*cw*delta*delta)*n1/(n2 + n3);
+        auto mut = rho*(cw*cw*delta*delta)*n1/(n2 + n3);
         
         grid.exchange_array(prim);
         
         // eddy visc.
-        auto num_nut = [&]()
+        auto num_mut = [&]()
         {
             using eddy_t = decltype(eddy_visc);
-            auto kernel = spade::omni::make_kernel([](const eddy_t& eddy, const auto& info){return eddy.get_mut(info);}, eddy_visc);
+            auto kernel = spade::omni::make_kernel([](const eddy_t& eddy, const auto& info){return eddy.get_mu_t(info);}, eddy_visc);
             spade::algs::transform_to(prim, rhs, kernel);
             spade::io::output_vtk("output", "num", rhs);
         };
-        auto ana_nut = [&]()
+        auto ana_mut = [&]()
         {
             spade::algs::fill_array(rhs_ana, [=](const grid_type::coord_point_type& xg)
             {
-                return nut(x=xg[0], y=xg[1], z=xg[2]);
+                return mut(x=xg[0], y=xg[1], z=xg[2]);
             });
             spade::io::output_vtk("output", "ana", rhs_ana);
         };
@@ -181,7 +186,7 @@ int main(int argc, char** argv)
             return std::make_pair(l2_error, li_error);
         };
         
-        auto [er_2, er_i] = run_test(num_nut, ana_nut);
+        auto [er_2, er_i] = run_test(num_mut, ana_mut);
         
         dx_all.push_back(std::pow(dV, 1.0/3.0));
         er_2_all.push_back(er_2);

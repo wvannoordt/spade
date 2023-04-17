@@ -4,40 +4,57 @@
 
 namespace spade::subgrid_scale
 {
-    template <typename derived_t, omni::info::is_omni_info... infos_t>
+    template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct subgrid_interface_t
     {
         derived_t&       self()       {return *static_cast<      derived_t*>(this);}
         const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
-        using info_type = omni::info_list_t<infos_t...>;
+        using info_type = ilist_t;
 
-        auto get_mut(const auto& input) const
+        auto get_mu_t(const auto& input) const
         {
-            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_nu_turb(args...);}, input);
+            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_mu_t(args...);}, input);
+        }
+        auto get_prt(const auto& input) const
+        {
+            return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_prt(args...);}, input);
         }
     };
 
-    template <typename float_t> struct wale_t
-    : public subgrid_interface_t<wale_t<float_t>, omni::info::gradient>
+    template <typename float_t, typename gas_t> struct wale_t
+    : public subgrid_interface_t<wale_t<float_t, gas_t>,
+        omni::info_union<omni::info_list_t<omni::info::gradient, omni::info::value>, typename gas_t::info_type>>
     {
-        using base_t = subgrid_interface_t<wale_t<float_t>, omni::info::gradient>;
-        using base_t::get_mut;
+        using base_t = subgrid_interface_t<wale_t<float_t, gas_t>,
+            omni::info_union<omni::info_list_t<omni::info::gradient, omni::info::value>, typename gas_t::info_type>>;
+        using base_t::get_mu_t;
+        using base_t::get_prt;
         using base_t::info_type;
 
-        float_t cw, delta;
-        wale_t(const float_t& cw_in, const float_t& delta_in) : cw{cw_in}, delta{delta_in} {}
+        using value_type = float_t;
 
-        float_t get_nu_turb(const ctrs::array<fluid_state::prim_t<float_t>, 3>& grad) const
+        float_t cw, delta, prt;
+        const gas_t& gas;
+        wale_t(const gas_t& gas_in, const float_t& cw_in, const float_t& delta_in, const float_t& prt_in)
+         : cw{cw_in}, delta{delta_in}, prt{prt_in}, gas{gas_in} {}
+
+        float_t get_prt(const auto& info) const {return prt;}
+
+        float_t get_mu_t(const auto& info) const
         {
             //for notation, see:
             //Nicoud, F., and Ducros, F.,
             //"Subgrid-Scale Stress Modelling Based on the Square of the Velocity Gradient Tensor,"
             //Flow, Turbulence and Combustion, Vol. 62, No. 3, 1999
 
-            const auto gij       = [&](const int i, const int j){ return grad[j].u(i); };
-            const auto gij2_impl = [&](const int i, const int j){ return gij(i,0)*gij(0,j) + gij(i,1)*gij(1,j) + gij(i,2)*gij(2,j); };
-            const auto sij       = [&](const int i, const int j){ return float_t(0.5)*(gij(i, j) + gij(j, i)); };
+            const auto& val       = omni::access<omni::info::value>(info);
+            const auto& grad      = omni::access<omni::info::gradient>(info);
+            const auto& rgas      = gas.get_gamma(info);
+            const auto  rho       = val.p()/(rgas*val.T());
+            const auto  gij       = [&](const int i, const int j){ return grad[j].u(i); };
+            const auto  gij2_impl = [&](const int i, const int j){ return gij(i,0)*gij(0,j) + gij(i,1)*gij(1,j) + gij(i,2)*gij(2,j); };
+            const auto  sij       = [&](const int i, const int j){ return float_t(0.5)*(gij(i, j) + gij(j, i)); };
             linear_algebra::dense_mat<float_t, 3> gij2(float_t(0.0));
             gij2.fill(gij2_impl);
 
@@ -66,8 +83,8 @@ namespace spade::subgrid_scale
             auto sum_sij  = tsum(sij);
 
             const float_t eps = float_t(1e-8);
-            auto nu_turb = cw*cw*delta*delta*std::pow(sum_sdij, 1.5)/(eps + std::pow(sum_sij, 2.5) + std::pow(sum_sdij, 1.25));
-            return nu_turb;
+            auto nu_turb = cw*cw*delta*delta*std::pow(sum_sdij, float_t(1.5))/(eps + std::pow(sum_sij, float_t(2.5)) + std::pow(sum_sdij, float_t(1.25)));
+            return rho*nu_turb;
         }
     };
 }

@@ -26,13 +26,13 @@ namespace spade::viscous_laws
     
     template <class T> concept viscous_law = state_dependent_viscosity<T> || state_independent_viscosity<T>;
 
-    template <typename derived_t, omni::info::is_omni_info... infos_t>
+    template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct visc_law_interface_t
     {
         derived_t&       self()       {return *static_cast<      derived_t*>(this);}
         const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
-        using info_type = omni::info_list_t<infos_t...>;
+        using info_type  = ilist_t;
 
         auto get_visc        (const auto& input) const
         {
@@ -85,7 +85,7 @@ namespace spade::viscous_laws
     };
     
     template <typename dtype> struct power_law_t
-    : public visc_law_interface_t<power_law_t<dtype>, omni::info::value>
+    : public visc_law_interface_t<power_law_t<dtype>, omni::info_list_t<omni::info::value>>
     {
             typedef dtype value_type;
             dtype mu_ref;
@@ -93,7 +93,7 @@ namespace spade::viscous_laws
             dtype power;
             dtype prandtl;
 
-            using base_t = visc_law_interface_t<power_law_t<dtype>, omni::info::value>;
+            using base_t = visc_law_interface_t<power_law_t<dtype>, omni::info_list_t<omni::info::value>>;
             using base_t::get_visc;
             using base_t::get_beta;
             using base_t::get_diffuse;
@@ -120,11 +120,11 @@ namespace spade::viscous_laws
     };
     
     template <typename state_t, typename visc_func_t, typename beta_func_t, typename cond_func_t> struct udf_t
-    : public visc_law_interface_t<udf_t<state_t, visc_func_t, beta_func_t, cond_func_t>, omni::info::value>
+    : public visc_law_interface_t<udf_t<state_t, visc_func_t, beta_func_t, cond_func_t>, omni::info_list_t<omni::info::value>>
     {
             typedef typename state_t::value_type value_type;
 
-            using base_t = visc_law_interface_t<udf_t<state_t, visc_func_t, beta_func_t, cond_func_t>, omni::info::value>;
+            using base_t = visc_law_interface_t<udf_t<state_t, visc_func_t, beta_func_t, cond_func_t>, omni::info_list_t<omni::info::value>>;
             using base_t::get_visc;
             using base_t::get_beta;
             using base_t::get_diffuse;
@@ -140,19 +140,49 @@ namespace spade::viscous_laws
             cfunc{c_in}
             {}
             
-            value_type get_visc(const state_t& q) const
+            value_type get_visc(const state_t& q) const override
             {
                 return vfunc(q);
             }
             
-            value_type get_beta(const state_t& q) const
+            value_type get_beta(const state_t& q) const override
             {
                 return bfunc(q);
             }
             
-            value_type get_diffuse(const state_t& q) const
+            value_type get_diffuse(const state_t& q) const override
             {
                 return cfunc(q);
             }
+    };
+
+    template <typename laminar_t, typename turb_t>
+    struct sgs_visc_t
+    {
+        using info_type = omni::info_union<typename laminar_t::info_type, typename turb_t::info_type>;
+        using value_type = decltype(typename laminar_t::value_type() + typename turb_t::value_type());
+
+        const laminar_t& lam;
+        const turb_t& turb;
+        sgs_visc_t(const laminar_t& lam_in, const turb_t& turb_in) : lam{lam_in}, turb{turb_in} {}
+
+        value_type get_visc(const auto& data) const
+        {
+            const auto lv = lam.get_visc(data);
+            const auto tv = turb.get_mu_t(data);
+            return lv + tv;
+        }
+        
+        value_type get_beta(const auto& data) const
+        {
+            return -0.66666666667*this->get_visc(data);
+        }
+        
+        value_type get_diffuse(const auto& data) const
+        {
+            const auto ld = lam.get_diffuse(data);
+            const auto td = turb.get_mu_t(data)/turb.get_prt(data);;
+            return ld + td;
+        }
     };
 }

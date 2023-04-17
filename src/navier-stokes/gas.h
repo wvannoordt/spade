@@ -12,13 +12,13 @@ namespace spade::fluid_state
         typename T::value_type;
     };
 
-    template <typename derived_t, omni::info::is_omni_info... infos_t>
+    template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct gas_interface_t
     {
         derived_t&       self()       {return *static_cast<      derived_t*>(this);}
         const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
-        using info_type = omni::info_list_t<infos_t...>;
+        using info_type = ilist_t;
 
         auto get_R    (const auto& input) const
         {
