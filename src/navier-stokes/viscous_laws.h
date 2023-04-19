@@ -140,17 +140,17 @@ namespace spade::viscous_laws
             cfunc{c_in}
             {}
             
-            value_type get_visc(const state_t& q) const override
+            value_type get_visc(const state_t& q) const
             {
                 return vfunc(q);
             }
             
-            value_type get_beta(const state_t& q) const override
+            value_type get_beta(const state_t& q) const
             {
                 return bfunc(q);
             }
             
-            value_type get_diffuse(const state_t& q) const override
+            value_type get_diffuse(const state_t& q) const
             {
                 return cfunc(q);
             }
