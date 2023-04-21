@@ -42,8 +42,8 @@ namespace spade::partition
                 num_global_blocks = group_in->sum(num_local_blocks);
             }
             
-            std::size_t get_num_global_blocks(void) const { return num_global_blocks; }
-            std::size_t get_num_local_blocks (void) const { return num_local_blocks; }
+            std::size_t get_num_global_blocks() const { return num_global_blocks; }
+            std::size_t get_num_local_blocks () const { return num_local_blocks; }
             std::size_t get_global_block(const std::size_t& lb_loc)   const { return local_block_to_global_block[lb_loc]; }
             std::size_t get_local_block (const std::size_t& lb_glob)  const { return global_block_to_local_block[lb_glob]; }
             std::size_t get_global_rank (const std::size_t& lb_glob)  const { return global_block_to_rank[lb_glob]; }

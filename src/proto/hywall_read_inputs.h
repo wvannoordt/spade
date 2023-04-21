@@ -11,10 +11,11 @@ namespace spade::proto
         settings.enableWallModel = true;
         settings.readRestart = false;
         input_section["rayDim"].MapTo(&settings.rayDim)                      = new PTL::PTLInteger(30, "number of ray points");
+        input_section["solveSkip"].MapTo(&settings.solveSkip)                      = new PTL::PTLInteger(1, "solve interval");
         settings.asyncSolve = false;
         input_section["verboseLevel"].MapTo(&settings.verboseLevel)          = new PTL::PTLInteger(1, "debug output level");
         input_section["maxIterations"].MapTo(&settings.maxIterations)        = new PTL::PTLInteger(100, "Max. iterations");
-        input_section["wallSpacing"].MapTo(&settings.wallSpacing)            = new PTL::PTLDouble(1e-6, "Max. iterations");
+        input_section["wallSpacing"].MapTo(&settings.wallSpacing)            = new PTL::PTLDouble(1e-6, "Max. itenumber of ray pointsrations");
         input_section["wallTemperature"].MapTo(&settings.wallTemperature)    = new PTL::PTLDouble(100, "Wall Temperature");
         input_section["adiabaticWall"].MapTo(&settings.adiabaticWall)        = new PTL::PTLBoolean(true, "Adiabatic wall");
         input_section["variablePrandtlT"].MapTo(&settings.variablePrandtlT)  = new PTL::PTLBoolean(false, "Variable turbulent prandtl number");
