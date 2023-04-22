@@ -49,14 +49,24 @@ namespace spade::convective
         const gas_t& gas;
     };
     
-    template <typename gas_t> struct pressure_diss_lr
+    template <typename gas_t, typename scale_t> struct pressure_diss_lr
     {
         typedef typename gas_t::value_type dtype;
         typedef fluid_state::flux_t<dtype> output_type;
-        using omni_type = omni::prefab::lr_t<omni::info_list_t<omni::info::value, omni::info::metric>>;
+        using sub_omni_type = omni::prefab::mono_t<grid::face_centered, typename scale_t::info_type>;
+        using sup_omni_type = omni::prefab::lr_t<omni::info_list_t<omni::info::value, omni::info::metric>>;
+        using omni_type     = omni::stencil_union<sub_omni_type, sup_omni_type>;
+
+
+        const gas_t&   gas;
+        const scale_t& scale;
+        dtype eps_p, eps_T;
         
-        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_p_in;}
-        pressure_diss_lr(const gas_t& gas_in, const dtype& eps_p_in, const dtype& eps_T_in) {gas = &gas_in; eps_p = eps_p_in; eps_T = eps_T_in;}
+        pressure_diss_lr(const gas_t& gas_in, const scale_t& scale_in, const dtype& eps_p_in)
+        : gas{gas_in}, scale{scale_in}, eps_p{eps_p_in}, eps_T{eps_p_in} {}
+
+        pressure_diss_lr(const gas_t& gas_in, const scale_t& scale_in, const dtype& eps_p_in, const dtype& eps_T_in)
+        : gas{gas_in}, scale{scale_in}, eps_p{eps_p_in}, eps_T{eps_T_in} {}
         
         output_type operator() (const auto& input) const
         {
@@ -70,30 +80,28 @@ namespace spade::convective
             const dtype delta_T = ql.T()-qr.T();
             const dtype pavg = 0.5*(ql.p() + qr.p());
             const dtype Tavg = 0.5*(ql.T() + qr.T());
-            const dtype inv_RT = 1.0/(0.5*(gas->get_R(input.cell(0_c))+gas->get_R(input.cell(1_c)))*Tavg);
+            const dtype inv_RT = 1.0/(0.5*(gas.get_R(input.cell(0_c))+gas.get_R(input.cell(1_c)))*Tavg);
             const dtype p_inv_rt2 = pavg*inv_RT/Tavg;
-            const dtype gamma =  0.5*(gas->get_gamma(input.cell(0_c))+gas->get_gamma(input.cell(1_c)));
+            const dtype gamma =  0.5*(gas.get_gamma(input.cell(0_c))+gas.get_gamma(input.cell(1_c)));
             const dtype k = 0.5*(ql.u()*qr.u() + ql.v()*qr.v() + ql.w()*qr.w());
             const dtype u = 0.5*(ql.u()+qr.u());
             const dtype v = 0.5*(ql.v()+qr.v());
             const dtype w = 0.5*(ql.w()+qr.w());
-            output.continuity() = eps_p*delta_p*inv_RT;
-            output.energy()     = eps_p*delta_p*(k*inv_RT + 1.0/gamma);
-            output.x_momentum() = eps_p*delta_p*u*inv_RT;
-            output.y_momentum() = eps_p*delta_p*v*inv_RT;
-            output.z_momentum() = eps_p*delta_p*w*inv_RT;
+            const auto  scl      = scale.get_sensor(input.face(0_c));
+            output.continuity()  = scl*eps_p*delta_p*inv_RT;
+            output.energy()      = scl*eps_p*delta_p*(k*inv_RT + 1.0/gamma);
+            output.x_momentum()  = scl*eps_p*delta_p*u*inv_RT;
+            output.y_momentum()  = scl*eps_p*delta_p*v*inv_RT;
+            output.z_momentum()  = scl*eps_p*delta_p*w*inv_RT;
             
-            output.continuity() -= eps_T*delta_T*p_inv_rt2;
-            output.energy()     -= eps_T*delta_T*p_inv_rt2*(0.5*k);
-            output.x_momentum() -= eps_T*delta_T*p_inv_rt2*u;
-            output.y_momentum() -= eps_T*delta_T*p_inv_rt2*v;
-            output.z_momentum() -= eps_T*delta_T*p_inv_rt2*w;
+            output.continuity() -= scl*eps_T*delta_T*p_inv_rt2;
+            output.energy()     -= scl*eps_T*delta_T*p_inv_rt2*(0.5*k);
+            output.x_momentum() -= scl*eps_T*delta_T*p_inv_rt2*u;
+            output.y_momentum() -= scl*eps_T*delta_T*p_inv_rt2*v;
+            output.z_momentum() -= scl*eps_T*delta_T*p_inv_rt2*w;
             
             return output;
         }
-        
-        const gas_t* gas;
-        dtype eps_p, eps_T;
     };
     
     //DELETE THE OLD IMPLEMENTATION!

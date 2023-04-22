@@ -42,3 +42,4 @@
 #include "navier-stokes/viscous.h"
 #include "navier-stokes/navier_stokes_mms.h"
 #include "navier-stokes/subgrid_scale.h"
+#include "navier-stokes/state_sensor.h"
