@@ -25,6 +25,8 @@ namespace spade::proto
         input_section["vanDriestAPlus"].MapTo(&settings.vanDriestAPlus)      = new PTL::PTLDouble(17.0, "van Driest Constant");
         input_section["gasConstant"].MapTo(&settings.gasConstant)            = new PTL::PTLDouble(287.0, "Gas constant");
         input_section["enableTransitionSensor"].MapTo(&settings.enableTransitionSensor) = new PTL::PTLBoolean(false, "Enable Transition Sensor");
+        input_section["laminarOnSolveFail"].MapTo(&settings.laminarOnSolveFail) = new PTL::PTLBoolean(false, "On fail, override with laminar solution");
+        
         
         std::string mom_eq_str, trb_eq_str, eng_eq_str;
         input_section["momentumEquationType"].MapTo(&mom_eq_str)          = new PTL::PTLString("ODE", "Momentum equation type");
