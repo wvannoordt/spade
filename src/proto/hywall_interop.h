@@ -20,13 +20,13 @@ namespace spade::proto
     {
         using array_state_t = typename array_t::alias_type;
         using coord_type    = typename array_t::grid_type::coord_type;
-        
         std::vector<grid::face_idx_t> wm_faces;
         std::vector<grid::cell_idx_t> wm_samples;
         std::vector<ctrs::v3d<coord_type>> wm_nvec_comps;
         std::vector<ctrs::v3d<coord_type>> wm_tvec;
         std::size_t num_points;
         int sampling_distance;
+        int nx, nz;
         real_t dx;
         const gas_t* gas;
         const array_t::grid_type::group_type& group;
@@ -48,6 +48,8 @@ namespace spade::proto
         std::vector<real_t> out_vort;
         std::vector<real_t> out_tau;
         std::vector<real_t> out_qw;
+        std::vector<real_t> out_tau2;
+        std::vector<real_t> out_qw2;
         std::vector<real_t> out_fail;
         
         using state_t = typename array_t::alias_type;
@@ -58,6 +60,8 @@ namespace spade::proto
             gas = &gas_in;
             HyWall::Initialize(prim_in.get_grid().group().get_channel(), 0);
             dx = prim_in.get_grid().get_dx(1);
+            nx = prim_in.get_grid().get_num_cells(0);
+            nz = prim_in.get_grid().get_num_cells(2);
         }
         
         void read(PTL::PropertySection& input_section)
@@ -122,6 +126,8 @@ namespace spade::proto
                 in_y[n]        = xf[1];
                 in_z[n]        = xf[2];
             }
+            out_tau2 = out_tau;
+            out_qw2  = out_qw;
             return wm_faces.size();
         }
         
@@ -246,6 +252,29 @@ namespace spade::proto
         {
             if (this->size() == 0) return;
             HyWall::Solve();
+        }
+
+        void smooth()
+        {
+            out_tau2 = out_tau;
+            out_qw2  = out_qw;
+            std::size_t idx = 0;
+            for (auto& i_f: wm_faces)
+            {
+                if ((i_f.i() > 0) && (i_f.i() < nx-1) && (i_f.k() > 0) && (i_f.k() < nz - 1))
+                {
+                    auto s0 = idx;
+                    auto s1 = idx + 1;
+                    auto s2 = idx - 1;
+                    auto s3 = idx + nx;
+                    auto s4 = idx - nz;
+                    auto tauval = 0.2*(out_tau2[s0] + out_tau2[s1] + out_tau2[s2] + out_tau2[s3] + out_tau2[s4]);
+                    auto  qwval = 0.2*(out_qw2 [s0] + out_qw2 [s1] + out_qw2 [s2] + out_qw2 [s3] + out_qw2 [s4]);
+                    out_tau[idx] = tauval;
+                    out_qw [idx] = qwval;
+                }
+                idx++;
+            }
         }
         
         void apply_flux(rhs_t& rhs) const
