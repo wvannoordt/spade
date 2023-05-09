@@ -1,11 +1,12 @@
 #pragma once
 
-#include "PTL.h"
 #include "HyWall.h"
+#include "core/sdf_binding.h"
 
 namespace spade::proto
 {
     bool streq(const std::string& s1, const std::string& s2) {return s1.compare(s2)==0;}
+#ifdef PTL_MAJOR_VERSION
     static void hywall_read_inputs(PTL::PropertySection& input_section, HyWall::UserSettings& settings)
     {
         settings.enableWallModel = true;
@@ -73,4 +74,79 @@ namespace spade::proto
         else if (streq(visc_law_str, "PowerLaw"))   {settings.viscousLaw = HyCore::visclaw::PowerLaw;}
         else if (!failed) {std::cout << "Invalid value for energy equation" << std::endl; abort();}
     }
+#endif
+// #ifdef SCIDF_MAJOR_VERSION
+    static void hywall_read_inputs(scidf::node_t& node, HyWall::UserSettings& settings)
+    {
+        settings.enableWallModel              = true;
+        settings.readRestart                  = false;
+        settings.rayDim                       = node["rayDim"];
+        settings.solveSkip                    = node["solveSkip"];
+        settings.asyncSolve                   = false;
+        settings.verboseLevel                 = node["verboseLevel"];
+        settings.maxIterations                = node["maxIterations"];
+        settings.wallSpacing                  = node["wallSpacing"];
+        settings.wallTemperature              = node["wallTemperature"];
+        settings.adiabaticWall                = node["adiabaticWall"];
+        settings.variablePrandtlT             = node["variablePrandtlT"];
+        settings.fluidCp                      = node["fluidCp"];
+        settings.turbPradntl                  = node["turbPradntl"];
+        settings.fluidPrandtl                 = node["fluidPrandtl"];
+        settings.vanDriestAPlus               = node["vanDriestAPlus"];
+        settings.gasConstant                  = node["gasConstant"];
+        settings.enableTransitionSensor       = node["enableTransitionSensor"];
+        settings.laminarOnSolveFail           = node["laminarOnSolveFail"];        
+        settings.momentumUnderRelaxationODE   = node["momentumUnderRelaxationODE"];
+        settings.turbulenceUnderRelaxationODE = node["turbulenceUnderRelaxationODE"];
+        settings.energyUnderRelaxationODE     = node["energyUnderRelaxationODE"];
+        settings.includeMomentumRhs           = node["includeMomentumRhs"];
+        settings.isCompressible               = node["isCompressible"];
+        settings.suthViscRef                  = node["suthViscRef"];
+        settings.suthTRef                     = node["suthTRef"];
+        
+        std::array vals0
+        {
+            HyCore::momentum::allmaras,
+            HyCore::momentum::ODE,
+            HyCore::momentum::fromFile
+        };
+        settings.momentumEquationType   = vals0[scidf::menu_t<std::string>(node["momentumEquationType"]).selected_index()];
+
+        std::array vals1
+        {
+            HyCore::turbulence::linear,
+            HyCore::turbulence::ODE,
+            HyCore::turbulence::vanDriest,
+            HyCore::turbulence::fromFile,
+            HyCore::turbulence::pnlm
+        };
+        settings.turbulenceEquationType = vals1[scidf::menu_t<std::string>(node["turbulenceEquationType"]).selected_index()];
+
+        std::array vals2
+        {
+            HyCore::energy::croccoBusemann,
+            HyCore::energy::ODE,
+            HyCore::energy::linear,
+            HyCore::energy::fromFile
+        };
+        settings.energyEquationType     = vals2[scidf::menu_t<std::string>(node["energyEquationType"]).selected_index()];
+
+        std::array vals3
+        {
+            HyCore::yscale::trettelLarsson,
+            HyCore::yscale::yPlus,
+            HyCore::yscale::mixed
+        };
+        settings.yscaleType             = vals3[scidf::menu_t<std::string>(node["yScale"]).selected_index()];
+
+        std::array vals4
+        {
+            HyCore::visclaw::constant,
+            HyCore::visclaw::sutherland,
+            HyCore::visclaw::PowerLaw
+        };
+        settings.viscousLaw             = vals4[scidf::menu_t<std::string>(node["viscousLaw"]).selected_index()];
+    }
+// #endif
+
 }

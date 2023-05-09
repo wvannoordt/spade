@@ -109,7 +109,9 @@ int main(int argc, char** argv)
         air.gamma = gamma;
         spade::viscous_laws::constant_viscosity_t visc_law(mu, prandtl);
 
-        spade::convective::totani_lr tscheme(air);
+        // spade::convective::totani_lr tscheme(air);
+        spade::convective::rusanov_t flx(air);
+        spade::convective::weno_t tscheme(flx);
         spade::viscous::visc_lr  visc_scheme(visc_law, air);
         
         // Convective

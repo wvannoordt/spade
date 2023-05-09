@@ -18,7 +18,6 @@
 #include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
 #include "core/block_config.h"
-#include "core/pde_algs.h"
 #include "core/mtimer.h"
 #include "core/arith_tuple.h"
 #include "core/avg.h"
@@ -29,6 +28,8 @@
 #include "omni/omni.h"
 #include "omni/prefab.h"
 
+#include "pde-algs/pde_algs.h"
+
 #include "io/io.h"
 
 #include "time-integration/explicit.h"
@@ -38,8 +39,11 @@
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/state_transformation.h"
 #include "navier-stokes/viscous_laws.h"
+#include "navier-stokes/flux_funcs.h"
 #include "navier-stokes/convective.h"
 #include "navier-stokes/viscous.h"
 #include "navier-stokes/navier_stokes_mms.h"
 #include "navier-stokes/subgrid_scale.h"
 #include "navier-stokes/state_sensor.h"
+
+#include "core/sdf_binding.h"

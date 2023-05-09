@@ -5,10 +5,10 @@
 #include <vector>
 
 #include "HyWall.h"
-#include "PTL.h"
 
 #include "core/config.h"
 #include "navier-stokes/fluid_state.h"
+#include "core/sdf_binding.h"
 
 #include "proto/hywall_read_inputs.h"
 
@@ -64,7 +64,7 @@ namespace spade::proto
             nz = prim_in.get_grid().get_num_cells(2);
         }
         
-        void read(PTL::PropertySection& input_section)
+        void read(auto& input_section)
         {
             hywall_read_inputs(input_section, HyWall::settings);
         }

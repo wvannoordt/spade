@@ -121,7 +121,9 @@ namespace spade::ctrs
             set_r(i+1, ps...);
         }
         
-        template <not_basic_array... params> arithmetic_array_t(params... ps)
+        template <not_basic_array... params>
+        requires(sizeof...(params) == ar_size)
+        arithmetic_array_t(params... ps)
         {
             set_r(0, ps...);
         }

@@ -57,7 +57,6 @@ namespace spade::convective
         using sup_omni_type = omni::prefab::lr_t<omni::info_list_t<omni::info::value, omni::info::metric>>;
         using omni_type     = omni::stencil_union<sub_omni_type, sup_omni_type>;
 
-
         const gas_t&   gas;
         const scale_t& scale;
         dtype eps_p, eps_T;
@@ -103,100 +102,67 @@ namespace spade::convective
             return output;
         }
     };
-    
-    //DELETE THE OLD IMPLEMENTATION!
-    /*
-    template <typename gas_t> struct weno_3
+
+    //todo: generalize to other weno schemes
+    template <typename flux_func_t> struct weno_t
     {
-        typedef typename gas_t::value_type dtype;
-        typedef fluid_state::flux_t<dtype> output_type;
-        typedef fetch::face_fetch_t
-        <
-            fetch::flux_line
-            <
-                4,
-                fetch::cell_info
-                <
-                    fetch::cell_state<fluid_state::prim_t<dtype>>,
-                    fetch::cell_normal<ctrs::array<dtype, 3>>
-                >
-            >,
-            fetch::face_info<>
-        > input_type;
+        using float_t       = typename flux_func_t::float_t;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using info_type     = typename flux_func_t::info_type;
+        using omni_type     = omni::stencil_t<
+                grid::face_centered,
+                omni::elem_t<omni::offset_t<-3, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t<-1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 3, 0, 0>, info_type>
+            >;
+
+        const flux_func_t& flux_func;
         
-        weno_3(const gas_t& gas_in) { gas = &gas_in; }
+        weno_t(const flux_func_t& flux_func_in)
+        : flux_func{flux_func_in} {}
         
-        output_type calc_flux(const input_type& input) const
+        output_type operator()(const auto& input) const
         {
-            fluid_state::flux_t<dtype> output;
-            const auto& q0       = std::get<0>(input.cell_data.stencil[0].elements).data;
-            const auto& q1       = std::get<0>(input.cell_data.stencil[1].elements).data;
-            const auto& q2       = std::get<0>(input.cell_data.stencil[2].elements).data;
-            const auto& q3       = std::get<0>(input.cell_data.stencil[3].elements).data;
-            const auto& n0       = std::get<1>(input.cell_data.stencil[0].elements).data;
-            const auto& n1       = std::get<1>(input.cell_data.stencil[1].elements).data;
-            const auto& n2       = std::get<1>(input.cell_data.stencil[2].elements).data;
-            const auto& n3       = std::get<1>(input.cell_data.stencil[3].elements).data;
-            
-            fluid_state::flux_t<dtype> f0_u, f0_d, f1_u, f1_d, f2_u, f2_d, f3_u, f3_d;
-            const auto flux_q = [&](
-                const fluid_state::prim_t<dtype>& q,
-                const ctrs::array<dtype, 3>& nv,
-                fluid_state::flux_t<dtype>& f_u,
-                fluid_state::flux_t<dtype>& f_d) -> void
-            {
-                const dtype u_n  = nv[0]*q.u() + nv[1]*q.v() + nv[2]*q.w();
-                const dtype rho  = q.p()/(gas->get_R(q)*q.T());
-                const dtype enth = 0.5*(q.u()*q.u()+q.v()*q.v()+q.w()*q.w()) + q.p()/rho + q.p()/(rho*(gas->get_gamma(q)-1.0));
-                f_u.continuity() = 0.5*rho*u_n;
-                f_u.energy()     = 0.5*rho*u_n*enth;
-                f_u.x_momentum() = 0.5*rho*q.u()*u_n + 0.5*q.p()*nv[0];
-                f_u.y_momentum() = 0.5*rho*q.v()*u_n + 0.5*q.p()*nv[1];
-                f_u.z_momentum() = 0.5*rho*q.w()*u_n + 0.5*q.p()*nv[2];
-                f_d = f_u;
-                const real_t sigma = abs(u_n) + sqrt(gas->get_gamma(q)*gas->get_R(q)*q.T());
-                f_d.continuity() -= sigma*rho;
-                f_d.energy()     -= sigma*enth;
-                f_d.x_momentum() -= sigma*rho*q.u();
-                f_d.y_momentum() -= sigma*rho*q.v();
-                f_d.z_momentum() -= sigma*rho*q.w();
-                f_u.continuity() += sigma*rho;
-                f_u.energy()     += sigma*enth;
-                f_u.x_momentum() += sigma*rho*q.u();
-                f_u.y_momentum() += sigma*rho*q.v();
-                f_u.z_momentum() += sigma*rho*q.w();
-            };
-            flux_q(q0, n0, f0_u, f0_d);
-            flux_q(q1, n1, f1_u, f1_d);
-            flux_q(q2, n2, f2_u, f2_d);
-            flux_q(q3, n3, f3_u, f3_d);
-            
+            fluid_state::flux_t<float_t> output = 0.0;
+            auto fp0 = flux_func(input.cell(0_c));
+            auto fp1 = flux_func(input.cell(1_c));
+            auto fp2 = flux_func(input.cell(2_c));
+            auto fp3 = flux_func(input.cell(3_c));
+            const auto& f0_u = fp0[0];
+            const auto& f0_d = fp0[1];
+            const auto& f1_u = fp1[0];
+            const auto& f1_d = fp1[1];
+            const auto& f2_u = fp2[0];
+            const auto& f2_d = fp2[1];
+            const auto& f3_u = fp3[0];
+            const auto& f3_d = fp3[1];
             for (std::size_t k = 0; k < output.size(); ++k)
             {
                 //upwind
-                const dtype r0  = -0.5*f0_u[k]+1.5*f1_u[k]; //sten0
-                const dtype r1  =  0.5*f1_u[k]+0.5*f2_u[k]; //sten1
+                const float_t r0  = -0.5*f0_u[k]+1.5*f1_u[k]; //sten0
+                const float_t r1  =  0.5*f1_u[k]+0.5*f2_u[k]; //sten1
                 
                 //downwind
-                const dtype r2  =  0.5*f1_d[k]+0.5*f2_d[k]; //sten2
-                const dtype r3  =  1.5*f2_d[k]-0.5*f3_d[k]; //sten3
+                const float_t r2  =  0.5*f1_d[k]+0.5*f2_d[k]; //sten2
+                const float_t r3  =  1.5*f2_d[k]-0.5*f3_d[k]; //sten3
                 
-                const dtype be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
-                const dtype be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
+                const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
+                const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
                 
-                const dtype be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
-                const dtype be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
+                const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
+                const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
                 
-                const dtype eps = 1e-9;
-                const dtype a0  = (1.0/3.0)/((be0+eps)*(be0+eps));
-                const dtype a1  = (2.0/3.0)/((be1+eps)*(be1+eps));
-                const dtype a2  = (2.0/3.0)/((be2+eps)*(be2+eps));
-                const dtype a3  = (1.0/3.0)/((be3+eps)*(be3+eps));
+                const float_t eps = 1e-9;
+                const float_t a0  = (1.0/3.0)/((be0+eps)*(be0+eps));
+                const float_t a1  = (2.0/3.0)/((be1+eps)*(be1+eps));
+                const float_t a2  = (2.0/3.0)/((be2+eps)*(be2+eps));
+                const float_t a3  = (1.0/3.0)/((be3+eps)*(be3+eps));
                 
-                const dtype w0 = a0/(a0+a1);
-                const dtype w1 = a1/(a0+a1);
-                const dtype w2 = a2/(a2+a3);
-                const dtype w3 = a3/(a2+a3);
+                const float_t w0 = a0/(a0+a1);
+                const float_t w1 = a1/(a0+a1);
+                const float_t w2 = a2/(a2+a3);
+                const float_t w3 = a3/(a2+a3);
                 
                 output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
                 // output[k] = (1.0/3.0)*r0 + (2.0/3.0)*r1 + (2.0/3.0)*r2 + (1.0/3.0)*r3; //(mms)
@@ -204,8 +170,5 @@ namespace spade::convective
             
             return output;
         }
-        
-        const gas_t* gas;
     };
-    */
 }
