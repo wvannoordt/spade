@@ -24,8 +24,7 @@ namespace spade::pde_algs
     enum block_flux_policy
     {
         block_flux_all,
-        block_flux_interior,
-        block_flux_boundary
+        block_flux_interior
     };
 
     template <
@@ -37,7 +36,6 @@ namespace spade::pde_algs
     static void flux_div(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
-        const block_flux_policy& policy,
         const bound_box_t<bool,sol_arr_t::grid_type::dim()>& domain_boundary_flux,
         const flux_funcs_t&... flux_funcs)
     {
@@ -69,13 +67,14 @@ namespace spade::pde_algs
             auto g0 = range(flux_bounds.min(0),flux_bounds.max(0));
             auto g1 = range(flux_bounds.min(1),flux_bounds.max(1));
             auto g2 = range(flux_bounds.min(2),flux_bounds.max(2));
-            
+
             auto grid_range = g0*g1*g2;
+            // 2023-05-24, tested explicit loop and it has the same performance
             for (auto idx: grid_range)
             {
                 const real_type dx = ar_grid.get_dx(idir);
-                grid::cell_idx_t il(idx[0], idx[1], idx[2], lb_loc);
-                grid::cell_idx_t ir(idx[0], idx[1], idx[2], lb_loc);
+                grid::cell_idx_t il(idx[0_c], idx[1_c], idx[2_c], lb_loc);
+                grid::cell_idx_t ir(idx[0_c], idx[1_c], idx[2_c], lb_loc);
                 ir[idir] += 1;
                 grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
                 const auto xyz_comp_l = ar_grid.get_comp_coords(il);
@@ -129,13 +128,12 @@ namespace spade::pde_algs
         const flux_funcs_t&... flux_funcs)
     {
         const std::size_t dim = sol_arr_t::grid_type::dim();
-        const block_flux_policy policy = block_flux_all;
         bound_box_t<bool,dim> domain_boundary_flux;
         for (auto i: range(0,dim))
         {
             domain_boundary_flux.max(i) = true;
             domain_boundary_flux.min(i) = true;
         }
-        flux_div(prims, rhs, policy, domain_boundary_flux, flux_funcs...);
+        flux_div(prims, rhs, domain_boundary_flux, flux_funcs...);
     }
 }

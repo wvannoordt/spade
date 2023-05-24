@@ -2,6 +2,8 @@
 #include <iostream>
 #include <array>
 
+#include "core/const_index.h"
+
 
 //Note:
 // for (auto i: range(0,3)*range(0,2))
@@ -102,6 +104,7 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
     {
         return -1;
     }
+
     template <typename index_t_i, const std::size_t idx_dim_i>
     constexpr index_t brack_r(const md_iterator<index_t_i,idx_dim_i>& iter, std::size_t idx) const noexcept
     {
@@ -116,6 +119,18 @@ template <typename index_t, const std::size_t idx_dim> struct md_iterator
         else
         {
             return brack_r(next,idx-1);
+        }
+    }
+
+    // 260,000 -> 268,000 (nice)
+    template <const int ii>
+    requires(ii >= 0 && ii < idx_dim)
+    constexpr index_t operator[] (const spade::udci::idx_const_t<ii>& idx) const noexcept
+    {
+        if constexpr (ii==0) return idx_v;
+        else
+        {
+            return next[spade::udci::idx_const_t<ii-1>()];
         }
     }
 };

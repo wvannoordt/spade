@@ -104,7 +104,13 @@ namespace spade::convective
     };
 
     //todo: generalize to other weno schemes
-    template <typename flux_func_t> struct weno_t
+    enum weno_smooth_indicator
+    {
+        enable_smooth,
+        disable_smooth
+    };
+
+    template <typename flux_func_t, const weno_smooth_indicator = enable_smooth> struct weno_t
     {
         using float_t       = typename flux_func_t::float_t;
         using output_type   = fluid_state::flux_t<float_t>;

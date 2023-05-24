@@ -35,6 +35,14 @@ namespace spade
         
         dtype& operator() (const std::size_t& dim, const std::size_t& min_max) {return bnds[2*dim+min_max];}
         const dtype& operator() (const std::size_t& dim, const std::size_t& min_max) const {return bnds[2*dim+min_max];}
+
+        bound_box_t operator ! () const
+        {
+            static_assert(std::same_as<dtype, bool>, "cannot apply unary operator ! to non-boolead bound box");
+            bound_box_t output = (*this);
+            for (auto& b: output) b = !b;
+            return output;
+        }
     };
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)
