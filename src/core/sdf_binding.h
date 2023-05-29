@@ -1,6 +1,7 @@
 #pragma once
 
-#ifdef SDF_MAJOR_VERSION
+// #ifdef SDF_MAJOR_VERSION
+#include "scidf.h"
 #include <vector>
 #include "core/ctrs.h"
 namespace scidf
@@ -35,4 +36,4 @@ namespace scidf
         return cnv;
     }
 }
-#endif
+// #endif

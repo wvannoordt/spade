@@ -82,7 +82,7 @@ namespace spade::grid
                 const array_descriptor_t& exchange_cells_in,
                 const bound_box_t<dtype, array_descriptor_t::size()>& bounds_in,
                 const coord_t& coord_system_in,
-                par_group_t& group_in
+                const par_group_t& group_in
                 )
             {
                 //Initialize class members
@@ -423,7 +423,7 @@ namespace spade::grid
             bound_box_t<dtype,  3> bounds;
             std::vector<bound_box_t<dtype, 3>> block_boxes;
             size_t total_blocks;
-            par_group_t* grid_group;
+            const par_group_t* grid_group;
             std::vector<neighbor_relationship_t> neighbors;
             std::vector<bound_box_t<bool, dim()>> block_is_domain_boundary;
             std::vector<std::size_t> send_size_elems;

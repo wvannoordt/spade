@@ -7,6 +7,7 @@
 
 namespace spade::pde_algs
 {
+    int DEBUG = 0;
     template <typename flux_func_t> concept is_flux_functor =
     requires(const flux_func_t& f)
     {
@@ -59,11 +60,8 @@ namespace spade::pde_algs
                 flux_bounds.max(d) = ar_grid.get_num_cells(d);
             }
             const auto& iboundary = ar_grid.is_domain_boundary(lb_glob);
-            for (auto d:range(0,ar_grid.dim()))
-            {
-                if (iboundary.min(d) && !domain_boundary_flux.min(d)) flux_bounds.min(d) = 0;
-                if (iboundary.max(d) && !domain_boundary_flux.max(d)) flux_bounds.max(d) = ar_grid.get_num_cells(d) - 1;
-            }
+            if (iboundary.min(idir) && !domain_boundary_flux.min(idir)) flux_bounds.min(idir) = 0;
+            if (iboundary.max(idir) && !domain_boundary_flux.max(idir)) flux_bounds.max(idir) = ar_grid.get_num_cells(idir) - 1;
             auto g0 = range(flux_bounds.min(0),flux_bounds.max(0));
             auto g1 = range(flux_bounds.min(1),flux_bounds.max(1));
             auto g2 = range(flux_bounds.min(2),flux_bounds.max(2));

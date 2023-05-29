@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include "core/range.h"
 
 namespace spade
 {

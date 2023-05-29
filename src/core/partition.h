@@ -14,7 +14,7 @@ namespace spade::partition
                 
             }
             
-            block_partition_t(const ctrs::array<int, 3>& num_blocks_in, parallel::mpi_t* group_in)
+            block_partition_t(const ctrs::array<int, 3>& num_blocks_in, const parallel::mpi_t* group_in)
             {
                 ctrs::copy_array(num_blocks_in, num_blocks);
                 std::size_t total_blocks = num_blocks[0]*num_blocks[1]*num_blocks[2];

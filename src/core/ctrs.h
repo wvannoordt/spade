@@ -6,6 +6,7 @@
 
 #include "core/config.h"
 #include "core/utils.h"
+#include "core/range.h"
 #include "core/const_index.h"
 
 namespace spade::ctrs

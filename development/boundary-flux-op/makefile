@@ -1,4 +1,4 @@
-spade  := $(realpath ../../../src)
+spade   := ${SPADE}
 target := vdf.x
 
 ifndef MPI_ENABLE
@@ -16,20 +16,26 @@ compflags += -DMPI_ENABLE=${MPI_ENABLE}
 
 flags :=
 flags += -fconcepts-diagnostics-depth=3
-#flags += -fsanitize=undefined,address
+ifeq (${sanny},1)
+flags += -fsanitize=undefined,address -fstack-protector-all
+endif
 
-iflags := 
-iflags += -I${spade}
-iflags += -I${PTL}/include
 
-lflags := 
-lflags += -L${PTL}/lib -lPTL
+iflags :=
+iflags += -I${spade}/src
+iflags += -I${SCIDF}/src
+iflags += -I${HYWALL_PATH}/include
 
 main:
+	${cc} --version
 	${cc} -std=c++20 -g -O3 ${flags} ${compflags} ${iflags} main.cc -o ${target} ${lflags}
 
 run: main
 	./${target}
 
+raw:
+	${cc} -E -std=c++20 -g -O3 ${flags} ${compflags} ${iflags} main.cc > raw.cc
+
 clean:
-	rm -f prf-ct.x prf-gc.x
+	${MAKE} -C ${HYWALL_PATH} -f makefile clean
+	rm -f ${target}

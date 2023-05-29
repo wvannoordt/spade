@@ -167,7 +167,7 @@ namespace spade::grid
     //offset has 3 entries that are either 0 or 1, indicating which corner of the cell to be chosen
     static node_idx_t cell_to_node(const cell_idx_t& i_cell, const ctrs::array<int,3>& offset)
     {
-        print("NOT IMPLEMENTED:", __FILE__, __LINE__);
+        // print("NOT IMPLEMENTED:", __FILE__, __LINE__);
         abort();
         // node_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3]);
         node_idx_t output;
@@ -195,7 +195,7 @@ namespace spade::grid
     //pm = 0 indicates the negative-side ("left") face, pm = 1 indicates the positive-side ("right") face
     static node_idx_t face_to_node(const face_idx_t& i_face, const int& pm)
     {
-        print("NOT IMPLEMENTED:", __FILE__, __LINE__);
+        // print("NOT IMPLEMENTED:", __FILE__, __LINE__);
         abort();
         node_idx_t output((int)i_face[0], (int)i_face[1], (int)i_face[2], (int)i_face[3]);
         return output;
