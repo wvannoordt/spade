@@ -215,10 +215,10 @@ namespace spade::grid
             output.rank_send = grid.get_partition().get_rank(lb_ini);
             output.rank_recv = grid.get_partition().get_rank(lb_term);
             
-            output.source.min(3) = grid.get_partition().to_local(lb_ini);
+            output.source.min(3) = grid.get_partition().to_local(lb_ini).value;
             output.source.max(3) = output.source.min(3)+1;
 
-            output.dest.min(3)   = grid.get_partition().to_local(lb_term);
+            output.dest.min(3)   = grid.get_partition().to_local(lb_term).value;
             output.dest.max(3)   = output.dest.min(3)+1;
             
             for (int d = 0; d < 3; ++d)
@@ -271,6 +271,6 @@ namespace spade::grid
             }
         }
         
-        return array_exchange_t(output0, output1);
+        return array_exchange_t{output0, output1};
     }
 }

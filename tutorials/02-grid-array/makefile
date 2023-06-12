@@ -22,7 +22,7 @@ flags += -fsanitize=undefined,address -fstack-protector-all
 endif
 
 main:
-	${cc} -std=c++20 -O3 ${flags} ${compflags} -I${SPADE} -I${PTL}/include main.cc -o ${target} -L${PTL}/lib -lPTL
+	${cc} -std=c++20 -O3 ${flags} ${compflags} -I${SPADE} main.cc -o ${target}
 
 run: main
 	./${target}

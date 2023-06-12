@@ -57,21 +57,18 @@ namespace spade::partition
             
             std::size_t get_rank (const partition_tagged auto& lb)  const { return global_block_to_rank[to_global(lb).value]; }
             
-            template <std::integral integ_t> auto to_global(const utils::tagged_value_t<global_tag_t, integ_t>& lb_glob) const
+            template <partition_tagged idx_t> auto to_global(const idx_t& lb) const
             {
-                return lb_glob;
+                if constexpr (utils::has_tag<idx_t, global_tag_t>) return lb;
+                else return utils::tag[global](local_block_to_global_block[lb.value]);
             }
-            template <std::integral integ_t> auto to_global(const utils::tagged_value_t<local_tag_t, integ_t>& lb_loc) const
+            
+            // template <std::integral integ_t> auto to_local(const utils::tagged_value_t<global_tag_t, integ_t>& lb_glob) const
+            // template <typename integ_t> auto to_local(const utils::tagged_value_t<global_tag_t, integ_t>& lb_glob) const
+            template <partition_tagged idx_t> auto to_local(const idx_t& lb) const
             {
-                return utils::tag[global](local_block_to_global_block[lb_loc.value]);
-            }
-            template <std::integral integ_t> auto to_local(const utils::tagged_value_t<global_tag_t, integ_t>& lb_glob) const
-            {
-                return utils::tag[local](global_block_to_local_block[lb_glob.value]);
-            }
-            template <std::integral integ_t> auto to_local(const utils::tagged_value_t<local_tag_t, integ_t>& lb_loc) const
-            {
-                return lb_loc;
+                if constexpr (utils::has_tag<idx_t, local_tag_t>) return lb;
+                else return utils::tag[local](global_block_to_local_block[lb.value]);
             }
             
         private:

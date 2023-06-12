@@ -22,12 +22,16 @@ int main(int argc, char** argv)
 
     //We won't use any fancy coordinate system for this example,
     //just a plain-old uniform grid.
-    spade::coords::identity<real_t> coords;  
+    spade::coords::identity<real_t> coords;
+    
+    //We need to create the blocks that will make up the grid: we will use a set of cartesian blocks
+    spade::grid::cartesian_blocks_t blocks(num_blocks, bounds);
+    
+    //Finally, we create the overall grid that we will use
     spade::grid::cartesian_grid_t grid(
-        num_blocks,
         cells_in_block,
         exchange_cells,
-        bounds,
+        blocks,
         coords,
         group);
     

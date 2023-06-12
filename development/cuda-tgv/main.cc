@@ -85,7 +85,10 @@ int main(int argc, char** argv)
     spade::coords::identity<real_t> coords;
     
     //create grid
-    spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
+    spade::grid::cartesian_blocks_t blocks(num_blocks, bounds);
+    spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, blocks, coords, group);
+    spade::ctrs::array<bool, 3> periodic = true;
+    auto handle = spade::grid::create_exchange(grid, group, periodic);
     
     //create arrays residing on the grid
     prim_t fill1 = 0.0;
@@ -116,7 +119,7 @@ int main(int argc, char** argv)
     spade::algs::fill_array(prim, ini);
     
     //fill the guards
-    grid.exchange_array(prim);
+    handle.exchange(prim);
     
     //if a restart file is specified, read the data, fill the array, and fill guards
     if (init_file != "none")
@@ -124,7 +127,7 @@ int main(int argc, char** argv)
         if (group.isroot()) print("reading...");
         spade::io::binary_read(init_file, prim);
         if (group.isroot()) print("Init done.");
-        grid.exchange_array(prim);
+        handle.exchange(prim);
     }
     
     //using the 2nd-order centered KEEP scheme
@@ -132,8 +135,8 @@ int main(int argc, char** argv)
     
     //viscous scheme
     const real_t visc = rho0*u0*L/reynolds;
-    spade::viscous_laws::constant_viscosity_t visc_law(visc, prandtl, air);
-    spade::viscous::visc_lr  vscheme(visc_law);
+    spade::viscous_laws::constant_viscosity_t visc_law(visc, prandtl);
+    spade::viscous::visc_lr  vscheme(visc_law, air);
     
     if (group.isroot())
     {
@@ -164,7 +167,7 @@ int main(int argc, char** argv)
     
     //calculate timestep
     real_t time0          = 0.0;
-    const real_t dx       = spade::utils::min(grid.get_dx(0), grid.get_dx(1), grid.get_dx(2));
+    const real_t dx       = spade::utils::min(grid.get_dx(0, 0), grid.get_dx(1, 0), grid.get_dx(2, 0));
     const real_t umax_ini = spade::algs::transform_reduce(prim, get_u, max_op);
     const real_t dt       = targ_cfl*dx/umax_ini;
     
@@ -174,7 +177,7 @@ int main(int argc, char** argv)
     
     auto bc = [&](auto& q, const auto& t)
     {
-        grid.exchange_array(q);
+        handle.exchange(q);
     };
     
     //define the residual calculation

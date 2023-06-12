@@ -242,9 +242,10 @@ namespace spade::grid
                 return size;
             }
             
-            dtype get_dx(const int i, const partition::partition_tagged auto& lb)  const
+            template <partition::partition_tagged idx_t>dtype get_dx(const int i, const idx_t& lb)  const
             {
-                return block_arrangement.get_size(i, grid_partition.to_global(lb).value)/cells_in_block[i];
+                const auto gbl = grid_partition.to_global(lb);
+                return block_arrangement.get_size(i, gbl.value)/cells_in_block[i];
             }
             
             bound_box_t<dtype, 3> get_block_box(const partition::partition_tagged auto& lb) const
