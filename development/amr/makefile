@@ -1,4 +1,3 @@
-cvdf   := $(realpath ../../../src)
 target := vdf.x
 
 ifndef MPI_ENABLE
@@ -11,14 +10,29 @@ else
 cc := $(shell which g++)
 endif
 
+ifndef use_cuda
+use_cuda := 0
+endif
+
 compflags :=
 compflags += -DMPI_ENABLE=${MPI_ENABLE}
+compflags += -DUSE_SOURCE_LOCATION=0
 
+sanny := 0
+
+#Note that including -g dramatically increases compile time
 flags :=
-flags += -fconcepts-diagnostics-depth=3
+flags += -std=c++20 -O3 -fconcepts-diagnostics-depth=3 -fmax-errors=1
+ifeq (${sanny},1)
+flags += -fsanitize=undefined,address -fstack-protector-all
+endif
 
+incl :=
+incl += -I${SPADE}/src
+
+link :=
 main:
-	${cc} -std=c++20 -g -O3 ${flags} ${compflags} -I${cvdf} main.cc -o ${target}
+	${cc} ${flags} ${compflags} ${incl} main.cc -o ${target}
 
 run: main
 	./${target}

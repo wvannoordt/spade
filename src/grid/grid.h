@@ -53,13 +53,6 @@ namespace spade::grid
         include_exchanges=1
     };
     
-    // struct neighbor_relationship_t
-    // {
-    //     ctrs::array<int, 3> edge_vec;
-    //     int rank_end, rank_start;
-    //     int lb_glob_end, lb_glob_start;
-    // };
-    
     template
     <
         ctrs::basic_array array_descriptor_t,
@@ -104,73 +97,18 @@ namespace spade::grid
                 //Initialize class members
                 ctrs::copy_array(cells_in_block_in, cells_in_block, 1);
                 ctrs::copy_array(exchange_cells_in, exchange_cells, 0);
-                
-                
-                // send_size_elems.resize(group_in.size(), 0);
-                // recv_size_elems.resize(group_in.size(), 0);
-                
-                // send_bufs.resize(group_in.size());
-                // recv_bufs.resize(group_in.size());
-                
-                // requests.resize(group_in.size());
-                // statuses.resize(group_in.size());
-                
-                // //compute neighbor relationships
-                // for (auto lb: range(0, this->get_num_global_blocks()))
-                // {
-                //     std::size_t lb_glob = lb;
-                //     ctrs::array<int, 3> delta_lb = 0;
-                //     int i3d = this->is_3d()?1:0;
-                //     auto delta_lb_range = range(-1, 2)*range(-1, 2)*range(-i3d, 1+i3d);
-                //     for (auto dlb: delta_lb_range)
-                //     {
-                //         ctrs::copy_array(dlb, delta_lb);
-                //         ctrs::array<int, 3> lb_nd;
-                //         ctrs::copy_array(expand_index(lb_glob, this->num_blocks), lb_nd);
-                //         lb_nd += delta_lb;
-                //         lb_nd += this->num_blocks;
-                //         lb_nd %= this->num_blocks;
-                //         std::size_t lb_glob_neigh = ctrs::collapse_index(lb_nd, this->num_blocks);
-                //         int rank_here  = grid_partition.get_global_rank(lb_glob);
-                //         int rank_neigh = grid_partition.get_global_rank(lb_glob_neigh);
-                        
-                //         neighbor_relationship_t neighbor_relationship;
-                //         neighbor_relationship.edge_vec      = delta_lb;
-                //         neighbor_relationship.rank_end      = rank_neigh;
-                //         neighbor_relationship.lb_glob_end   = lb_glob_neigh;
-                //         neighbor_relationship.rank_start    = rank_here;
-                //         neighbor_relationship.lb_glob_start = lb_glob;
-                //         if (neighbor_relationship.edge_vec[0] != 0 || neighbor_relationship.edge_vec[1] != 0 || neighbor_relationship.edge_vec[2] != 0)
-                //         {
-                //             if ((rank_here==group_in.rank()) || (rank_neigh==group_in.rank()))
-                //             {
-                //                 neighbors.push_back(neighbor_relationship);
-                                
-                //                 //Here sends, neigh receives
-                //                 if (group_in.rank()==rank_here)
-                //                 {
-                //                     send_size_elems[rank_neigh] += this->get_send_index_bounds(delta_lb).volume();
-                //                 }
-                //                 if (group_in.rank()==rank_neigh)
-                //                 {
-                //                     recv_size_elems[rank_here]  += this->get_recv_index_bounds(delta_lb).volume();
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
             }
             
             cartesian_grid_t(){}
             
             constexpr static int dim() {return grid_dim;}
             
-            template <typename idx_t>_finline_ coord_point_type get_coords(const idx_t& i) const
+            template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
             {
                 return coord_system.map(this->get_comp_coords(i));
             }
             
-            template <typename idx_t>_finline_ coord_point_type get_comp_coords(const idx_t& i) const
+            template <typename idx_t> _finline_ coord_point_type get_comp_coords(const idx_t& i) const
             {
                 const auto  idx_r = get_index_coord(i);
                 const auto  lb    = grid_partition.to_global(utils::tag[partition::local](i.lb()));
@@ -222,6 +160,8 @@ namespace spade::grid
             const par_group_t& group()                          const { return grid_group; }
             const coord_t& coord_sys()                          const { return coord_system; }
             const auto& get_blocks()                            const { return block_arrangement; }
+            const partition::block_partition_t& get_partition() const { return grid_partition; }
+            const coord_t& get_coord_sys()                      const { return coord_system; }
             
             constexpr static bool is_3d()                             { return dim()==3; }
             
@@ -242,7 +182,7 @@ namespace spade::grid
                 return size;
             }
             
-            template <partition::partition_tagged idx_t>dtype get_dx(const int i, const idx_t& lb)  const
+            template <partition::partition_tagged idx_t> dtype get_dx(const int i, const idx_t& lb)  const
             {
                 const auto gbl = grid_partition.to_global(lb);
                 return block_arrangement.get_size(i, gbl.value)/cells_in_block[i];
@@ -252,8 +192,5 @@ namespace spade::grid
             {
                 return block_arrangement.get_bounding_box(grid_partition.to_global(lb).value);
             }
-            
-            const partition::block_partition_t& get_partition() const { return grid_partition; }
-            const coord_t& get_coord_sys() const { return coord_system; }
     };
 }

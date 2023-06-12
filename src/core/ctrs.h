@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <cmath>
 #include <utility>
+#include <initializer_list>
 
 #include "core/config.h"
 #include "core/utils.h"
@@ -134,6 +135,11 @@ namespace spade::ctrs
         arithmetic_array_t(params... ps)
         {
             set_r(0, ps...);
+        }
+        
+        arithmetic_array_t(std::initializer_list<dtype>& llist)
+        {
+            std::copy(this->begin(), this->end(), llist.begin());
         }
         
         arithmetic_array_t(const dtype& val) {fill(val);}
