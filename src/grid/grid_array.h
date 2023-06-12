@@ -11,10 +11,10 @@
 #include "core/range.h"
 #include "core/coord_system.h"
 #include "core/parallel.h"
-#include "core/partition.h"
+#include "grid/partition.h"
 #include "core/static_math.h"
-#include "core/grid_index_types.h"
-#include "core/grid.h"
+#include "grid/grid_index_types.h"
+#include "grid/grid.h"
 #include "core/mem_map.h"
 
 #include "array-containers/ac_vector_wrapper.h"

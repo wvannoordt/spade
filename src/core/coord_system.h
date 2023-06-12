@@ -5,7 +5,7 @@
 
 #include "core/config.h"
 #include "core/ctrs.h"
-#include "core/grid_index_types.h"
+#include "grid/grid_index_types.h"
 #include "core/linear_algebra.h"
 #include "core/point.h"
 

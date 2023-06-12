@@ -28,9 +28,9 @@ namespace spade::omni
                 const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
                 const ctrs::array<typename grid_t::coord_type, 3> invdx
                 (
-                    1.0/ar_grid.get_dx(0), //todo: update with block index
-                    1.0/ar_grid.get_dx(1),
-                    1.0/ar_grid.get_dx(2)
+                    1.0/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
+                    1.0/ar_grid.get_dx(1, idx.lb()),
+                    1.0/ar_grid.get_dx(2, idx.lb())
                 );
                 grid::cell_idx_t ic = grid::face_to_cell(idx, 0);
                 

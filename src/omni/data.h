@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/grid_array.h"
+#include "grid/grid_array.h"
 
 #include "omni/geom.h"
 

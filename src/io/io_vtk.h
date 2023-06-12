@@ -5,7 +5,7 @@
 
 #include "core/config.h"
 #include "core/static_for.h"
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "core/print.h"
 #include "core/utils.h"
 #include "core/base_64.h"
@@ -81,7 +81,7 @@ namespace spade::io
             const int n_guard_i = obj.get_num_exchange(0);
             const int n_guard_j = obj.get_num_exchange(1);
             const int n_guard_k = obj.get_num_exchange(2);
-            auto box = obj.get_block_box(lb_loc);
+            auto box = obj.get_block_box(utils::tag[partition::local](lb_loc));
             out_str << ntab(1) << utils::strformat("<RectilinearGrid WholeExtent=\"0 {} 0 {} 0 {}\">", n_total_i, n_total_j, n_total_k) << std::endl;
             out_str << ntab(2) << "<FieldData>" << std::endl;
             out_str << ntab(3) << "<DataArray type=\"Int32\" Name=\"avtRealDims\" NumberOfTuples=\"6\" format=\"ascii\">" << std::endl;
@@ -153,11 +153,12 @@ namespace spade::io
             out_str << ntab(3) << "<Coordinates>" << std::endl;
             
             ctrs::array<int,3> ng(n_guard_i, n_guard_j, n_guard_k);
-            auto box_tmp = obj.get_block_box(lb_loc);
+            auto local_lb_idx = utils::tag[partition::local](lb_loc);
+            auto box_tmp = obj.get_block_box(local_lb_idx);
             algs::static_for<0, obj.dim()>([&](auto i)->void
             {
-                box_tmp.min(i.value) -= obj.get_dx(i.value)*ng[i.value];
-                box_tmp.max(i.value) += obj.get_dx(i.value)*ng[i.value];
+                box_tmp.min(i.value) -= obj.get_dx(i.value, local_lb_idx)*ng[i.value];
+                box_tmp.max(i.value) += obj.get_dx(i.value, local_lb_idx)*ng[i.value];
             });
             
             out_str << ntab(4) << spade::utils::strformat("<DataArray type=\"Float64\" format=\"ascii\" RangeMin=\"{}\" RangeMax=\"{}\">", box_tmp.min(0), box_tmp.max(0)) << std::endl;

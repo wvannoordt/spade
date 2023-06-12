@@ -5,12 +5,11 @@
 
 #include "core/config.h"
 #include "core/static_for.h"
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "core/print.h"
 #include "core/utils.h"
 #include "core/base_64.h"
 #include "core/mem_map.h"
-#include "core/block_config.h"
 
 namespace spade::io
 {

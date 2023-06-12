@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "omni/omni.h"
 
 // GET RID OF THIS IMPLEMENTATION, ITS EXACTLY THE SAME AS FLUX_DIV!!!!!!!!

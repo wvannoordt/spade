@@ -4,7 +4,7 @@
 
 #include "core/config.h"
 #include "core/attribs.h"
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "core/reduce_ops.h"
 #include "core/md_loop.h"
 #include "core/invoke.h"

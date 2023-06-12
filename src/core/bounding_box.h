@@ -24,7 +24,7 @@ namespace spade
         dtype& max(size_t idx) {return bnds[2*idx+1];}
         
         dtype size(size_t idx) const {return max(idx)-min(idx);}
-        dtype volume(void) const
+        dtype volume() const
         {
             dtype output = 1;
             for (std::size_t i = 0; i < ar_size; i++)

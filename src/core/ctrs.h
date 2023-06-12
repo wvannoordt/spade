@@ -51,6 +51,13 @@ namespace spade::ctrs
         return std::sqrt(output);
     }
 
+    template <basic_array a1_t, basic_array a2_t> constexpr static void copy_array(const a1_t& src, a2_t& dest, const typename a2_t::value_type& default_val)
+    {
+        std::size_t tsize = utils::min(src.size(), dest.size());
+        for (std::size_t i = 0; i < dest.size(); ++i) dest[i] = default_val;
+        for (std::size_t i = 0; i < tsize;       ++i) dest[i] = src[i];
+    }
+    
     template <basic_array a1_t, basic_array a2_t> constexpr static void copy_array(const a1_t& src, a2_t& dest)
     {
         std::size_t tsize = utils::min(src.size(), dest.size());

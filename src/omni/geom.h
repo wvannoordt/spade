@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/grid_index_types.h"
+#include "grid/grid_index_types.h"
 #include "core/static_math.h"
 
 namespace spade::omni

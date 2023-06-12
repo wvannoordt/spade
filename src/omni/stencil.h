@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/grid_index_types.h"
+#include "grid/grid_index_types.h"
 #include "core/utils.h"
 
 #include "omni/info.h"

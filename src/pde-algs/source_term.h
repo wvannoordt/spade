@@ -2,7 +2,7 @@
 
 #include <concepts>
 
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "omni/omni.h"
 
 namespace spade::pde_algs

@@ -2,9 +2,9 @@
 
 #include <concepts>
 
-#include "core/grid_index_types.h"
+#include "grid/grid_index_types.h"
 #include "core/utils.h"
-#include "core/grid.h"
+#include "grid/grid.h"
 
 namespace spade::omni
 {

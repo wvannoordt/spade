@@ -110,7 +110,7 @@ namespace spade::convective
         disable_smooth
     };
 
-    template <typename flux_func_t, const weno_smooth_indicator = enable_smooth> struct weno_t
+    template <typename flux_func_t, const weno_smooth_indicator use_smooth = enable_smooth> struct weno_t
     {
         using float_t       = typename flux_func_t::float_t;
         using output_type   = fluid_state::flux_t<float_t>;
@@ -165,13 +165,19 @@ namespace spade::convective
                 const float_t a2  = (2.0/3.0)/((be2+eps)*(be2+eps));
                 const float_t a3  = (1.0/3.0)/((be3+eps)*(be3+eps));
                 
-                const float_t w0 = a0/(a0+a1);
-                const float_t w1 = a1/(a0+a1);
-                const float_t w2 = a2/(a2+a3);
-                const float_t w3 = a3/(a2+a3);
-                
-                output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
-                // output[k] = (1.0/3.0)*r0 + (2.0/3.0)*r1 + (2.0/3.0)*r2 + (1.0/3.0)*r3; //(mms)
+                if constexpr (use_smooth == disable_smooth)
+                {
+                    //use this for MMS!!
+                    output[k] = (1.0/3.0)*r0 + (2.0/3.0)*r1 + (2.0/3.0)*r2 + (1.0/3.0)*r3;
+                }
+                else
+                {
+                    const float_t w0 = a0/(a0+a1);
+                    const float_t w1 = a1/(a0+a1);
+                    const float_t w2 = a2/(a2+a3);
+                    const float_t w3 = a3/(a2+a3);
+                    output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
+                }
             }
             
             return output;

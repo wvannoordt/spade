@@ -165,7 +165,7 @@ namespace spade::parallel
         private:
             int g_rank, g_size;
             mpi_comm_t channel;
-            bool wrap_init;
+            bool wrap_init; 
     };
     
     struct par_buf_t

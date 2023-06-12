@@ -2,7 +2,7 @@
 
 #include <concepts>
 
-#include "core/grid.h"
+#include "grid/grid.h"
 #include "omni/omni.h"
 
 namespace spade::pde_algs
@@ -67,10 +67,10 @@ namespace spade::pde_algs
             auto g2 = range(flux_bounds.min(2),flux_bounds.max(2));
 
             auto grid_range = g0*g1*g2;
-            // 2023-05-24, tested explicit loop and it has the same performance
             for (auto idx: grid_range)
             {
-                const real_type dx = ar_grid.get_dx(idir);
+                auto lb_loc_des = utils::tag[partition::local](lb_loc);
+                const real_type dx = ar_grid.get_dx(idir, lb_loc_des);
                 grid::cell_idx_t il(idx[0_c], idx[1_c], idx[2_c], lb_loc);
                 grid::cell_idx_t ir(idx[0_c], idx[1_c], idx[2_c], lb_loc);
                 ir[idir] += 1;
