@@ -17,13 +17,19 @@ int main(int argc, char** argv)
     
     spade::coords::identity<real_t> coords;
     spade::ctrs::array<int, 2> num_blocks      (2,  2);
-    spade::ctrs::array<int, 2> cells_in_block  (16, 16);
+    spade::ctrs::array<int, 2> cells_in_block  (32, 32);
     spade::ctrs::array<int, 2> exchange_cells  (2,  2);
     
     spade::grid::cartesian_blocks_t blocks     (num_blocks, bounds);
     spade::amr::amr_blocks_t        amr_blocks (num_blocks, bounds);
-    spade::amr::refine(amr_blocks, 0, {true, true, false});
-    spade::grid::cartesian_grid_t   grid(cells_in_block, exchange_cells, amr_blocks, coords, group);
+    amr_blocks.refine(3, {false, false}, {true, true});
+    // print(amr_blocks.total_num_blocks());
+    
+    amr_blocks.all_nodes[7]->debug();
+    // print(amr_blocks.total_num_blocks());
+    // print(amr_blocks.all_nodes[0]->is_domain_boundary());
+    
+    spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, amr_blocks, coords, group);
     
     using prim_t = spade::fluid_state::prim_t<real_t>;
     prim_t ft = 0.0;

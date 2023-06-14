@@ -118,6 +118,11 @@ namespace spade::amr
             }
             return output;
         }
+        
+        auto to_unit() const
+        {
+            return convert_to_coordinate(0.0, 1.0/num_partitions);
+        }
     };
     
     template <typename T1, typename T2> static std::ostream & operator<<(std::ostream & os, const amr_exact_coord_t<T1, T2> & pos)

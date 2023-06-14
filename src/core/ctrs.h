@@ -72,7 +72,8 @@ namespace spade::ctrs
     
     namespace detail{struct no_type_t{};}
     
-    template<typename dtype, const std::size_t ar_size, typename derived_t = detail::no_type_t> struct arithmetic_array_t
+    template<typename dtype, const std::size_t ar_size, typename derived_t = detail::no_type_t>
+    struct arithmetic_array_t
     {
         using self_type = std::conditional<
             std::is_same<derived_t, detail::no_type_t>::value,
@@ -238,6 +239,22 @@ namespace spade::ctrs
             return output;
         }
     };
+    
+    template<typename dtype, const std::size_t ar_size, typename derived_t>
+    arithmetic_array_t<dtype, ar_size, derived_t> operator*(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
+    {
+        arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
+        for (auto& i: output) i*= lhs;
+        return output;
+    }
+    
+    template<typename dtype, const std::size_t ar_size, typename derived_t>
+    arithmetic_array_t<dtype, ar_size, derived_t> operator+(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
+    {
+        arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
+        for (auto& i: output) i+= lhs;
+        return output;
+    }
     
     template <typename data_t, const std::size_t ar_size> using array = arithmetic_array_t<data_t, ar_size>;
     template <typename data_t> using v3d = array<data_t,3>;

@@ -19,6 +19,8 @@ namespace spade::amr
         std::vector<node_type>                   root_nodes;
         std::vector<bound_box_t<coord_val_t, 3>> block_boxes;
         std::vector<node_type*>                  all_nodes;
+        std::vector<node_type*>                  enumerated_nodes;
+        
         
         constexpr static std::size_t dim() { return array_designator_t::size(); }
         
@@ -48,8 +50,8 @@ namespace spade::amr
                     if constexpr (dim() == 2) extent[2] = 1;
                     auto dijk = ctrs::expand_index(jt, extent);
                     for (auto& e: dijk) e -= 1;
-                    bool all_zero = true;
-                    for (const auto& e: dijk) all_zero = (all_zero && (e==0));
+                    if constexpr (dim() == 2) dijk[2] = 0;
+                    bool all_zero = (dijk == 0*dijk);
                     if (!all_zero)
                     {
                         auto ijk_neigh = dijk + ijk;
@@ -84,20 +86,25 @@ namespace spade::amr
             return block_boxes[lb_glob];
         }
         
-        std::size_t total_num_blocks() const { return all_nodes.size(); }
+        std::size_t total_num_blocks() const { return enumerated_nodes.size(); }
         template <typename filter_t> std::size_t get_num_blocks(const filter_t& filter) const
         {
             std::size_t output = 0;
-            for (const auto p: all_nodes)
+            for (const auto p: enumerated_nodes)
             {
                 if (filter(*p)) ++output;
             }
             return output;
         }
         
+        bound_box_t<bool, 3> is_domain_boundary(const std::size_t& i) const
+        {
+            return enumerated_nodes[i]->is_domain_boundary();
+        }
+        
         // re-collects the global list of amr nodes and their bounding boxes,
         // must be called after every single refinement operation
-        void enumerate()
+        template <typename crit_t> void enumerate(const crit_t& criterion)
         {
             std::size_t block_count = 0;
             for (auto& n: root_nodes)
@@ -110,20 +117,40 @@ namespace spade::amr
             {
                 n.collect_nodes(all_nodes);
             }
+            enumerated_nodes.clear();
+            enumerated_nodes.reserve(block_count);
+            for (const auto& n: all_nodes)
+            {
+                if (criterion(*n)) enumerated_nodes.push_back(n);
+            }
             block_boxes.clear();
-            block_boxes.resize(block_count);
+            block_boxes.resize(enumerated_nodes.size());
             ctrs::array<coord_val_t, dim()> dx;
             for (auto i: range(0, dim())) dx[i] = bounds.size(i)/num_blocks[i];
             for (auto i: range(0, block_boxes.size()))
             {
-                const auto& amr_bbox  = all_nodes[i]->amr_position;
+                const auto& amr_bbox  = enumerated_nodes[i]->amr_position;
                 auto& comp_bbox = block_boxes[i];
+                comp_bbox.min(2) = 0.0;
+                comp_bbox.max(2) = 1.0;
                 for (auto d: range(0, dim()))
                 {
                     comp_bbox.min(d) = amr_bbox.min(d).convert_to_coordinate(bounds.min(d), dx[d]);
                     comp_bbox.max(d) = amr_bbox.max(d).convert_to_coordinate(bounds.min(d), dx[d]);
                 }
             }
+        }
+        
+        void enumerate()
+        {
+            this->enumerate([](const auto& n){return n.terminal();});
+        }
+        
+        void refine(const std::size_t lb, const ctrs::array<bool, dim()> is_periodic, const node_type::amr_refine_t directions = {true, true, true})
+        {
+            auto& anode = *(enumerated_nodes[lb]);
+            anode.refine_node_recurse(directions);
+            this->enumerate();
         }
         
         const auto&       get_bounding_box(const std::size_t lb)              const { return block_boxes[lb]; }
