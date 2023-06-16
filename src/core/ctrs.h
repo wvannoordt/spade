@@ -51,6 +51,16 @@ namespace spade::ctrs
         for (int i = 0; i < arr.size(); ++i) output += arr[i]*arr[i];
         return std::sqrt(output);
     }
+    
+    template <basic_array arr1_t, basic_array arr2_t>
+    requires (arr1_t::size() == arr2_t::size())
+    constexpr static auto dot_prod(const arr1_t& arr1, const arr2_t& arr2)
+    {
+        using data_t = typename arr1_t::value_type;
+        data_t output = arr1[0]*arr2[0];
+        for (int i = 1; i < arr1.size(); ++i) output += arr1[i]*arr2[i];
+        return output;
+    }
 
     template <basic_array a1_t, basic_array a2_t> constexpr static void copy_array(const a1_t& src, a2_t& dest, const typename a2_t::value_type& default_val)
     {

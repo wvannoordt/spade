@@ -65,14 +65,6 @@ namespace spade::amr
             return (unit<<offset);
         }
         
-        amr_exact_coord_t& operator =(const amr_exact_coord_t& rhs)
-        {
-            bits = rhs.bits;
-            partition = rhs.partition;
-            num_partitions = rhs.num_partitions;
-            return *this;
-        }
-        
         bool operator == (const amr_exact_coord_t & rhs) const
         {
             return ((bits==rhs.bits)&&(partition==rhs.partition));

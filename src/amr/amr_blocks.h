@@ -149,7 +149,7 @@ namespace spade::amr
         void refine(const std::size_t lb, const ctrs::array<bool, dim()> is_periodic, const node_type::amr_refine_t directions = {true, true, true})
         {
             auto& anode = *(enumerated_nodes[lb]);
-            anode.refine_node_recurse(directions);
+            anode.refine_node_recurse(directions, is_periodic);
             this->enumerate();
         }
         
