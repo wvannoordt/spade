@@ -1,7 +1,7 @@
 #pragma once
 
 #include "amr/amr_blocks.h"
-
+#include "amr/amr_constraints.h"
 namespace spade::amr
 {
     template <typename blocks_t>

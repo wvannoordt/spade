@@ -1,5 +1,5 @@
 [x] Write a global function to convert between node/face/cell indices to standardize convention
-[ ] Separate out the block topology type to handle neighbor relationships and domain boundary status
+[x] Separate out the block topology type to handle neighbor relationships and domain boundary status
 [x] Better separation of navier-stokes code and the general finite-volume framework code
 [ ] Flux compatibility concepts
 [ ] Fix the segfault issue with the MPI communicator when not using MPI_COMM_WORLD
@@ -14,8 +14,8 @@
 [x] Make the indexing more efficient for memory maps (don't create temporary arrays!)
 [x] Separate the block indexing from the block element indexing
 [x] CRTP for basic array types
-[ ] Improve the implementation of the md_loop algorithm to be able to use any kind of index
-[ ] re-write range and md_iterator to use literal-constant indexing
+[x] Improve the implementation of the md_loop algorithm to be able to use any kind of index
+[x] re-write range and md_iterator to use literal-constant indexing
 [ ] Implement CUDA kernel version of md_loop
 [x] Implement tiling map for use with OpenMP/thread pooling
 [x] Remove all traces of old memory map implementation
@@ -27,3 +27,5 @@
 [ ] Introduce and omni-info for interpolated value with specified order-of-accuracy
 [ ] Re-work the lambda-omni conversion to account for unions
 [ ] Generalize OMNI point-operation for multi-interface mode
+[ ] Implement non-periodicity in exchanges
+[ ] Basic unit testing (now that we have API stability more or less)

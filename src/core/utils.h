@@ -224,5 +224,28 @@ namespace spade::utils
         typedef get_pack_type_helper<0,idx,types_t...>::type type;
     };
     
-    
+    // Used to store a reallocation-agnostic
+    // reference to a vector element
+    template <typename data_t>
+    struct vector_location
+    {
+        std::vector<data_t>* container = nullptr;
+        std::size_t offset;
+        vector_location(std::vector<data_t>& container_in, const std::size_t offset_in)
+        : container{&container_in}, offset{offset_in} {}
+        vector_location(std::vector<data_t>* container_in, const std::size_t offset_in)
+        : container{container_in},  offset{offset_in} {}
+        vector_location& operator = (const vector_location& rhs)
+        {
+            offset = rhs.offset;
+            container = rhs.container;
+            return *this;
+        }
+        
+        bool is_null()      const { return container == nullptr; }
+        data_t&       get()       { return (*container)[offset]; }
+        const data_t& get() const { return (*container)[offset]; }
+        
+        constexpr static vector_location null() { return vector_location(nullptr, 0); }
+    };
 }

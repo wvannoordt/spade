@@ -39,7 +39,7 @@ namespace spade
 
         bound_box_t operator ! () const
         {
-            static_assert(std::same_as<dtype, bool>, "cannot apply unary operator ! to non-boolead bound box");
+            static_assert(std::same_as<dtype, bool>, "cannot apply unary operator ! to non-boolean bound box");
             bound_box_t output = (*this);
             for (auto& b: output) b = !b;
             return output;

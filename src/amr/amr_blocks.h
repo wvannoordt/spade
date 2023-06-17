@@ -12,14 +12,16 @@ namespace spade::amr
     struct amr_blocks_t
     {
         using node_type      = amr::amr_node_t<array_designator_t::size()>;
+        using handle_type    = node_handle_t<array_designator_t::size()>;
+        using refine_type    = ctrs::array<bool, array_designator_t::size()>;
         using coord_val_type = coord_val_t;
         
         ctrs::array<int, 3>                      num_blocks;
         bound_box_t<coord_val_t, 3>              bounds;
         std::vector<node_type>                   root_nodes;
         std::vector<bound_box_t<coord_val_t, 3>> block_boxes;
-        std::vector<node_type*>                  all_nodes;
-        std::vector<node_type*>                  enumerated_nodes;
+        std::vector<handle_type>                 all_nodes;
+        std::vector<handle_type>                 enumerated_nodes;
         
         
         constexpr static std::size_t dim() { return array_designator_t::size(); }
@@ -62,14 +64,14 @@ namespace spade::amr
                         }
                         auto j = collapse_index(ijk_neigh, num_blocks);
                         
+                        ctrs::array<int, dim()> dijk_d;
+                        for (int d = 0; d < dim(); ++d) dijk_d[d] = dijk[d];
                         //node i has neighbor j
-                        amr::amr_neighbor_t<dim()> neighbor_relationship;
-                        neighbor_relationship.endpoint = &root_nodes[j];
-                        neighbor_relationship.edge     = dijk;
+                        amr::amr_neighbor_t<dim()> neighbor_relationship{node_handle_t<dim()>(root_nodes, j), dijk_d};
                         root_nodes[i].neighbors.push_back(neighbor_relationship);
                     }
                 }
-                root_nodes[i].parent = nullptr;
+                root_nodes[i].parent = handle_type::null();
                 for (auto d: range(0, dim()))
                 {
                     root_nodes[i].amr_position.min(d) = amr::amr_coord_t(ijk[d],   num_blocks[d], 0);
@@ -113,15 +115,16 @@ namespace spade::amr
             }
             all_nodes.clear();
             all_nodes.reserve(block_count);
-            for (auto& n: root_nodes)
+            for (int i = 0; i < root_nodes.size(); ++i)
             {
-                n.collect_nodes(all_nodes);
+                all_nodes.push_back(handle_type(root_nodes, i));
+                root_nodes[i].collect_nodes(all_nodes);
             }
             enumerated_nodes.clear();
             enumerated_nodes.reserve(block_count);
             for (const auto& n: all_nodes)
             {
-                if (criterion(*n)) enumerated_nodes.push_back(n);
+                if (criterion(n.get())) enumerated_nodes.push_back(n);
             }
             block_boxes.clear();
             block_boxes.resize(enumerated_nodes.size());
@@ -129,7 +132,7 @@ namespace spade::amr
             for (auto i: range(0, dim())) dx[i] = bounds.size(i)/num_blocks[i];
             for (auto i: range(0, block_boxes.size()))
             {
-                const auto& amr_bbox  = enumerated_nodes[i]->amr_position;
+                const auto& amr_bbox  = enumerated_nodes[i].get().amr_position;
                 auto& comp_bbox = block_boxes[i];
                 comp_bbox.min(2) = 0.0;
                 comp_bbox.max(2) = 1.0;
@@ -139,6 +142,8 @@ namespace spade::amr
                     comp_bbox.max(d) = amr_bbox.max(d).convert_to_coordinate(bounds.min(d), dx[d]);
                 }
             }
+            for (auto& p: all_nodes) p.get().tag = -1;
+            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb].get().tag = lb;
         }
         
         void enumerate()
@@ -146,14 +151,119 @@ namespace spade::amr
             this->enumerate([](const auto& n){return n.terminal();});
         }
         
-        void refine(const std::size_t lb, const ctrs::array<bool, dim()> is_periodic, const node_type::amr_refine_t directions = {true, true, true})
+        template <typename interface_constraint_t>
+        void refine_recurse(
+            std::vector<handle_type>& lbs,
+            const ctrs::array<bool, dim()>& is_periodic,
+            const std::vector<typename node_type::amr_refine_t>& directions,
+            const interface_constraint_t& constraint)
         {
-            auto& anode = *(enumerated_nodes[lb]);
-            anode.refine_node_recurse(directions, is_periodic);
+            std::vector<handle_type> new_children;
+            int idx = 0;
+            for (auto& lb: lbs)
+            {
+                auto& anode = lb.get();
+                bool refd = anode.refine_node(directions[idx], is_periodic);
+                if (refd)
+                {
+                    for (int i = 0; i < anode.subnodes.size(); ++i)
+                    {
+                        new_children.push_back(handle_type(anode.subnodes, i));
+                    }
+                }
+                ++idx;
+            }
+            std::vector<handle_type>                      further_refines;
+            std::vector<typename node_type::amr_refine_t> further_direcs;
+            for (auto& child: new_children)
+            {
+                for (auto& neigh: child.get().neighbors)
+                {
+                    const auto idomain_boundary = child.get().is_domain_boundary();
+                    auto new_refine = constraint(child.get(), neigh);
+                    bool any = false;
+                    for (auto b: new_refine) any = any | b;
+                    bool reject_domain_boundary = false;
+                    for (int i = 0; i < dim(); ++i)
+                    {
+                        reject_domain_boundary = reject_domain_boundary || ((neigh.edge[i] == -1) && idomain_boundary.min(i) && !is_periodic[i]);
+                        reject_domain_boundary = reject_domain_boundary || ((neigh.edge[i] ==  1) && idomain_boundary.max(i) && !is_periodic[i]);
+                    }
+                    if (any && !reject_domain_boundary)
+                    {
+                        further_refines.push_back(neigh.endpoint);
+                        further_direcs.push_back(new_refine);
+                    }
+                }
+            }
+            if (further_refines.size() > 0) this->refine_recurse(further_refines, is_periodic, further_direcs, constraint);
+        }
+        
+        template <typename interface_constraint_t>
+        void refine(
+            std::vector<handle_type>& lbs,
+            const ctrs::array<bool, dim()>& is_periodic,
+            const std::vector<typename node_type::amr_refine_t>& directions,
+            const interface_constraint_t& constraint)
+        {
+            this->refine_recurse(lbs, is_periodic, directions, constraint);
             this->enumerate();
+        }
+        
+        template <typename interface_constraint_t>
+        void refine(
+            std::vector<handle_type>& lbs,
+            const ctrs::array<bool, dim()>& is_periodic,
+            const typename node_type::amr_refine_t& directions,
+            const interface_constraint_t& constraint)
+        {
+            std::vector<typename node_type::amr_refine_t> drs(lbs.size(), directions);
+            this->refine(lbs, is_periodic, drs, constraint);
+        }
+        
+        template <typename interface_constraint_t>
+        void refine(
+            const std::vector<std::size_t>& lbs,
+            const ctrs::array<bool, dim()>& is_periodic,
+            const std::vector<typename node_type::amr_refine_t>& directions,
+            const interface_constraint_t& constraint)
+        {
+            std::vector<handle_type> nds;
+            for (auto lb: lbs) nds.push_back(this->enumerated_nodes[lb]);
+            this->refine(nds, is_periodic, directions, constraint);
+        }
+        
+        template <typename interface_constraint_t>
+        void refine(std::size_t lb, const ctrs::array<bool, dim()>& is_periodic, const node_type::amr_refine_t directions, const interface_constraint_t& cc)
+        {
+            using v0_t = std::vector<std::size_t>;
+            this->refine(v0_t{lb}, is_periodic, {directions}, cc);
+        }
+        
+        void refine(std::size_t lb, const ctrs::array<bool, dim()>& is_periodic, const node_type::amr_refine_t directions)
+        {
+            this->refine({lb}, is_periodic, {directions}, [](const auto&, const auto&){return typename node_type::amr_refine_t(false);});
+        }
+        
+        void refine(const std::size_t& lb)
+        {
+            const ctrs::array<bool, dim()> is_per = false;
+            const typename node_type::amr_refine_t directions = true;
+            this->refine({lb}, is_per, directions);
         }
         
         const auto&       get_bounding_box(const std::size_t lb)              const { return block_boxes[lb]; }
         const coord_val_t get_size(const std::size_t i, const std::size_t lb) const { return block_boxes[lb].size(i); }
+        
+        template <typename condition_t>
+        std::vector<handle_type> select(const condition_t& condition)
+        {
+            std::vector<handle_type> output;
+            for (auto& lb: enumerated_nodes)
+            {
+                if (condition(lb.get())) output.push_back(lb);
+            }
+            return output;
+        }
     };
 }

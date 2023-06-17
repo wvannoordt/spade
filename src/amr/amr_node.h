@@ -2,31 +2,35 @@
 
 #include <vector>
 #include <tuple>
+#include <algorithm>
 
+#include "core/utils.h"
 #include "core/ctrs.h"
 #include "core/bounding_box.h"
 #include "amr/amr_coord.h"
 
 namespace spade::amr
 {    
-    template <const std::size_t grid_dim> struct amr_node_t;
+    template <const std::size_t grid_dim, typename tag_t = int> struct amr_node_t;
+    template <const std::size_t grid_dim> using node_handle_t = utils::vector_location<amr_node_t<grid_dim>>;
     template <const std::size_t grid_dim> struct amr_neighbor_t
     {
         //                            edge
         //         amr_node          ------>     endpoint
-        amr_node_t<grid_dim>* endpoint = nullptr;
+        node_handle_t<grid_dim>  endpoint;
         ctrs::array<int, grid_dim> edge;
-        
     };
-    template <const std::size_t grid_dim> struct amr_node_t
+    template <const std::size_t grid_dim, typename tag_t> struct amr_node_t
     {
         using amr_refine_t = ctrs::array<bool,grid_dim>;
-        bound_box_t<amr_coord_t, grid_dim> amr_position;
-        std::vector<amr_node_t> subnodes;
+        using handle_type  = node_handle_t<grid_dim>;
+        
+        bound_box_t<amr_coord_t, grid_dim>    amr_position;
+        std::vector<amr_node_t>               subnodes;
         std::vector<amr_neighbor_t<grid_dim>> neighbors;
-        ctrs::array<int, grid_dim> level;
-        amr_node_t<grid_dim>* parent;
-        bool flood_lock = false;
+        ctrs::array<int, grid_dim>            level;
+        handle_type                           parent = handle_type::null();
+        tag_t                                 tag; //this holds the blocks value!!!!!!!
         
         static constexpr std::size_t dim() { return grid_dim; }
         
@@ -39,22 +43,21 @@ namespace spade::amr
             return output;
         }
         
-        void refine_node_recurse(const amr_refine_t& ref_type, const ctrs::array<bool, dim()> is_periodic = false)
+        bool refine_node(const amr_refine_t& ref_type, const ctrs::array<bool, dim()> is_periodic = false)
         {
             std::size_t num_sub_nodes = 1;
             for (auto i: range(0, dim())) num_sub_nodes *= ref_type[i]?2:1;
             
             //exception conditions
-            if (num_sub_nodes == 1) return;
-            if (!this->terminal())  return;
-            if (this->flood_lock)   return;
+            if (num_sub_nodes == 1) return false;
+            if (!this->terminal())  return false;
             subnodes.resize(num_sub_nodes);
             auto rg = range(0,ref_type[0]?2:1)*range(0,ref_type[1]?2:1)*range(0,(ref_type[dim()-1]&&(dim()==3))?2:1);
             int ct = 0;
             for (auto i: rg)
             {
                 auto& child = subnodes[ct];
-                child.parent = this;
+                child.parent = handle_type(subnodes, ct);
                 child.amr_position = this->amr_position;
                 for (auto d: range(0, dim()))
                 {
@@ -74,99 +77,57 @@ namespace spade::amr
             for (int i = 0; i < subnodes.size(); ++i)
             {
                 auto& child = subnodes[i];
+                handle_type child_handle(subnodes, i);
                 
                 //First add neighbor relationships for siblings of current child
                 for (int j = 0; j < subnodes.size(); ++j)
                 {
                     if (i != j)
                     {
-                        auto& sibling = subnodes[j];
+                        handle_type sibling(subnodes, j);
                         child.create_neighbor(sibling);
                     }
                 }
                 
                 //Now add parent neighbors
-                for (const auto& neigh: neighbors)
+                for (auto& neigh: neighbors)
                 {
-                    auto cond =  [=](const auto& relationship) {return ctrs::dot_prod(neigh.edge, relationship.edge) >= 0;};
-                    child.create_neighbor(*neigh.endpoint);
-                    neigh.endpoint->create_neighbor(child);
+                    child.create_neighbor(neigh.endpoint);
+                    neigh.endpoint.get().create_neighbor(child_handle);
                 }
             }
             
             //Each of my neighbors track their own neighbors, so need to update those.
-            //NOTE: the following two loops must be executed separately, but I am not quite sure why...
-            //Remove any duplicates unduly created from periodicity
-            for (auto& neigh: neighbors) neigh.endpoint->remove_duplicate_neighbors();
-            
             //Now that I am no longer a terminal node, remove myself from my neighbors' list of neighbors
-            for (auto& neigh: neighbors) neigh.endpoint->remove_neighbors([](const auto& ngh){ return !ngh.endpoint->terminal(); });
+            for (auto& neigh: neighbors) neigh.endpoint.get().remove_neighbors([&](const auto& ngh) { return !ngh.endpoint.get().terminal(); });
+
+            for (auto& child: subnodes) child.remove_duplicate_neighbors();
+            for (auto& neigh: neighbors) neigh.endpoint.get().remove_duplicate_neighbors();
             
-            //Generalize later: enforce no factor-4 refinement between neighboring nodes
-            for (auto& child: subnodes) child.enforce_interface_compatibility(is_periodic);
+            return true;
         }
         
-        void enforce_interface_compatibility(const ctrs::array<bool, dim()> is_periodic)
+        template <typename condition_t>
+        void create_neighbor(handle_type& candidate, const condition_t& condition)
         {
-            //todo: add in logic for derefinement
-            this->flood_lock = true;
-            const auto is_boundary = this->is_domain_boundary();
-            const auto neighbor_copy = neighbors; //neighbors will change size during iteration otherwise
-            for (auto& neigh: neighbor_copy)
-            {
-                //here we loop over neighbors to see if interface compatibility conditions are met
-                amr_refine_t ref = false;
-                bool refine_any  = false;
-                for (int d = 0; d < dim(); ++d)
-                {
-                    if (this->level[d] > neigh.endpoint->level[d]+1) ref[d] = true;
-                    refine_any = refine_any || ref[d];
-                }
-                
-                //ignore if specified by the periodicity condition
-                for (int d = 0; d < dim(); ++d)
-                {
-                    if (!is_periodic[d] && ((is_boundary.max(d) && neigh.edge[d] == 1) || (is_boundary.min(d) && neigh.edge[d] == -1))) refine_any = false;
-                }
-                if (refine_any)
-                {
-                    neigh.endpoint->refine_node_recurse(ref);
-                }
-            }
-            this->flood_lock = false;
-        }
-        
-        template <typename condition_t> void create_neighbor(amr_node_t& candidate, const condition_t& condition)
-        {
-            if (!candidate.terminal()) return;
+            if (!candidate.get().terminal()) return;
             ctrs::array<ctrs::array<bool, 3>, 3> table;
             table.fill(true);
+            
             for (int d = 0; d < dim(); ++d)
             {
                 auto& in_region = table[d];
                 const auto& n_min = this->amr_position.min(d);
                 const auto& n_max = this->amr_position.max(d);
                 
-                const auto& m_min = candidate.amr_position.min(d);
-                const auto& m_max = candidate.amr_position.max(d);
+                const auto& m_min = candidate.get().amr_position.min(d);
+                const auto& m_max = candidate.get().amr_position.max(d);
                 
-                const auto lboundary_wrap = [](const auto& x0, const auto& x1)
+                const auto uboundary_wrap = [](const auto& test, const auto& x0, const auto& x1)
                 {
                     auto y0 = x0;
                     auto y1 = x1;
-                    if (y1.partition == y1.num_partitions)
-                    {
-                        y1.partition -= y1.num_partitions;
-                        y0.partition -= y0.num_partitions;
-                    }
-                    return std::make_tuple(y0, y1);
-                };
-                
-                const auto uboundary_wrap = [](const auto& x0, const auto& x1)
-                {
-                    auto y0 = x0;
-                    auto y1 = x1;
-                    if (y0.partition == 0 && y0.bits == 0)
+                    if (test.partition == test.num_partitions)
                     {
                         y1.partition += y1.num_partitions;
                         y0.partition += y0.num_partitions;
@@ -174,15 +135,26 @@ namespace spade::amr
                     return std::make_tuple(y0, y1);
                 };
                 
+                const auto lboundary_wrap = [](const auto& test, const auto& x0, const auto& x1)
+                {
+                    auto y0 = x0;
+                    auto y1 = x1;
+                    if (test.partition == 0 && test.bits == 0)
+                    {
+                        y1.partition -= y1.num_partitions;
+                        y0.partition -= y0.num_partitions;
+                    }
+                    return std::make_tuple(y0, y1);
+                };
+                
                 //Wrap around boundaries to detect periodic neighbors
-                const auto [m_min_p, m_max_p] = uboundary_wrap(m_min, m_max);
-                const auto [m_min_m, m_max_m] = lboundary_wrap(m_min, m_max);
+                const auto [m_min_m, m_max_m] = lboundary_wrap(n_min, m_min, m_max);
+                const auto [m_min_p, m_max_p] = uboundary_wrap(n_max, m_min, m_max);
                 
                 in_region[0] = (m_max_m >= n_min) && (m_min_m <  n_min);
                 in_region[1] = (m_max   >  n_min) && (m_min   <  n_max);
                 in_region[2] = (m_max_p >  n_max) && (m_min_p <= n_max);
             }
-
             int kmax = (dim()==3)?3:1;
             for (int k = 0; k < kmax; ++k)
             {
@@ -192,12 +164,10 @@ namespace spade::amr
                     {
                         ctrs::array<int, 3> edge(i-1, j-1, k-1);
                         if constexpr (dim() == 2) edge[2] = 0;
-                        
                         bool valid = table[0][i] && table[1][j] && table[2][k];
                         if (valid)
                         {
-                            amr_neighbor_t<dim()> neighbor;
-                            neighbor.endpoint = &candidate;
+                            amr_neighbor_t<dim()> neighbor{candidate, 0};
                             ctrs::copy_array(edge, neighbor.edge);
                             if (condition(neighbor)) neighbors.push_back(neighbor);
                         }
@@ -206,9 +176,9 @@ namespace spade::amr
             }
         }
         
-        void create_neighbor(amr_node_t& candidate)
+        void create_neighbor(handle_type& candidate)
         {
-            this->create_neighbor(candidate, [](const auto&i){return true;});
+            this->create_neighbor(candidate, [](const auto&){return true;});
         }
         
         template <typename condition_t>
@@ -221,29 +191,43 @@ namespace spade::amr
         void remove_duplicate_neighbors()
         {
             //defines a quasi-lexicographical ordering among set of neighbor objects
-            const auto sort_predicate = [](const auto& n0, const auto& n1)
+            const auto sort_comp = [](const auto& n0, const auto& n1)
             {
-                bool i1 = (n0.endpoint < n1.endpoint);
-                auto lexi = 3 + 0*n0.edge;
-                bool i0 = ctrs::dot_prod(lexi, 1+n0.edge) < ctrs::dot_prod(lexi, 1+n1.edge);
-                return i1 || (!i1 && i0);
+                if (&n0.endpoint.get() == &n1.endpoint.get())
+                {
+                    auto lexi = 0*n0.edge;
+                    lexi[0] = 1;
+                    for (int i = 1; i < lexi.size(); ++i) lexi[i] = 3*lexi[i-1];
+                    return ctrs::dot_prod(lexi, 1+n0.edge) < ctrs::dot_prod(lexi, 1+n1.edge);
+                }
+                return &n0.endpoint.get() < &n1.endpoint.get();
             };
             
             
             //defines an equivalence relation between two neighbor relationships
             const auto uniq_predicate = [](const auto& n0, const auto& n1)
             {
-                return (n0.endpoint == n1.endpoint) && (n0.edge == n1.edge);
+                return (&n0.endpoint.get() == &n1.endpoint.get()) && (n0.edge == n1.edge);
             };
-            std::sort(neighbors.begin(), neighbors.end(), sort_predicate);
+
+            std::sort(neighbors.begin(), neighbors.end(), sort_comp);
             auto it = std::unique(neighbors.begin(), neighbors.end(), uniq_predicate);
             neighbors.erase(it, neighbors.end());
         }
         
-        void collect_nodes(std::vector<amr_node_t*>& node_list)
+        void collect_nodes(std::vector<handle_type>& node_list)
         {
-            node_list.push_back(this);
+            for (int i = 0; i < subnodes.size(); ++i)
+            {
+                node_list.push_back(handle_type(subnodes, i));
+            }
             for (auto& n: subnodes) n.collect_nodes(node_list);
+        }
+        
+        bool UCONTAIN(const ctrs::array<double, 2>& x) const
+        {
+            const auto pp = ubox();
+            return (pp.min(0) < x[0]) && (pp.max(0) > x[0]) && (pp.min(1) < x[1]) && (pp.max(1) > x[1]);
         }
         
         auto ubox() const
@@ -276,9 +260,9 @@ namespace spade::amr
             for (const auto& i:neighbors)
             {
                 print("----------------------");
-                print(i.edge);
-                print(i.endpoint->ubox());
-                print(i.endpoint->terminal());
+                print(i.edge, "@", &i.endpoint.get());
+                print(i.endpoint.get().ubox());
+                print(i.endpoint.get().terminal());
                 print("----------------------");
             }
         }
