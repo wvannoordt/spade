@@ -3,8 +3,9 @@
 #include <vector>
 
 #include "core/ctrs.h"
-#include "amr/amr_node.h"
 #include "core/block_config.h"
+#include "amr/amr_node.h"
+#include "amr/amr_constraints.h"
 
 namespace spade::amr
 {
@@ -254,6 +255,7 @@ namespace spade::amr
         
         const auto&       get_bounding_box(const std::size_t lb)              const { return block_boxes[lb]; }
         const coord_val_t get_size(const std::size_t i, const std::size_t lb) const { return block_boxes[lb].size(i); }
+        const auto&       get_neighs(const std::size_t lb)                    const { return enumerated_nodes[lb].get().neighbors; }
         
         template <typename condition_t>
         std::vector<handle_type> select(const condition_t& condition)

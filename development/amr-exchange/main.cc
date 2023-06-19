@@ -9,9 +9,9 @@ int main(int argc, char** argv)
     
     spade::bound_box_t<real_t, 2> bounds;
     
-    bounds.min(0) =  -1.0;
+    bounds.min(0) =   0.0;
     bounds.max(0) =   1.0;
-    bounds.min(1) =  -1.0;
+    bounds.min(1) =   0.0;
     bounds.max(1) =   1.0;
     
     spade::coords::identity<real_t> coords;
@@ -30,9 +30,8 @@ int main(int argc, char** argv)
     
     
     
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 3; ++i)
     {
-        print("P =", i);
         const auto selection = [&](const auto& node)
         {
             const auto& bbox = amr_blocks.get_block_box(node.tag);
@@ -76,7 +75,7 @@ int main(int argc, char** argv)
     
     spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, amr_blocks, coords, group);
     
-    // auto handle = spade::grid::create_exchange(grid, group, periodic);
+    auto handle = spade::grid::create_exchange(grid, group, per);
     
     using prim_t = spade::fluid_state::prim_t<real_t>;
     prim_t ft = 0.0;

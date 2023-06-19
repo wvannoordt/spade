@@ -3,28 +3,25 @@
 #include <vector>
 #include <tuple>
 
-#include "grid/grid.h"
 #include "core/parallel.h"
 #include "core/ctrs.h"
-#include "grid/partition.h"
 #include "core/md_loop.h"
+#include "core/poly_vec.h"
+
+#include "grid/grid.h"
+#include "grid/partition.h"
+#include "grid/transactions.h"
+#include "grid/get_transaction.h"
 
 namespace spade::grid
 {
-    struct grid_rect_copy_t
-    {
-        bound_box_t<int, 4> source, dest;
-        int rank_recv, rank_send;
-        std::size_t volume() const { return source.volume(); }
-    };
-
     template <typename grid_t>
     struct grid_exchange_config_t
     {
-        std::vector<grid_rect_copy_t> send_data;
-        std::vector<grid_rect_copy_t> recv_data;
-        std::vector<std::size_t>      num_send_elems; //counts the number of CELLS sent or recieved
-        std::vector<std::size_t>      num_recv_elems;
+        utils::poly_vec_t<grid_rect_copy_t, patch_fill_t<grid_t::dim()>> send_data;
+        utils::poly_vec_t<grid_rect_copy_t, patch_fill_t<grid_t::dim()>> recv_data;
+        std::vector<std::size_t>            num_send_elems; //counts the number of CELLS sent or recieved
+        std::vector<std::size_t>            num_recv_elems;
         
         int my_rank;
         const grid_t& grid;
@@ -56,63 +53,43 @@ namespace spade::grid
         void pack_to(const array_t& arr, std::vector<std::vector<char>>& buffers) const
         {
             std::vector<std::size_t> offsets(num_send_elems.size(), 0);
-            using element_type = typename array_t::alias_type;
-            element_type elem;
-            char* raw_e_addr = (char*)&elem;
-            std::size_t elem_size = sizeof(element_type);
-            int count = 0;
-            int count2 = 0;
-            for (const auto& transaction: send_data)
+            send_data.foreach([&](const auto& transaction)
             {
-                auto& buf    = buffers[transaction.rank_recv];
-                auto& offset = offsets[transaction.rank_recv];
-                grid::cell_idx_t idx;
-                algs::md_loop(idx, transaction.source, [&](const auto& icell)
-                {
-                    elem = arr.get_elem(idx);
-                    std::copy(raw_e_addr, raw_e_addr + elem_size, &buf[offset]);
-                    offset += elem_size;
-                });
-            }
+                auto& buf    = buffers[transaction.receiver()];
+                auto& offset = offsets[transaction.receiver()];
+                offset += transaction.insert(arr, &buf[offset]);
+            });
         }
         
         template <typename array_t>
         void unpack_from(array_t& arr, const std::vector<std::vector<char>>& buffers) const
         {
             std::vector<std::size_t> offsets(num_recv_elems.size(), 0);
-            using element_type = typename array_t::alias_type;
-            element_type elem;
-            char* raw_e_addr = (char*)&elem;
-            std::size_t elem_size = sizeof(element_type);
-            for (const auto& transaction: recv_data)
+            recv_data.foreach([&](const auto& transaction)
             {
-                const auto& buf = buffers[transaction.rank_send];
-                auto& offset    = offsets[transaction.rank_send];
-                grid::cell_idx_t idx;
-                algs::md_loop(idx, transaction.dest, [&](const auto& icell)
-                {
-                    std::copy(&buf[offset], &buf[offset]+elem_size, raw_e_addr);
-                    arr.set_elem(idx, elem);
-                    offset += elem_size;
-                });
+                const auto& buf = buffers[transaction.sender()];
+                auto& offset    = offsets[transaction.sender()];
+                offset += transaction.extract(arr, &buf[offset]);
+            });
+        }
+        
+        template <typename p2p_transaction_t>
+        void add_send(const p2p_transaction_t& elem)
+        {
+            if (elem.sender() == my_rank)
+            {
+                send_data.add(elem);
+                num_send_elems[elem.receiver()] += elem.send_volume();
             }
         }
         
-        void add_send(const grid_rect_copy_t& elem)
+        template <typename p2p_transaction_t>
+        void add_recv(const p2p_transaction_t& elem)
         {
-            if (elem.rank_send == my_rank)
+            if (elem.receiver() == my_rank)
             {
-                send_data.push_back(elem);
-                num_send_elems[elem.rank_recv] += elem.volume();
-            }
-        }
-        
-        void add_recv(const grid_rect_copy_t& elem)
-        {
-            if (elem.rank_recv == my_rank)
-            {
-                recv_data.push_back(elem);
-                num_recv_elems[elem.rank_send] += elem.volume();
+                recv_data.add(elem);
+                num_recv_elems[elem.sender()] += elem.recv_volume();
             }
         }
     };
@@ -205,64 +182,12 @@ namespace spade::grid
         grid_exchange_config_t output0(grid);
         exchange_handle_t      output1(group);
         
-        const auto get_transaction = [&](const auto& relation)
-        {
-            grid_rect_copy_t output;
-            
-            auto lb_ini  = utils::tag[partition::global](relation.lb_ini);
-            auto lb_term = utils::tag[partition::global](relation.lb_term);
-            
-            output.rank_send = grid.get_partition().get_rank(lb_ini);
-            output.rank_recv = grid.get_partition().get_rank(lb_term);
-            
-            output.source.min(3) = grid.get_partition().to_local(lb_ini).value;
-            output.source.max(3) = output.source.min(3)+1;
-
-            output.dest.min(3)   = grid.get_partition().to_local(lb_term).value;
-            output.dest.max(3)   = output.dest.min(3)+1;
-            
-            for (int d = 0; d < 3; ++d)
-            {
-                const int sign = relation.edge[d];
-                const int nx   = grid.get_num_cells(d);
-                const int ng   = grid.get_num_exchange(d);
-                switch (sign)
-                {
-                    case -1:
-                    {
-                        output.source.min(d) = 0;
-                        output.source.max(d) = ng;
-                        output.dest.min(d)   = nx;
-                        output.dest.max(d)   = nx+ng;
-                        break;
-                    }
-                    case  0:
-                    {
-                        output.source.min(d) = 0;
-                        output.source.max(d) = nx;
-                        output.dest.min(d)   = 0;
-                        output.dest.max(d)   = nx;
-                        break;
-                    }
-                    case  1:
-                    {
-                        output.source.min(d) = nx-ng;
-                        output.source.max(d) = nx;
-                        output.dest.min(d)   = -ng;
-                        output.dest.max(d)   = 0;
-                        break;
-                    }
-                }
-            }
-            return output;
-        };
-        
         for (auto lb = utils::tag[partition::global](0); lb.value < grid.get_num_global_blocks(); ++lb.value)
         {
-            const auto neighs = grid.get_blocks().get_neighs(lb.value);
+            const auto& neighs = grid.get_blocks().get_neighs(lb.value);
             for (const auto& e:neighs)
             {
-                grid_rect_copy_t transaction = get_transaction(e);
+                const auto transaction = get_transaction(grid, lb.value, e);
                 
                 // Note that we add as both and the internal logic inside
                 // these calls will handle the rank checking

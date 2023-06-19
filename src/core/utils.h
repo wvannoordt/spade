@@ -248,4 +248,36 @@ namespace spade::utils
         
         constexpr static vector_location null() { return vector_location(nullptr, 0); }
     };
+    
+    template <typename T, typename... Ts>
+    struct is_contained;
+    
+    template <typename T, typename U, typename... Vs>
+    struct is_contained<T, U, Vs...>
+    {
+        constexpr static bool value = std::is_same<T, U>::value || is_contained<T, Vs...>::value;
+    };
+    
+    template <typename T>
+    struct is_contained<T>
+    {
+        constexpr static bool value = false;
+    };
+    
+    template <typename... List>
+    struct is_unique_impl;
+    
+    template <typename U, typename... Vs>
+    struct is_unique_impl<U, Vs...>
+    {
+        constexpr static bool value = !is_contained<U, Vs...>::value && is_unique_impl<Vs...>::value;
+    };
+    
+    template <>
+    struct is_unique_impl<>
+    {
+        constexpr static bool value = true;
+    };
+    
+    template <typename... Ts> concept is_unique = is_unique_impl<Ts...>::value;
 }
