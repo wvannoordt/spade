@@ -102,7 +102,7 @@ namespace spade::amr
         
         bound_box_t<bool, 3> is_domain_boundary(const std::size_t& i) const
         {
-            return enumerated_nodes[i]->is_domain_boundary();
+            return enumerated_nodes[i].get().is_domain_boundary();
         }
         
         // re-collects the global list of amr nodes and their bounding boxes,
@@ -239,6 +239,15 @@ namespace spade::amr
         {
             using v0_t = std::vector<std::size_t>;
             this->refine(v0_t{lb}, is_periodic, {directions}, cc);
+        }
+        
+        template <typename interface_constraint_t>
+        void refine(std::vector<std::size_t> lb, const ctrs::array<bool, dim()>& is_periodic, const node_type::amr_refine_t directions, const interface_constraint_t& cc)
+        {
+            using v0_t = std::vector<typename node_type::amr_refine_t>;
+            v0_t v0;
+            for (auto i:lb) v0.push_back(directions);
+            this->refine(lb, is_periodic, v0, cc);
         }
         
         void refine(std::size_t lb, const ctrs::array<bool, dim()>& is_periodic, const node_type::amr_refine_t directions)

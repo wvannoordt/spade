@@ -251,19 +251,19 @@ namespace spade::ctrs
     };
     
     template<typename dtype, const std::size_t ar_size, typename derived_t>
-    arithmetic_array_t<dtype, ar_size, derived_t> operator*(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
+    auto operator*(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
     {
         arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
         for (auto& i: output) i*= lhs;
-        return output;
+        return output.self();
     }
     
     template<typename dtype, const std::size_t ar_size, typename derived_t>
-    arithmetic_array_t<dtype, ar_size, derived_t> operator+(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
+    auto operator+(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
     {
         arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
         for (auto& i: output) i+= lhs;
-        return output;
+        return output.self();
     }
     
     template <typename data_t, const std::size_t ar_size> using array = arithmetic_array_t<data_t, ar_size>;

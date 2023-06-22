@@ -41,6 +41,7 @@
 #include "navier-stokes/viscous_laws.h"
 #include "navier-stokes/flux_funcs.h"
 #include "navier-stokes/convective.h"
+#include "navier-stokes/hybrid_scheme.h"
 #include "navier-stokes/viscous.h"
 #include "navier-stokes/navier_stokes_mms.h"
 #include "navier-stokes/subgrid_scale.h"

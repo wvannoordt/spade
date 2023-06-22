@@ -97,6 +97,22 @@ namespace spade::grid
                 //Initialize class members
                 ctrs::copy_array(cells_in_block_in, cells_in_block, 1);
                 ctrs::copy_array(exchange_cells_in, exchange_cells, 0);
+                
+                if constexpr (requires {block_arrangement.root_nodes;})
+                {
+                    const auto err_evn = []
+                    {
+                        throw except::sp_exception("For AMR grids, number of cells and exchange cells must be even");
+                    };
+                    for (const auto n: cells_in_block_in)
+                    {
+                        if (n%2 != 0) err_evn();
+                    }
+                    for (const auto n: exchange_cells_in)
+                    {
+                        if (n%2 != 0) err_evn();
+                    }
+                }
             }
             
             cartesian_grid_t(){}
@@ -155,7 +171,6 @@ namespace spade::grid
             std::size_t get_num_global_blocks()                 const { return grid_partition.get_num_global_blocks(); }
             int get_num_cells(const std::size_t& i)             const { return cells_in_block[i]; }
             int get_num_exchange(const std::size_t& i)          const { return exchange_cells[i]; }
-            const auto& is_domain_boundary(const auto& lb)      const { return block_arrangement.is_domain_boundary(lb); }
             bound_box_t<dtype,  3> get_bounds()                 const { return block_arrangement.get_bounds(); }
             const par_group_t& group()                          const { return grid_group; }
             const coord_t& coord_sys()                          const { return coord_system; }
@@ -165,6 +180,10 @@ namespace spade::grid
             
             constexpr static bool is_3d()                             { return dim()==3; }
             
+            const auto is_domain_boundary(const partition::partition_tagged auto& lb) const
+            {
+                return block_arrangement.is_domain_boundary(grid_partition.to_global(lb).value);
+            } 
             ctrs::array<dtype,  3> get_dx(const std::size_t& lb) const
             { 
                 return this->get_dx(utils::tag[partition::local](lb));

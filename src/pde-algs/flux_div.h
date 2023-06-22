@@ -50,8 +50,8 @@ namespace spade::pde_algs
 
         for (auto lb_idir: block_range*range(0, ar_grid.dim()))
         {
-            int lb_loc  = lb_idir[0];
-            int lb_glob = ar_grid.get_partition().get_global_block(lb_loc);
+            int  lb_loc  = lb_idir[0];
+            auto lb_glob = ar_grid.get_partition().to_global(utils::tag[partition::local](lb_loc));
             int idir = lb_idir[1];
             bound_box_t<int,3> flux_bounds;
             for (auto d:range(0,3))

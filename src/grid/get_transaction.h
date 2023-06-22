@@ -1,12 +1,16 @@
 #pragma once
 
+#include "core/except.h"
 #include "grid/transactions.h"
 #include "amr/amr_node.h"
 
 namespace spade::grid
 {
     template <typename grid_t>
-    auto get_transaction(const grid_t& grid, const std::size_t&, const neighbor_relation_t& relation)
+    auto get_transaction(
+        const grid_t& grid,
+        const std::size_t&,
+        const neighbor_relation_t& relation)
     {
         grid_rect_copy_t output;
         auto lb_ini  = utils::tag[partition::global](relation.lb_ini);
@@ -53,23 +57,153 @@ namespace spade::grid
                 }
             }
         }
+        if constexpr (grid_t::dim() == 2)
+        {
+            output.source.min(2) = 0;
+            output.source.max(2) = 1;
+            output.dest.min(2)   = 0;
+            output.dest.max(2)   = 1;
+        }
         return output;
     };
     
     template <typename grid_t>
-    auto get_transaction(const grid_t& grid, const std::size_t& lb_ini, const amr::amr_neighbor_t<grid_t::dim()>& relation)
+    auto get_transaction(
+        const grid_t& grid,
+        const std::size_t& lb_ini,
+        const amr::amr_neighbor_t<grid_t::dim()>& relation)
     {
         patch_fill_t<grid_t::dim()> output;
         neighbor_relation_t base_relation;
-        base_relation.edge = relation.edge;
-        base_relation.lb_ini  = lb_ini;
-        base_relation.lb_term = relation.endpoint.get().tag;
-        output.patches = get_transaction(grid, lb_ini, base_relation);
-        
-        auto& self  = grid.get_blocks().enumerated_nodes[lb_ini].get();
-        auto& neigh = relation.endpoint.get();
+        base_relation.edge = -1*relation.edge;
+        base_relation.lb_ini  = relation.endpoint.get().tag;
+        base_relation.lb_term = lb_ini;
         
         
+        //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
+        auto ptch = get_transaction(grid, lb_ini, base_relation);
+        output.patches = ptch;
+        
+        
+        auto& self  = relation.endpoint.get();
+        auto& neigh = grid.get_blocks().enumerated_nodes[lb_ini].get();
+        
+        output.num_oslot = 1;
+        output.i_skip = 1;
+        output.delta_i = 0;
+        for (int d = 0; d < grid_t::dim(); ++d)
+        {
+            int level_diff = self.level[d] - neigh.level[d];
+            
+            //Need to modify:
+            
+            // [ ] output.patches.source
+            // [ ] output.patches.dest
+            // [x] output.i_skip
+            // [x] output.num_oslot
+            // [x] output.delta_i
+            
+            switch(level_diff)
+            {
+                case -1: // neighbor is finer, I am coarser in this direction
+                {
+                    output.num_oslot *= 2;
+                    
+                    // Neighbor is finer, so I only need half the range in this
+                    // direction
+                    switch(base_relation.edge[d])
+                    {
+                        case -1:
+                        {
+                            output.patches.source.max(d) = output.patches.source.min(d) + output.patches.source.size(d)/2;
+                            break;
+                        }
+                        case  0:
+                        {
+                            output.patches.source.max(d) = output.patches.source.min(d) + output.patches.source.size(d)/2;
+                            if (neigh.amr_position.min(d)>self.amr_position.min(d))
+                            {
+                                const auto sz = output.patches.source.size(d);
+                                output.patches.source.min(d) += sz;
+                                output.patches.source.max(d) += sz;
+                            }
+                            break;
+                        }
+                        case  1:
+                        {
+                            output.patches.source.min(d) = output.patches.source.max(d) - output.patches.source.size(d)/2;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case  0: // same level (do nothing)
+                {
+                    break;
+                }
+                case  1: // neighbor is coarser, I am finer in this direction
+                {
+                    output.i_skip[d] = 2;
+                    for (int c = 0; c < output.max_size; ++c)
+                    {
+                        auto& delta_i_loc = output.delta_i[c];
+                        delta_i_loc[d] = (c>>d) & 1;
+                    }
+                    
+                    switch(base_relation.edge[d])
+                    {
+                        // neighbor is coarser, so send twice the data
+                        case -1:
+                        {
+                            output.patches.source.max(d) = output.patches.source.min(d) + 2*output.patches.source.size(d);
+                            break;
+                        }
+                        case  0:
+                        {
+                            //except here, where we only fill half the data!
+                            output.patches.dest.max(d) = output.patches.dest.min(d) + output.patches.dest.size(d)/2;
+                            if (self.amr_position.min(d) > neigh.amr_position.min(d))
+                            {
+                                const auto sz = output.patches.dest.size(d);
+                                output.patches.dest.min(d) += sz;
+                                output.patches.dest.max(d) += sz;
+                            }
+                            break;
+                        }
+                        case  1:
+                        {
+                            output.patches.source.min(d) = output.patches.source.max(d) - 2*output.patches.source.size(d);
+                            break;
+                        }
+                    }
+                    
+                    break;
+                }
+                default:
+                {
+                    throw except::sp_exception("illegal grid configuration");
+                }
+            }
+        }
+        
+        // Leave this here for a bit!
+        // bool DEBUG = neigh.UCONTAIN({0.1, 0.4}) && self.UCONTAIN({0.05, 0.2});
+        // if (neigh.UCONTAIN({0.1, 0.4}) && self.UCONTAIN({0.05, 0.2}))
+        // {
+        //     print("======= begin debug");
+        //     print(self.ubox(), neigh.ubox());
+        //     print("level diff (self - neigh):", self.level - neigh.level);
+        //     print("index table:");
+        //     for (auto& p: output.delta_i) print(p);
+        //     print("idx skip:", output.i_skip);
+        //     print("num slot:", output.num_oslot);
+        //     print("SOURCE");
+        //     print(output.patches.source);
+        //     print("DEST");
+        //     print(output.patches.dest);
+        //     print("======= end debug");
+        //     std::cin.get();
+        // }
         
         return output;
     };

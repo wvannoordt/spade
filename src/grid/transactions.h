@@ -60,7 +60,7 @@ namespace spade::grid
     template <const std::size_t gdim>
     struct patch_fill_t
     {
-        
+        // for construction of this object, see get_transaction.h
         constexpr static int max_size = static_math::pow<2, gdim>::value;
         
         grid_rect_copy_t patches;
@@ -81,10 +81,10 @@ namespace spade::grid
         template <typename arr_t>
         _finline_ std::size_t insert(const arr_t& array, char* buf) const
         {
-            using element_type = typename arr_t::alias_type;
-            using f_val_t      = typename element_type::value_type;
+            using element_type   = typename arr_t::alias_type;
+            using f_val_t        = typename element_type::value_type;
             constexpr auto coeff = f_val_t(1.0)/max_size;
-            ctrs::array<element_type, max_size> islot, oslot;
+            ctrs::array<element_type, max_size> oslot;
             constexpr std::size_t elem_size = sizeof(element_type);
             element_type elem;
             char* raw_e_addr = (char*)&oslot;
@@ -103,12 +103,11 @@ namespace spade::grid
                     donor.i() += delta_i[nn][0];
                     donor.j() += delta_i[nn][1];
                     donor.k() += delta_i[nn][2];
-
                     elem += array.get_elem(donor);
                 });
                 
-                oslot = coeff*elem;
-                std::copy(raw_e_addr, raw_e_addr + output, buf + output);
+                for (auto& k: oslot) k = coeff*elem;
+                std::copy(raw_e_addr, raw_e_addr + num_oslot*elem_size, buf + output);
                 output += num_oslot*elem_size;
             }}}
             return output;

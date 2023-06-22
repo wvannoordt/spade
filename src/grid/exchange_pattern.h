@@ -122,7 +122,6 @@ namespace spade::grid
             {
                 std::size_t num_send_bytes = config.num_send_elems[p]*elem_size;
                 std::size_t num_recv_bytes = config.num_recv_elems[p]*elem_size;
-                
                 if (send_bufs[p].size() < num_send_bytes) send_bufs[p].resize(num_send_bytes);
                 if (recv_bufs[p].size() < num_recv_bytes) recv_bufs[p].resize(num_recv_bytes);
             }
@@ -187,12 +186,30 @@ namespace spade::grid
             const auto& neighs = grid.get_blocks().get_neighs(lb.value);
             for (const auto& e:neighs)
             {
-                const auto transaction = get_transaction(grid, lb.value, e);
-                
-                // Note that we add as both and the internal logic inside
-                // these calls will handle the rank checking
-                output0.add_send(transaction);
-                output0.add_recv(transaction);
+                bool ignore_from_periodic = false;
+                const auto& is_dom_bdy = grid.is_domain_boundary(lb);
+                for (int d = 0; d < grid_t::dim(); ++d)
+                {
+                    bool loc = !is_periodic[d] && ((is_dom_bdy.min(d) && e.edge[d] == -1) || (is_dom_bdy.max(d) && e.edge[d] == 1));
+                    ignore_from_periodic = ignore_from_periodic || loc;
+                }
+                if (!ignore_from_periodic)
+                {
+                    const auto transaction = get_transaction(grid, lb.value, e);
+                    
+                    // Note that we add as both and the internal logic inside
+                    // these calls will handle the rank checking
+                    // if (transaction.reducible())
+                    // {
+                        // output0.add_send(transaction.reduce());
+                        // output0.add_recv(transaction.reduce());
+                    // }
+                    // else
+                    // {
+                        output0.add_send(transaction);
+                        output0.add_recv(transaction);
+                    // }
+                }
             }
         }
         

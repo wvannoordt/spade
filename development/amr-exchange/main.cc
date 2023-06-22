@@ -28,8 +28,6 @@ int main(int argc, char** argv)
     
     const auto constraint = spade::amr::constraints::factor2;
     
-    
-    
     for (int i = 0; i < 3; ++i)
     {
         const auto selection = [&](const auto& node)
@@ -53,26 +51,6 @@ int main(int argc, char** argv)
         amr_blocks.refine(nodes, per, ref, constraint);
     }
     
-    // amr_blocks.refine(0, per, {true, true});
-    // amr_blocks.refine(0, per, {true, true});
-    // amr_blocks.enumerated_nodes[0]->remove_duplicate_neighbors();
-    
-    // amr_blocks.enumerated_nodes[0].get().debug();
-    // const auto get_block_at = [&](const spade::ctrs::array<real_t, 2>& x)
-    // {
-    //     for (const auto& node: amr_blocks.enumerated_nodes)
-    //     {
-    //         const auto ub = node->ubox();
-    //         if ((ub.min(0) <= x[0] && x[0] < ub.max(0)) && (ub.min(1) <= x[1] && x[1] < ub.max(1)))
-    //         {
-    //             return node;
-    //         }
-    //     }
-    //     return amr_blocks.enumerated_nodes[0];
-    // };
-    
-    // auto& node = *get_block_at({0.75, 0.5});
-    
     spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, amr_blocks, coords, group);
     
     auto handle = spade::grid::create_exchange(grid, group, per);
@@ -83,14 +61,14 @@ int main(int argc, char** argv)
     spade::grid::cell_array p1(grid, ft);
     
     using point_t = decltype(grid)::coord_point_type;
-    auto fill = [](const point_t& x)
+    auto fill = [](const point_t& x, const spade::grid::cell_idx_t ii)
     {
         prim_t output;
-        output.p() = 10.0;
-        output.T() = 10.0;
+        output.p() = -10.0;
+        output.T() = -10.0;
         output.u() = 10.0*std::sin(2.0*spade::consts::pi*x[0] + 2.0*spade::consts::pi*x[1]);
-        output.v() = 0.0;
-        output.w() = 0.0;
+        output.v() = ii.lb();
+        output.w() = -10.0;
         return output;
     };
     
@@ -100,9 +78,8 @@ int main(int argc, char** argv)
     spade::io::output_vtk("output", "p0", p0);
     spade::io::output_vtk("output", "p1", p1);
     
-    p1 -= p0;
+    handle.exchange(p1);
     
-    spade::io::output_vtk("output", "diff", p1);
-    
+    spade::io::output_vtk("output", "exch", p1);
     return 0;
 }
