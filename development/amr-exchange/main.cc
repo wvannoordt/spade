@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     }
     
     spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, amr_blocks, coords, group);
-    
+
     auto handle = spade::grid::create_exchange(grid, group, per);
     
     using prim_t = spade::fluid_state::prim_t<real_t>;

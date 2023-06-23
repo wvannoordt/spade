@@ -7,7 +7,6 @@
 
 namespace spade::pde_algs
 {
-    int DEBUG = 0;
     template <typename flux_func_t> concept is_flux_functor =
     requires(const flux_func_t& f)
     {
