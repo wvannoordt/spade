@@ -31,16 +31,21 @@ namespace spade::convective
             f_u.z_momentum()           = 0.5*rho*q.w()*u_n + 0.5*q.p()*nv[2];
             f_d = f_u;
             const real_t sigma = abs(u_n) + sqrt(gas.get_gamma(info)*gas.get_R(info)*q.T());
+            
+            //Note: enth is actually the enthalpy as implemented, 
+            //should actually be the conserved quantity total energy (pressure diffusion term)
             f_d.continuity() -= sigma*rho;
-            f_d.energy()     -= sigma*enth;
+            f_d.energy()     -= sigma*rho*enth;
             f_d.x_momentum() -= sigma*rho*q.u();
             f_d.y_momentum() -= sigma*rho*q.v();
             f_d.z_momentum() -= sigma*rho*q.w();
+            
             f_u.continuity() += sigma*rho;
-            f_u.energy()     += sigma*enth;
+            f_u.energy()     += sigma*rho*enth;
             f_u.x_momentum() += sigma*rho*q.u();
             f_u.y_momentum() += sigma*rho*q.v();
             f_u.z_momentum() += sigma*rho*q.w();
+            
             return out;
         }
     };

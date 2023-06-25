@@ -160,11 +160,15 @@ namespace spade::convective
                 const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
                 const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
                 
-                const float_t eps = 1e-9;
+                const float_t eps = 1e-16;
                 const float_t a0  = (1.0/3.0)/((be0+eps)*(be0+eps));
                 const float_t a1  = (2.0/3.0)/((be1+eps)*(be1+eps));
                 const float_t a2  = (2.0/3.0)/((be2+eps)*(be2+eps));
                 const float_t a3  = (1.0/3.0)/((be3+eps)*(be3+eps));
+                // const float_t a0  = (1.0/3.0)/((be0+eps));
+                // const float_t a1  = (2.0/3.0)/((be1+eps));
+                // const float_t a2  = (2.0/3.0)/((be2+eps));
+                // const float_t a3  = (1.0/3.0)/((be3+eps));
                 
                 if constexpr (use_smooth == disable_smooth)
                 {
