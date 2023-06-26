@@ -67,7 +67,7 @@ namespace spade::grid
                 for (int i = 0; i < num_blocks.size(); ++i)
                 {
                     bnd.min(i) = bounds.min(i) + blk[i]*bsize[i];
-                    bnd.max(i) = bounds.min(i) + bsize[i];
+                    bnd.max(i) = bnd.min(i)    + bsize[i];
                 }
                 
                 auto& neighs = neighbors[lb];
