@@ -65,6 +65,10 @@ namespace spade::omni
     {
         constexpr static bool is_1d = ((dj==0) && (dk==0));
         
+        constexpr static int del_i() { return di; }
+        constexpr static int del_j() { return dj; }
+        constexpr static int del_k() { return dk; }
+        
         //if we are at a node of type 'center', what kind of node is at the given offset?
         template <const grid::array_centering center>
         constexpr static grid::array_centering relative_node_centering

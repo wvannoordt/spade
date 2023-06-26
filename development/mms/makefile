@@ -22,7 +22,7 @@ sanny := 0
 
 #Note that including -g dramatically increases compile time
 flags :=
-flags += -std=c++20 -g -O3 -fconcepts-diagnostics-depth=3 -fmax-errors=4
+flags += -std=c++20 -O3 -fconcepts-diagnostics-depth=3 -fmax-errors=4
 ifeq (${sanny},1)
 flags += -fsanitize=undefined,address -fstack-protector-all
 endif

@@ -7,7 +7,7 @@ int main(int argc, char** argv)
     spade::parallel::mpi_t group(&argc, &argv);
     
     spade::ctrs::array<int, 3> num_blocks(2, 2, 2);
-    spade::ctrs::array<int, 3> exchange_cells(2, 2, 2);
+    spade::ctrs::array<int, 3> exchange_cells(5, 5, 5);
     spade::bound_box_t<real_t, 3> bounds;
     bounds.min(0) = 0.0;
     bounds.max(0) = 2.0;
@@ -15,6 +15,9 @@ int main(int argc, char** argv)
     bounds.max(1) = 2.0;
     bounds.min(2) = 0.0;
     bounds.max(2) = 2.0;
+    
+    spade::grid::cartesian_blocks_t blocks(num_blocks, bounds);
+    
     spade::coords::identity<real_t> coords;
     spade::fluid_state::prim_t<real_t> pfill = 0.0;
     spade::fluid_state::flux_t<real_t> ffill = 0.0;
@@ -28,11 +31,13 @@ int main(int argc, char** argv)
     std::vector<real_t> dx_all;
     for (int l = 0; l < nx.size(); ++l)
     {
-        
+        const bool output = false;
         spade::ctrs::array<int, 3> cells_in_block(nx[l], nx[l], nx[l]);
-        spade::grid::cartesian_grid_t grid(num_blocks, cells_in_block, exchange_cells, bounds, coords, group);
-        const auto dV = grid.get_dx(0)*grid.get_dx(1)*grid.get_dx(2);
+        spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, blocks, coords, group);
+        const auto dV = grid.get_dx(0,0)*grid.get_dx(1,0)*grid.get_dx(2,0);
 
+        auto handle = spade::grid::create_exchange(grid, group, spade::ctrs::array<bool, 3>(true, true, true));
+        
         spade::grid::grid_array prim   (grid, pfill);
         spade::grid::grid_array rhs    (grid, ffill);
         spade::grid::grid_array rhs_ana(grid, ffill);
@@ -90,7 +95,7 @@ int main(int argc, char** argv)
             return output;
         });
         
-        grid.exchange_array(prim);
+        handle.exchange(prim);
         
         auto cont_i  = -1*(symd::ddx(rho*u,          x) + symd::ddx(rho*v,          y) + symd::ddx(rho*w,          z));
         auto mom_x_i = -1*(symd::ddx(rho*u*u + p,    x) + symd::ddx(rho*v*u,        y) + symd::ddx(rho*w*u,        z));
@@ -110,8 +115,9 @@ int main(int argc, char** argv)
         spade::viscous_laws::constant_viscosity_t visc_law(mu, prandtl);
 
         // spade::convective::totani_lr tscheme(air);
+        auto tscheme = spade::convective::cent_keep<8>(air);
         spade::convective::rusanov_t flx(air);
-        spade::convective::weno_t tscheme(flx);
+        //spade::convective::weno_t tscheme(flx);
         spade::viscous::visc_lr  visc_scheme(visc_law, air);
         
         // Convective
@@ -146,7 +152,7 @@ int main(int argc, char** argv)
             });
         };
         
-        auto run_test = [&](const auto& num_func, const auto& ana_func)
+        auto run_test = [&](const auto& num_func, const auto& ana_func, const std::string& name)
         {
             rhs = 0.0;
             rhs_ana = 0.0;
@@ -162,8 +168,19 @@ int main(int argc, char** argv)
             tmr.stop("ana");
             
             if (group.isroot()) print(tmr);
+            if (output)
+            {
+                if (group.isroot()) print("output...");
+                spade::io::output_vtk("output", "num_" + name + spade::utils::zfill(l, 3), rhs);
+                spade::io::output_vtk("output", "ana_" + name + spade::utils::zfill(l, 3), rhs_ana);
+            }
             rhs -= rhs_ana;
-            grid.exchange_array(rhs);
+            if (output)
+            {
+                spade::io::output_vtk("output", "err_" + name + spade::utils::zfill(l, 3), rhs);
+            }
+            if (!output && group.isroot()) print("skipping output");
+            handle.exchange(rhs);
             spade::fluid_state::flux_t<real_t> l2_error;
             spade::fluid_state::flux_t<real_t> li_error;
             spade::reduce_ops::reduce_max<real_t> max_op;
@@ -176,8 +193,8 @@ int main(int argc, char** argv)
             return std::make_pair(l2_error, li_error);
         };
         
-        auto [c_er_2, c_er_i] = run_test(num_conv, ana_conv);
-        auto [v_er_2, v_er_i] = run_test(num_visc, ana_visc);
+        auto [c_er_2, c_er_i] = run_test(num_conv, ana_conv, "conv");
+        auto [v_er_2, v_er_i] = run_test(num_visc, ana_visc, "visc");
         
         dx_all.push_back(std::pow(dV, 1.0/3.0));
         c_er_2_all.push_back(c_er_2);

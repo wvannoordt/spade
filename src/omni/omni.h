@@ -20,6 +20,7 @@
 #include "omni/convert.h"
 #include "omni/info_union.h"
 #include "omni/stencil_union.h"
+#include "omni/pattern.h"
 
 #include "omni/interpret.h"
 

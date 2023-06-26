@@ -4,6 +4,8 @@
 #include "core/ctrs.h"
 #include "omni/omni.h"
 
+#include "core/finite_diff.h"
+
 #include "navier-stokes/fluid_state.h"
 
 namespace spade::convective
@@ -16,6 +18,8 @@ namespace spade::convective
         using sub_info_type = typename gas_t::info_type;
         using info_type     = omni::info_union<own_info_type, sub_info_type>;
         using omni_type     = omni::prefab::lr_t<info_type>;
+        
+        const gas_t& gas;
         
         totani_lr(const gas_t& gas_in) : gas{gas_in}{}
         
@@ -46,8 +50,106 @@ namespace spade::convective
             return output;
         }
         
-        const gas_t& gas;
+        
     };
+    
+    template <typename gas_t, const int order>
+    struct cent_keep_scheme_t
+    {
+        static_assert(order <= 8, "only accurate up to 8th order because of precision issues");
+        constexpr static int half_wid = order/2;
+        
+        using float_t       = typename gas_t::value_type;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using sub_info_type = typename gas_t::info_type;
+        using info_type     = omni::info_union<own_info_type, sub_info_type>;
+        using x0_t          = omni::offset_t< -(2*half_wid-1), 0, 0>;
+        using dx_t          = omni::offset_t<               2, 0, 0>;
+        using cells_t       = omni::pattern_t<grid::face_centered, x0_t, dx_t, order, info_type>;
+        using faces_t       = omni::prefab::face_mono_t<omni::info_list_t<omni::info::metric>>;
+        using omni_type     = omni::stencil_union<cells_t, faces_t>;
+        
+        const gas_t& gas;
+        
+        cent_keep_scheme_t(const gas_t& gas_in) : gas{gas_in}{}
+        
+        output_type operator() (const auto& input_data) const
+        {
+            output_type output;
+            const auto nface = omni::access<omni::info::metric>(input_data.face(0_c));
+            ctrs::array<float_t, order> u_normal, rho, eng;
+            algs::static_for<0, order>([&](const auto& ii)
+            {
+                udci::idx_const_t<ii.value> idx;
+                const auto& c_cell = input_data.cell(idx);
+                const auto& q = omni::access<omni::info::value >(c_cell);
+                const auto& n = omni::access<omni::info::metric>(c_cell);
+                u_normal[idx] = q.u()*n[0] + q.v()*n[1] + q.w()*n[2];
+                rho[idx]      = q.p()/(gas.get_R(c_cell)*q.T());
+                eng[idx]      = q.p()/(rho[idx]*(gas.get_gamma(c_cell)-float_t(1.0)));
+            });
+            float_t c   = float_t(0.0); // mass conservation
+            float_t mx  = float_t(0.0); // x-momentum (advection)
+            float_t my  = float_t(0.0); // y-momentum (advection)
+            float_t mz  = float_t(0.0); // z-momentum (advection)
+            float_t g   = float_t(0.0); // pressure gradient
+            float_t k   = float_t(0.0); // kinetic energy flux
+            float_t i   = float_t(0.0); // internal energy flux
+            float_t p   = float_t(0.0); // pressure diffusion term
+            
+            // functors for stencil point calculations
+            const auto ar_access = [&](const auto& arr){ return [&](const auto& iii) { return arr[iii.value]; }; };
+            const auto st_access = [&](const auto& lam)
+            {
+                return [&](const auto& iii)
+                {
+                    const auto& st = omni::access<omni::info::value>(input_data.cell(udci::idx_const_t<iii.value>()));
+                    return lam(st);
+                };
+            };
+            algs::static_for<1, half_wid+1>([&](const auto& ii)
+            {
+                // const auto& a_coeff = coeff[ii.value-1];
+                constexpr auto a_coeff = finite_diff::centered_finite_diff_t<ii.value, order, float_t>::value;
+                algs::static_for<0, ii.value>([&](const auto& jj)
+                {
+                    udci::idx_const_t<half_wid - 1 - jj.value> i0;
+                    udci::idx_const_t<i0.value + ii.value> i1;
+                    const auto& q0 = omni::access<omni::info::value>(input_data.cell(udci::idx_const_t<i0.value>()));
+                    const auto& q1 = omni::access<omni::info::value>(input_data.cell(udci::idx_const_t<i1.value>()));
+                    //local averaging operators
+                    const auto avg0 = [&](const auto& func)                     { return float_t(0.5)*(func(i0) + func(i1)); };
+                    const auto avg1 = [&](const auto& func0, const auto& func1) { return float_t(0.25)*(func0(i0) + func0(i1))*(func1(i1) + func1(i0)); };
+                    const auto avg2 = [&](const auto& func0, const auto& func1) { return float_t(0.5)*(func0(i0)*func1(i1) + func0(i1)*func1(i0)); };
+                    
+                    const auto c_loc = a_coeff*avg1(ar_access(rho), ar_access(u_normal));
+                    c  +=   c_loc;
+                    mx +=   c_loc*avg0(st_access([](const auto& q){return q.u();}));
+                    my +=   c_loc*avg0(st_access([](const auto& q){return q.v();}));
+                    mz +=   c_loc*avg0(st_access([](const auto& q){return q.w();}));
+                    g  += a_coeff*avg0(st_access([](const auto& q){return q.p();}));
+                    k  += float_t(0.5)*c_loc*(q0.u()*q1.u() + q0.v()*q1.v() + q0.w()*q1.w());
+                    i  += c_loc*avg0(ar_access(eng));
+                    p  += a_coeff*avg2(ar_access(u_normal), st_access([](const auto& q){return q.p();}));
+                });
+            });
+            
+            output.continuity() = float_t(2.0)*c;
+            output.energy()     = float_t(2.0)*(k + i + p);
+            output.x_momentum() = float_t(2.0)*(mx + g*nface[0]);
+            output.y_momentum() = float_t(2.0)*(my + g*nface[1]);
+            output.z_momentum() = float_t(2.0)*(mz + g*nface[2]);
+            return output;
+        }
+    };
+    
+    template <const int order, typename gas_t>
+    auto cent_keep(const gas_t& gas)
+    {
+        static_assert(order == 2*(order/2), "nominal order for centered scheme must be even");
+        return cent_keep_scheme_t<gas_t, order>(gas);
+    }
     
     template <typename gas_t, typename scale_t> struct pressure_diss_lr
     {

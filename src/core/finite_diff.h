@@ -21,4 +21,21 @@ namespace spade::finite_diff
         output[order] = last;
         return output;
     }
+    
+    template <const int idx, const int order, typename float_t>
+    struct centered_finite_diff_t
+    {
+        static_assert(order == 2*(order/2), "even nominal order required for centered FD coefficients");
+        static_assert((idx <= order/2) && (-order/2 <= idx), "index for cenetered FD coefficient out of range [-N/2, N/2].");
+        constexpr static int     h     = order/2;
+        constexpr static float_t d0    = float_t(static_math::factorial<h>::value)/float_t(static_math::factorial<h+idx>::value);
+        constexpr static float_t d1    = float_t(static_math::factorial<h>::value)/float_t(static_math::factorial<h-idx>::value);
+        constexpr static float_t value = d0*d1*static_math::pow< -1, 1+idx>::value/float_t(idx);
+    };
+    
+    template <const int order, typename float_t>
+    struct centered_finite_diff_t<0, order, float_t>
+    {
+        constexpr static float_t value = 0.0;
+    };
 }
