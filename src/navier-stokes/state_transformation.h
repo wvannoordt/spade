@@ -37,11 +37,13 @@ namespace spade::fluid_state
     struct state_transform_t
     {
         const gas_t& gas;
+        const grid::exchange_inclusion_e g_config;
         
         //prim = inverse
         //cons = forward
         
-        state_transform_t(const forward_t&, const gas_t& gas_in) : gas{gas_in} {}
+        state_transform_t(const forward_t&, const gas_t& gas_in)                                         : gas{gas_in}, g_config{grid::include_exchanges} {}
+        state_transform_t(const forward_t&, const gas_t& gas_in, const grid::exchange_inclusion_e& g_in) : gas{gas_in}, g_config{g_in} {}
         
         template <typename array_t>
         requires (fluid_state::is_state_type<typename array_t::alias_type> && fluid_state::state_convertible<forward_t, typename array_t::alias_type, gas_t>)
@@ -49,7 +51,7 @@ namespace spade::fluid_state
         {
             using inverse_t = typename array_t::alias_type;
             using i2f_t = detail::mono_state_converstion_t<array_t, gas_t, inverse_t, forward_t>;
-            spade::algs::transform_inplace(q, i2f_t(gas));
+            spade::algs::transform_inplace(q, i2f_t(gas), g_config);
         }
         
         template <typename array_t>
@@ -58,7 +60,7 @@ namespace spade::fluid_state
         {
             using inverse_t = typename array_t::alias_type;
             using f2i_t = detail::mono_state_converstion_t<array_t, gas_t, forward_t, inverse_t>;
-            spade::algs::transform_inplace(q, f2i_t(gas));
+            spade::algs::transform_inplace(q, f2i_t(gas), g_config);
         }
     };
 }
