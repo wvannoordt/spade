@@ -7,10 +7,9 @@ namespace spade
 {
     template <typename dtype, const std::size_t ar_size> struct bound_box_t
     {
-        dtype bnds[2*ar_size];
+        ctrs::array<dtype, 2*ar_size> bnds;
         
-        dtype* begin() noexcept {return &bnds[0];}
-        dtype* end()   noexcept {return &bnds[0]+2*ar_size;}
+        const auto& data() const {return bnds;}
         
         bound_box_t(){}
         bound_box_t(const dtype& v)

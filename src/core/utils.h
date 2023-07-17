@@ -22,7 +22,7 @@ namespace spade::utils
         >::type
         >::type
         > struct remove_all : remove_all<U> {};
-    template<class T> struct remove_all<T, T> { typedef T type; };
+    template<class T> struct remove_all<T, T> { using type = T; };
 
     template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
     {
@@ -155,6 +155,21 @@ namespace spade::utils
         std::string output = std::to_string(data);
         while (output.length() < num_zeros) output = "0"+output;
         return output;
+    }
+    
+    template <typename data_t>
+    static std::string join(const data_t& data, const std::string& join_dlm)
+    {
+        std::string output = "";
+        std::stringstream ss(output);
+        int ct = 0;
+        for (const auto& i: data)
+        {
+            if (ct != 0) ss << join_dlm;
+            ss << i;
+            ++ct;
+        }
+        return ss.str();
     }
     
     static inline bool is_big_endian()

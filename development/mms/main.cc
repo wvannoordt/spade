@@ -19,6 +19,7 @@ int main(int argc, char** argv)
     spade::grid::cartesian_blocks_t blocks(num_blocks, bounds);
     
     spade::coords::identity<real_t> coords;
+	//spade::coords::cyl_coords<real_t> coords;
     spade::fluid_state::prim_t<real_t> pfill = 0.0;
     spade::fluid_state::flux_t<real_t> ffill = 0.0;
     
@@ -115,7 +116,7 @@ int main(int argc, char** argv)
         spade::viscous_laws::constant_viscosity_t visc_law(mu, prandtl);
 
         // spade::convective::totani_lr tscheme(air);
-        auto tscheme = spade::convective::cent_keep<8>(air);
+        auto tscheme = spade::convective::cent_keep<2>(air);
         spade::convective::rusanov_t flx(air);
         //spade::convective::weno_t tscheme(flx);
         spade::viscous::visc_lr  visc_scheme(visc_law, air);

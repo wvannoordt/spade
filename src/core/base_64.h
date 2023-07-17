@@ -12,7 +12,7 @@
 
 namespace spade::detail
 {
-    template <class data_t> static inline void stream_base_64(std::ostream& strm, data_t* data, const size_t& data_size)
+    template <class data_t> static inline void stream_base_64(std::ostream& strm, const data_t* data, const size_t& data_size)
     {
         //This is a very slow implentation for now.
         const char  table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -61,5 +61,13 @@ namespace spade::detail
         {
             strm << term;
         }
+    }
+    
+    template<typename data_t>
+    static inline void stream_base_64(std::ostream& strm, const std::vector<data_t>& data)
+    {
+        unsigned int bytes = data.size() * sizeof(data_t);
+        stream_base_64(strm, &bytes, 1);
+        stream_base_64(strm, data.data(), data.size());
     }
 }

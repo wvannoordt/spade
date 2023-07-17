@@ -12,7 +12,7 @@
 namespace spade::coords
 {
     template <class T> concept coordinate_system = std::floating_point<typename T::coord_type>
-    && requires(T t, ctrs::array<typename T::coord_type,3> x)
+    && requires(T t, point_t<typename T::coord_type> x)
     {
         t;
         { t.map(x) } -> ctrs::vec_nd<3,typename T::coord_type>;

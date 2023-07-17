@@ -27,5 +27,5 @@
 [ ] Introduce and omni-info for interpolated value with specified order-of-accuracy
 [ ] Re-work the lambda-omni conversion to account for unions
 [ ] Generalize OMNI point-operation for multi-interface mode
-[ ] Implement non-periodicity in exchanges
+[x] Implement non-periodicity in exchanges
 [ ] Basic unit testing (now that we have API stability more or less)

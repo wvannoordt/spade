@@ -262,6 +262,7 @@ namespace spade::amr
             this->refine({lb}, is_per, directions);
         }
         
+        const auto&       get_bounds()                                        const { return bounds; }
         const auto&       get_bounding_box(const std::size_t lb)              const { return block_boxes[lb]; }
         const coord_val_t get_size(const std::size_t i, const std::size_t lb) const { return block_boxes[lb].size(i); }
         const auto&       get_neighs(const std::size_t lb)                    const { return enumerated_nodes[lb].get().neighbors; }

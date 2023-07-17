@@ -110,7 +110,6 @@ namespace spade::convective
             };
             algs::static_for<1, half_wid+1>([&](const auto& ii)
             {
-                // const auto& a_coeff = coeff[ii.value-1];
                 constexpr auto a_coeff = finite_diff::centered_finite_diff_t<ii.value, order, float_t>::value;
                 algs::static_for<0, ii.value>([&](const auto& jj)
                 {
