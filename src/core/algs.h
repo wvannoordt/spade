@@ -1,5 +1,5 @@
 #pragma once
-
+65;6800;1c
 #include <type_traits>
 
 #include "core/config.h"
@@ -8,6 +8,8 @@
 #include "core/reduce_ops.h"
 #include "core/md_loop.h"
 #include "core/invoke.h"
+
+#include "dispatch/support_of.h"
 
 namespace spade::algs
 {
@@ -59,7 +61,7 @@ namespace spade::algs
         // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
         {
-            const auto loop_func = [&](const auto& elem) -> void
+            const auto loop_func = [&](const auto& elem)
             {
                 const auto data = invoke_at(arr, elem, kernel);
                 arr.set_elem(elem, data);
@@ -68,6 +70,26 @@ namespace spade::algs
         }
         return arr;
     }
+  /*    
+    template <grid::multiblock_array array_t, class callable_t>
+    auto& transform_inplace_NEW(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    {
+        const grid::array_centering ctr = array_t::centering_type();
+        const auto kernel = omni::to_omni<ctr>(func, arr);
+        using index_type     = typename array_t::index_type;
+        //ideally, this would be given as a parameter later on
+        auto var_range       = dispatch::support_of(arr, exchange_policy);
+        const auto d_image   = arr.view();
+        const auto loop_load = _sp_kernel (const index_type& index)
+        {
+            const auto data = omni::invoke_at(d_image, index, kernel);
+            d_image.set_elem(index, data);
+        };
+        
+        dispatch::foreach<index_type>(var_range, loop_load);
+        
+        return arr;
+    }*/
 
     template <grid::multiblock_array source_t, grid::multiblock_array dest_t, class callable_t>
     auto& transform_to(const source_t& source, dest_t& dest, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)

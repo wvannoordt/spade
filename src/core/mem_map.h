@@ -5,6 +5,7 @@
 #include "core/config.h"
 #include "core/aliases.h" 
 #include "core/static_for.h"
+#include "core/cuda_incl.h"
 
 namespace spade::mem_map
 {
@@ -317,7 +318,7 @@ namespace spade::mem_map
             const int dim_idx,   //Which dimension are we considering?
             typename offset_t,
             typename idx_t, typename... idxs_t>
-        void rec_off_calc(offset_t& offset, const idx_t& idx, const idxs_t&... idxs) const
+        _sp_hybrid void rec_off_calc(offset_t& offset, const idx_t& idx, const idxs_t&... idxs) const
         {
             constexpr bool skip_index = [&]()
             {
@@ -383,7 +384,7 @@ namespace spade::mem_map
         
         template <typename... idxs_t>
         requires (detail::size_sum<idxs_t...>::value == map_t::rank())
-        offset_type compute_offset(const idxs_t&... idxs) const
+        _sp_hybrid offset_type compute_offset(const idxs_t&... idxs) const
         {
             offset_type output = 0;
             rec_off_calc<0,0,0>(output, idxs...);

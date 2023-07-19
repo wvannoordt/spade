@@ -108,7 +108,7 @@ namespace spade::omni
         using info_list_type = decltype(lamda_info_list(array_t(), index_t(), kernel));
         using omni_type = stencil_t<index_t::centering_type(), elem_t<offset_t<0, 0, 0>, info_list_type>>;
         omni_lambda_wrapper_t(const kernel_t& kernel_in, const array_t&, const index_t&) : kernel{kernel_in}{}
-        auto operator() (const auto& input_data) const
+        _sp_hybrid auto operator() (const auto& input_data) const
         {
             const auto elem = input_data.template seek_element<index_t::centering_type()>(0_c);
             return invoke_call(kernel, elem);

@@ -17,7 +17,9 @@
 #include "grid/grid.h"
 #include "core/mem_map.h"
 
-#include "array-containers/ac_vector_wrapper.h"
+#include "dispatch/device_type.h"
+#include "dispatch/device_vector.h"
+
 
 namespace spade::grid
 {    
@@ -174,13 +176,11 @@ namespace spade::grid
         void set_bbox_dir_val(bbox_t& bbox, const int& dim) {}
     }
     
-    template <typename data_t> using default_container_t = array_containers::vector_wrapper<data_t>;
-    
     template <
         multiblock_grid grid_t,
         typename data_alias_t,
-        const array_centering centering=cell_centered,
-        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
+        typename device_t = device::cpu_t,
+        const array_centering centering = cell_centered
         >
     struct grid_array
     {
@@ -193,6 +193,10 @@ namespace spade::grid
         using index_type          = get_index_type<centering_type()>::array_type;
         using coord_point_type    = grid_t::coord_point_type;
         using alias_type          = data_alias_t;
+        using container_t         = std::conditional<
+                                        device::is_cpu<device_t>,
+                                        std::vector<fundamental_type>,
+                                        device::vector<fundamental_type>>::type;
         
         using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
@@ -222,13 +226,16 @@ namespace spade::grid
         {
             return std::get<1>(mem_view.mmap.views);
         }
+        
+        auto get_device() const {return device_t();}
 
         std::size_t cell_element_size() const {return mem_map::map_size(var_map());}
 
         grid_array(){}
         grid_array(
             const grid_t& grid_in,
-            const data_alias_t& fill_elem
+            const data_alias_t& fill_elem,
+            const device_t& dev_in = device::cpu_t()
             )
         {
             grid = &grid_in;
@@ -366,14 +373,6 @@ namespace spade::grid
         }
     };
     
-    template <
-        multiblock_grid grid_t,
-        typename data_alias_t,
-        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
-        > using face_array = grid_array<grid_t, data_alias_t, face_centered, container_t>;
-    template <
-        multiblock_grid grid_t,
-        typename data_alias_t,
-        array_containers::is_array_container container_t = default_container_t<typename detail::get_fundamental_type<data_alias_t>::type>
-        > using cell_array = grid_array<grid_t, data_alias_t, cell_centered, container_t>;
+    // template <multiblock_grid grid_t, typename data_alias_t> using cell_array = grid_array<grid_t, data_alias_t, cell_centered>;
+    // template <multiblock_grid grid_t, typename data_alias_t> using face_array = grid_array<grid_t, data_alias_t, face_centered>;
 }
