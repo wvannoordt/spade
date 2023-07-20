@@ -1,7 +1,7 @@
 #pragma once
 
 #include <concepts>
-
+#include "core/cuda_incl.h"
 namespace spade::device
 {
     struct gpu_t {} gpu;
