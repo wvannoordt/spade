@@ -10,7 +10,7 @@
 #include "core/invoke.h"
 
 #include "dispatch/support_of.h"
-#include "dispatch/loop.h"
+#include "dispatch/device_type.h"
 
 namespace spade::algs
 {
@@ -50,29 +50,31 @@ namespace spade::algs
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
     }
     
-    // template <grid::multiblock_array array_t, class callable_t>
-    // auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
-    // {
-    //     const auto& grid = arr.get_grid();
-    //     const auto nlb = grid.get_num_local_blocks();
+    template <grid::multiblock_array array_t, class callable_t>
+    requires (device::is_cpu<typename array_t::device_type>)
+    auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    {
+        const auto& grid = arr.get_grid();
+        const auto nlb = grid.get_num_local_blocks();
 
-    //     const grid::array_centering ctr = array_t::centering_type();
-    //     const auto kernel = omni::to_omni<ctr>(func, arr);
+        const grid::array_centering ctr = array_t::centering_type();
+        const auto kernel = omni::to_omni<ctr>(func, arr);
         
-    //     // consider fundamentally separating the block dimension with the ijk dimensions!
-    //     for (auto lb: range(0, nlb))
-    //     {
-    //         const auto loop_func = [&](const auto& elem)
-    //         {
-    //             const auto data = invoke_at(arr, elem, kernel);
-    //             arr.set_elem(elem, data);
-    //         };
-    //         block_loop(arr, lb, loop_func, exchange_policy);
-    //     }
-    //     return arr;
-    // }
+        // consider fundamentally separating the block dimension with the ijk dimensions!
+        for (auto lb: range(0, nlb))
+        {
+            const auto loop_func = [&](const auto& elem)
+            {
+                const auto data = invoke_at(arr, elem, kernel);
+                arr.set_elem(elem, data);
+            };
+            block_loop(arr, lb, loop_func, exchange_policy);
+        }
+        return arr;
+    }
     
     template <grid::multiblock_array array_t, class callable_t>
+    requires (device::is_gpu<typename array_t::device_type>)
     void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const grid::array_centering ctr = array_t::centering_type();
@@ -80,16 +82,14 @@ namespace spade::algs
         
         // //ideally, this would be given as a parameter later on
         auto var_range       = dispatch::support_of(arr, exchange_policy);
-        // using index_type     = typename decltype(var_range)::index_type;
+        using index_type     = typename decltype(var_range)::index_type;
         // const auto d_image   = arr.view();
-        // const auto loop_load = _sp_lambda (const index_type& index)
-        const auto loop_load = _sp_lambda (const int& index)
+        const auto loop_load = _sp_lambda (const index_type& index)
         {
-            // const auto data = invoke_at(d_image, index, kernel);
-            // d_image.set_elem(index, data);
+        //     const auto data = invoke_at(d_image, index, kernel);
+        //     d_image.set_elem(index, data);
         };
-        // dispatch::loop(var_range, loop_load);
-        // dispatch::loop(var_range, loop_load);
+        var_range.execute(loop_load);
     }
 
     template <grid::multiblock_array source_t, grid::multiblock_array dest_t, class callable_t>

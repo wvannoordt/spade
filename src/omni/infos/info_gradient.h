@@ -38,7 +38,14 @@ namespace spade::omni
                 auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const grid::cell_idx_t& idx)
                 {
                     auto q = array.get_elem(ic);
-                    for (std::size_t i = 0; i < out[iset].size(); ++i) out[iset][i] += coeff*q[i]*invdx[iset];
+                    if constexpr (ctrs::basic_array<typename array_t::alias_type>)
+                    {
+                        for (std::size_t i = 0; i < out[iset].size(); ++i) out[iset][i] += coeff*q[i]*invdx[iset];
+                    }
+                    else
+                    {
+                        out[iset] += coeff*q*invdx[iset];
+                    }
                 };
                 
                 apply_coeff_at(idir[0],  -1.0, ic);

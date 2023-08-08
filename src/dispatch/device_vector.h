@@ -8,7 +8,7 @@ namespace spade::device
     template <typename data_t>
     struct vector
     {
-        using allocator_t = cuda_allocator_t<data_t>;
+        using allocator_t = device_allocator_t<data_t>;
         allocator_t allocator;
         data_t* raw = nullptr;
         std::size_t c_size = 0;
@@ -31,7 +31,7 @@ namespace spade::device
             if (raw != nullptr) allocator.deallocate(raw, c_size);
         }
         
-        _sp_hybrid data_t& operator[] (const std::size_t& idx)             { return raw[idx]; }
+        _sp_hybrid data_t& operator[]       (const std::size_t& idx)       { return raw[idx]; }
         _sp_hybrid const data_t& operator[] (const std::size_t& idx) const { return raw[idx]; }
     };
 }

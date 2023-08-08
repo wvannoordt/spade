@@ -46,9 +46,16 @@ namespace spade::pde_algs
             input_type source_data;
             omni::retrieve(q, i, source_data);
             auto source_term = kernel(source_data);
-            for (auto n: range(0, source_term.size()))
+            if constexpr (ctrs::basic_array<typename sol_arr_t::alias_type>)
             {
-                rhs(n, i[0], i[1], i[2], i[3])+=source_term[n]/jac;
+                for (auto n: range(0, source_term.size()))
+                {
+                    rhs(n, i[0], i[1], i[2], i[3])+=source_term[n]/jac;
+                }
+            }
+            else
+            {
+                rhs(i[0], i[1], i[2], i[3])+=source_term/jac;
             }
         }
     }

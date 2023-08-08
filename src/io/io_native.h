@@ -19,7 +19,6 @@ namespace spade::io
         {
             buf.clear();
             const auto& grid = array.get_grid();
-            auto block_range = grid.get_range(array.centering_type(), grid::include_exchanges);
             std::size_t block_elems = mem_map::map_size(array.var_map())*mem_map::map_size(array.block_map()) / grid.get_num_local_blocks();
             using data_t = typename array_t::value_type;
             std::size_t block_size_bytes = block_elems*sizeof(data_t);

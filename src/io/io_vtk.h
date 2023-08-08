@@ -177,7 +177,11 @@ namespace spade::io
                             for (cid.i() = 0; cid.i() < grid.get_num_cells(0); ++cid.i())
                             {
                                 alias_type elem = arr.get_elem(cid);
-                                auto data = elem[ct];
+                                auto data = [&]()
+                                {
+                                    if constexpr (ctrs::basic_array<alias_type>) return elem[ct];
+                                    else return elem;
+                                }();
                                 data_raw.push_back(data);
                             }
                         }
@@ -199,6 +203,7 @@ namespace spade::io
                         for (idx.i() = 0; idx.i() <= grid.get_num_cells(0); ++idx.i())
                         {
                             auto pt = grid.get_coords(idx);
+                            if constexpr (grid.dim() == 2) pt[2] = 0.0;
                             coord_raw.push_back(pt[0]);
                             coord_raw.push_back(pt[1]);
                             coord_raw.push_back(pt[2]);
@@ -225,5 +230,6 @@ namespace spade::io
         const std::string base_file  = out_path / (basename + ".pvts");
         if (group.isroot()) detail::output_base_file(arr, base_file, basename);
         detail::output_block_files(arr, out_dir, basename);
+        group.sync();
     }
 }

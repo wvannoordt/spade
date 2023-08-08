@@ -178,9 +178,9 @@ namespace spade::grid
     
     template <
         multiblock_grid grid_t,
-        typename data_alias_t,
-        typename device_t = device::cpu_t,
-        const array_centering centering = cell_centered
+        typename        data_alias_t,
+        typename        device_t = device::cpu_t,
+        const           array_centering centering = cell_centered
         >
     struct grid_array
     {
@@ -193,7 +193,7 @@ namespace spade::grid
         using index_type          = get_index_type<centering_type()>::array_type;
         using coord_point_type    = grid_t::coord_point_type;
         using alias_type          = data_alias_t;
-        using container_t         = std::conditional<
+        using container_type      = std::conditional<
                                         device::is_cpu<device_t>,
                                         std::vector<fundamental_type>,
                                         device::vector<fundamental_type>>::type;
@@ -201,11 +201,15 @@ namespace spade::grid
         using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
         using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
+        using device_type         = device_t;
         
-        const grid_t* grid;
-        container_t data;
-        std::size_t offset;
-        mem_map_type mem_view;
+        
+        const grid_t*         grid;
+        container_type        data;
+        std::size_t           offset;
+        mem_map_type          mem_view;
+        
+        device_t device() const { return device_t(); }
         
         const auto& var_map() const
         {
@@ -236,9 +240,8 @@ namespace spade::grid
             const grid_t& grid_in,
             const data_alias_t& fill_elem,
             const device_t& dev_in = device::cpu_t()
-            )
+            ) : grid{&grid_in}
         {
-            grid = &grid_in;
             auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
             this->mem_view.compute_coeffs();

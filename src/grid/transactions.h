@@ -82,7 +82,7 @@ namespace spade::grid
         _finline_ std::size_t insert(const arr_t& array, char* buf) const
         {
             using element_type   = typename arr_t::alias_type;
-            using f_val_t        = typename element_type::value_type;
+            using f_val_t        = typename arr_t::fundamental_type;
             constexpr auto coeff = f_val_t(1.0)/max_size;
             ctrs::array<element_type, max_size> oslot;
             constexpr std::size_t elem_size = sizeof(element_type);

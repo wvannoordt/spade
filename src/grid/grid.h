@@ -148,33 +148,33 @@ namespace spade::grid
                 return output;
             }
             
-            // md_range_t<int,4> get_range(const array_centering& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
-            // {
-            //     int iexchg = 0;
-            //     int i3d = 0;
-            //     if (dim()==3) i3d = 1;
-            //     if (do_guards==include_exchanges) iexchg = 1;
-            //     switch (centering_in)
-            //     {
-            //         case cell_centered:
-            //         {
-            //             return md_range_t<int,4>(
-            //                 -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
-            //                 -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
-            //                 -i3d*iexchg*exchange_cells[2],cells_in_block[2]+i3d*iexchg*exchange_cells[2],
-            //                 0,grid_partition.get_num_local_blocks());
-            //         }
-            //         case node_centered:
-            //         {
-            //             return md_range_t<int,4>(
-            //                 -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
-            //                 -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
-            //                 -i3d*iexchg*exchange_cells[2],(1-i3d)+cells_in_block[2]+i3d*iexchg*exchange_cells[2],
-            //                 0,grid_partition.get_num_local_blocks());
-            //         }
-            //         default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
-            //     }
-            // }
+            md_range_t<int,4> get_range(const array_centering& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
+            {
+                int iexchg = 0;
+                int i3d = 0;
+                if (dim()==3) i3d = 1;
+                if (do_guards==include_exchanges) iexchg = 1;
+                switch (centering_in)
+                {
+                    case cell_centered:
+                    {
+                        return md_range_t<int,4>(
+                            -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
+                            -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
+                            -i3d*iexchg*exchange_cells[2],cells_in_block[2]+i3d*iexchg*exchange_cells[2],
+                            0,grid_partition.get_num_local_blocks());
+                    }
+                    case node_centered:
+                    {
+                        return md_range_t<int,4>(
+                            -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
+                            -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
+                            -i3d*iexchg*exchange_cells[2],(1-i3d)+cells_in_block[2]+i3d*iexchg*exchange_cells[2],
+                            0,grid_partition.get_num_local_blocks());
+                    }
+                    default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
+                }
+            }
             
             std::size_t get_grid_size()                         const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
             std::size_t  get_num_local_blocks()                 const { return grid_partition.get_num_local_blocks(); }

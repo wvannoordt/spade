@@ -1,12 +1,12 @@
 #pragma once
 
 #ifdef __NVCC__
-#define _spade_cuda_ 1
+#define _sp_cuda 1
 #else
-#define _spade_cuda_ 0
+#define _sp_cuda 0
 #endif
 
-#if (_spade_cuda_)
+#if (_sp_cuda)
 
 #include <cuda.h>
 #include "cuda_device_runtime_api.h"
@@ -21,10 +21,13 @@
 //See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#notes-on-host-device-lambdas
 //Section 14.7.3 and 14.7.2.14
 #define _sp_lambda [=] _sp_hybrid
+
+#define _sp_cu_guard(mycode) mycode
 #else
 
 #define _sp_device
 #define _sp_hybrid
 #define _sp_lambda [=]
+#define _sp_cu_guard(mycode) 
 
 #endif

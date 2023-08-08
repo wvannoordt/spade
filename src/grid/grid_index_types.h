@@ -33,6 +33,8 @@ namespace spade::grid
         { T::centering_type() } -> std::same_as<array_centering>;
     };
     
+    template <typename T> concept is_directed_index = grid_index<T> && ( T::centering_type() == face_centered || T::centering_type() == edge_centered);
+    
     struct cell_idx_t : public ctrs::arithmetic_array_t<int, 4, cell_idx_t>
     {
         constexpr static array_centering centering_type() {return cell_centered;}
