@@ -15,6 +15,7 @@
 #include "core/static_math.h"
 #include "grid/grid_index_types.h"
 #include "grid/grid.h"
+#include "grid/array_view.h"
 #include "core/mem_map.h"
 
 #include "dispatch/device_type.h"
@@ -24,19 +25,7 @@
 namespace spade::grid
 {    
     namespace detail
-    {
-        template <class T> concept has_value_type = requires(T t) {typename T::value_type;};
-        
-        template <typename data_t> struct get_fundamental_type
-        {
-            typedef data_t type;
-        };
-        
-        template <has_value_type data_t> struct get_fundamental_type<data_t>
-        {
-            typedef typename data_t::value_type type;
-        };
-        
+    {        
         template <class T> concept is_static_1D_array = ctrs::basic_array<T> && requires (T t)
         {
             t.size(); //todo: figure out whay the heck is going on with this
@@ -203,10 +192,12 @@ namespace spade::grid
         using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
         using device_type         = device_t;
         
+        using view_type           = array_view_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
+        using const_view_type     = array_view_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
+        
         
         const grid_t*         grid;
         container_type        data;
-        std::size_t           offset;
         mem_map_type          mem_view;
         
         device_t device() const { return device_t(); }
@@ -249,45 +240,9 @@ namespace spade::grid
             auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
             data.resize(total_size);
         }
-
-        template <typename... idxs_t>
-        _finline_ fundamental_type& operator() (const idxs_t&... idxs)
-        {
-            return data[mem_view.compute_offset(idxs...)];
-        }
-
-        //Note: This has potential to become a bottleneck.
-        template <typename... idxs_t>
-        _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
-        {
-            return data[mem_view.compute_offset(idxs...)];
-        }
         
-        void set_elem(const index_type& idx, const alias_type& alias)
-        {
-            if constexpr (ctrs::basic_array<alias_type>)
-            {
-                for (int i = 0; i < alias.size(); ++i) (*this)(i, idx) = alias[i];
-            }
-            if constexpr (!ctrs::basic_array<alias_type>)
-            {
-                (*this)(idx) = alias;
-            }
-        }
-        
-        alias_type get_elem(const index_type& idx) const
-        {
-            if constexpr (ctrs::basic_array<alias_type>)
-            {
-                alias_type output;
-                for (int i = 0; i < output.size(); ++i) output[i] = (*this)(i, idx);
-                return output;
-            }
-            if constexpr (!ctrs::basic_array<alias_type>)
-            {
-                return (*this)(idx);
-            }
-        }
+        const const_view_type view() const { return {&data[0], mem_view}; }
+        view_type             view()       { return {&data[0], mem_view}; }
 
         template <multiblock_array rhs_t>
         requires elementwise_compatible<grid_array, rhs_t>
@@ -350,6 +305,8 @@ namespace spade::grid
 
         const grid_t& get_grid() const {return *grid;}
         
+        
+        
         auto get_grid_index_bounding_box(const grid::exchange_inclusion_e& exchange_policy) const
         {
             const auto& grid = get_grid();
@@ -375,7 +332,4 @@ namespace spade::grid
             return output;
         }
     };
-    
-    // template <multiblock_grid grid_t, typename data_alias_t> using cell_array = grid_array<grid_t, data_alias_t, cell_centered>;
-    // template <multiblock_grid grid_t, typename data_alias_t> using face_array = grid_array<grid_t, data_alias_t, face_centered>;
 }

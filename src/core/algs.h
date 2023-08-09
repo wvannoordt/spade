@@ -36,13 +36,14 @@ namespace spade::algs
         const auto& grid = arr.get_grid();
         const auto nlb = grid.get_num_local_blocks();
         const typename array_t::index_type ii = 0;
-        auto init_data = arr.get_elem(ii);
+        const auto view = arr.view();
+        auto init_data = view.get_elem(ii);
         reduce_oper.init(func(init_data));
         for (auto lb: range(0, nlb))
         {
             const auto loop_func = [&](const auto& elem) -> void
             {
-                const auto data = arr.get_elem(elem);
+                const auto data = view.get_elem(elem);
                 reduce_oper.reduce_elem(func(data));
             };
             block_loop(arr, lb, loop_func, exchange_policy);
@@ -59,14 +60,14 @@ namespace spade::algs
 
         const grid::array_centering ctr = array_t::centering_type();
         const auto kernel = omni::to_omni<ctr>(func, arr);
-        
+        auto view = arr.view();
         // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
         {
             const auto loop_func = [&](const auto& elem)
             {
-                const auto data = invoke_at(arr, elem, kernel);
-                arr.set_elem(elem, data);
+                const auto data = invoke_at(grid, view, elem, kernel);
+                view.set_elem(elem, data);
             };
             block_loop(arr, lb, loop_func, exchange_policy);
         }
@@ -83,11 +84,11 @@ namespace spade::algs
         // //ideally, this would be given as a parameter later on
         auto var_range       = dispatch::support_of(arr, exchange_policy);
         using index_type     = typename decltype(var_range)::index_type;
-        // const auto d_image   = arr.view();
+        const auto d_image   = arr.view();
         const auto loop_load = _sp_lambda (const index_type& index)
         {
-        //     const auto data = invoke_at(d_image, index, kernel);
-        //     d_image.set_elem(index, data);
+            // const auto data = invoke_at(d_image, index, kernel);
+            // d_image.set_elem(index, data);
         };
         var_range.execute(loop_load);
     }
@@ -100,13 +101,13 @@ namespace spade::algs
 
         const grid::array_centering ctr = source_t::centering_type();
         const auto kernel = omni::to_omni<ctr>(func, source);
-        
+        const auto view = source.view();
         // consider fundamentally separating the block dimension with the ijk dimensions!
         for (auto lb: range(0, nlb))
         {
             const auto loop_func = [&](const auto& elem)
             {
-                const auto data = invoke_at(source, elem, kernel);
+                const auto data = invoke_at(grid, view, elem, kernel);
                 dest.set_elem(elem, data);
             };
             block_loop(source, lb, loop_func, exchange_policy);

@@ -13,8 +13,9 @@ namespace spade::omni
             template <typename array_t, const grid::array_centering center>
             using array_data_type = ctrs::array<int, array_t::grid_type::coord_point_type::size()>;
             
-            template <typename array_t, typename index_t>
+            template <typename grid_view_t, typename array_t, typename index_t>
             static void compute(
+                const grid_view_t&,
                 const array_t& array,
                 const index_t& idx,
                 const int& dir,

@@ -15,14 +15,14 @@ namespace spade::omni
             using array_data_type
             = ctrs::array<typename array_t::alias_type, array_t::grid_type::coord_point_type::size()>;
             
-            template <typename array_t, typename index_t>
+            template <typename grid_view_t, typename array_t, typename index_t>
             requires((index_t::centering_type() == grid::face_centered) && (grid::cell_centered == array_t::centering_type()))
             static void compute(
+                const grid_view_t& ar_grid,
                 const array_t& array,
                 const index_t& idx,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
-                const auto& ar_grid = array.get_grid();
                 using grid_t = utils::remove_all<decltype(ar_grid)>::type;
                 const int idir0 = idx.dir();
                 const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
@@ -73,14 +73,14 @@ namespace spade::omni
                 // transform_gradient(ar_grid, iface, out);
             }
 
-            template <typename array_t, typename index_t>
+            template <typename grid_view_t, typename array_t, typename index_t>
             requires((index_t::centering_type() == grid::cell_centered) && (grid::cell_centered == array_t::centering_type()))
             static void compute(
+                const grid_view_t& ar_grid,
                 const array_t& array,
                 const index_t& idx,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
-                const auto& ar_grid = array.get_grid();
                 using grid_t = utils::remove_all<decltype(ar_grid)>::type;
                 const ctrs::array<typename grid_t::coord_type, 3> invdx
                 (

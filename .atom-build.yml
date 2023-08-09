@@ -1,1 +1,0 @@
-cmd: 'cd ./runs/channel/ && make && mpirun -np 5 ./vdf.x'

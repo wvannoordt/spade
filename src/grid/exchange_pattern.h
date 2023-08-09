@@ -53,11 +53,12 @@ namespace spade::grid
         void pack_to(const array_t& arr, std::vector<std::vector<char>>& buffers) const
         {
             std::vector<std::size_t> offsets(num_send_elems.size(), 0);
+            const auto view = arr.view();
             send_data.foreach([&](const auto& transaction)
             {
                 auto& buf    = buffers[transaction.receiver()];
                 auto& offset = offsets[transaction.receiver()];
-                offset += transaction.insert(arr, &buf[offset]);
+                offset += transaction.insert(view, &buf[offset]);
             });
         }
         
@@ -65,11 +66,12 @@ namespace spade::grid
         void unpack_from(array_t& arr, const std::vector<std::vector<char>>& buffers) const
         {
             std::vector<std::size_t> offsets(num_recv_elems.size(), 0);
+            auto view = arr.view();
             recv_data.foreach([&](const auto& transaction)
             {
                 const auto& buf = buffers[transaction.sender()];
                 auto& offset    = offsets[transaction.sender()];
-                offset += transaction.extract(arr, &buf[offset]);
+                offset += transaction.extract(view, &buf[offset]);
             });
         }
         
