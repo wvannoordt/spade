@@ -28,7 +28,8 @@ namespace spade::pde_algs
         const grid::multiblock_grid auto& ar_grid = rhs.get_grid();
         const grid::array_centering ctr = sol_arr_t::centering_type();
         const auto kernel = omni::to_omni<ctr>(source_term_func, q);
-
+        const auto qv = q.image();
+        auto rv = rhs.image();
         auto grid_range = ar_grid.get_range(sol_arr_t::centering_type(), grid::exclude_exchanges);
         for (auto idx: grid_range)
         {
@@ -44,18 +45,18 @@ namespace spade::pde_algs
             using input_type  = omni::stencil_data_t<omni_type, sol_arr_t>;
 
             input_type source_data;
-            omni::retrieve(q, i, source_data);
+            omni::retrieve(ar_grid, qv, i, source_data);
             auto source_term = kernel(source_data);
             if constexpr (ctrs::basic_array<typename sol_arr_t::alias_type>)
             {
                 for (auto n: range(0, source_term.size()))
                 {
-                    rhs(n, i[0], i[1], i[2], i[3])+=source_term[n]/jac;
+                    rv(n, i[0], i[1], i[2], i[3])+=source_term[n]/jac;
                 }
             }
             else
             {
-                rhs(i[0], i[1], i[2], i[3])+=source_term/jac;
+                rv(i[0], i[1], i[2], i[3])+=source_term/jac;
             }
         }
     }

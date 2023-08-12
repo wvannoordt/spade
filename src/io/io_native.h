@@ -19,7 +19,7 @@ namespace spade::io
         {
             buf.clear();
             const auto& grid = array.get_grid();
-            const auto view = array.view();
+            const auto img = array.image();
             std::size_t block_elems = mem_map::map_size(array.var_map())*mem_map::map_size(array.block_map()) / grid.get_num_local_blocks();
             using data_t = typename array_t::value_type;
             std::size_t block_size_bytes = block_elems*sizeof(data_t);
@@ -28,7 +28,7 @@ namespace spade::io
             {
                 std::size_t lb_glob = array.get_grid().get_partition().get_global_block(lb);
                 ctrs::array<int, array_t::variable_map_type::rank()> iv = 0;
-                void* ptr = (void*)(&view(iv,-nexch[0], -nexch[1], -nexch[2], lb));
+                void* ptr = (void*)(&img(iv,-nexch[0], -nexch[1], -nexch[2], lb));
                 std::size_t offset_bytes = lb_glob*block_size_bytes;
                 buf.add(ptr, block_size_bytes, offset_bytes);
             }

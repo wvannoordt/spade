@@ -43,8 +43,8 @@ namespace spade::pde_algs
         using alias_type = sol_arr_t::alias_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
         
-        const auto prims_view = prims.view();
-        auto rhs_view   = rhs.view();
+        const auto prims_img = prims.image();
+        auto rhs_img   = rhs.image();
 
         auto block_range = range(0,ar_grid.get_num_local_blocks());
 
@@ -85,7 +85,7 @@ namespace spade::pde_algs
                 using omni_type = omni_union_type;
                 using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
                 data_type data;
-                omni::retrieve(ar_grid, prims_view, iface, data);
+                omni::retrieve(ar_grid, prims_img, iface, data);
                 using flux_out_t = rhs_arr_t::alias_type;
                 flux_out_t accum(0.0);
                 utils::foreach_param([&](const auto& flux_func)
@@ -103,14 +103,14 @@ namespace spade::pde_algs
                 {
                     for (int n = 0; n < accum.size(); ++n)
                     {
-                        rhs_view(n, il) -= jac_l*accum[n]/(dx);
-                        rhs_view(n, ir) += jac_r*accum[n]/(dx);
+                        rhs_img(n, il) -= jac_l*accum[n]/(dx);
+                        rhs_img(n, ir) += jac_r*accum[n]/(dx);
                     }
                 }
                 else
                 {
-                    rhs_view(il) -= jac_l*accum/(dx);
-                    rhs_view(ir) += jac_r*accum/(dx);
+                    rhs_img(il) -= jac_l*accum/(dx);
+                    rhs_img(ir) += jac_r*accum/(dx);
                 }
             }
         }

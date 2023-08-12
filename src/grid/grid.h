@@ -17,6 +17,7 @@
 
 #include "grid/partition.h"
 #include "grid/grid_index_types.h"
+#include "grid/grid_geometry.h"
 
 namespace spade::grid
 {    

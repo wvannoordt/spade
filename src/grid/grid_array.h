@@ -15,7 +15,7 @@
 #include "core/static_math.h"
 #include "grid/grid_index_types.h"
 #include "grid/grid.h"
-#include "grid/array_view.h"
+#include "grid/array_image.h"
 #include "core/mem_map.h"
 
 #include "dispatch/device_type.h"
@@ -192,13 +192,14 @@ namespace spade::grid
         using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
         using device_type         = device_t;
         
-        using view_type           = array_view_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
-        using const_view_type     = array_view_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
-        
+        using image_type           = array_image_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
+        using const_image_type     = array_image_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
         
         const grid_t*         grid;
         container_type        data;
         mem_map_type          mem_view;
+        
+        static_assert(device::is_gpu<device_t> == _sp_cuda, "attempted to declare GPU array without GPU support");
         
         device_t device() const { return device_t(); }
         
@@ -241,8 +242,8 @@ namespace spade::grid
             data.resize(total_size);
         }
         
-        const const_view_type view() const { return {&data[0], mem_view}; }
-        view_type             view()       { return {&data[0], mem_view}; }
+        const const_image_type image() const { return {&data[0], mem_view}; }
+        image_type             image()       { return {&data[0], mem_view}; }
 
         template <multiblock_array rhs_t>
         requires elementwise_compatible<grid_array, rhs_t>
