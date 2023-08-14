@@ -11,7 +11,7 @@
 #include "core/base_64.h"
 #include "core/block_config.h"
 
-namespace spade::io
+namespace spade::deprecated
 {
     namespace detail
     {
@@ -81,6 +81,9 @@ namespace spade::io
             const int n_guard_i = obj.get_num_exchange(0);
             const int n_guard_j = obj.get_num_exchange(1);
             const int n_guard_k = obj.get_num_exchange(2);
+            // const int n_guard_i = 0;
+            // const int n_guard_j = 0;
+            // const int n_guard_k = 0;
             auto box = obj.get_block_box(utils::tag[partition::local](lb_loc));
             out_str << ntab(1) << utils::strformat("<RectilinearGrid WholeExtent=\"0 {} 0 {} 0 {}\">", n_total_i, n_total_j, n_total_k) << std::endl;
             out_str << ntab(2) << "<FieldData>" << std::endl;
@@ -108,7 +111,7 @@ namespace spade::io
             out_str << ntab(3) << "<CellData Scalars=\"" << vars_string << "\">" << std::endl;
             auto write_data = [&](const auto& arr) -> void
             {
-                
+                const auto arr_im = arr.image();
                 using data_t = typename std::remove_reference<decltype(arr)>::type::value_type;
                 using arr_t = std::remove_reference<decltype(arr)>::type;
                 if (arr.centering_type()!=grid::cell_centered) throw std::runtime_error("parallel output not currently supporting anything other than cell data!");
@@ -121,7 +124,7 @@ namespace spade::io
                     std::size_t idx = 0;
                     for (auto ijk: block_grid_range)
                     {
-                        compressed_data[idx++] = arr(vidx, ijk[0], ijk[1], ijk[2], lb_loc);
+                        compressed_data[idx++] = arr_im(vidx, ijk[0], ijk[1], ijk[2], lb_loc);
                     }
                     std::string array_name = "data";
                     if constexpr (!requires{vidx.size();}) {array_name = get_array_name(arr, vidx);}
