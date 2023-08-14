@@ -52,6 +52,13 @@ namespace spade::ctrs
         return std::sqrt(output);
     }
     
+    template <basic_array arr_t>
+    requires (std::floating_point<typename arr_t::value_type> && arr_t::size() == 3)
+    constexpr static arr_t cross_prod(const arr_t& v0, const arr_t& v1)
+    {
+        return {v0[1]*v1[2] - v0[2]*v1[1], v0[2]*v1[0] - v0[0]*v1[2], v0[0]*v1[1] - v0[1]*v1[0]};
+    }
+    
     template <basic_array arr1_t, basic_array arr2_t>
     requires (arr1_t::size() == arr2_t::size())
     constexpr static auto dot_prod(const arr1_t& arr1, const arr2_t& arr2)
@@ -255,6 +262,14 @@ namespace spade::ctrs
     {
         arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
         for (auto& i: output) i*= lhs;
+        return output.self();
+    }
+    
+    template<typename dtype, const std::size_t ar_size, typename derived_t>
+    auto operator/(const arithmetic_array_t<dtype, ar_size, derived_t>& rhs, const dtype& lhs)
+    {
+        arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
+        for (auto& i: output) i/= lhs;
         return output.self();
     }
     
