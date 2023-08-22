@@ -36,6 +36,17 @@ namespace spade::omni
         return invoke_call(info_type(), kernel, info_list);
     }
 
+    //NEED VOID CALLABLE!    
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<>();
+    }
+
     template <
         typename array_t,
         typename index_t,

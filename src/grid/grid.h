@@ -65,17 +65,18 @@ namespace spade::grid
     {
         public:
             
-            using dtype            = coord_t::coord_type;
-            using coord_type       = coord_t::coord_type;
-            using coord_sys_type   = coord_t;
-            using coord_point_type = coords::point_t<coord_type>;
-            using group_type       = par_group_t;
+            using dtype              = coord_t::coord_type;
+            using coord_type         = coord_t::coord_type;
+            using coord_sys_type     = coord_t;
+            using coord_point_type   = coords::point_t<coord_type>;
+            using group_type         = par_group_t;
+            using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), std::vector<bound_box_t<dtype, 3>>, std::vector<bound_box_t<bool, 3>>>;
+            using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), const bound_box_t<dtype, 3>*, const bound_box_t<bool, 3>*>;
         
         private:
-            partition::block_partition_t grid_partition;
-            coord_t coord_system;
-            ctrs::array<int, 3> cells_in_block;
-            ctrs::array<int, 3> exchange_cells;
+            partition::block_partition_t grid_partition;    
+            geometry_type local_geometry;
+            geometry_type global_geometry;
             block_arrangement_t block_arrangement;
             const par_group_t& grid_group;
 
@@ -92,12 +93,9 @@ namespace spade::grid
                 )
             : block_arrangement{block_arrangement_in},
               grid_group{group_in},
-              coord_system{coord_system_in},
               grid_partition(block_arrangement_in, group_in)
             {
                 //Initialize class members
-                ctrs::copy_array(cells_in_block_in, cells_in_block, 1);
-                ctrs::copy_array(exchange_cells_in, exchange_cells, 0);
                 
                 if constexpr (requires {block_arrangement.root_nodes;})
                 {
@@ -114,43 +112,40 @@ namespace spade::grid
                         if (n%2 != 0) err_evn();
                     }
                 }
+                
+                local_geometry  = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
+                global_geometry = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
+                
+                const auto create_geom = [&](const std::size_t& lim, const auto& loc_glob, auto& geom)
+                {
+                    for (std::size_t lb = 0; lb < lim; ++lb)
+                    {
+                        const auto bidx           = utils::tag[loc_glob](lb);
+                        const std::size_t lb_glob = grid_partition.to_global(bidx).value;
+                        const auto box            = block_arrangement.get_block_box(lb_glob);
+                        const auto ibdy           = block_arrangement.is_domain_boundary(lb_glob);
+                        geom.bounding_boxes.push_back(box);
+                        geom.domain_boundary.push_back(ibdy);
+                    }
+                };
+                
+                create_geom(grid_partition.get_num_global_blocks(), partition::global, global_geometry);
+                create_geom(grid_partition.get_num_local_blocks(),  partition::local,  local_geometry);
             }
             
             cartesian_grid_t(){}
             
-            const auto view() const
-            {
-                return 0;
-            }
-            
-            auto view()
-            {
-                return 0;
-            }
+            const geometry_type& image(const partition::global_tag_t&) const { return global_geometry.image(); }
+            const geometry_type& image(const partition::local_tag_t&)  const { return  local_geometry.image(); }
+            const geometry_type& image() const { return this->image(partition::local).image(); }
             
             constexpr static int dim() {return grid_dim;}
             
-            template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
-            {
-                return coord_system.map(this->get_comp_coords(i));
-            }
-            
-            template <typename idx_t> _finline_ coord_point_type get_comp_coords(const idx_t& i) const
-            {
-                const auto  idx_r = get_index_coord(i);
-                const auto  lb    = grid_partition.to_global(utils::tag[partition::local](i.lb()));
-                const auto& bnd   = block_arrangement.get_bounding_box(lb.value);
-                coord_point_type output;
-                if constexpr (dim() == 2) output[2] = 0.0;
-                for (int d = 0; d < dim(); ++d)
-                {
-                    output[d] = bnd.min(d)+idx_r[d]*this->get_dx(d, lb);
-                }
-                return output;
-            }
-            
+            //This function doesn't have long to live.
             md_range_t<int,4> get_range(const array_centering& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
             {
+                const auto& exchange_cells = global_geometry.num_exch;
+                const auto& cells_in_block = global_geometry.num_cell;
                 int iexchg = 0;
                 int i3d = 0;
                 if (dim()==3) i3d = 1;
@@ -180,20 +175,37 @@ namespace spade::grid
             std::size_t get_grid_size()                         const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
             std::size_t  get_num_local_blocks()                 const { return grid_partition.get_num_local_blocks(); }
             std::size_t get_num_global_blocks()                 const { return grid_partition.get_num_global_blocks(); }
-            int get_num_cells(const std::size_t& i)             const { return cells_in_block[i]; }
-            int get_num_exchange(const std::size_t& i)          const { return exchange_cells[i]; }
+            int get_num_cells(const std::size_t& i)             const { return global_geometry.num_cell[i]; }
+            int get_num_exchange(const std::size_t& i)          const { return global_geometry.num_exch[i]; }
             bound_box_t<dtype,  3> get_bounds()                 const { return block_arrangement.get_bounds(); }
             const par_group_t& group()                          const { return grid_group; }
-            const coord_t& coord_sys()                          const { return coord_system; }
+            const coord_t& coord_sys()                          const { return global_geometry.get_coords(); }
             const auto& get_blocks()                            const { return block_arrangement; }
             const partition::block_partition_t& get_partition() const { return grid_partition; }
-            const coord_t& get_coord_sys()                      const { return coord_system; }
-            
             constexpr static bool is_3d()                             { return dim()==3; }
+            
+            template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
+            {
+                return coord_sys().map(this->get_comp_coords(i));
+            }
+                
+            template <typename idx_t> _finline_ coord_point_type get_comp_coords(const idx_t& i) const
+            {
+                const auto  idx_r = get_index_coord(i);
+                const auto  lb    = grid_partition.to_global(utils::tag[partition::local](i.lb()));
+                const auto& bnd   = block_arrangement.get_bounding_box(lb.value);
+                coord_point_type output;
+                if constexpr (dim() == 2) output[2] = 0.0;
+                for (int d = 0; d < dim(); ++d)
+                {
+                    output[d] = bnd.min(d)+idx_r[d]*this->get_dx(d, lb);
+                }
+                return output;
+            }
             
             const auto is_domain_boundary(const partition::partition_tagged auto& lb) const
             {
-                return block_arrangement.is_domain_boundary(grid_partition.to_global(lb).value);
+                return global_geometry.is_domain_boundary(grid_partition.to_global(lb).value);
             } 
             ctrs::array<dtype,  3> get_dx(const std::size_t& lb) const
             { 
@@ -206,21 +218,26 @@ namespace spade::grid
             }
             
             ctrs::array<dtype,  3> get_dx(const partition::partition_tagged auto& lb) const
-            { 
-                auto size = block_arrangement.get_size(grid_partition.to_global(lb).value);
-                for (int i = 0; i < cells_in_block.size(); ++i) size[i] /= cells_in_block[i];
-                return size;
+            {
+                const auto& bx = this->get_bounding_box(lb);
+                const auto& nx = global_geometry.num_cell;
+                ctrs::array<dtype,  3> dx;
+                for (int i = 0; i < nx.size(); ++i) dx[i] = bx.size(i) / nx[i];
+                return dx;
             }
             
             template <partition::partition_tagged idx_t> dtype get_dx(const int i, const idx_t& lb)  const
             {
-                const auto gbl = grid_partition.to_global(lb);
-                return block_arrangement.get_size(i, gbl.value)/cells_in_block[i];
+                const auto& bx = this->get_bounding_box(lb);
+                const auto& nx = global_geometry.num_cell;
+                return bx.size(i)/nx[i];
             }
             
-            bound_box_t<dtype, 3> get_block_box(const partition::partition_tagged auto& lb) const
+            bound_box_t<dtype, 3> get_bounding_box(const partition::partition_tagged auto& lb) const
             {
-                return block_arrangement.get_bounding_box(grid_partition.to_global(lb).value);
+                return global_geometry.get_bounding_box(grid_partition.to_global(lb).value);
             }
+            
+            const auto& get_coord_sys() const {return global_geometry.get_coords();}
     };
 }

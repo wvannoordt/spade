@@ -75,26 +75,25 @@ namespace spade::algs
     }
     
     template <grid::multiblock_array array_t, class callable_t>
-    requires (device::is_gpu<typename array_t::device_type>)
+    // requires (device::is_gpu<typename array_t::device_type>)
     void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
         const grid::array_centering ctr = array_t::centering_type();
-        // const auto kernel = omni::to_omni<ctr>(func, arr);
+        const auto kernel = omni::to_omni<ctr>(func, arr);
         
         // //ideally, this would be given as a parameter later on
         auto var_range       = dispatch::support_of(arr, exchange_policy);
         using index_type     = typename decltype(var_range)::index_type;
         auto d_image         = arr.image();
-        // const auto g_image   = arr.get_grid().image();
+        const auto g_image   = arr.get_grid().image();
         const auto loop_load = _sp_lambda (const index_type& index) mutable
         {
-            // const auto data = invoke_at(g_image, d_image, index, kernel);
-            const auto data = func();
+            const auto data = invoke_at(g_image, d_image, index, kernel);
             d_image.set_elem(index, data);
         };
         var_range.execute(loop_load);
     }
-
+/*
     template <grid::multiblock_array source_t, grid::multiblock_array dest_t, class callable_t>
     auto& transform_to(const source_t& source, dest_t& dest, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
@@ -116,7 +115,7 @@ namespace spade::algs
         }
         return dest;
     }
-
+*/
 
     template <class array_t, class kernel_t>
     void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)

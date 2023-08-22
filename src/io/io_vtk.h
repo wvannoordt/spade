@@ -169,6 +169,7 @@ namespace spade::io
                 for (const auto& name: names)
                 {
                     data_raw.clear();
+                    
                     const auto img = arr.image();
                     grid::cell_idx_t cid(0,0,0,lb);
                     for (cid.k() = 0; cid.k() < grid.get_num_cells(2); ++cid.k())
