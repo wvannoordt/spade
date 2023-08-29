@@ -46,17 +46,17 @@ namespace spade::grid
         static constexpr int k_idx =   2;
         static constexpr int lb_idx =  3;
         
-        cell_idx_t(){}
-        int& i () {return (*this)[i_idx];}
-        int& i (const int& idx) {return (*this)[i_idx + idx];}
-        int& j () {return (*this)[j_idx];}
-        int& k () {return (*this)[k_idx];}
-        int& lb() {return (*this)[lb_idx];}
-        const int& i () const {return (*this)[i_idx];}
-        const int& i (const int& idx) const {return (*this)[i_idx + idx];}
-        const int& j () const {return (*this)[j_idx];}
-        const int& k () const {return (*this)[k_idx];}
-        const int& lb() const {return (*this)[lb_idx];}
+        _sp_hybrid cell_idx_t(){}
+        _sp_hybrid int& i () {return (*this)[i_idx];}
+        _sp_hybrid int& i (const int& idx) {return (*this)[i_idx + idx];}
+        _sp_hybrid int& j () {return (*this)[j_idx];}
+        _sp_hybrid int& k () {return (*this)[k_idx];}
+        _sp_hybrid int& lb() {return (*this)[lb_idx];}
+        _sp_hybrid const int& i () const {return (*this)[i_idx];}
+        _sp_hybrid const int& i (const int& idx) const {return (*this)[i_idx + idx];}
+        _sp_hybrid const int& j () const {return (*this)[j_idx];}
+        _sp_hybrid const int& k () const {return (*this)[k_idx];}
+        _sp_hybrid const int& lb() const {return (*this)[lb_idx];}
 
         bool operator == (const cell_idx_t& rhs) const
         {
@@ -76,19 +76,19 @@ namespace spade::grid
         static constexpr int k_idx =   3;
         static constexpr int lb_idx =  4;
         
-        face_idx_t(){}
-        int& dir() {return (*this)[dir_idx];}
-        int& i  () {return (*this)[i_idx];}
-        int& i (const int& idx) {return (*this)[i_idx + idx];}
-        int& j  () {return (*this)[j_idx];}
-        int& k  () {return (*this)[k_idx];}
-        int& lb () {return (*this)[lb_idx];}
-        const int& dir() const {return (*this)[dir_idx];}
-        const int& i  () const {return (*this)[i_idx];}
-        const int& i (const int& idx) const {return (*this)[i_idx + idx];}
-        const int& j  () const {return (*this)[j_idx];}
-        const int& k  () const {return (*this)[k_idx];}
-        const int& lb () const {return (*this)[lb_idx];}
+        _sp_hybrid face_idx_t(){}
+        _sp_hybrid int& dir() {return (*this)[dir_idx];}
+        _sp_hybrid int& i  () {return (*this)[i_idx];}
+        _sp_hybrid int& i (const int& idx) {return (*this)[i_idx + idx];}
+        _sp_hybrid int& j  () {return (*this)[j_idx];}
+        _sp_hybrid int& k  () {return (*this)[k_idx];}
+        _sp_hybrid int& lb () {return (*this)[lb_idx];}
+        _sp_hybrid const int& dir() const {return (*this)[dir_idx];}
+        _sp_hybrid const int& i  () const {return (*this)[i_idx];}
+        _sp_hybrid const int& i (const int& idx) const {return (*this)[i_idx + idx];}
+        _sp_hybrid const int& j  () const {return (*this)[j_idx];}
+        _sp_hybrid const int& k  () const {return (*this)[k_idx];}
+        _sp_hybrid const int& lb () const {return (*this)[lb_idx];}
 
         bool operator == (const face_idx_t& rhs) const
         {
@@ -109,19 +109,19 @@ namespace spade::grid
         static constexpr int k_idx =   3;
         static constexpr int lb_idx =  4;
         
-        edge_idx_t(){}
-        int& dir() {return (*this)[dir_idx];}
-        int& i  () {return (*this)[i_idx];}
-        int& i (const int& idx) {return (*this)[i_idx + idx];}
-        int& j  () {return (*this)[j_idx];}
-        int& k  () {return (*this)[k_idx];}
-        int& lb () {return (*this)[lb_idx];}
-        const int& dir() const {return (*this)[dir_idx];}
-        const int& i  () const {return (*this)[i_idx];}
-        const int& i (const int& idx) const {return (*this)[i_idx + idx];}
-        const int& j  () const {return (*this)[j_idx];}
-        const int& k  () const {return (*this)[k_idx];}
-        const int& lb () const {return (*this)[lb_idx];}
+        _sp_hybrid edge_idx_t(){}
+        _sp_hybrid int& dir() {return (*this)[dir_idx];}
+        _sp_hybrid int& i  () {return (*this)[i_idx];}
+        _sp_hybrid int& i (const int& idx) {return (*this)[i_idx + idx];}
+        _sp_hybrid int& j  () {return (*this)[j_idx];}
+        _sp_hybrid int& k  () {return (*this)[k_idx];}
+        _sp_hybrid int& lb () {return (*this)[lb_idx];}
+        _sp_hybrid const int& dir() const {return (*this)[dir_idx];}
+        _sp_hybrid const int& i  () const {return (*this)[i_idx];}
+        _sp_hybrid const int& i (const int& idx) const {return (*this)[i_idx + idx];}
+        _sp_hybrid const int& j  () const {return (*this)[j_idx];}
+        _sp_hybrid const int& k  () const {return (*this)[k_idx];}
+        _sp_hybrid const int& lb () const {return (*this)[lb_idx];}
     };
     
     struct node_idx_t : public ctrs::arithmetic_array_t<int, 4, node_idx_t>
@@ -135,23 +135,23 @@ namespace spade::grid
         static constexpr int k_idx =   2;
         static constexpr int lb_idx =  3;
         
-        node_idx_t(){}
-        int& i () {return (*this)[i_idx];}
-        int& i (const int& idx) {return (*this)[i_idx + idx];}
-        int& j () {return (*this)[j_idx];}
-        int& k () {return (*this)[k_idx];}
-        int& lb() {return (*this)[lb_idx];}
-        const int& i () const {return (*this)[i_idx];}
-        const int& i (const int& idx) const {return (*this)[i_idx + idx];}
-        const int& j () const {return (*this)[j_idx];}
-        const int& k () const {return (*this)[k_idx];}
-        const int& lb() const {return (*this)[lb_idx];}
+        _sp_hybrid node_idx_t(){}
+        _sp_hybrid int& i () {return (*this)[i_idx];}
+        _sp_hybrid int& i (const int& idx) {return (*this)[i_idx + idx];}
+        _sp_hybrid int& j () {return (*this)[j_idx];}
+        _sp_hybrid int& k () {return (*this)[k_idx];}
+        _sp_hybrid int& lb() {return (*this)[lb_idx];}
+        _sp_hybrid const int& i () const {return (*this)[i_idx];}
+        _sp_hybrid const int& i (const int& idx) const {return (*this)[i_idx + idx];}
+        _sp_hybrid const int& j () const {return (*this)[j_idx];}
+        _sp_hybrid const int& k () const {return (*this)[k_idx];}
+        _sp_hybrid const int& lb() const {return (*this)[lb_idx];}
     };
     
     //i_cell is the cell index
     //idir is the principal cartesian component of the face normal vector [unsigned]
     //pm = 0 indicates the negative-side face, pm = 1 indicates the positive-side face
-    static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
+    _sp_hybrid static face_idx_t cell_to_face(const cell_idx_t& i_cell, const int& idir, const int& pm)
     {
         face_idx_t output;
         output.i()   = i_cell.i();
@@ -167,7 +167,7 @@ namespace spade::grid
     
     //i_cell is the cell index
     //offset has 3 entries that are either 0 or 1, indicating which corner of the cell to be chosen
-    static node_idx_t cell_to_node(const cell_idx_t& i_cell, const ctrs::array<int,3>& offset)
+    _sp_hybrid static node_idx_t cell_to_node(const cell_idx_t& i_cell, const ctrs::array<int,3>& offset)
     {
         // print("NOT IMPLEMENTED:", __FILE__, __LINE__);
         abort();
@@ -181,7 +181,7 @@ namespace spade::grid
     
     //i_face is the face index
     //pm = 0 indicates the negative-side ("left") face, pm = 1 indicates the positive-side ("right") face
-    static cell_idx_t face_to_cell(const face_idx_t& i_face, const int& pm)
+    _sp_hybrid static cell_idx_t face_to_cell(const face_idx_t& i_face, const int& pm)
     {
         cell_idx_t output;
         output.i() =  i_face.i();
@@ -195,7 +195,7 @@ namespace spade::grid
     
     //i_face is the face index
     //pm = 0 indicates the negative-side ("left") face, pm = 1 indicates the positive-side ("right") face
-    static node_idx_t face_to_node(const face_idx_t& i_face, const int& pm)
+    _sp_hybrid static node_idx_t face_to_node(const face_idx_t& i_face, const int& pm)
     {
         // print("NOT IMPLEMENTED:", __FILE__, __LINE__);
         abort();
@@ -204,7 +204,7 @@ namespace spade::grid
     }
     
     //Return the index-space coordinates of the index, used to compute the computational coordinates
-    template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const cell_idx_t& i_cell)
+    template <typename rtype=real_t> _sp_hybrid ctrs::array<rtype, 3> get_index_coord(const cell_idx_t& i_cell)
     {
         ctrs::array<rtype, 3> output(
             (rtype)i_cell.i()+0.5,
@@ -213,7 +213,7 @@ namespace spade::grid
         return output;
     }
     
-    template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const node_idx_t& i_node)
+    template <typename rtype=real_t> _sp_hybrid ctrs::array<rtype, 3> get_index_coord(const node_idx_t& i_node)
     {
         ctrs::array<rtype, 3> output(
             (rtype)i_node.i(),
@@ -222,7 +222,7 @@ namespace spade::grid
         return output;
     }
     
-    template <typename rtype=real_t> ctrs::array<rtype, 3> get_index_coord(const face_idx_t& i_face)
+    template <typename rtype=real_t> _sp_hybrid ctrs::array<rtype, 3> get_index_coord(const face_idx_t& i_face)
     {
         ctrs::array<rtype, 3> output(
             (rtype)i_face.i()+0.5,

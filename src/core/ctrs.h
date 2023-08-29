@@ -101,19 +101,19 @@ namespace spade::ctrs
         using index_type = int;
         
         dtype data[ar_size];
-        dtype& operator [] (index_type idx) {return data[idx];}
-        const dtype& operator [] (index_type idx) const {return data[idx];}
+        _sp_hybrid dtype& operator [] (index_type idx) {return data[idx];}
+        _sp_hybrid const dtype& operator [] (index_type idx) const {return data[idx];}
         
         template <udci::integral_t ii>
         requires(ii < ar_size)
-        dtype& operator[] (const udci::idx_const_t<ii>& idx) {return data[ii];}
+        _sp_hybrid dtype& operator[] (const udci::idx_const_t<ii>& idx) {return data[ii];}
         
         template <udci::integral_t ii>
         requires(ii < ar_size)
-        const dtype& operator[] (const udci::idx_const_t<ii>& idx) const {return data[ii];}
+        _sp_hybrid const dtype& operator[] (const udci::idx_const_t<ii>& idx) const {return data[ii];}
         
         template <udci::integral_t ii>
-        const dtype& operator[] (const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid const dtype& operator[] (const udci::idx_const_t<ii>& idx) const
         {
             static_assert(ii<ar_size, "constant literal index must be less than array size"); return data[ii];
         }
@@ -124,25 +124,25 @@ namespace spade::ctrs
         const dtype* begin() const noexcept {return &data[0];}
         const dtype* end()   const noexcept {return &data[0]+ar_size;}
 
-        constexpr static index_type size(void) {return ar_size;}
+        constexpr static index_type size() {return ar_size;}
         
-        self_type& self() { return *(static_cast<self_type*>(this)); }
+        _sp_hybrid self_type& self() { return *(static_cast<self_type*>(this)); }
         
-        template <typename ftype> void fill(const ftype& val, const index_type imin, const index_type imax)
+        template <typename ftype> _sp_hybrid void fill(const ftype& val, const index_type imin, const index_type imax)
         {
             for (index_type i = imin; i < imax; i++) data[i] = val;
         }
         
-        template <typename ftype> void fill(const ftype& val)
+        template <typename ftype> _sp_hybrid void fill(const ftype& val)
         {
             fill(val, 0, this->size());
         }
         
-        template <not_basic_array param> void set_r(const index_type i, const param& p)
+        template <not_basic_array param> _sp_hybrid  void set_r(const index_type i, const param& p)
         {
             data[i] = p;
         }
-        template <not_basic_array param, class... params> void set_r(const index_type i, const param& p, params... ps)
+        template <not_basic_array param, class... params> _sp_hybrid  void set_r(const index_type i, const param& p, params... ps)
         {
             data[i] = p;
             set_r(i+1, ps...);
@@ -150,24 +150,24 @@ namespace spade::ctrs
         
         template <not_basic_array... params>
         requires(sizeof...(params) == ar_size)
-        arithmetic_array_t(params... ps)
+        _sp_hybrid  arithmetic_array_t(params... ps)
         {
             set_r(0, ps...);
         }
         
-        arithmetic_array_t(std::initializer_list<dtype>& llist)
+        _sp_hybrid arithmetic_array_t(std::initializer_list<dtype>& llist)
         {
             std::copy(this->begin(), this->end(), llist.begin());
         }
         
-        arithmetic_array_t(const dtype& val) {fill(val);}
+       _sp_hybrid  arithmetic_array_t(const dtype& val) {fill(val);}
         // arithmetic_array_t(dtype&& val)
         // {
         //     data[0] = std::move(val);
         //     if constexpr (this->size() > 1) this->fill(data[0], 1, this->size());
         // }
         
-        arithmetic_array_t() {}
+        _sp_hybrid arithmetic_array_t() {}
         constexpr arithmetic_array_t(const arithmetic_array_t& rhs) = default;
         
         template <typename rhs_t>
@@ -190,8 +190,8 @@ namespace spade::ctrs
             return self();
         }
         
-        template <integral_type idx_t> const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
-        template <integral_type idx_t>       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
+        template <integral_type idx_t> _sp_hybrid const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
+        template <integral_type idx_t> _sp_hybrid       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
         
         template <basic_array arr_t> self_type& operator += (const arr_t& rhs)
         {

@@ -42,9 +42,10 @@ namespace spade::pde_algs
         using real_type  = sol_arr_t::value_type;
         using alias_type = sol_arr_t::alias_type;
         const grid::multiblock_grid auto& ar_grid = prims.get_grid();
+        const auto geom_image = ar_grid.image(prims.device());
         
         const auto prims_img = prims.image();
-        auto rhs_img   = rhs.image();
+        auto rhs_img         = rhs.image();
 
         auto block_range = range(0,ar_grid.get_num_local_blocks());
 
@@ -72,20 +73,20 @@ namespace spade::pde_algs
             for (auto idx: grid_range)
             {
                 auto lb_loc_des = utils::tag[partition::local](lb_loc);
-                const real_type dx = ar_grid.get_dx(idir, lb_loc_des);
+                const real_type dx = geom_image.get_dx(idir, lb_loc);
                 grid::cell_idx_t il(idx[0_c], idx[1_c], idx[2_c], lb_loc);
                 grid::cell_idx_t ir(idx[0_c], idx[1_c], idx[2_c], lb_loc);
                 ir[idir] += 1;
                 grid::face_idx_t iface = grid::cell_to_face(il, idir, 1);
-                const auto xyz_comp_l = ar_grid.get_comp_coords(il);
-                const auto xyz_comp_r = ar_grid.get_comp_coords(ir);
-                const real_type jac_l = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_l, il);
-                const real_type jac_r = coords::calc_jacobian(ar_grid.coord_sys(), xyz_comp_r, ir);
+                const auto xyz_comp_l = geom_image.get_comp_coords(il);
+                const auto xyz_comp_r = geom_image.get_comp_coords(ir);
+                const real_type jac_l = coords::calc_jacobian(geom_image.get_coord_sys(), xyz_comp_l, il);
+                const real_type jac_r = coords::calc_jacobian(geom_image.get_coord_sys(), xyz_comp_r, ir);
                 
                 using omni_type = omni_union_type;
                 using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
                 data_type data;
-                omni::retrieve(ar_grid, prims_img, iface, data);
+                omni::retrieve(geom_image, prims_img, iface, data);
                 using flux_out_t = rhs_arr_t::alias_type;
                 flux_out_t accum(0.0);
                 utils::foreach_param([&](const auto& flux_func)

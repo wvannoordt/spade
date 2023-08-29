@@ -9,21 +9,22 @@ namespace spade
     {
         ctrs::array<dtype, 2*ar_size> bnds;
         
-        const auto& data() const {return bnds;}
+        _sp_hybrid const auto& data() const {return bnds;}
         
-        bound_box_t(){}
-        bound_box_t(const dtype& v)
+        _sp_hybrid bound_box_t(){}
+        _sp_hybrid bound_box_t(const dtype& v)
         {
             for (int i = 0; i < 2*ar_size; ++i) bnds[i] = v;
         }
-        const dtype& min(size_t idx) const {return bnds[2*idx+0];}
-        const dtype& max(size_t idx) const {return bnds[2*idx+1];}
         
-        dtype& min(size_t idx) {return bnds[2*idx+0];}
-        dtype& max(size_t idx) {return bnds[2*idx+1];}
+        _sp_hybrid const dtype& min(size_t idx) const {return bnds[2*idx+0];}
+        _sp_hybrid const dtype& max(size_t idx) const {return bnds[2*idx+1];}
         
-        dtype size(size_t idx) const {return max(idx)-min(idx);}
-        dtype volume() const
+        _sp_hybrid dtype& min(size_t idx) {return bnds[2*idx+0];}
+        _sp_hybrid dtype& max(size_t idx) {return bnds[2*idx+1];}
+        
+        _sp_hybrid dtype size(size_t idx) const {return max(idx)-min(idx);}
+        _sp_hybrid dtype volume() const
         {
             dtype output = 1;
             for (std::size_t i = 0; i < ar_size; i++)
@@ -33,10 +34,10 @@ namespace spade
             return output;
         }
         
-        dtype& operator() (const std::size_t& dim, const std::size_t& min_max) {return bnds[2*dim+min_max];}
-        const dtype& operator() (const std::size_t& dim, const std::size_t& min_max) const {return bnds[2*dim+min_max];}
+        _sp_hybrid dtype& operator() (const std::size_t& dim, const std::size_t& min_max) {return bnds[2*dim+min_max];}
+        _sp_hybrid const dtype& operator() (const std::size_t& dim, const std::size_t& min_max) const {return bnds[2*dim+min_max];}
 
-        bound_box_t operator ! () const
+        _sp_hybrid bound_box_t operator ! () const
         {
             static_assert(std::same_as<dtype, bool>, "cannot apply unary operator ! to non-boolean bound box");
             bound_box_t output = (*this);

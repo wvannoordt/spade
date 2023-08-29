@@ -12,19 +12,19 @@ namespace spade::fluid_state
     {
         using base_t = ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>;        
         using base_t::base_t;
-        prim_t(){}
-        rtype& p() {return (*this)[0];}
-        rtype& T() {return (*this)[1];}
-        rtype& u() {return (*this)[2];}
-        rtype& u(const int i) {return (*this)[2+i];}
-        rtype& v() {return (*this)[3];}
-        rtype& w() {return (*this)[4];}
-        const rtype& p() const {return (*this)[0];}
-        const rtype& T() const {return (*this)[1];}
-        const rtype& u() const {return (*this)[2];}
-        const rtype& u(const int i) const {return (*this)[2+i];}
-        const rtype& v() const {return (*this)[3];}
-        const rtype& w() const {return (*this)[4];}
+        _sp_hybrid prim_t(){}
+        _sp_hybrid rtype& p() {return (*this)[0];}
+        _sp_hybrid rtype& T() {return (*this)[1];}
+        _sp_hybrid rtype& u() {return (*this)[2];}
+        _sp_hybrid rtype& u(const int i) {return (*this)[2+i];}
+        _sp_hybrid rtype& v() {return (*this)[3];}
+        _sp_hybrid rtype& w() {return (*this)[4];}
+        _sp_hybrid const rtype& p() const {return (*this)[0];}
+        _sp_hybrid const rtype& T() const {return (*this)[1];}
+        _sp_hybrid const rtype& u() const {return (*this)[2];}
+        _sp_hybrid const rtype& u(const int i) const {return (*this)[2+i];}
+        _sp_hybrid const rtype& v() const {return (*this)[3];}
+        _sp_hybrid const rtype& w() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
@@ -36,17 +36,17 @@ namespace spade::fluid_state
     {
         using base_t = ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>;
         using base_t::base_t;
-        cons_t(){}
-        rtype& rho  () {return (*this)[0];}
-        rtype& rho_H() {return (*this)[1];}
-        rtype& rho_u() {return (*this)[2];}
-        rtype& rho_v() {return (*this)[3];}
-        rtype& rho_w() {return (*this)[4];}
-        const rtype& rho  () const {return (*this)[0];}
-        const rtype& rho_H() const {return (*this)[1];}
-        const rtype& rho_u() const {return (*this)[2];}
-        const rtype& rho_v() const {return (*this)[3];}
-        const rtype& rho_w() const {return (*this)[4];}
+        _sp_hybrid cons_t(){}
+        _sp_hybrid rtype& rho  () {return (*this)[0];}
+        _sp_hybrid rtype& rho_H() {return (*this)[1];}
+        _sp_hybrid rtype& rho_u() {return (*this)[2];}
+        _sp_hybrid rtype& rho_v() {return (*this)[3];}
+        _sp_hybrid rtype& rho_w() {return (*this)[4];}
+        _sp_hybrid const rtype& rho  () const {return (*this)[0];}
+        _sp_hybrid const rtype& rho_H() const {return (*this)[1];}
+        _sp_hybrid const rtype& rho_u() const {return (*this)[2];}
+        _sp_hybrid const rtype& rho_v() const {return (*this)[3];}
+        _sp_hybrid const rtype& rho_w() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
@@ -58,17 +58,17 @@ namespace spade::fluid_state
     {
         using base_t = ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>;
         using base_t::base_t;
-        flux_t(){}
-        rtype& continuity() {return (*this)[0];}
-        rtype& energy    () {return (*this)[1];}
-        rtype& x_momentum() {return (*this)[2];}
-        rtype& y_momentum() {return (*this)[3];}
-        rtype& z_momentum() {return (*this)[4];}
-        const rtype& continuity() const {return (*this)[0];}
-        const rtype& energy    () const {return (*this)[1];}
-        const rtype& x_momentum() const {return (*this)[2];}
-        const rtype& y_momentum() const {return (*this)[3];}
-        const rtype& z_momentum() const {return (*this)[4];}
+        _sp_hybrid flux_t(){}
+        _sp_hybrid rtype& continuity() {return (*this)[0];}
+        _sp_hybrid rtype& energy    () {return (*this)[1];}
+        _sp_hybrid rtype& x_momentum() {return (*this)[2];}
+        _sp_hybrid rtype& y_momentum() {return (*this)[3];}
+        _sp_hybrid rtype& z_momentum() {return (*this)[4];}
+        _sp_hybrid const rtype& continuity() const {return (*this)[0];}
+        _sp_hybrid const rtype& energy    () const {return (*this)[1];}
+        _sp_hybrid const rtype& x_momentum() const {return (*this)[2];}
+        _sp_hybrid const rtype& y_momentum() const {return (*this)[3];}
+        _sp_hybrid const rtype& z_momentum() const {return (*this)[4];}
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");
@@ -100,7 +100,7 @@ namespace spade::fluid_state
     }
 
     template<typename ptype, typename ctype, class gas_t>
-    static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
+    _sp_hybrid static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
     {
         ptype rho = prim.p() / (gas.get_R()*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());

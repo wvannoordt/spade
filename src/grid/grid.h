@@ -19,6 +19,9 @@
 #include "grid/grid_index_types.h"
 #include "grid/grid_geometry.h"
 
+#include "dispatch/device_type.h"
+#include "dispatch/shared_vector.h"
+
 namespace spade::grid
 {    
     template <class T> concept multiblock_grid = requires(T t, const cell_idx_t& i_c, const face_idx_t& i_f, const node_idx_t& i_n)
@@ -70,8 +73,18 @@ namespace spade::grid
             using coord_sys_type     = coord_t;
             using coord_point_type   = coords::point_t<coord_type>;
             using group_type         = par_group_t;
-            using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), std::vector<bound_box_t<dtype, 3>>, std::vector<bound_box_t<bool, 3>>>;
-            using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), const bound_box_t<dtype, 3>*, const bound_box_t<bool, 3>*>;
+            
+            using geometry_type      = grid_geometry_t<
+                coord_t,
+                array_descriptor_t::size(),
+                device::shared_vector<bound_box_t<dtype, 3>>,
+                device::shared_vector<bound_box_t<bool, 3>>>;
+                
+            using geomety_image_type = grid_geometry_t<
+                coord_t,
+                array_descriptor_t::size(),
+                const bound_box_t<dtype, 3>*,
+                const bound_box_t<bool, 3>*>;
         
         private:
             partition::block_partition_t grid_partition;    
@@ -131,13 +144,40 @@ namespace spade::grid
                 
                 create_geom(grid_partition.get_num_global_blocks(), partition::global, global_geometry);
                 create_geom(grid_partition.get_num_local_blocks(),  partition::local,  local_geometry);
+                global_geometry.bounding_boxes.transfer();
+                global_geometry.domain_boundary.transfer();
+                local_geometry.bounding_boxes.transfer();
+                local_geometry.domain_boundary.transfer();
             }
             
             cartesian_grid_t(){}
             
-            const geometry_type& image(const partition::global_tag_t&) const { return global_geometry.image(); }
-            const geometry_type& image(const partition::local_tag_t&)  const { return  local_geometry.image(); }
-            const geometry_type& image() const { return this->image(partition::local).image(); }
+            // template <typename device_t>
+            // const auto image(const device_t& dev, const partition::global_tag_t&) const { return global_geometry.image(dev); }
+            
+            // template <typename device_t>
+            // const auto image(const device_t& dev, const partition::local_tag_t&)  const { return  local_geometry.image(dev); }
+            
+            template <typename loc_glob_t, typename device_t>
+            const geomety_image_type image(const loc_glob_t& i, const device_t& dev) const
+            {
+                const auto& geom = this->geometry(i);
+                geomety_image_type output(geom.coords, geom.num_cell, geom.num_exch);
+                output.bounding_boxes  = &geom.bounding_boxes.host_data[0];
+                output.domain_boundary = &geom.domain_boundary.host_data[0];
+                if constexpr (device::is_gpu<device_t>)
+                {
+                    output.bounding_boxes  = &geom.bounding_boxes.devc_data[0];
+                    output.domain_boundary = &geom.domain_boundary.devc_data[0];
+                }
+                return output;
+            }
+            
+            template <typename device_t>
+            const geomety_image_type image(const device_t& dev) const
+            {
+                return this->image(partition::local, dev);
+            }
             
             constexpr static int dim() {return grid_dim;}
             
@@ -186,27 +226,19 @@ namespace spade::grid
             
             template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
             {
-                return coord_sys().map(this->get_comp_coords(i));
+                return global_geometry.get_coords(i);
             }
                 
             template <typename idx_t> _finline_ coord_point_type get_comp_coords(const idx_t& i) const
             {
-                const auto  idx_r = get_index_coord(i);
-                const auto  lb    = grid_partition.to_global(utils::tag[partition::local](i.lb()));
-                const auto& bnd   = block_arrangement.get_bounding_box(lb.value);
-                coord_point_type output;
-                if constexpr (dim() == 2) output[2] = 0.0;
-                for (int d = 0; d < dim(); ++d)
-                {
-                    output[d] = bnd.min(d)+idx_r[d]*this->get_dx(d, lb);
-                }
-                return output;
+                return global_geometry.get_comp_coords(i);
             }
             
             const auto is_domain_boundary(const partition::partition_tagged auto& lb) const
             {
                 return global_geometry.is_domain_boundary(grid_partition.to_global(lb).value);
             } 
+            
             ctrs::array<dtype,  3> get_dx(const std::size_t& lb) const
             { 
                 return this->get_dx(utils::tag[partition::local](lb));
@@ -217,27 +249,27 @@ namespace spade::grid
                 return this->get_dx(i, utils::tag[partition::local](lb));
             }
             
-            ctrs::array<dtype,  3> get_dx(const partition::partition_tagged auto& lb) const
+            template <partition::partition_tagged idx_t>
+            ctrs::array<dtype,  3> get_dx(const idx_t& lb) const
             {
-                const auto& bx = this->get_bounding_box(lb);
-                const auto& nx = global_geometry.num_cell;
-                ctrs::array<dtype,  3> dx;
-                for (int i = 0; i < nx.size(); ++i) dx[i] = bx.size(i) / nx[i];
-                return dx;
+                return this->geometry(typename idx_t::tag_type()).get_dx(lb.value);
             }
             
-            template <partition::partition_tagged idx_t> dtype get_dx(const int i, const idx_t& lb)  const
+            template <partition::partition_tagged idx_t>
+            dtype get_dx(const int i, const idx_t& lb)  const
             {
-                const auto& bx = this->get_bounding_box(lb);
-                const auto& nx = global_geometry.num_cell;
-                return bx.size(i)/nx[i];
+                return this->geometry(typename idx_t::tag_type()).get_dx(i, lb.value);
             }
             
-            bound_box_t<dtype, 3> get_bounding_box(const partition::partition_tagged auto& lb) const
+            template <partition::partition_tagged idx_t>
+            bound_box_t<dtype, 3> get_bounding_box(const idx_t& lb) const
             {
-                return global_geometry.get_bounding_box(grid_partition.to_global(lb).value);
+                return this->geometry(typename idx_t::tag_type()).get_bounding_box(grid_partition.to_global(lb).value);
             }
             
             const auto& get_coord_sys() const {return global_geometry.get_coords();}
+            
+            const auto& geometry(const partition::global_tag_t&) const { return global_geometry; }
+            const auto& geometry(const partition::local_tag_t&)  const { return local_geometry;  }
     };
 }

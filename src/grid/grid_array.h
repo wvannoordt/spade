@@ -185,7 +185,7 @@ namespace spade::grid
         using container_type      = std::conditional<
                                         device::is_cpu<device_t>,
                                         std::vector<fundamental_type>,
-                                        device::vector<fundamental_type>>::type;
+                                        device::device_vector<fundamental_type>>::type;
         
         using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
@@ -199,7 +199,7 @@ namespace spade::grid
         container_type        data;
         mem_map_type          mem_view;
         
-        static_assert(device::is_gpu<device_t> == _sp_cuda, "attempted to declare GPU array without GPU support");
+        static_assert(!(device::is_gpu<device_t> && !_sp_cuda), "attempted to declare GPU array without GPU support");
         
         device_t device() const { return device_t(); }
         

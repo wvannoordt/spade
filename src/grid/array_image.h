@@ -31,18 +31,18 @@ namespace spade::grid
         
         //Note: This has potential to become a bottleneck.
         template <typename... idxs_t>
-        _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
+        _sp_hybrid _finline_ const fundamental_type& operator() (const idxs_t&... idxs) const
         {
             return base[map.compute_offset(idxs...)];
         }
         
         template <typename... idxs_t>
-        _finline_ fundamental_type& operator() (const idxs_t&... idxs)
+        _sp_hybrid _finline_ fundamental_type& operator() (const idxs_t&... idxs)
         {
             return base[map.compute_offset(idxs...)];
         }
         
-        void set_elem(const index_type& idx, const alias_type& alias)
+        _sp_hybrid void set_elem(const index_type& idx, const alias_type& alias)
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
@@ -54,7 +54,7 @@ namespace spade::grid
             }
         }
         
-        alias_type get_elem(const index_type& idx) const
+        _sp_hybrid alias_type get_elem(const index_type& idx) const
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {

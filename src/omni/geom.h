@@ -81,7 +81,7 @@ namespace spade::omni
 
         template<grid::grid_index index_t>
         requires((index_t::centering_type() == grid::cell_centered) || (index_t::centering_type() == grid::node_centered))
-        constexpr static auto compute_index(const index_t& i)
+        _sp_hybrid constexpr static auto compute_index(const index_t& i)
         {
             const int di_div = static_math::moddiv<di,2>::value;
             const int dj_div = static_math::moddiv<dj,2>::value;
@@ -117,7 +117,7 @@ namespace spade::omni
         
         template<grid::grid_index index_t>
         requires(((index_t::centering_type() == grid::face_centered) || (index_t::centering_type() == grid::edge_centered)) && is_1d)
-        constexpr static auto compute_index(const index_t& i)
+        _sp_hybrid constexpr static auto compute_index(const index_t& i)
         {
             const int di_div = static_math::moddiv<di,2>::value;
             const int di_mod = static_math::mod<di,2>::value;

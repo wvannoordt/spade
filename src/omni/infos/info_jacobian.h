@@ -14,7 +14,7 @@ namespace spade::omni
             using array_data_type = typename array_t::grid_type::coord_type;
             
             template <typename grid_view_t, typename array_t, typename index_t>
-            static void compute(
+            _sp_hybrid static void compute(
                 const grid_view_t& grid,
                 const array_t& array,
                 const index_t& idx,

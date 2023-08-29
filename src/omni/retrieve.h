@@ -6,19 +6,20 @@ namespace spade::omni
 {
     template <typename info_t, typename grid_view_t, typename array_t, typename index_t, typename direction_t, typename data_t>
     requires (info_t::requires_direction)
-    void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
+    _sp_hybrid void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
     {
         info_t::compute(grid, array, index, direction, data);
     }
 
     template <typename info_t, typename grid_view_t, typename array_t, typename index_t, typename direction_t, typename data_t>
-    void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
+    _sp_hybrid void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
     {
+        
         info_t::compute(grid, array, index, data);
     }
 
     template <typename grid_view_t, typename index_t, typename array_t, typename direction_t, typename stencil_data_t>
-    void retrieve_impl(const grid_view_t& grid, const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
+    _sp_hybrid void retrieve_impl(const grid_view_t& grid, const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
     {
         const int num_elem = stencil_data_t::stencil_type::num_elements();
         algs::static_for<0,num_elem>([&](const auto& ii)
@@ -42,14 +43,14 @@ namespace spade::omni
 
     template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
     requires(requires{index_t().dir();})
-    void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
     {
         retrieve_impl(grid, array, idx_center, idx_center.dir(), data);
     }
 
     template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
-    void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
     {
-        retrieve_impl(grid, array, idx_center, info::undirected, data);
+        retrieve_impl(grid, array, idx_center, info::undirected_tag_t(), data);
     }
 }

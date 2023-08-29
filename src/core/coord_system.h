@@ -50,14 +50,15 @@ namespace spade::coords
     template <typename dtype> struct identity
     {
         typedef dtype coord_type;
-        template <ctrs::vec_nd<3,coord_type> coords_t> auto map(const coords_t& coords) const {return coords;}
+        template <ctrs::vec_nd<3,coord_type> coords_t>
+        _sp_hybrid auto map(const coords_t& coords) const {return coords;}
     };
     
     template <typename dtype> struct identity_1D
     {
         typedef dtype coord_type;
-        dtype map(const dtype& coord) const {return coord;}
-        dtype coord_deriv(const dtype& coord) const { return 1.0; }
+        _sp_hybrid dtype map(const dtype& coord) const {return coord;}
+        _sp_hybrid dtype coord_deriv(const dtype& coord) const { return 1.0; }
     };
     
     template <
@@ -70,14 +71,15 @@ namespace spade::coords
         typedef xcoord_t xcoord_type;
         typedef ycoord_t ycoord_type;
         typedef zcoord_t zcoord_type;
-        diagonal_coords(void){}
+        diagonal_coords(){}
         diagonal_coords(const xcoord_t& xcoord_in, const ycoord_t& ycoord_in, const zcoord_t& zcoord_in)
         {
             xcoord = xcoord_in;
             ycoord = ycoord_in;
             zcoord = zcoord_in;
         }
-        template <ctrs::vec_nd<3,coord_type> coords_t> auto map(const coords_t& coords) const
+        template <ctrs::vec_nd<3,coord_type> coords_t>
+        _sp_hybrid auto map(const coords_t& coords) const
         {
             return coords_t(xcoord.map(coords[0]), ycoord.map(coords[1]), zcoord.map(coords[2]));
         }
@@ -93,7 +95,7 @@ namespace spade::coords
         typedef decltype(((callable_t*)(NULL))->operator()(0.0)) dtype;
         analytical_1D(){}
         analytical_1D(const callable_t& func_in) {func = &func_in;}
-        dtype map(const dtype& coord) const {return (*func)(coord);}
+        _sp_hybrid dtype map(const dtype& coord) const {return (*func)(coord);}
         const callable_t* func;
     };
     
@@ -120,7 +122,7 @@ namespace spade::coords
             f0 = func(eta0);
             normInv = 1.0/(func(eta1)-f0);
         }
-        dtype map(const dtype& coord) const
+        _sp_hybrid dtype map(const dtype& coord) const
         {
             auto abs = [](const dtype& d) -> dtype {return d<0?-d:d;};
             auto func = [&](const dtype& eta) -> dtype
@@ -129,7 +131,7 @@ namespace spade::coords
             };
             return eta0 + deta*(func(coord) - f0)*normInv;
         }
-        dtype coord_deriv(const dtype& coord) const
+        _sp_hybrid dtype coord_deriv(const dtype& coord) const
         {
             return (deta*(tanh(alpha0*coord+beta0) + tanh(alpha1*coord+beta1) - 1.0))*normInv;
         }
@@ -144,11 +146,11 @@ namespace spade::coords
         {
             k = k_in;
         }
-        dtype map(const dtype& coord) const
+        _sp_hybrid dtype map(const dtype& coord) const
         {
             return k*coord;
         }
-        dtype coord_deriv(const dtype& coord) const
+        _sp_hybrid dtype coord_deriv(const dtype& coord) const
         {
             return k;
         }
@@ -159,11 +161,11 @@ namespace spade::coords
     {
         typedef dtype coord_type;
         quad_1D(void){}
-        dtype map(const dtype& coord) const
+        _sp_hybrid dtype map(const dtype& coord) const
         {
             return coord*coord;
         }
-        dtype coord_deriv(const dtype& coord) const
+        _sp_hybrid dtype coord_deriv(const dtype& coord) const
         {
             return 2.0*coord;
         }
@@ -174,13 +176,13 @@ namespace spade::coords
         typedef dtype coord_type;
         using point_type = point_t<dtype>;
         cyl_coords(void){}
-        point_type map(const point_type& x) const
+        _sp_hybrid point_type map(const point_type& x) const
         {
             return point_type(x[0], x[1]*cos(x[2]), x[1]*sin(x[2]));
         }
         
         linear_algebra::dense_mat<dtype, 3>
-        coord_deriv(const point_type& x) const
+        _sp_hybrid coord_deriv(const point_type& x) const
         {
             // x = x
             // y = r*cos(q)
@@ -201,7 +203,7 @@ namespace spade::coords
     };
     
     template <typename dtype, typename idx_t>
-    ctrs::array<dtype, 3> calc_normal_vector(
+    _sp_hybrid ctrs::array<dtype, 3> calc_normal_vector(
         const identity<dtype>& coord,
         const point_t<dtype>& coords,
         const idx_t& i,
@@ -213,7 +215,7 @@ namespace spade::coords
     }
     
     template <typename dtype, typename idx_t>
-    dtype calc_jacobian(
+    _sp_hybrid dtype calc_jacobian(
         const identity<dtype>& coord,
         const point_t<dtype>& coords,
         idx_t& i)
@@ -222,7 +224,7 @@ namespace spade::coords
     }
     
     template <diagonal_coordinate_system coord_t, typename idx_t>
-    ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
+    _sp_hybrid ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
         const coord_t& coord,
         const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i,
@@ -241,7 +243,7 @@ namespace spade::coords
     }
     
     template <dense_coordinate_system coord_t, typename idx_t>
-    ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
+    _sp_hybrid ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(
         const coord_t& coord,
         const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i,
@@ -267,7 +269,7 @@ namespace spade::coords
         }
     
     template <diagonal_coordinate_system coord_t, typename idx_t>
-    typename coord_t::coord_type calc_jacobian(
+    _sp_hybrid typename coord_t::coord_type calc_jacobian(
         const coord_t& coord,
         const point_t<typename coord_t::coord_type>& coords,
         const idx_t& i)
@@ -276,7 +278,7 @@ namespace spade::coords
     }
     
     template <dense_coordinate_system coord_t, typename integral_t>
-    typename coord_t::coord_type calc_jacobian(
+    _sp_hybrid typename coord_t::coord_type calc_jacobian(
         const coord_t& coord,
         const point_t<typename coord_t::coord_type>& coords,
         const grid::cell_idx_t& i)

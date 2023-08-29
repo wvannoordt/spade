@@ -108,6 +108,7 @@ namespace spade::grid
         
         const auto& get_neighs(const std::size_t& i)             const { return neighbors[i]; }
         const auto& get_bounding_box(const std::size_t& i)       const { return block_boxes[i]; }
+        const auto& get_block_box   (const std::size_t& i)       const { return block_boxes[i]; }
         const auto& is_domain_boundary(const std::size_t& i)     const { return block_is_domain_boundary[i]; }
         std::size_t total_num_blocks()                           const { return total_blocks; }
         const auto get_size(const std::size_t& i)                const { return bsize; }

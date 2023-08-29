@@ -12,15 +12,20 @@ namespace spade::omni
         typename T::omni_type;
     };
 
+    template <typename a_t, typename... as_t>
+    _sp_hybrid const a_t& r_f(const a_t& a, const as_t&...) {return a;}
+    
     template <typename list_t, typename kernel_t, typename info_data_t, typename... extracts_t>
     requires(sizeof...(extracts_t) == list_t::num_infos())
-    static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+    _sp_hybrid static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
-        return kernel(args...);
+        const auto xx = r_f(args...);
+        const auto pp = kernel(args...);
+        return pp;
     }
 
     template <typename list_t, typename kernel_t, typename info_data_t, typename... extracts_t>
-    static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
+    _sp_hybrid static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
         constexpr int idx   = sizeof...(extracts_t);
         using info_type     = list_t;
@@ -30,13 +35,13 @@ namespace spade::omni
     }
 
     template <typename kernel_t, typename info_data_t>
-    static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list)
+    _sp_hybrid static auto invoke_call(const kernel_t& kernel, const info_data_t& info_list)
     {
         using info_type = typename info_data_t::list_type;
-        return invoke_call(info_type(), kernel, info_list);
+        const auto pp = invoke_call(info_type(), kernel, info_list);
+        return pp;
     }
 
-    //NEED VOID CALLABLE!    
     template <
         typename array_t,
         typename index_t,
@@ -57,6 +62,18 @@ namespace spade::omni
     auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
     {
         return info_list_t<info::coord>();
+    }
+    
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable<
+            info::index::array_data_type<array_t, index_t::centering_type()>
+            > kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<info::index>();
     }
 
     template <
@@ -122,7 +139,8 @@ namespace spade::omni
         _sp_hybrid auto operator() (const auto& input_data) const
         {
             const auto elem = input_data.template seek_element<index_t::centering_type()>(0_c);
-            return invoke_call(kernel, elem);
+            const auto outp = invoke_call(kernel, elem);
+            return outp;
         }
     };
 

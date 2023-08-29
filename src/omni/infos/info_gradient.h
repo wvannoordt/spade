@@ -17,7 +17,7 @@ namespace spade::omni
             
             template <typename grid_view_t, typename array_t, typename index_t>
             requires((index_t::centering_type() == grid::face_centered) && (grid::cell_centered == array_t::centering_type()))
-            static void compute(
+            _sp_hybrid static void compute(
                 const grid_view_t& ar_grid,
                 const array_t& array,
                 const index_t& idx,
@@ -75,7 +75,7 @@ namespace spade::omni
 
             template <typename grid_view_t, typename array_t, typename index_t>
             requires((index_t::centering_type() == grid::cell_centered) && (grid::cell_centered == array_t::centering_type()))
-            static void compute(
+            _sp_hybrid static void compute(
                 const grid_view_t& ar_grid,
                 const array_t& array,
                 const index_t& idx,

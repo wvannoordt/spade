@@ -11,6 +11,7 @@
 
 #include "dispatch/support_of.h"
 #include "dispatch/device_type.h"
+#include "dispatch/execute.h"
 
 namespace spade::algs
 {
@@ -50,50 +51,50 @@ namespace spade::algs
         }
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
     }
-    
-    template <grid::multiblock_array array_t, class callable_t>
-    requires (device::is_cpu<typename array_t::device_type>)
-    auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
-    {
-        const auto& grid = arr.get_grid();
-        const auto nlb = grid.get_num_local_blocks();
 
-        const grid::array_centering ctr = array_t::centering_type();
-        const auto kernel = omni::to_omni<ctr>(func, arr);
-        auto img = arr.image();
-        // consider fundamentally separating the block dimension with the ijk dimensions!
-        for (auto lb: range(0, nlb))
-        {
-            const auto loop_func = [&](const auto& elem)
-            {
-                const auto data = invoke_at(grid, img, elem, kernel);
-                img.set_elem(elem, data);
-            };
-            block_loop(arr, lb, loop_func, exchange_policy);
-        }
-        return arr;
-    }
+    // template <grid::multiblock_array array_t, class callable_t>
+    // auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
+    // {
+    //     const auto& grid = arr.get_grid();
+    //     const auto nlb = grid.get_num_local_blocks();
+
+    //     const grid::array_centering ctr = array_t::centering_type();
+    //     const auto kernel = omni::to_omni<ctr>(func, arr);
+    //     auto img = arr.image();
+    //     const auto& geom = grid.geometry(partition::local);
+    //     // consider fundamentally separating the block dimension with the ijk dimensions!
+    //     for (auto lb: range(0, nlb))
+    //     {
+    //         const auto loop_func = [&](const auto& elem)
+    //         {
+    //             const auto data = invoke_at(geom, img, elem, kernel);
+    //             img.set_elem(elem, data);
+    //         };
+    //         block_loop(arr, lb, loop_func, exchange_policy);
+    //     }
+    //     return arr;
+    // }
     
     template <grid::multiblock_array array_t, class callable_t>
-    // requires (device::is_gpu<typename array_t::device_type>)
     void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
-        const grid::array_centering ctr = array_t::centering_type();
-        const auto kernel = omni::to_omni<ctr>(func, arr);
-        
-        // //ideally, this would be given as a parameter later on
+        const auto ctr       = array_t::centering_type();
+        auto kernel          = omni::to_omni<ctr>(func, arr);
         auto var_range       = dispatch::support_of(arr, exchange_policy);
         using index_type     = typename decltype(var_range)::index_type;
         auto d_image         = arr.image();
-        const auto g_image   = arr.get_grid().image();
-        const auto loop_load = _sp_lambda (const index_type& index) mutable
+        const auto g_image   = arr.get_grid().image(arr.device());
+        
+        auto loop_load = _sp_lambda (const index_type& index) mutable
         {
+            const auto xxx = g_image.get_coords(index);
             const auto data = invoke_at(g_image, d_image, index, kernel);
             d_image.set_elem(index, data);
         };
-        var_range.execute(loop_load);
+        
+        dispatch::execute(var_range, loop_load);
     }
-/*
+
     template <grid::multiblock_array source_t, grid::multiblock_array dest_t, class callable_t>
     auto& transform_to(const source_t& source, dest_t& dest, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
     {
@@ -115,7 +116,7 @@ namespace spade::algs
         }
         return dest;
     }
-*/
+
 
     template <class array_t, class kernel_t>
     void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)

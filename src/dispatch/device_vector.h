@@ -6,18 +6,20 @@ namespace spade::device
 {
     //todo: improve this implementation
     template <typename data_t>
-    struct vector
+    struct device_vector
     {
         using allocator_t = device_allocator_t<data_t>;
         allocator_t allocator;
         data_t* raw = nullptr;
         std::size_t c_size = 0;
         
-        vector(){}
-        vector(const std::size_t n) 
+        device_vector(){}
+        device_vector(const std::size_t n) 
         {
             this->resize(n);
         }
+        
+        std::size_t size() const {return c_size;}
         
         void resize(const std::size_t& n)
         {
@@ -26,7 +28,7 @@ namespace spade::device
             raw = allocator.allocate(n);
         }
         
-        ~vector()
+        ~device_vector()
         {
             if (raw != nullptr) allocator.deallocate(raw, c_size);
         }

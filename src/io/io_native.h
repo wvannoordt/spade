@@ -15,7 +15,8 @@ namespace spade::io
 {
     namespace detail
     {
-        template <grid::multiblock_array array_t> void get_array_par_buf(parallel::par_buf_t& buf, const array_t& array)
+        template <grid::multiblock_array array_t>
+		void get_array_par_buf(parallel::par_buf_t& buf, const array_t& array)
         {
             buf.clear();
             const auto& grid = array.get_grid();

@@ -83,6 +83,47 @@ namespace spade::io
             }
         }
         
+        template <typename data_t, typename idx_t>
+        requires (ctrs::basic_array<data_t>)
+        _sp_hybrid static auto ith_elem(const data_t& d, const idx_t& i) { return d[i]; }
+        
+        template <typename data_t, typename idx_t>
+        _sp_hybrid static auto ith_elem(const data_t& d, const idx_t&) { return d; }
+        
+        template <typename arr_t, typename vec_t, typename var_idx_t>
+        static void copy_block_variable_data(
+            const arr_t& arr,
+            vec_t& data,
+            const var_idx_t vidx,
+            const std::size_t& lb)
+        {
+            constexpr bool is_gpu_vec = requires { data.devc_data; };
+            
+            auto range = dispatch::support_of(arr, grid::exclude_exchanges);
+            range.lower.lb() = lb;
+            range.upper.lb() = lb + 1;
+            
+            std::size_t ni = arr.get_grid().get_num_cells(0);
+            std::size_t nj = arr.get_grid().get_num_cells(1);
+            std::size_t nk = arr.get_grid().get_num_cells(2);
+            
+            using data_t = vec_t::value_type;
+            data_t* ptr = &data[0];
+            if constexpr (is_gpu_vec) ptr = &(data.devc_data[0]);
+            auto img = arr.image();
+            using index_type = decltype(range)::index_type;
+            auto load = _sp_lambda (const index_type& i) mutable
+            {
+                std::size_t offst = i.i() + ni*i.j() + ni*nj*i.k();
+                const auto data   = img.get_elem(i);
+                ptr[offst] = ith_elem(data, vidx);
+            };
+            
+            dispatch::execute(range, load);
+            
+            if constexpr (is_gpu_vec) data.itransfer();
+        }
+        
         template <typename arr_t>
         static void output_base_file(const arr_t& arr, const std::string& base_file, const std::string& base_name)
         {
@@ -132,12 +173,14 @@ namespace spade::io
         {
             const auto& grid  = arr.get_grid();
             const auto& group = grid.group();
+            const auto& geom  = grid.geometry(partition::local);
             std::filesystem::path out_path(out_dir);
             using coord_float_t = utils::remove_all<decltype(grid)>::type::coord_type;
             using data_float_t  = typename arr_t::value_type;
             using alias_type    = typename arr_t::alias_type;
             const std::string data_direc = out_path / get_data_basename(basename);
             if (!std::filesystem::is_directory(data_direc) && group.isroot()) std::filesystem::create_directory(data_direc);
+            group.sync();
             const auto bbx = grid.get_bounds();
             bound_box_t<std::size_t, 3> vtk_extent;
             vtk_extent.min(0) = 0;
@@ -147,9 +190,14 @@ namespace spade::io
             vtk_extent.max(1) = grid.get_num_cells(1);// - 1;
             vtk_extent.max(2) = grid.get_num_cells(2);// - 1;
             std::vector<coord_float_t> coord_raw;
-            std::vector<data_float_t> data_raw;
+            
+            using device_t = typename arr_t::device_type;
+            constexpr bool is_gpu_device = device::is_gpu<device_t>;
+            using vec_t = std::conditional<is_gpu_device, device::shared_vector<data_float_t>, std::vector<data_float_t>>::type;
+            vec_t data_raw;
+            
             coord_raw.reserve(3*(grid.get_num_cells(0)+1)*(grid.get_num_cells(1)+1)*(grid.get_num_cells(2)+1));
-            data_raw.reserve(grid.get_num_cells(0)*grid.get_num_cells(1)*grid.get_num_cells(2));
+            data_raw.resize(grid.get_num_cells(0)*grid.get_num_cells(1)*grid.get_num_cells(2));
             const std::string format_str = "binary";
             const auto names = get_var_names(typename arr_t::alias_type());
             for (std::size_t lb = 0; lb < grid.get_num_local_blocks(); ++lb)
@@ -168,28 +216,21 @@ namespace spade::io
                 int ct = 0;
                 for (const auto& name: names)
                 {
-                    data_raw.clear();
+                    copy_block_variable_data(arr, data_raw, ct, lb);
                     
-                    const auto img = arr.image();
-                    grid::cell_idx_t cid(0,0,0,lb);
-                    for (cid.k() = 0; cid.k() < grid.get_num_cells(2); ++cid.k())
-                    {
-                        for (cid.j() = 0; cid.j() < grid.get_num_cells(1); ++cid.j())
-                        {
-                            for (cid.i() = 0; cid.i() < grid.get_num_cells(0); ++cid.i())
-                            {
-                                alias_type elem = img.get_elem(cid);
-                                auto data = [&]()
-                                {
-                                    if constexpr (ctrs::basic_array<alias_type>) return elem[ct];
-                                    else return elem;
-                                }();
-                                data_raw.push_back(data);
-                            }
-                        }
-                    }
                     bf << "<DataArray type=\"" << get_fundamental_str(data_float_t()) << "\" Name=\"" << name << "\" format=\"" << format_str << "\">\n";
-                    spade::detail::stream_base_64(bf, data_raw);
+                    const std::vector<data_float_t>& rdat = [&]()
+                    {
+                        if constexpr (is_gpu_device)
+                        {
+                            return data_raw.host_data;
+                        }
+                        else
+                        {
+                            return data_raw;
+                        }
+                    }();
+                    spade::detail::stream_base_64(bf, rdat);
                     bf << "\n</DataArray>\n";
                     ++ct;
                 }
@@ -204,7 +245,7 @@ namespace spade::io
                     {
                         for (idx.i() = 0; idx.i() <= grid.get_num_cells(0); ++idx.i())
                         {
-                            auto pt = grid.get_coords(idx);
+                            auto pt = geom.get_coords(idx);
                             if constexpr (grid.dim() == 2) pt[2] = 0.0;
                             coord_raw.push_back(pt[0]);
                             coord_raw.push_back(pt[1]);
@@ -231,6 +272,7 @@ namespace spade::io
         if (!std::filesystem::is_directory(out_path) && group.isroot()) std::filesystem::create_directory(out_path);
         const std::string base_file  = out_path / (basename + ".pvts");
         if (group.isroot()) detail::output_base_file(arr, base_file, basename);
+        group.sync();
         detail::output_block_files(arr, out_dir, basename);
         group.sync();
     }
