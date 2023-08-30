@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/except.h"
 #include "core/ctrs.h"
 #include "dispatch/device_type.h"
 #include "dispatch/kernel_params.h"
@@ -31,7 +32,10 @@ namespace spade::dispatch
         __global__ void k_gpu_dispatch_impl(const launch_params_t mapping, kern_t kern)
         {
             const auto i = mapping.get_index(threadIdx, blockIdx, blockDim, gridDim);
-            if (mapping.is_valid(i)) kern(i);
+            if (mapping.is_valid(i))
+            {
+                kern(i);
+            }
         }
 
 #endif
@@ -57,7 +61,6 @@ namespace spade::dispatch
         {
             //GPU dispatch
             const auto ps = get_launch_params(range);
-            
 #if(_sp_cuda)
             ///Notes on kernel dispatch
             // k_kernel<<<grid_size, block_size, shmem_size, istream>>>(...);
@@ -71,6 +74,10 @@ namespace spade::dispatch
             cudaDeviceSynchronize();
             auto er_code = cudaGetLastError();
             std::string er_str = std::string(cudaGetErrorString(er_code));
+            if (er_code != cudaSuccess)
+            {
+                throw except::sp_exception("Error after kernel call: " + er_str);
+            }
             //Do stuff
 #endif
         }

@@ -29,10 +29,9 @@ namespace spade::device
         {
             if (n > max_alloc_size) throw mem_exception("attempted to allocate too much device memory (" + std::to_string(n*sizeof(data_t)) + " bytes)");
             data_t* output = nullptr;
-            void** alias = (void**)&output;
             std::string err_string = "attempted to allocate device memory without device support";
 #if(_sp_cuda)
-            auto er_code = cudaMalloc(alias, n*sizeof(data_t));
+            auto er_code = cudaMalloc(&output, n*sizeof(data_t));
             if (er_code == cudaSuccess && output != nullptr)
             {
                 ++count;
@@ -47,9 +46,16 @@ namespace spade::device
         {
 #if(_sp_cuda)
             --count;
-            cudaFree((void*)p);
+            auto er_code = cudaFree((void*)p);
+            
+            //Done to avoid annoying compiler warning.
+            p = nullptr;
+            if (er_code != cudaSuccess)
+            {
+                throw mem_exception("could not deallocate device memory: " + std::string(cudaGetErrorString(er_code)));
+            }
 #else
-            throw mem_exception("attempted to deallocate device memory without device support");
+            if (p != nullptr) throw mem_exception("attempted to deallocate device memory without device support");
 #endif
         }
     };

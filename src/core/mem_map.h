@@ -52,9 +52,9 @@ namespace spade::mem_map
     struct empty_view_t
     {
         std::tuple<> views;
-        constexpr static int rank()        {return 0;}
-        constexpr static int num_views()   {return 0;}
-        constexpr static int num_coeffs()  {return 0;}
+        _sp_hybrid constexpr static int rank()        {return 0;}
+        _sp_hybrid constexpr static int num_views()   {return 0;}
+        _sp_hybrid constexpr static int num_coeffs()  {return 0;}
         using coeff_array_t = ctrs::array<int, 0>;
         coeff_array_t get_extent_array() const
         {
@@ -68,9 +68,9 @@ namespace spade::mem_map
 
     template <typename... dims_t> struct recti_view_t
     {
-        constexpr static int rank()        {return detail::rank_sum_t<dims_t...>::value;}
-        constexpr static int num_views()   {return sizeof...(dims_t);}
-        constexpr static int num_coeffs()  {return detail::coeff_count_sum_t<dims_t...>::value;}
+        _sp_hybrid constexpr static int rank()        {return detail::rank_sum_t<dims_t...>::value;}
+        _sp_hybrid constexpr static int num_views()   {return sizeof...(dims_t);}
+        _sp_hybrid constexpr static int num_coeffs()  {return detail::coeff_count_sum_t<dims_t...>::value;}
         std::tuple<dims_t...> views;
         recti_view_t(){}
         recti_view_t(dims_t... views_in) : views(std::make_tuple(views_in...)) {}
@@ -128,10 +128,10 @@ namespace spade::mem_map
         constexpr static int tile_size() {return static_math::pow<2,tsize>::value;}
         tile_uni_dim_t(const dim_t& dim_in) : dim{dim_in} {}
         std::size_t size()  const          {return dim.size();}
-        constexpr static int rank()        {return 1;}
-        constexpr static int num_coeffs()  {return 2;}
-        constexpr static int mask()        {return tile_size()-1;}
-        constexpr static int exp()         {return tsize;}
+        _sp_hybrid constexpr static int rank()        {return 1;}
+        _sp_hybrid constexpr static int num_coeffs()  {return 2;}
+        _sp_hybrid constexpr static int mask()        {return tile_size()-1;}
+        _sp_hybrid constexpr static int exp()         {return tsize;}
     };
     
     template <typename... uni_dims_t>
@@ -142,9 +142,9 @@ namespace spade::mem_map
         template <const int idx> constexpr static int tile_size = utils::get_pack_type<idx, uni_dims_t...>::type::tile_size();
         std::tuple<uni_dims_t...> views;
         tiled_dim_t(const uni_dims_t&... views_in) : views(std::make_tuple(views_in...)) {}
-        constexpr static int num_views()   {return sizeof...(uni_dims_t);}
-        constexpr static int rank()        {return sizeof...(uni_dims_t);}
-        constexpr static int num_coeffs()  {return 2*rank();}
+        _sp_hybrid constexpr static int num_views()   {return sizeof...(uni_dims_t);}
+        _sp_hybrid constexpr static int rank()        {return sizeof...(uni_dims_t);}
+        _sp_hybrid constexpr static int num_coeffs()  {return 2*rank();}
         using coeff_array_t = ctrs::array<int, num_coeffs()>;
         
         coeff_array_t get_extent_array() const { return get_extent_array([](const auto& vw) -> auto {return vw.size();});}
@@ -181,7 +181,7 @@ namespace spade::mem_map
     namespace detail
     {
         template <const int idx, const int view_idx, const int cur_pos, typename views_t>
-        constexpr const auto& recurse_dim_retrieve(const views_t& view_collection)
+        _sp_hybrid constexpr const auto& recurse_dim_retrieve(const views_t& view_collection)
         {
             const auto& view = std::get<view_idx>(view_collection.views);
             
@@ -234,7 +234,7 @@ namespace spade::mem_map
     }
     
     template <const int idx, typename views_t>
-    constexpr const auto& get_dim_from_map(const views_t& views)
+    _sp_hybrid constexpr const auto& get_dim_from_map(const views_t& views)
     {
         return detail::recurse_dim_retrieve<idx, 0, 0>(views);
     }

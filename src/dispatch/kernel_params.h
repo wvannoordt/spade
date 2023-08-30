@@ -46,7 +46,7 @@ namespace spade::dispatch
             bool output = true;
             algs::static_for<0, index_type::size()>([&](const auto& d)
             {
-                output = output && (i[d] >= irange.lower[d] && i[d] < irange.upper[d]);
+                output = output && (i[d.value] >= irange.lower[d.value] && i[d.value] < irange.upper[d.value]);
             });
             return output;
         }
@@ -75,6 +75,7 @@ namespace spade::dispatch
         bsize.x = blocksize;
         bsize.y = blocksize;
         bsize.z = blocksize;
+        if (range_in.upper.k() - range_in.lower.k() == 1) bsize.z = 1;
         
         return kernel_params_t<index_type, range_t>{gsize, bsize, range_in};
     }

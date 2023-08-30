@@ -9,12 +9,12 @@ using cons_t = spade::fluid_state::cons_t<real_t>;
 int main(int argc, char** argv)
 {
     spade::parallel::mpi_t group(&argc, &argv);
-    const int nx      = 64;
-    const int ny      = 64;
-    const int nz      = 64;
-    const int nxb     = 4;
-    const int nyb     = 4;
-    const int nzb     = 4;
+    const int nx      = 16;
+    const int ny      = 16;
+    const int nz      = 16;
+    const int nxb     = 2;
+    const int nyb     = 2;
+    const int nzb     = 2;
     const int nguard  = 2;
     const real_t xmin = 0.0;
     const real_t xmax = 1.0;
@@ -66,6 +66,11 @@ int main(int argc, char** argv)
     {
         spade::timing::scoped_tmr_t t0("fill");
         spade::algs::fill_array(prim, ini);
+    }
+    
+    {
+        // spade::timing::scoped_tmr_t t0("exch");
+        // handle.exchange(prim);
     }
     
     spade::io::output_vtk("output", "prim", prim);

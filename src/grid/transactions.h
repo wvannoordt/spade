@@ -68,7 +68,6 @@ namespace spade::grid
         ctrs::array<ctrs::array<int, 3>, max_size> delta_i;
         int num_oslot;
         
-        
         //NOTE: this type of exchange will "pack" the sending patch
         //into memory of the size expected to receive, hence the anomaly
         //in send_volume()
@@ -94,7 +93,6 @@ namespace spade::grid
             for (idx.k() = patches.source.min(2); idx.k() < patches.source.max(2); idx.k() += i_skip[2]){
             for (idx.j() = patches.source.min(1); idx.j() < patches.source.max(1); idx.j() += i_skip[1]){
             for (idx.i() = patches.source.min(0); idx.i() < patches.source.max(0); idx.i() += i_skip[0]){
-                
                 elem = f_val_t(0.0);
                 algs::static_for<0, max_size>([&](const auto& ii)
                 {
@@ -112,7 +110,7 @@ namespace spade::grid
             }}}
             return output;
         }
-        
+
         template <typename arr_t>
         _finline_ std::size_t extract(arr_t& array, const char* buf) const
         {

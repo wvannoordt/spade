@@ -12,14 +12,10 @@ namespace spade::omni
         typename T::omni_type;
     };
 
-    template <typename a_t, typename... as_t>
-    _sp_hybrid const a_t& r_f(const a_t& a, const as_t&...) {return a;}
-    
     template <typename list_t, typename kernel_t, typename info_data_t, typename... extracts_t>
     requires(sizeof...(extracts_t) == list_t::num_infos())
     _sp_hybrid static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
-        const auto xx = r_f(args...);
         const auto pp = kernel(args...);
         return pp;
     }
@@ -132,7 +128,8 @@ namespace spade::omni
     template <typename kernel_t, typename array_t, typename index_t>
     struct omni_lambda_wrapper_t
     {
-        const kernel_t& kernel;
+        //Important: capture-by-value required here!!!! (for GPU)
+        const kernel_t kernel;
         using info_list_type = decltype(lamda_info_list(array_t(), index_t(), kernel));
         using omni_type = stencil_t<index_t::centering_type(), elem_t<offset_t<0, 0, 0>, info_list_type>>;
         omni_lambda_wrapper_t(const kernel_t& kernel_in, const array_t&, const index_t&) : kernel{kernel_in}{}

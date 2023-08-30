@@ -87,7 +87,6 @@ namespace spade::algs
         
         auto loop_load = _sp_lambda (const index_type& index) mutable
         {
-            const auto xxx = g_image.get_coords(index);
             const auto data = invoke_at(g_image, d_image, index, kernel);
             d_image.set_elem(index, data);
         };
