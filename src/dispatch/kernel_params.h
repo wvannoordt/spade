@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/cuda_incl.h"
+#include "dispatch/ranges/grid_idx_range.h"
+#include "dispatch/ranges/linear_range.h"
 
 namespace spade::dispatch
 {
@@ -16,16 +18,20 @@ namespace spade::dispatch
     using d3_t = dim3_wrapper_t;
 #endif
     
-    template <typename idx_t, typename range_t>
-    struct kernel_params_t
+    template <typename idx_t, typename range_t> struct kernel_params_t{};
+    
+    template <typename idx_t, typename dev_t>
+    struct kernel_params_t<idx_t, ranges::grid_idx_range_t<idx_t, dev_t>>
     {
+        using range_type = ranges::grid_idx_range_t<idx_t, dev_t>;
+        using range_t      = range_type;
         using index_type   = idx_t;
         using triplet_type = d3_t;
         
         constexpr static int blocksize = 8;
         triplet_type grid_size;
         triplet_type block_size;
-        range_t irange;
+        range_type irange;
         
         _sp_hybrid index_type get_index(const triplet_type& thr_idx, const triplet_type& blo_idx, const triplet_type& blo_dim, const triplet_type& grd_dim) const
         {
@@ -52,11 +58,38 @@ namespace spade::dispatch
         }
     };
     
-    template <typename range_t>
-    static auto get_launch_params(const range_t& range_in)
+    template <typename idx_t, typename dev_t>
+    struct kernel_params_t<idx_t, ranges::linear_range_t<idx_t, dev_t>>
     {
+        using range_type   = ranges::linear_range_t<idx_t, dev_t>;
+        using range_t      = range_type;
+        using index_type   = typename range_t::index_type;
+        using triplet_type = d3_t;
+        
+        constexpr static int blocksize = 32;
+        triplet_type grid_size;
+        triplet_type block_size;
+        range_type irange;
+        
+        _sp_hybrid index_type get_index(const triplet_type& thr_idx, const triplet_type& blo_idx, const triplet_type& blo_dim, const triplet_type& grd_dim) const
+        {
+            index_type output;
+            output[0] = irange.lower + thr_idx.x + blo_idx.x*blo_dim.x;
+            return output;
+        }
+        
+        _sp_hybrid bool is_valid(const index_type& i) const
+        {
+            return (i[0] < irange.upper) && (i[0] >= irange.lower);
+        }
+    };
+    
+    template <grid::grid_index index_t, typename r_device_t>
+    static auto get_launch_params(const ranges::grid_idx_range_t<index_t, r_device_t>& range_in)
+    {
+        using range_t = ranges::grid_idx_range_t<index_t, r_device_t>;
         using index_type = typename range_t::index_type;
-        using triplet_type = kernel_params_t<index_type, range_t>::triplet_type;
+        using triplet_type = typename kernel_params_t<index_type, range_t>::triplet_type;
         
         
         int ni = range_in.upper.i() - range_in.lower.i();
@@ -78,5 +111,27 @@ namespace spade::dispatch
         if (range_in.upper.k() - range_in.lower.k() == 1) bsize.z = 1;
         
         return kernel_params_t<index_type, range_t>{gsize, bsize, range_in};
+    }
+    
+    template <typename index_t, typename r_device_t>
+    static auto get_launch_params(const ranges::linear_range_t<index_t, r_device_t>& range_in)
+    {
+        using range_t = ranges::linear_range_t<index_t, r_device_t>;
+        using index_type = typename range_t::index_type;
+        using triplet_type = typename kernel_params_t<index_t, range_t>::triplet_type;
+        
+        constexpr int blocksize = kernel_params_t<index_t, range_t>::blocksize;
+        
+        triplet_type gsize;
+        gsize.x =  1 + ((range_in.upper - range_in.lower - 1) / blocksize);
+        gsize.y =  1;
+        gsize.z =  1;
+        
+        triplet_type bsize;
+        bsize.x = blocksize;
+        bsize.y = 1;
+        bsize.z = 1;        
+        
+        return kernel_params_t<index_t, range_t>{gsize, bsize, range_in};
     }
 }

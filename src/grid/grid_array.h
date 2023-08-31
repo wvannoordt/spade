@@ -17,9 +17,12 @@
 #include "grid/grid.h"
 #include "grid/array_image.h"
 #include "core/mem_map.h"
+#include "core/vec_image.h"
 
 #include "dispatch/device_type.h"
 #include "dispatch/device_vector.h"
+#include "dispatch/execute.h"
+#include "dispatch/ranges/linear_range.h"
 
 
 namespace spade::grid
@@ -245,11 +248,18 @@ namespace spade::grid
         const const_image_type image() const { return {&data[0], mem_view}; }
         image_type             image()       { return {&data[0], mem_view}; }
 
+        //TODO: clean this up a little bit with more lambdas!
         template <multiblock_array rhs_t>
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator -= (const rhs_t& rhs)
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] -= rhs.data[i];
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            const auto rimg   = utils::make_vec_image(rhs.data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] -= rimg[i]; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
@@ -257,8 +267,13 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator += (const rhs_t& rhs)
         {
-            //Note: attempted to hand-optimize this, turns out the compiler will do just fine on its own.
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] += rhs.data[i];
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            const auto rimg   = utils::make_vec_image(rhs.data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] += rimg[i]; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
@@ -266,7 +281,13 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator *= (const rhs_t& rhs)
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs.data[i];
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            const auto rimg   = utils::make_vec_image(rhs.data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] *= rimg[i]; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
@@ -274,33 +295,48 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator /= (const rhs_t& rhs)
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs.data[i];
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            const auto rimg   = utils::make_vec_image(rhs.data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] /= rimg[i]; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
         template <typename numeric_t> grid_array& operator *= (const numeric_t& rhs)
         requires std::floating_point<numeric_t>
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] *= rhs;
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] *= rhs; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
         template <typename numeric_t> grid_array& operator /= (const numeric_t& rhs)
         requires std::floating_point<numeric_t>
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs;
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] /= rhs; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
         
-        grid_array& operator /= (const grid_array& rhs)
+        grid_array& operator = (const fundamental_type& rhs)
         {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] /= rhs.data[i];
-            return *this;
-        }
-        
-        grid_array& operator = (const fundamental_type& v)
-        {
-            for (std::size_t i = 0; i < data.size(); ++i) data[i] = v;
+            std::size_t i0 = 0;
+            std::size_t i1 = this->data.size();
+            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
+            auto vimg         = utils::make_vec_image(this->data);
+            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] = rhs; };
+            dispatch::execute(lrange, fnc);
             return *this;
         }
 

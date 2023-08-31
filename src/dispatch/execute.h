@@ -13,7 +13,8 @@ namespace spade::dispatch
         requires ((idx < 0) && ctrs::basic_array<index_t>)
         static void cpu_dispatch_impl(index_t& i, const bbx_type& bounds, kernel_t& kernel)
         {
-            kernel(i);
+            if constexpr (index_t::size() == 1) kernel(i[0]);
+            else                                kernel(i);
         }
         
         template <typename index_t, typename bbx_type, const int idx, typename kernel_t>
@@ -34,7 +35,14 @@ namespace spade::dispatch
             const auto i = mapping.get_index(threadIdx, blockIdx, blockDim, gridDim);
             if (mapping.is_valid(i))
             {
-                kern(i);
+                if constexpr (launch_params_t::range_type::index_type::size() == 1)
+                {
+                    kern(i[0]);
+                }
+                else
+                {
+                    kern(i);
+                }
             }
         }
 

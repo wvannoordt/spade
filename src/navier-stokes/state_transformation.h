@@ -17,9 +17,9 @@ namespace spade::fluid_state
             constexpr static grid::array_centering centr = array_t::centering_type();
             using native_t  = array_t::alias_type;
             using omni_type = omni::prefab::mono_t<centr, omni::info_list_t<omni::info::value>>;
-            const gas_t& gas;
+            const gas_t gas;
             mono_state_converstion_t(const gas_t& gas_in) : gas{gas_in} {}
-            native_t operator () (const auto& input) const
+            _sp_hybrid native_t operator () (const auto& input) const
             {
                 // This is the worst thing in the whole universe,
                 // if you're an employer and you are seeing this then please realize that
