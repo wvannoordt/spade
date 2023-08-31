@@ -69,12 +69,6 @@ namespace spade::grid
         grid_rect_copy_t patches;
         ctrs::array<int, 3> i_coeff, i_incr;
         
-        //i_incr[d] = 1 if donor is finer in direction d
-        //i_incr[d] = 0 otherwise
-        
-        //i_coeff[d] = 1 if donor is coarser in direction d
-        //i_coeff[d] = 0 otherwise
-        
         //NOTE: this type of exchange will "pack" the sending patch
         //into memory of the size expected to receive, hence the anomaly
         //in send_volume()
@@ -101,16 +95,6 @@ namespace spade::grid
             for (int di = 0; di < patches.dest.size(0); ++di){
                 //each cell in the output range
                 elem = 0.0;
-                // grid::cell_idx_t recvr;
-                // recvr.lb() = patches.dest.min(3);
-                // recvr.i() = patches.dest.min(0) + di;
-                // recvr.j() = patches.dest.min(1) + dj;
-                // recvr.k() = patches.dest.min(2) + dk;
-                
-                
-                // using t_t = spade::grid::cell_idx_t;
-                // bool debug = (recvr == t_t(-1, 0, 0, 40));
-                // if (debug) print("DEBUG");
                 algs::static_for<0,max_size>([&](const auto iii)
                 {
                     constexpr int iv = iii.value;
@@ -136,13 +120,9 @@ namespace spade::grid
                     idx.j()  = patches.source.min(1) + donor_dj;
                     idx.k()  = patches.source.min(2) + donor_dk;
                     
-                    // if (debug) print(idx);
-                    
                     elem += array.get_elem(idx);
                 });
-                // if (debug) print("i_incr",  i_incr);
-                // if (debug) print("i_coeff", i_coeff);
-                // if (debug) print("DONE");
+                
                 
                 
                 elem *= coeff;
