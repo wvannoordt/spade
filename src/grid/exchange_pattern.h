@@ -201,16 +201,16 @@ namespace spade::grid
                     
                     // Note that we add as both and the internal logic inside
                     // these calls will handle the rank checking
-                    // if (transaction.reducible())
-                    // {
-                        // output0.add_send(transaction.reduce());
-                        // output0.add_recv(transaction.reduce());
-                    // }
-                    // else
-                    // {
+                    if (transaction.reducible())
+                    {
+                        output0.add_send(transaction.reduce());
+                        output0.add_recv(transaction.reduce());
+                    }
+                    else
+                    {
                         output0.add_send(transaction);
                         output0.add_recv(transaction);
-                    // }
+                    }
                 }
             }
         }

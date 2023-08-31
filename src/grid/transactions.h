@@ -55,6 +55,9 @@ namespace spade::grid
             });
             return output;
         }
+        
+        bool reducible() const { return false; }
+        auto reduce() const { return *this; }
     };
     
     template <const std::size_t gdim>
@@ -64,9 +67,13 @@ namespace spade::grid
         constexpr static int max_size = static_math::pow<2, gdim>::value;
         
         grid_rect_copy_t patches;
-        ctrs::array<int, 3> i_skip;
-        ctrs::array<ctrs::array<int, 3>, max_size> delta_i;
-        int num_oslot;
+        ctrs::array<int, 3> i_coeff, i_incr;
+        
+        //i_incr[d] = 1 if donor is finer in direction d
+        //i_incr[d] = 0 otherwise
+        
+        //i_coeff[d] = 1 if donor is coarser in direction d
+        //i_coeff[d] = 0 otherwise
         
         //NOTE: this type of exchange will "pack" the sending patch
         //into memory of the size expected to receive, hence the anomaly
@@ -83,30 +90,64 @@ namespace spade::grid
             using element_type   = typename arr_t::alias_type;
             using f_val_t        = typename arr_t::fundamental_type;
             constexpr auto coeff = f_val_t(1.0)/max_size;
-            ctrs::array<element_type, max_size> oslot;
+            const int lb = patches.source.min(3);
             constexpr std::size_t elem_size = sizeof(element_type);
-            element_type elem;
-            char* raw_e_addr = (char*)&oslot;
+            element_type elem = 0.0;
+            char* rptr = (char*)(&elem);
+            
             std::size_t output = 0;
-            grid::cell_idx_t idx;
-            idx.lb() = patches.source.min(3);
-            for (idx.k() = patches.source.min(2); idx.k() < patches.source.max(2); idx.k() += i_skip[2]){
-            for (idx.j() = patches.source.min(1); idx.j() < patches.source.max(1); idx.j() += i_skip[1]){
-            for (idx.i() = patches.source.min(0); idx.i() < patches.source.max(0); idx.i() += i_skip[0]){
-                elem = f_val_t(0.0);
-                algs::static_for<0, max_size>([&](const auto& ii)
-                {
-                    constexpr int nn = ii.value;
-                    auto donor = idx;
-                    donor.i() += delta_i[nn][0];
-                    donor.j() += delta_i[nn][1];
-                    donor.k() += delta_i[nn][2];
-                    elem += array.get_elem(donor);
-                });
+            for (int dk = 0; dk < patches.dest.size(2); ++dk){
+            for (int dj = 0; dj < patches.dest.size(1); ++dj){
+            for (int di = 0; di < patches.dest.size(0); ++di){
+                //each cell in the output range
+                elem = 0.0;
+                // grid::cell_idx_t recvr;
+                // recvr.lb() = patches.dest.min(3);
+                // recvr.i() = patches.dest.min(0) + di;
+                // recvr.j() = patches.dest.min(1) + dj;
+                // recvr.k() = patches.dest.min(2) + dk;
                 
-                for (auto& k: oslot) k = coeff*elem;
-                std::copy(raw_e_addr, raw_e_addr + num_oslot*elem_size, buf + output);
-                output += num_oslot*elem_size;
+                
+                // using t_t = spade::grid::cell_idx_t;
+                // bool debug = (recvr == t_t(-1, 0, 0, 40));
+                // if (debug) print("DEBUG");
+                algs::static_for<0,max_size>([&](const auto iii)
+                {
+                    constexpr int iv = iii.value;
+                    constexpr int d0 = (iv >> 0)&1;
+                    constexpr int d1 = (iv >> 1)&1;
+                    constexpr int d2 = (iv >> 2)&1;
+                    
+                    int i0 = di<<(i_coeff[0]+1);
+                    int j0 = dj<<(i_coeff[1]+1);
+                    int k0 = dk<<(i_coeff[2]+1);
+                    i0 = i0 >> 1;
+                    j0 = j0 >> 1;
+                    k0 = k0 >> 1;
+                    
+                    
+                    const int donor_di = i0 + d0*i_incr[0];
+                    const int donor_dj = j0 + d1*i_incr[1];
+                    const int donor_dk = k0 + d2*i_incr[2];
+                    
+                    grid::cell_idx_t idx;
+                    idx.lb() = lb;
+                    idx.i()  = patches.source.min(0) + donor_di;
+                    idx.j()  = patches.source.min(1) + donor_dj;
+                    idx.k()  = patches.source.min(2) + donor_dk;
+                    
+                    // if (debug) print(idx);
+                    
+                    elem += array.get_elem(idx);
+                });
+                // if (debug) print("i_incr",  i_incr);
+                // if (debug) print("i_coeff", i_coeff);
+                // if (debug) print("DONE");
+                
+                
+                elem *= coeff;
+                std::copy(rptr, rptr+elem_size, buf + output);
+                output += elem_size;
             }}}
             return output;
         }
@@ -114,7 +155,24 @@ namespace spade::grid
         template <typename arr_t>
         _finline_ std::size_t extract(arr_t& array, const char* buf) const
         {
-            return patches.extract(array, buf);
+            std::size_t output = patches.extract(array, buf);
+            return output;
         }
+        
+        bool reducible() const
+        {
+            bool output = true;
+            for (const auto p: i_coeff)
+            {
+                output = output && (p == 0);
+            }
+            for (const auto p: i_incr)
+            {
+                output = output && (p == 0);
+            } 
+            return output;
+        }
+        auto reduce() const { return patches; }
+        
     };
 }

@@ -18,7 +18,7 @@ namespace spade::grid
         
         output.rank_send = grid.get_partition().get_rank(lb_ini);
         output.rank_recv = grid.get_partition().get_rank(lb_term);
-        
+
         output.source.min(3) = grid.get_partition().to_local(lb_ini).value;
         output.source.max(3) = output.source.min(3)+1;
         output.dest.min(3)   = grid.get_partition().to_local(lb_term).value;
@@ -76,8 +76,10 @@ namespace spade::grid
         patch_fill_t<grid_t::dim()> output;
         neighbor_relation_t base_relation;
         base_relation.edge = -1*relation.edge;
+        if constexpr (grid_t::dim() == 2) base_relation.edge[2] = 0;
         base_relation.lb_ini  = relation.endpoint.get().tag;
         base_relation.lb_term = lb_ini;
+        
         
         
         //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
@@ -88,9 +90,8 @@ namespace spade::grid
         auto& self  = relation.endpoint.get();
         auto& neigh = grid.get_blocks().enumerated_nodes[lb_ini].get();
         
-        output.num_oslot = 1;
-        output.i_skip = 1;
-        output.delta_i = 0;
+        output.i_coeff = 0;
+        output.i_incr  = 0;
         for (int d = 0; d < grid_t::dim(); ++d)
         {
             int level_diff = self.level[d] - neigh.level[d];
@@ -107,8 +108,7 @@ namespace spade::grid
             {
                 case -1: // neighbor is finer, I am coarser in this direction
                 {
-                    output.num_oslot *= 2;
-                    
+                    output.i_coeff[d] = -1;
                     // Neighbor is finer, so I only need half the range in this
                     // direction
                     switch(base_relation.edge[d])
@@ -143,13 +143,8 @@ namespace spade::grid
                 }
                 case  1: // neighbor is coarser, I am finer in this direction
                 {
-                    output.i_skip[d] = 2;
-                    for (int c = 0; c < output.max_size; ++c)
-                    {
-                        auto& delta_i_loc = output.delta_i[c];
-                        delta_i_loc[d] = (c>>d) & 1;
-                    }
-                    
+                    output.i_incr[d] = 1;
+                    output.i_coeff[d] = 1;
                     switch(base_relation.edge[d])
                     {
                         // neighbor is coarser, so send twice the data
@@ -186,23 +181,21 @@ namespace spade::grid
             }
         }
         
-        // Leave this here for a bit!
-        // bool DEBUG = neigh.UCONTAIN({0.1, 0.4}) && self.UCONTAIN({0.05, 0.2});
-        // if (neigh.UCONTAIN({0.1, 0.4}) && self.UCONTAIN({0.05, 0.2}))
+        // bool aa = (base_relation.lb_ini == 10) && (base_relation.lb_term == 21);
+        // bool bb = (base_relation.lb_ini == 21) && (base_relation.lb_term == 10);
+        // if (aa || bb)
         // {
-        //     print("======= begin debug");
-        //     print(self.ubox(), neigh.ubox());
-        //     print("level diff (self - neigh):", self.level - neigh.level);
-        //     print("index table:");
-        //     for (auto& p: output.delta_i) print(p);
-        //     print("idx skip:", output.i_skip);
-        //     print("num slot:", output.num_oslot);
-        //     print("SOURCE");
-        //     print(output.patches.source);
-        //     print("DEST");
-        //     print(output.patches.dest);
-        //     print("======= end debug");
-        //     std::cin.get();
+        //     print("found");
+        //     print("SENDER", grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_ini)));
+        //     print("RECVER", grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_term)));
+        //     print(base_relation.lb_ini, base_relation.lb_term);
+        //     print(base_relation.edge);
+        //     print("source --> ", ptch.source);
+        //     print("dest   --> ", ptch.dest);
+        //     print("num_oslot", output.num_oslot);
+        //     print("i_skip", output.i_skip);
+        //     print("delta_i", output.delta_i);
+        //     if (aa) std::cin.get();
         // }
         
         return output;
