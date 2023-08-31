@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/cuda_incl.h"
 #include "omni/omni.h"
 
 namespace spade::fluid_state
