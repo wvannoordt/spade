@@ -197,27 +197,31 @@ namespace spade::ctrs
         template <integral_type idx_t> _sp_hybrid const dtype& operator[] (const idx_t& idx) const noexcept { return data[idx]; }
         template <integral_type idx_t> _sp_hybrid       dtype& operator[] (const idx_t& idx)       noexcept { return data[idx]; }
         
-        template <basic_array arr_t> self_type& operator += (const arr_t& rhs)
+        template <basic_array arr_t>
+        _sp_hybrid self_type& operator += (const arr_t& rhs)
         {
             for (index_type i = 0; i < this->size(); i++) data[i] += rhs[i];
             return self();
         }
         
-        template <typename rhs_t> auto operator + (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
+        template <typename rhs_t>
+        _sp_hybrid auto operator + (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
             return output;
         }
         
-        template <typename rhs_t> auto operator - (const arithmetic_array_t<rhs_t, ar_size>& rhs) const
+        template <typename rhs_t>
+        _sp_hybrid auto operator - (const arithmetic_array_t<rhs_t, ar_size>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
             return output;
         }
         
-        template <basic_array arr_t> self_type& operator -= (const arr_t& rhs)
+        template <basic_array arr_t>
+        _sp_hybrid self_type& operator -= (const arr_t& rhs)
         {
             for (index_type i = 0; i < this->size(); i++) data[i] -= rhs[i];
             return self();

@@ -19,14 +19,14 @@ namespace spade::omni
         using stencil_type        = interpret_t; // used for any further (deeper) aliases
         using native_stencil_type = typename input_t::stencil_type;
         const input_t& native;
-        stencil_alias_t(const input_t& native_in) : native{native_in}{}
+        _sp_hybrid stencil_alias_t(const input_t& native_in) : native{native_in}{}
 
-        auto& root() {return native.root();}
-        const auto& root() const {return native.root();}
+        _sp_hybrid auto& root() {return native.root();}
+        _sp_hybrid const auto& root() const {return native.root();}
 
         //const qualified
         template <const grid::array_centering ctr, udci::integral_t ii>
-        const auto& seek_element(const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid const auto& seek_element(const udci::idx_const_t<ii>& idx) const
         {
             // strategy: generate as much heat as possible during compilation so the
             // data center doesn't get too cold
@@ -37,7 +37,7 @@ namespace spade::omni
         
         //not const qualified
         template <const grid::array_centering ctr, udci::integral_t ii>
-        auto& seek_element(const udci::idx_const_t<ii>& idx)
+        _sp_hybrid auto& seek_element(const udci::idx_const_t<ii>& idx)
         {
             using offset_type     = offset_at<interpret_t, ctr, ii>;
             constexpr int trans_i = index_of<native_stencil_type, offset_type>;
@@ -47,28 +47,28 @@ namespace spade::omni
         //const qualified
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_cell())
-        constexpr const auto& cell(const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid constexpr const auto& cell(const udci::idx_const_t<ii>& idx) const
         {
             return seek_element<grid::cell_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_face())
-        constexpr const auto& face(const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid constexpr const auto& face(const udci::idx_const_t<ii>& idx) const
         {
             return seek_element<grid::face_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_node())
-        constexpr const auto& node(const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid constexpr const auto& node(const udci::idx_const_t<ii>& idx) const
         {
             return seek_element<grid::node_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_edge())
-        constexpr const auto& edge(const udci::idx_const_t<ii>& idx) const
+        _sp_hybrid constexpr const auto& edge(const udci::idx_const_t<ii>& idx) const
         {
             return seek_element<grid::edge_centered>(idx);
         }
@@ -76,28 +76,28 @@ namespace spade::omni
         //not const qualified
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_cell())
-        constexpr auto& cell(const udci::idx_const_t<ii>& idx)
+        _sp_hybrid constexpr auto& cell(const udci::idx_const_t<ii>& idx)
         {
             return seek_element<grid::cell_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_face())
-        constexpr auto& face(const udci::idx_const_t<ii>& idx)
+        _sp_hybrid constexpr auto& face(const udci::idx_const_t<ii>& idx)
         {
             return seek_element<grid::face_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_node())
-        constexpr auto& node(const udci::idx_const_t<ii>& idx)
+        _sp_hybrid constexpr auto& node(const udci::idx_const_t<ii>& idx)
         {
             return seek_element<grid::node_centered>(idx);
         }
         
         template <udci::integral_t ii>
         requires (ii < interpret_t::num_edge())
-        constexpr auto& edge(const udci::idx_const_t<ii>& idx)
+        _sp_hybrid constexpr auto& edge(const udci::idx_const_t<ii>& idx)
         {
             return seek_element<grid::edge_centered>(idx);
         }
@@ -105,14 +105,14 @@ namespace spade::omni
     };
 
     template <typename interpret_t, typename input_t>
-    auto interpret_stencil(const input_t& input)
+    _sp_hybrid auto interpret_stencil(const input_t& input)
     {
         return stencil_alias_t<interpret_t, input_t>(input);
     }
 
     template <typename interpret_t, typename input_t>
     requires (std::same_as<typename input_t::stencil_type, interpret_t>)
-    auto interpret_stencil(const input_t& input)
+    _sp_hybrid auto interpret_stencil(const input_t& input)
     {
         return input;
     }

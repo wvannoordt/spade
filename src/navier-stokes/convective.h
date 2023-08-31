@@ -70,11 +70,11 @@ namespace spade::convective
         using faces_t       = omni::prefab::face_mono_t<omni::info_list_t<omni::info::metric>>;
         using omni_type     = omni::stencil_union<cells_t, faces_t>;
         
-        const gas_t& gas;
+        const gas_t gas;
         
         cent_keep_scheme_t(const gas_t& gas_in) : gas{gas_in}{}
         
-        output_type operator() (const auto& input_data) const
+        _sp_hybrid output_type operator() (const auto& input_data) const
         {
             output_type output;
             const auto nface = omni::access<omni::info::metric>(input_data.face(0_c));

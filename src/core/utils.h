@@ -50,13 +50,13 @@ namespace spade::utils
     }
     
     template <class invokable_t, class param_t>
-    static void foreach_param(const invokable_t& func, const param_t& param)
+    _sp_hybrid static void foreach_param(const invokable_t& func, const param_t& param)
     {
         func(param);
     }
     
     template <class invokable_t, class param_t, class... params_t>
-    static void foreach_param(const invokable_t& func, const param_t& param, const params_t&... params)
+    _sp_hybrid static void foreach_param(const invokable_t& func, const param_t& param, const params_t&... params)
     {
         func(param);
         foreach_param(func, params...);

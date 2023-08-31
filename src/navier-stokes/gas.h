@@ -16,17 +16,17 @@ namespace spade::fluid_state
     template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct gas_interface_t
     {
-        derived_t&       self()       {return *static_cast<      derived_t*>(this);}
-        const derived_t& self() const {return *static_cast<const derived_t*>(this);}
+        _sp_hybrid derived_t&       self()       {return *static_cast<      derived_t*>(this);}
+        _sp_hybrid const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
         using info_type = ilist_t;
 
-        auto get_R    (const auto& input) const
+        _sp_hybrid auto get_R    (const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_R    (args...);}, input);
         }
 
-        auto get_gamma(const auto& input) const
+        _sp_hybrid auto get_gamma(const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_gamma(args...);}, input);
         }
@@ -42,9 +42,9 @@ namespace spade::fluid_state
 
         typedef dtype value_type;
         dtype R, gamma;
-        ideal_gas_t(){}
-        ideal_gas_t(const dtype& gamma_in, const dtype& R_in) : gamma{gamma_in}, R{R_in} {}
-        dtype get_R    () const {return this->R;}
-        dtype get_gamma() const {return this->gamma;}
+        _sp_hybrid ideal_gas_t(){}
+        _sp_hybrid ideal_gas_t(const dtype& gamma_in, const dtype& R_in) : gamma{gamma_in}, R{R_in} {}
+        _sp_hybrid dtype get_R    () const {return this->R;}
+        _sp_hybrid dtype get_gamma() const {return this->gamma;}
     };
 }
