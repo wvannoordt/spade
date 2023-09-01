@@ -123,8 +123,6 @@ namespace spade::grid
                     elem += array.get_elem(idx);
                 });
                 
-                
-                
                 elem *= coeff;
                 std::copy(rptr, rptr+elem_size, buf + output);
                 output += elem_size;

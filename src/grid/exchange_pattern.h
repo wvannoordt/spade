@@ -197,10 +197,45 @@ namespace spade::grid
                 dispatch::execute(snds, l0, device::cpu);
                 dispatch::execute(recv, l1, device::cpu);
             }
-            
             for (const auto& intp: interp)
             {
-                
+                const auto& recvs = intp.patches.dest;
+                const auto l0 = [&](const auto& arr_i)
+                {
+                    grid::cell_idx_t gidx(arr_i[0], arr_i[1], arr_i[2], arr_i[3]);
+                    int di = gidx.i() - intp.patches.dest.min(0);
+                    int dj = gidx.j() - intp.patches.dest.min(1);
+                    int dk = gidx.k() - intp.patches.dest.min(2);
+                    algs::static_for<0,intp.max_size>([&](const auto iii)
+                    {
+                        constexpr int iv = iii.value;
+                        constexpr int d0 = (iv >> 0)&1;
+                        constexpr int d1 = (iv >> 1)&1;
+                        constexpr int d2 = (iv >> 2)&1;
+                        
+                        int i0 = di<<(intp.i_coeff[0]+1);
+                        int j0 = dj<<(intp.i_coeff[1]+1);
+                        int k0 = dk<<(intp.i_coeff[2]+1);
+                        i0 = i0 >> 1;
+                        j0 = j0 >> 1;
+                        k0 = k0 >> 1;
+                        
+                        
+                        const int donor_di = i0 + d0*intp.i_incr[0];
+                        const int donor_dj = j0 + d1*intp.i_incr[1];
+                        const int donor_dk = k0 + d2*intp.i_incr[2];
+                        
+                        grid::cell_idx_t donor_idx;
+                        donor_idx.lb() = intp.patches.source.min(3);
+                        donor_idx.i()  = intp.patches.source.min(0) + donor_di;
+                        donor_idx.j()  = intp.patches.source.min(1) + donor_dj;
+                        donor_idx.k()  = intp.patches.source.min(2) + donor_dk;
+                        device_exch.int_sends.push_back(get_base_offst(donor_idx));
+                    });
+                    const auto loc_oft = get_base_offst(gidx);
+                    device_exch.int_recvs.push_back(loc_oft);
+                };
+                dispatch::execute(recvs, l0, device::cpu);
             }
             
             device_exch.inj_sends.transfer();
@@ -228,7 +263,6 @@ namespace spade::grid
             return handle_sentinel_t{array, config, handle};
         }
         
-        /*
         template <typename arr_t>
         requires device::is_cpu<typename arr_t::device_type>
         void exchange(arr_t& array)
@@ -236,10 +270,9 @@ namespace spade::grid
             auto handle = this->async_exchange(array);
             handle.await();
         }
-        */
         
         template <typename arr_t>
-        // requires device::is_gpu<typename arr_t::device_type>
+        requires device::is_gpu<typename arr_t::device_type>
         void exchange(arr_t& array)
         {
             if (!device_exch.configd)
@@ -299,12 +332,12 @@ namespace spade::grid
                     arr_raw_vec[i_int_r[idx] + v*voffst] = data_t(0);
                     for (std::size_t id = 0; id < ndonor; ++id)
                     {
-                        arr_raw_vec[i_int_r[idx] + v*voffst] += coeff*arr_raw_vec[ndonor*i_int_s[idx] + id + v*voffst];
+                        arr_raw_vec[i_int_r[idx] + v*voffst] += coeff*arr_raw_vec[i_int_s[id + ndonor*idx] + v*voffst];
                     }
                 }
             };
             
-            // dispatch::execute(interpolations, int_load);
+            dispatch::execute(interpolations, int_load);
             dispatch::execute(injections,     inj_load);
         }
     };
