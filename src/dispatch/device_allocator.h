@@ -29,8 +29,10 @@ namespace spade::device
         {
             if (n > max_alloc_size) throw mem_exception("attempted to allocate too much device memory (" + std::to_string(n*sizeof(data_t)) + " bytes)");
             data_t* output = nullptr;
+            if (n==0) return output;
             std::string err_string = "attempted to allocate device memory without device support";
 #if(_sp_cuda)
+            
             auto er_code = cudaMalloc(&output, n*sizeof(data_t));
             if (er_code == cudaSuccess && output != nullptr)
             {
@@ -46,7 +48,7 @@ namespace spade::device
         {
 #if(_sp_cuda)
             --count;
-            auto er_code = cudaFree((void*)p);
+            auto er_code = cudaFree(p);
             
             //Done to avoid annoying compiler warning.
             p = nullptr;

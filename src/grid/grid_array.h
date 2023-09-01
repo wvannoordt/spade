@@ -194,6 +194,7 @@ namespace spade::grid
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
         using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
         using device_type         = device_t;
+        using var_idx_t           = ctrs::array<int,variable_map_type::rank()>;
         
         using image_type           = array_image_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
         using const_image_type     = array_image_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
@@ -205,6 +206,8 @@ namespace spade::grid
         static_assert(!(device::is_gpu<device_t> && !_sp_cuda), "attempted to declare GPU array without GPU support");
         
         device_t device() const { return device_t(); }
+        
+        fundamental_type* get_base() { return &data[0]; }
         
         const auto& var_map() const
         {

@@ -49,13 +49,17 @@ namespace spade::dispatch
 #endif
     }
     
-    template <typename range_t, typename kernel_t>
-    static void execute(const range_t& range, kernel_t& kernel)
+    template <typename range_t, typename kernel_t, typename device_t>
+    static void execute(const range_t& range, kernel_t& kernel, const device_t& device)
     {
         using loop_index_type = typename range_t::index_type;
-        const auto bound_box  = range.idx_bound_box();
+        const auto bound_box  = [&]()
+        {
+            if constexpr (requires {range.idx_bound_box();}) return range.idx_bound_box();
+            else return range;
+        }();
         using bound_type = utils::remove_all<decltype(bound_box)>::type;
-        if constexpr (device::is_cpu<typename range_t::device_t>)
+        if constexpr (device::is_cpu<device_t>)
         {
             //CPU dispatch
             loop_index_type i;
@@ -86,8 +90,14 @@ namespace spade::dispatch
             {
                 throw except::sp_exception("Error after kernel call: " + er_str);
             }
-            //Do stuff
 #endif
         }
+    }
+    
+    template <typename range_t, typename kernel_t>
+    requires (device::is_cpu<typename range_t::device_t> || device::is_gpu<typename range_t::device_t>)
+    static void execute(const range_t& range, kernel_t& kernel)
+    {
+        execute(range, kernel, range.device());
     }
 }

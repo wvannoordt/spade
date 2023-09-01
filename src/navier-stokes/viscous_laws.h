@@ -29,22 +29,22 @@ namespace spade::viscous_laws
     template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct visc_law_interface_t
     {
-        derived_t&       self()       {return *static_cast<      derived_t*>(this);}
-        const derived_t& self() const {return *static_cast<const derived_t*>(this);}
+        _sp_hybrid derived_t&       self()       {return *static_cast<      derived_t*>(this);}
+        _sp_hybrid const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
         using info_type  = ilist_t;
 
-        auto get_visc        (const auto& input) const
+        _sp_hybrid auto get_visc        (const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_visc        (args...);}, input);
         }
 
-        auto get_beta        (const auto& input) const
+        _sp_hybrid auto get_beta        (const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_beta        (args...);}, input);
         }
 
-        auto get_diffuse(const auto& input) const
+        _sp_hybrid auto get_diffuse(const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_diffuse(args...);}, input);
         }
@@ -64,17 +64,17 @@ namespace spade::viscous_laws
         : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl{prandtl_in}
         { }
         
-        dtype get_visc() const
+        _sp_hybrid dtype get_visc() const
         {
             return visc;
         }
         
-        dtype get_beta() const
+        _sp_hybrid dtype get_beta() const
         {
             return beta;
         }
         
-        dtype get_diffuse() const
+        _sp_hybrid dtype get_diffuse() const
         {
             return visc/prandtl;
         }

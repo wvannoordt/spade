@@ -28,7 +28,7 @@ namespace spade::dispatch
         using index_type   = idx_t;
         using triplet_type = d3_t;
         
-        constexpr static int blocksize = 8;
+        constexpr static int blocksize = 4;
         triplet_type grid_size;
         triplet_type block_size;
         range_type irange;

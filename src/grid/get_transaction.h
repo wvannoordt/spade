@@ -181,23 +181,6 @@ namespace spade::grid
             }
         }
         
-        // bool aa = (base_relation.lb_ini == 10) && (base_relation.lb_term == 21);
-        // bool bb = (base_relation.lb_ini == 21) && (base_relation.lb_term == 10);
-        // if (aa || bb)
-        // {
-        //     print("found");
-        //     print("SENDER", grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_ini)));
-        //     print("RECVER", grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_term)));
-        //     print(base_relation.lb_ini, base_relation.lb_term);
-        //     print(base_relation.edge);
-        //     print("source --> ", ptch.source);
-        //     print("dest   --> ", ptch.dest);
-        //     print("num_oslot", output.num_oslot);
-        //     print("i_skip", output.i_skip);
-        //     print("delta_i", output.delta_i);
-        //     if (aa) std::cin.get();
-        // }
-        
         return output;
     };
 }

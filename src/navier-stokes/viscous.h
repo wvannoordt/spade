@@ -21,7 +21,7 @@ namespace spade::viscous
         
         visc_lr(const vlaw_t& vlaw_in, const gas_model_t& gas_in) : vlaw{vlaw_in}, gas{gas_in} {}
         
-        output_type operator() (const auto& input) const
+        _sp_hybrid output_type operator() (const auto& input) const
         {
             // don't forget the negative signs
             output_type output;
@@ -63,7 +63,7 @@ namespace spade::viscous
             return output;
         }
         
-        const vlaw_t& vlaw;
-        const gas_model_t& gas;
+        const vlaw_t vlaw;
+        const gas_model_t gas;
     };
 }

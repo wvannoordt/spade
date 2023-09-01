@@ -12,6 +12,7 @@ namespace spade::utils
         std::size_t csize;
         _sp_hybrid std::size_t size() const { return csize; }
         _sp_hybrid data_t& operator [] (const std::size_t& idx) { return ptr[idx]; }
+        _sp_hybrid const data_t& operator [] (const std::size_t& idx) const { return ptr[idx]; }
     };
     
     template <typename data_t>

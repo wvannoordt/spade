@@ -192,9 +192,7 @@ namespace spade::pde_algs
                     // accum += flux_func(flux_data);
                     
                     accum += flux_func(data);
-                    
                     accum *= jac*(real_type(1.0)-real_type(2.0)*pm)*inv_dx;
-                    
                     relem += accum;
                 });
             });

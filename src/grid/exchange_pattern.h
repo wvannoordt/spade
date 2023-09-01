@@ -144,11 +144,71 @@ namespace spade::grid
         }
     };
     
+    template <typename grid_t>
+    struct gpu_exch_t
+    {
+        constexpr static int interp_size = static_math::pow<2, grid_t::dim()>::value;
+        device::shared_vector<std::size_t> inj_sends;
+        device::shared_vector<std::size_t> inj_recvs;
+        device::shared_vector<std::size_t> int_sends;
+        device::shared_vector<std::size_t> int_recvs;
+        bool configd = false;
+    };
+    
     template <typename grid_t, typename par_group_t>
     struct array_exchange_t
     {
         grid_exchange_config_t<grid_t> config;
         exchange_handle_t<par_group_t> handle;
+        gpu_exch_t<grid_t>             device_exch;
+        
+        array_exchange_t(const grid_exchange_config_t<grid_t>& cfgin, const exchange_handle_t<par_group_t>& hdlin)
+        : config{cfgin}, handle{hdlin} {}
+        
+        template <typename arr_t>
+        void config_gpu_exch(const arr_t& arr)
+        {
+            typename arr_t::var_idx_t i0 = 0;
+            
+            const auto aimg = arr.image();
+            
+            const auto get_base_offst = [&](const grid::cell_idx_t& icell)
+            {
+                return aimg.map.compute_offset(i0, icell);
+            };
+            
+            const auto& injecs = config.send_data.data;
+            const auto& interp = config.send_data.sub.data;
+            for (const auto& injc: injecs)
+            {
+                const auto& snds = injc.source;
+                const auto& recv = injc.dest;
+                
+                const auto l0 = [&](const auto& arr_i)
+                {
+                    const auto loc_oft = get_base_offst(grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
+                    device_exch.inj_sends.push_back(loc_oft);
+                };
+                const auto l1 = [&](const auto& arr_i)
+                {
+                    const auto loc_oft = get_base_offst(grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
+                    device_exch.inj_recvs.push_back(loc_oft);
+                };
+                dispatch::execute(snds, l0, device::cpu);
+                dispatch::execute(recv, l1, device::cpu);
+            }
+            
+            for (const auto& intp: interp)
+            {
+                
+            }
+            
+            device_exch.inj_sends.transfer();
+            device_exch.inj_recvs.transfer();
+            device_exch.int_sends.transfer();
+            device_exch.int_recvs.transfer();
+            device_exch.configd = true;
+        }
         
         template <typename arr_t>
         [[nodiscard("exchange sentinel must be used to complete exchange")]]
@@ -168,11 +228,84 @@ namespace spade::grid
             return handle_sentinel_t{array, config, handle};
         }
         
+        /*
         template <typename arr_t>
+        requires device::is_cpu<typename arr_t::device_type>
         void exchange(arr_t& array)
         {
             auto handle = this->async_exchange(array);
             handle.await();
+        }
+        */
+        
+        template <typename arr_t>
+        // requires device::is_gpu<typename arr_t::device_type>
+        void exchange(arr_t& array)
+        {
+            if (!device_exch.configd)
+            {
+                config_gpu_exch(array);
+                device_exch.configd = true;
+            }
+            using data_t = typename arr_t::fundamental_type;
+            using alias_t = typename arr_t::alias_type;
+            auto arr_raw_vec = utils::make_vec_image(array.data);
+            cell_idx_t root_idx(0,0,0,0);
+            
+            auto img = array.image();
+            
+            constexpr std::size_t nv = [&]()
+            {
+                if constexpr (ctrs::basic_array<alias_t>) return alias_t::size();
+                else                                      return 1;
+            }();
+            
+            const std::size_t voffst = [&]()
+            {
+                if constexpr (ctrs::basic_array<alias_t>) return img.map.compute_offset(1,root_idx) - img.map.compute_offset(0,root_idx);
+                else                                      return 0;
+            }();
+            
+            const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.devc_data);
+            const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.devc_data);
+            const auto i_int_s = utils::make_vec_image(device_exch.int_sends.devc_data);
+            const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.devc_data);
+            
+            dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.devc_data.size(), array.device());
+            dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.devc_data.size(), array.device());
+            
+            // const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.host_data);
+            // const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.host_data);
+            // const auto i_int_s = utils::make_vec_image(device_exch.int_sends.host_data);
+            // const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.host_data);
+            
+            // dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.host_data.size(), array.device());
+            // dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.host_data.size(), array.device());
+            
+            auto inj_load = _sp_lambda (const std::size_t& idx) mutable
+            {
+                for (std::size_t v = 0; v < nv; ++v)
+                {
+                    arr_raw_vec[i_inj_r[idx] + v*voffst] = arr_raw_vec[i_inj_s[idx] + v*voffst];
+                }
+            };
+            
+            const int ndonor = device_exch.interp_size;
+            const data_t coeff = data_t(1.0)/ndonor;
+            auto int_load = _sp_lambda (const std::size_t& idx) mutable
+            {
+                for (std::size_t v = 0; v < nv; ++v)
+                {
+                    arr_raw_vec[i_int_r[idx] + v*voffst] = data_t(0);
+                    for (std::size_t id = 0; id < ndonor; ++id)
+                    {
+                        arr_raw_vec[i_int_r[idx] + v*voffst] += coeff*arr_raw_vec[ndonor*i_int_s[idx] + id + v*voffst];
+                    }
+                }
+            };
+            
+            // dispatch::execute(interpolations, int_load);
+            dispatch::execute(injections,     inj_load);
         }
     };
     
@@ -215,6 +348,6 @@ namespace spade::grid
             }
         }
         
-        return array_exchange_t{output0, output1};
+        return array_exchange_t(output0, output1);
     }
 }
