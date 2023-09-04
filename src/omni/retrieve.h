@@ -14,7 +14,6 @@ namespace spade::omni
     template <typename info_t, typename grid_view_t, typename array_t, typename index_t, typename direction_t, typename data_t>
     _sp_hybrid void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
     {
-        
         info_t::compute(grid, array, index, data);
     }
 

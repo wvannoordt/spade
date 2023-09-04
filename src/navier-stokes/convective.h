@@ -49,8 +49,6 @@ namespace spade::convective
             output.z_momentum() = float_t(0.5)*c*(ql.w()+qr.w()) + float_t(0.5)*(normal_l[2]*ql.p()+normal_r[2]*qr.p());
             return output;
         }
-        
-        
     };
     
     template <typename gas_t, const int order>
@@ -158,8 +156,8 @@ namespace spade::convective
         using sup_omni_type = omni::prefab::lr_t<omni::info_list_t<omni::info::value, omni::info::metric>>;
         using omni_type     = omni::stencil_union<sub_omni_type, sup_omni_type>;
 
-        const gas_t&   gas;
-        const scale_t& scale;
+        const gas_t   gas;
+        const scale_t scale;
         dtype eps_p, eps_T;
         
         pressure_diss_lr(const gas_t& gas_in, const scale_t& scale_in, const dtype& eps_p_in)
@@ -168,7 +166,7 @@ namespace spade::convective
         pressure_diss_lr(const gas_t& gas_in, const scale_t& scale_in, const dtype& eps_p_in, const dtype& eps_T_in)
         : gas{gas_in}, scale{scale_in}, eps_p{eps_p_in}, eps_T{eps_T_in} {}
         
-        output_type operator() (const auto& input) const
+        _sp_hybrid output_type operator() (const auto& input) const
         {
             output_type output;
             const auto& ql       = omni::access<omni::info::value >(input.cell(0_c));
@@ -225,14 +223,14 @@ namespace spade::convective
                 omni::elem_t<omni::offset_t< 3, 0, 0>, info_type>
             >;
 
-        const flux_func_t& flux_func;
+        const flux_func_t flux_func;
         
         weno_t(const flux_func_t& flux_func_in)
         : flux_func{flux_func_in} {}
         
-        output_type operator()(const auto& input) const
+        _sp_hybrid output_type operator()(const auto& input) const
         {
-            fluid_state::flux_t<float_t> output = 0.0;
+            fluid_state::flux_t<float_t> output;
             auto fp0 = flux_func(input.cell(0_c));
             auto fp1 = flux_func(input.cell(1_c));
             auto fp2 = flux_func(input.cell(2_c));

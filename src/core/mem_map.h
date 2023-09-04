@@ -6,6 +6,7 @@
 #include "core/aliases.h" 
 #include "core/static_for.h"
 #include "core/cuda_incl.h"
+#include "core/permute.h"
 
 namespace spade::mem_map
 {
@@ -271,6 +272,20 @@ namespace spade::mem_map
                 i_coeff[i] = 1;
                 for (int j = 0; j < i; ++j) i_coeff[i] *= sizes[j];
             }
+            permute_tile_coeffs();
+        }
+        
+        void compute_coeffs(const ctrs::array<int, map_t::num_coeffs()> permutation)
+        {
+            auto sizes = mmap.get_extent_array();
+            sizes = utils::permute(sizes, permutation);
+            
+            for (int i = 0; i < i_coeff.size(); ++i)
+            {
+                i_coeff[i] = 1;
+                for (int j = 0; j < i; ++j) i_coeff[i] *= sizes[j];
+            }
+            i_coeff = utils::ipermute(i_coeff, permutation);
             permute_tile_coeffs();
         }
         

@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "core/config.h"
-#include "core/config.h"
+#include "core/utils.h"
 #include "core/print.h"
 #include "core/mpi_flags.h"
 #include "core/aliases.h"
@@ -122,6 +122,15 @@ namespace spade::parallel
                 data_t sumval = data_t();
                 for (const auto& e: data) sumval += e;
                 return this->sum(sumval);
+            }
+            
+            template <typename... data_t> auto min(data_t... datas) const
+            {
+                auto min_loc = utils::min(datas...);
+                decltype(min_loc) min_glob;
+                auto dtype = get_data_type(min_loc);
+                MPI_CHECK(MPI_Allreduce(&min_loc, &min_glob, 1, dtype, MPI_MIN, this->channel));
+                return min_glob;
             }
             
             template <typename data_t> void append_root(aliases::vector<data_t>& root_result, const data_t& local_data) const

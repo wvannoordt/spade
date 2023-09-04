@@ -62,27 +62,37 @@ namespace spade::utils
         foreach_param(func, params...);
     }
     
-    template <typename tp1_t, typename tp2_t> constexpr static auto max(const tp1_t& t1, const tp2_t& t2)
+    template <typename tp1_t> _sp_hybrid constexpr static auto max(const tp1_t& t1)
+    {
+        return t1;
+    }
+    
+    template <typename tp1_t, typename tp2_t> _sp_hybrid constexpr static auto max(const tp1_t& t1, const tp2_t& t2)
     {
         return t1<t2?t2:t1;
     }
     
-    template <typename tp_t, typename... tps_t> constexpr static auto max(const tp_t& t, const tps_t&... ts)
+    template <typename tp_t, typename... tps_t> _sp_hybrid constexpr static auto max(const tp_t& t, const tps_t&... ts)
     {
         return max(t, max(ts...));
     }
     
-    template <typename tp1_t, typename tp2_t> constexpr static auto min(const tp1_t& t1, const tp2_t& t2)
+    template <typename tp1_t> _sp_hybrid constexpr static auto min(const tp1_t& t1)
+    {
+        return t1;
+    }
+    
+    template <typename tp1_t, typename tp2_t> _sp_hybrid constexpr static auto min(const tp1_t& t1, const tp2_t& t2)
     {
         return t1<t2?t1:t2;
     }
     
-    template <typename tp_t, typename... tps_t> constexpr static auto min(const tp_t& t, const tps_t&... ts)
+    template <typename tp_t, typename... tps_t> _sp_hybrid constexpr static auto min(const tp_t& t, const tps_t&... ts)
     {
         return min(t, min(ts...));
     }
     
-    template <typename rtype> constexpr static auto abs(const rtype& val)
+    template <typename rtype> _sp_hybrid constexpr static auto abs(const rtype& val)
     {
         return val<0?-val:val;
     }

@@ -7,12 +7,12 @@ namespace spade::state_sensor
     template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct sensor_interface_t
     {
-        derived_t&       self()       {return *static_cast<      derived_t*>(this);}
-        const derived_t& self() const {return *static_cast<const derived_t*>(this);}
+        _sp_hybrid derived_t&       self()       {return *static_cast<      derived_t*>(this);}
+        _sp_hybrid const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
         using info_type = ilist_t;
 
-        auto get_sensor(const auto& input) const
+        _sp_hybrid auto get_sensor(const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_sensor(args...);}, input);
         }
@@ -29,7 +29,7 @@ namespace spade::state_sensor
 
         ducros_t(const float_t& epsilon_in) : epsilon{epsilon_in} {}
 
-        float_t get_sensor(const auto& info) const
+        _sp_hybrid float_t get_sensor(const auto& info) const
         {
             const auto& grad     = omni::access<omni::info::gradient>(info);
             auto        theta_sq = grad[0].u() + grad[1].v() + grad[2].w();

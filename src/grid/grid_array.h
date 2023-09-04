@@ -18,6 +18,7 @@
 #include "grid/array_image.h"
 #include "core/mem_map.h"
 #include "core/vec_image.h"
+#include "core/permute.h"
 
 #include "dispatch/device_type.h"
 #include "dispatch/device_vector.h"
@@ -242,14 +243,19 @@ namespace spade::grid
         {
             auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
-            this->mem_view.compute_coeffs();
+            // this->mem_view.compute_coeffs();
+            // this->mem_view.compute_coeffs({0,1,2,3,4});
+            this->mem_view.compute_coeffs({1,2,3,4,0});
+            // this->mem_view.compute_coeffs({4, 3, 2, 1, 0});
+            // this->mem_view.compute_coeffs({0, 4, 3, 2, 1});
+            // this->mem_view.compute_coeffs({1, 3, 2, 4, 0});
             this->mem_view.compute_offset_base();
             auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
             data.resize(total_size);
         }
         
-        const const_image_type image() const { return {&data[0], mem_view}; }
-        image_type             image()       { return {&data[0], mem_view}; }
+        const const_image_type image() const { return {&data[0], data.size(), mem_view}; }
+        image_type             image()       { return {&data[0], data.size(), mem_view}; }
 
         //TODO: clean this up a little bit with more lambdas!
         template <multiblock_array rhs_t>

@@ -139,7 +139,6 @@ namespace spade::pde_algs
         flux_div(prims, rhs, domain_boundary_flux, flux_funcs...);
     }
     */
-
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
@@ -188,10 +187,8 @@ namespace spade::pde_algs
                     omni::retrieve(geom_image, prims_img, iface, data);
                     
                     flux_out_t accum = 0.0;
-                    // auto flux_data = omni::interpret_stencil<omni_type>(data);
-                    // accum += flux_func(flux_data);
-                    
-                    accum += flux_func(data);
+                    auto flux_data = omni::interpret_stencil<omni_type>(data);
+                    accum += flux_func(flux_data);
                     accum *= jac*(real_type(1.0)-real_type(2.0)*pm)*inv_dx;
                     relem += accum;
                 });

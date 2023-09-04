@@ -58,6 +58,9 @@ namespace spade::dispatch
             if constexpr (requires {range.idx_bound_box();}) return range.idx_bound_box();
             else return range;
         }();
+        
+        if (bound_box.volume() == 0) return;
+        
         using bound_type = utils::remove_all<decltype(bound_box)>::type;
         if constexpr (device::is_cpu<device_t>)
         {
@@ -82,6 +85,9 @@ namespace spade::dispatch
             // istream    = ID of the cuda stream that is dispatched
             
             //generalize this later
+            // print(ps.grid_size.x, ps.grid_size.y, ps.grid_size.z);
+            // print(ps.block_size.x, ps.block_size.y, ps.block_size.z);
+            // std::cin.get();
             detail::k_gpu_dispatch_impl<<<ps.grid_size, ps.block_size>>>(ps, kernel);
             cudaDeviceSynchronize();
             auto er_code = cudaGetLastError();

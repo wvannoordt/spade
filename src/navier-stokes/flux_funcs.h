@@ -7,14 +7,14 @@ namespace spade::convective
 {
     template <typename gas_t> struct rusanov_t
     {
-        const gas_t& gas;
+        const gas_t gas;
         using g_info_type   = typename gas_t::info_type;
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
         using flux_t        = fluid_state::flux_t<float_t>;
         rusanov_t(const gas_t& gas_in) : gas{gas_in} {}
-        ctrs::array<flux_t, 2> operator() (const auto& info) const
+        _sp_hybrid ctrs::array<flux_t, 2> operator() (const auto& info) const
         {
             ctrs::array<flux_t, 2> out;
             auto& f_u = out[0];
@@ -52,14 +52,14 @@ namespace spade::convective
 
     template <typename gas_t> struct phys_flux_t
     {
-        const gas_t& gas;
+        const gas_t gas;
         using g_info_type   = typename gas_t::info_type;
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
         using flux_t        = fluid_state::flux_t<float_t>;
         phys_flux_t(const gas_t& gas_in) : gas{gas_in} {}
-        ctrs::array<flux_t, 2> operator() (const auto& info) const
+        _sp_hybrid ctrs::array<flux_t, 2> operator() (const auto& info) const
         {
             ctrs::array<flux_t, 2> out;
             auto& f_u = out[0];

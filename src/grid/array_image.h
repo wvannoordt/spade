@@ -25,9 +25,12 @@ namespace spade::grid
         using value_type       = fundamental_type;
         
         base_t      base;
+        std::size_t csize;
         mem_map_t   map;
         
         constexpr static auto centering_type() { return ctr; }
+        
+        _sp_hybrid std::size_t size() const { return csize; }
         
         //Note: This has potential to become a bottleneck.
         template <typename... idxs_t>
