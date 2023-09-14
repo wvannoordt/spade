@@ -23,6 +23,14 @@ namespace spade::utils
         >::type
         > struct remove_all : remove_all<U> {};
     template<class T> struct remove_all<T, T> { using type = T; };
+    
+    
+    namespace detail
+    {
+        template <typename T> struct istdv_t { constexpr static bool value = false;};
+        template <typename T, typename A> struct istdv_t<std::vector<T,A>> { constexpr static bool value = true;};
+    }
+    template <typename T> concept is_std_vector = detail::istdv_t<T>::value;
 
     template <class ltype, class rtype> static void sum_reduce(ltype& total, const rtype& r)
     {

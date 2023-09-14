@@ -4,18 +4,19 @@
 
 #include "core/ctrs.h"
 #include "core/block_config.h"
+#include "core/except.h"
 #include "amr/amr_node.h"
 #include "amr/amr_constraints.h"
 
 namespace spade::amr
-{
+{    
     template <typename coord_val_t, typename array_designator_t>
     struct amr_blocks_t
     {
-        using node_type      = amr::amr_node_t<array_designator_t::size()>;
-        using handle_type    = node_handle_t<array_designator_t::size()>;
-        using refine_type    = ctrs::array<bool, array_designator_t::size()>;
-        using coord_val_type = coord_val_t;
+        using node_type       = amr::amr_node_t<array_designator_t::size()>;
+        using handle_type     = node_handle_t<array_designator_t::size()>;
+        using refine_type     = ctrs::array<bool, array_designator_t::size()>;
+        using coord_val_type  = coord_val_t;
         
         ctrs::array<int, 3>                      num_blocks;
         bound_box_t<coord_val_t, 3>              bounds;
@@ -29,6 +30,11 @@ namespace spade::amr
         
         amr_blocks_t(const array_designator_t& num_blocks_in,
             const bound_box_t<coord_val_t, array_designator_t::size()>& bounds_in)
+        {
+            init(num_blocks_in, bounds_in);
+        }
+        
+        void init(const auto& num_blocks_in, const auto& bounds_in)
         {
             ctrs::copy_array(num_blocks_in, num_blocks, 1);
             bounds.min(2) = 0.0;
@@ -83,6 +89,15 @@ namespace spade::amr
             this->enumerate();
         }
         
+        amr_blocks_t(const amr_blocks_t& rhs)
+        {
+            init(rhs.num_blocks, rhs.bounds);
+            if (rhs.total_num_blocks() > rhs.num_blocks[0]*rhs.num_blocks[1]*rhs.num_blocks[2])
+            {
+                throw except::sp_exception("amr_blocks_t copy constructor not implemented for refined grid");
+            }
+        }
+        
         //Note: these return the block bounding box in computational coordinates
         const auto& get_block_box (const std::size_t& lb_glob) const
         {
@@ -121,6 +136,8 @@ namespace spade::amr
                 all_nodes.push_back(handle_type(root_nodes, i));
                 root_nodes[i].collect_nodes(all_nodes);
             }
+            
+            
             enumerated_nodes.clear();
             enumerated_nodes.reserve(block_count);
             for (const auto& n: all_nodes)
@@ -158,7 +175,7 @@ namespace spade::amr
             const ctrs::array<bool, dim()>& is_periodic,
             const std::vector<typename node_type::amr_refine_t>& directions,
             const interface_constraint_t& constraint)
-        {
+        {            
             std::vector<handle_type> new_children;
             int idx = 0;
             for (auto& lb: lbs)

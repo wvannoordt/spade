@@ -156,14 +156,17 @@ namespace spade::grid
     };
     
     template <typename grid_t, typename par_group_t>
-    struct array_exchange_t
+    struct array_exchange_t// : public grid_t::dependent_type
     {
         grid_exchange_config_t<grid_t> config;
         exchange_handle_t<par_group_t> handle;
         gpu_exch_t<grid_t>             device_exch;
         
         array_exchange_t(const grid_exchange_config_t<grid_t>& cfgin, const exchange_handle_t<par_group_t>& hdlin)
-        : config{cfgin}, handle{hdlin} {}
+        : config{cfgin}, handle{hdlin}
+        {
+
+        }
         
         template <typename arr_t>
         void config_gpu_exch(const arr_t& arr)
@@ -299,13 +302,13 @@ namespace spade::grid
                 else                                      return 0;
             }();
             
-            const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.devc_data);
-            const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.devc_data);
-            const auto i_int_s = utils::make_vec_image(device_exch.int_sends.devc_data);
-            const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.devc_data);
+            const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.data(array.device()));
+            const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.data(array.device()));
+            const auto i_int_s = utils::make_vec_image(device_exch.int_sends.data(array.device()));
+            const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.data(array.device()));
             
-            dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.devc_data.size(), array.device());
-            dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.devc_data.size(), array.device());
+            dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.data(array.device()).size(), array.device());
+            dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.data(array.device()).size(), array.device());
             
             // const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.host_data);
             // const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.host_data);
@@ -340,6 +343,12 @@ namespace spade::grid
             dispatch::execute(interpolations, int_load);
             dispatch::execute(injections,     inj_load);
         }
+        
+        // How to do this?
+        // virtual void on_blocks_update() override final
+        // {
+        //     print("UPDATING");
+        // }
     };
     
     

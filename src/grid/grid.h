@@ -19,6 +19,8 @@
 #include "grid/grid_index_types.h"
 #include "grid/grid_geometry.h"
 
+#include "amr/amr_constraints.h"
+
 #include "dispatch/device_type.h"
 #include "dispatch/shared_vector.h"
 
@@ -57,6 +59,11 @@ namespace spade::grid
         include_exchanges=1
     };
     
+    struct grid_dependent_t
+    {
+        virtual void on_blocks_update() = 0;
+    };
+    
     template
     <
         ctrs::basic_array array_descriptor_t,
@@ -73,6 +80,8 @@ namespace spade::grid
             using coord_sys_type     = coord_t;
             using coord_point_type   = coords::point_t<coord_type>;
             using group_type         = par_group_t;
+            using partition_type     = partition::block_partition_t;
+            using dependent_type    = grid_dependent_t;
             
             using geometry_type      = grid_geometry_t<
                 coord_t,
@@ -87,11 +96,12 @@ namespace spade::grid
                 const bound_box_t<bool, 3>*>;
         
         private:
-            partition::block_partition_t grid_partition;    
+            partition_type grid_partition;    
             geometry_type local_geometry;
             geometry_type global_geometry;
             block_arrangement_t block_arrangement;
             const par_group_t& grid_group;
+            std::vector<dependent_type*> dependents;
 
         public:
 
@@ -105,30 +115,25 @@ namespace spade::grid
                 const par_group_t& group_in
                 )
             : block_arrangement{block_arrangement_in},
-              grid_group{group_in},
-              grid_partition(block_arrangement_in, group_in)
+              grid_group{group_in}
             {
-                //Initialize class members
-                
-                if constexpr (requires {block_arrangement.root_nodes;})
-                {
-                    const auto err_evn = []
-                    {
-                        throw except::sp_exception("For AMR grids, number of cells and exchange cells must be even");
-                    };
-                    for (const auto n: cells_in_block_in)
-                    {
-                        if (n%2 != 0) err_evn();
-                    }
-                    for (const auto n: exchange_cells_in)
-                    {
-                        if (n%2 != 0) err_evn();
-                    }
-                }
-                
                 local_geometry  = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
                 global_geometry = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
-                
+                compute_geometry();
+            }
+            
+            //deleted until I can figure out this dependency thing
+            cartesian_grid_t(const cartesian_grid_t&) = delete;
+            
+            cartesian_grid_t(){}            
+            
+            void compute_geometry()
+            {
+                grid_partition = partition_type(block_arrangement, grid_group);
+                global_geometry.bounding_boxes.clear();
+                global_geometry.domain_boundary.clear();
+                local_geometry.bounding_boxes.clear();
+                local_geometry.domain_boundary.clear();
                 const auto create_geom = [&](const std::size_t& lim, const auto& loc_glob, auto& geom)
                 {
                     for (std::size_t lb = 0; lb < lim; ++lb)
@@ -149,8 +154,6 @@ namespace spade::grid
                 local_geometry.bounding_boxes.transfer();
                 local_geometry.domain_boundary.transfer();
             }
-            
-            cartesian_grid_t(){}
             
             // template <typename device_t>
             // const auto image(const device_t& dev, const partition::global_tag_t&) const { return global_geometry.image(dev); }
@@ -221,6 +224,7 @@ namespace spade::grid
             const par_group_t& group()                          const { return grid_group; }
             const coord_t& coord_sys()                          const { return global_geometry.get_coords(); }
             const auto& get_blocks()                            const { return block_arrangement; }
+            auto& get_blocks()                                        { return block_arrangement; }
             const partition::block_partition_t& get_partition() const { return grid_partition; }
             constexpr static bool is_3d()                             { return dim()==3; }
             
@@ -267,9 +271,68 @@ namespace spade::grid
                 return this->geometry(typename idx_t::tag_type()).get_bounding_box(grid_partition.to_global(lb).value);
             }
             
+            bound_box_t<dtype, 3> get_bounding_box(const std::size_t& lb) const
+            {
+                return this->get_bounding_box(utils::tag[partition::global](lb));
+            }
+            
             const auto& get_coord_sys() const {return global_geometry.get_coords();}
             
             const auto& geometry(const partition::global_tag_t&) const { return global_geometry; }
             const auto& geometry(const partition::local_tag_t&)  const { return local_geometry;  }
+            
+            template <typename func_t>
+            std::vector<std::size_t> select_blocks(const func_t& func) const
+            {
+                std::vector<std::size_t> output;
+                for (std::size_t lb = 0; lb < get_num_global_blocks(); ++lb)
+                {
+                    if (func(lb)) output.push_back(lb);
+                }
+                return output;
+            }
+            
+            static constexpr bool periodic_refinement_default = false;
+            
+            
+            template <typename list_t, typename refs_t, typename constraint_t>
+            void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const refs_t& refs, const constraint_t& constraint = amr::constraints::factor2)
+            {
+                std::size_t vsize = 1;
+                constexpr bool list_is_vec = utils::is_std_vector<list_t>;
+                constexpr bool refs_is_vec = utils::is_std_vector<refs_t>;
+                if constexpr (list_is_vec) vsize = utils::max(vsize, list.size());
+                if constexpr (refs_is_vec) vsize = utils::max(vsize, refs.size());
+                auto arg_list = [&]()
+                {
+                    if constexpr (list_is_vec) return list;
+                    else return std::vector<list_t>(vsize, list);
+                }();
+                
+                const auto ref_list = [&]()
+                {
+                    if constexpr (refs_is_vec) return refs;
+                    else return std::vector<refs_t>(vsize, refs);
+                }();
+                
+                this->get_blocks().refine(arg_list, periodic, ref_list, constraint);
+                compute_geometry();
+                
+                for (auto& p: dependents) p->on_blocks_update();
+            }
+            
+            template <typename list_t, typename constraint_t>
+            void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const constraint_t& constraint = amr::constraints::factor2)
+            {
+                const typename block_arrangement_t::refine_type rtype = true;
+                this->refine_blocks(list, periodic, rtype, constraint);
+            }
+            
+            template <typename list_t, typename constraint_t>
+            void refine_blocks(const list_t& list, const constraint_t& constraint = amr::constraints::factor2)
+            {
+                const typename block_arrangement_t::refine_type rtype = true;
+                this->refine_blocks(list, periodic_refinement_default, rtype, constraint);
+            }
     };
 }

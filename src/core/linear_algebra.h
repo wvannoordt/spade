@@ -68,6 +68,12 @@ namespace spade::linear_algebra
             return output;
         }
         
+        _sp_hybrid dense_mat<data_t, mat_size>& operator /= (const data_t& rhs)
+        {
+            for (int i = 0; i < mat_size*mat_size; ++i) m[i] /= rhs;
+            return *this;
+        }
+        
         _sp_hybrid dense_mat<data_t, mat_size> operator - (const dense_mat<data_t, mat_size>& rhs) const
         {
             dense_mat<data_t, mat_size> output;
@@ -82,12 +88,19 @@ namespace spade::linear_algebra
             return output;
         }
         
-        _sp_hybrid  data_t det() const
+        _sp_hybrid data_t det() const
         {
-            static_assert(mat_size==3, "Determinant calculation not yet implemented for matrices other thatn 3x3");
-            return (*this)(0,0)*((*this)(1,1)*(*this)(2,2) - (*this)(1,2)*(*this)(2,1))
-                +  (*this)(0,1)*((*this)(1,2)*(*this)(2,0) - (*this)(1,0)*(*this)(2,2))
-                +  (*this)(0,2)*((*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0));
+            static_assert((mat_size==3) || (mat_size==2), "Determinant calculation not yet implemented for matrices other thatn 3x3 and 2x2");
+            if constexpr (mat_size==3)
+            {
+                return (*this)(0,0)*((*this)(1,1)*(*this)(2,2) - (*this)(1,2)*(*this)(2,1))
+                    +  (*this)(0,1)*((*this)(1,2)*(*this)(2,0) - (*this)(1,0)*(*this)(2,2))
+                    +  (*this)(0,2)*((*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0));
+            }
+            else
+            {
+                return (*this)(0,0)*(*this)(1,1) - (*this)(1,0)*(*this)(0,1);
+            }
         }
 
         template <typename kern_t>

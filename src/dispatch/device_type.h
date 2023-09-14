@@ -14,6 +14,8 @@ namespace spade::device
     using best_type = std::conditional<_sp_cuda, gpu_t, cpu_t>::type;
     static best_type best;
     
-    template <typename T> concept is_cpu = std::same_as<T, cpu_t>;
-    template <typename T> concept is_gpu = std::same_as<T, gpu_t>;
+    template <typename T> concept is_cpu    = std::same_as<T, cpu_t>;
+    template <typename T> concept is_gpu    = std::same_as<T, gpu_t>;
+    
+    template <typename T> concept is_device = is_cpu<T> || is_gpu<T>;
 }

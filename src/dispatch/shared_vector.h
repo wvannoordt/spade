@@ -15,6 +15,20 @@ namespace spade::device
         std::vector<data_t>   host_data;
         device_vector<data_t> devc_data;
         
+        template <device::is_device device_t>
+        auto& data(const device_t&)
+        {
+            if constexpr (device::is_cpu<device_t>) return host_data;
+            else                                    return devc_data;
+        }
+        
+        template <device::is_device device_t>
+        const auto& data(const device_t&) const
+        {
+            if constexpr (device::is_cpu<device_t>) return host_data;
+            else                                    return devc_data;
+        }
+        
         void push_back(const value_type& nval)
         {
             host_data.push_back(nval);
@@ -24,6 +38,11 @@ namespace spade::device
         {
             host_data.resize(n);
             devc_data.resize(n);
+        }
+        
+        void clear()
+        {
+            this->resize(0);
         }
         
         void transfer()
