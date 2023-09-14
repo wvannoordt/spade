@@ -243,9 +243,9 @@ namespace spade::grid
         {
             auto& grid_map = block_map();
             detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
-            // this->mem_view.compute_coeffs();
+            this->mem_view.compute_coeffs();
             // this->mem_view.compute_coeffs({0,1,2,3,4});
-            this->mem_view.compute_coeffs({1,2,3,4,0});
+            // this->mem_view.compute_coeffs({1,2,3,4,0});
             // this->mem_view.compute_coeffs({4, 3, 2, 1, 0});
             // this->mem_view.compute_coeffs({0, 4, 3, 2, 1});
             // this->mem_view.compute_coeffs({1, 3, 2, 4, 0});

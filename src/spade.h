@@ -18,6 +18,8 @@
 #include "core/arith_tuple.h"
 #include "core/avg.h"
 
+#include "geom/vtk_geom.h"
+
 #include "grid/cartesian_blocks.h"
 #include "grid/grid.h"
 #include "grid/exchange_pattern.h"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <concepts>
 #include "core/range.h"
 
 namespace spade
@@ -17,6 +18,13 @@ namespace spade
         _sp_hybrid bound_box_t(const dtype& v)
         {
             for (int i = 0; i < 2*ar_size; ++i) bnds[i] = v;
+        }
+        
+        template <typename... rs_t>
+        requires ((sizeof...(rs_t) == 2*ar_size) && (std::same_as<rs_t, dtype> && ...))
+        _sp_hybrid bound_box_t(const rs_t&... rs)
+        {
+            bnds = ctrs::array<dtype, 2*ar_size>(rs...);
         }
         
         _sp_hybrid const dtype& min(size_t idx) const {return bnds[2*idx+0];}
