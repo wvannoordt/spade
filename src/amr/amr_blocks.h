@@ -98,6 +98,16 @@ namespace spade::amr
             }
         }
         
+        auto& get_amr_node(const std::size_t lb_glob)
+        {
+            return enumerated_nodes[lb_glob].get();
+        }
+        
+        const auto& get_amr_node(const std::size_t lb_glob) const
+        {
+            return enumerated_nodes[lb_glob].get();
+        }
+        
         //Note: these return the block bounding box in computational coordinates
         const auto& get_block_box (const std::size_t& lb_glob) const
         {

@@ -27,6 +27,28 @@ namespace spade
             bnds = ctrs::array<dtype, 2*ar_size>(rs...);
         }
         
+        _sp_hybrid bound_box_t inflate(const dtype& infl) const
+        {
+            bound_box_t output = *this;
+            for (int d = 0; d < ar_size; ++d)
+            {
+                dtype hh = dtype(0.5)*this->size(d);
+                dtype cc = dtype(0.5)*(this->min(d) + this->max(d));
+                output.min(d) = cc - infl*hh;
+                output.max(d) = cc + infl*hh;
+            }
+            return output;
+        }
+        
+        _sp_hybrid bool contains(const ctrs::array<dtype, ar_size>& x) const
+        {
+            for (int d = 0; d < ar_size; ++d)
+            {
+                if ((x[d]<min(d)) || (x[d]>max(d))) return false;
+            }
+            return true;
+        }
+        
         _sp_hybrid const dtype& min(size_t idx) const {return bnds[2*idx+0];}
         _sp_hybrid const dtype& max(size_t idx) const {return bnds[2*idx+1];}
         

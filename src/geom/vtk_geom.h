@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 #include "core/except.h"
 #include "core/ctrs.h"
@@ -11,7 +12,7 @@
 #include "core/ascii.h"
 namespace spade::geom
 {
-    template <const int n_edge = 3, typename float_t = double>
+    template <const int dim, const int n_edge = 3, typename float_t = double>
     struct vtk_geom_t
     {
         using value_type = float_t;
@@ -22,18 +23,28 @@ namespace spade::geom
         
         static constexpr int num_edges() { return n_edge; }
         
-        std::vector<pnt_t>    points;
-        std::vector<vec_t>    normals;
-        std::vector<face_t>   faces;
+        std::size_t n_bin_cls;
+        std::vector<pnt_t>       points;
+        std::vector<vec_t>       normals;
+        std::vector<face_t>      faces;
+        std::vector<std::pair<std::size_t, std::size_t>> table;
+        bound_box_t<float_t,3>   bbox, bbox_inflated;
+        
+        void organize(const std::size_t& ncls = 60)
+        {
+            n_bin_cls = ncls;
+            std::size_t csize = std::pow(n_bin_cls, dim);
+            
+        }
     };
     
-    template <const int n_edge, typename float_t>
-    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<n_edge, float_t>& surf)
+    template <const int dim, const int n_edge, typename float_t>
+    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf)
     {
-        using uint_t = typename vtk_geom_t<n_edge, float_t>::uint_t;
-        using face_t = typename vtk_geom_t<n_edge, float_t>::face_t;
-        using pnt_t  = typename vtk_geom_t<n_edge, float_t>::pnt_t;
-        using vec_t  = typename vtk_geom_t<n_edge, float_t>::vec_t;
+        using uint_t = typename vtk_geom_t<dim, n_edge, float_t>::uint_t;
+        using face_t = typename vtk_geom_t<dim, n_edge, float_t>::face_t;
+        using pnt_t  = typename vtk_geom_t<dim, n_edge, float_t>::pnt_t;
+        using vec_t  = typename vtk_geom_t<dim, n_edge, float_t>::vec_t;
         
         utils::ascii_file_t fh(fname);
         fh.next_line();
@@ -50,13 +61,27 @@ namespace spade::geom
         fh.parse(j0, num_points, j1);
         
         float_t x, y, z;
+        surf.bbox.min(0) =  1e50;
+        surf.bbox.min(1) =  1e50;
+        surf.bbox.min(2) =  1e50;
+        surf.bbox.max(0) = -1e50;
+        surf.bbox.max(1) = -1e50;
+        surf.bbox.max(2) = -1e50;
         surf.points.reserve(num_points);
         for (std::size_t i = 0; i < num_points; ++i)
         {
             fh.next_line();
             fh.parse(x, y, z);
             surf.points.push_back(pnt_t(x, y, z));
+            surf.bbox.min(0) = utils::min(surf.bbox.min(0), x);
+            surf.bbox.min(1) = utils::min(surf.bbox.min(1), y);
+            surf.bbox.min(2) = utils::min(surf.bbox.min(2), z);
+            surf.bbox.max(0) = utils::max(surf.bbox.max(0), x);
+            surf.bbox.max(1) = utils::max(surf.bbox.max(1), y);
+            surf.bbox.max(2) = utils::max(surf.bbox.max(2), z);
         }
+        
+        surf.bbox_inflated = surf.bbox.inflate(1.0001);
         
         std::size_t num_faces, junk;
         fh.next_line();
@@ -84,6 +109,8 @@ namespace spade::geom
             n /= ctrs::array_norm(n);
             surf.normals.push_back(n);
         }
+        
+        surf.organize();
         
         return header;
     }

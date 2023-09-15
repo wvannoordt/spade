@@ -328,11 +328,12 @@ namespace spade::grid
                 this->refine_blocks(list, periodic, rtype, constraint);
             }
             
-            template <typename list_t, typename constraint_t>
-            void refine_blocks(const list_t& list, const constraint_t& constraint = amr::constraints::factor2)
+            template <typename list_t>
+            void refine_blocks(const list_t& list)
             {
                 const typename block_arrangement_t::refine_type rtype = true;
-                this->refine_blocks(list, periodic_refinement_default, rtype, constraint);
+                ctrs::array<bool, dim()> periodic = periodic_refinement_default;
+                this->refine_blocks(list, periodic, rtype, amr::constraints::factor2);
             }
     };
 }
