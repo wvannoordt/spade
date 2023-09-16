@@ -10,6 +10,9 @@
 #include "core/ctrs.h"
 #include "core/point.h"
 #include "core/ascii.h"
+
+#include "geom/primitives.h"
+
 namespace spade::geom
 {
     template <const int dim, const int n_edge = 3, typename float_t = double>
@@ -34,7 +37,7 @@ namespace spade::geom
         {
             n_bin_cls = ncls;
             std::size_t csize = std::pow(n_bin_cls, dim);
-            
+            std::vector<uint_t> table;
         }
     };
     

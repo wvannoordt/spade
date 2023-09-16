@@ -49,6 +49,15 @@ namespace spade
             return true;
         }
         
+        _sp_hybrid bool intersects(const bound_box_t& rhs) const
+        {
+            for (int i = 0; i < ar_size; ++i)
+            {
+                if (!((this->min(i) <= rhs.max(i)) && (this->max(i) >= rhs.min(i)))) return false;
+            }
+            return true;
+        }
+        
         _sp_hybrid const dtype& min(size_t idx) const {return bnds[2*idx+0];}
         _sp_hybrid const dtype& max(size_t idx) const {return bnds[2*idx+1];}
         

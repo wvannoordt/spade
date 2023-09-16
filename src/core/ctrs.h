@@ -213,7 +213,7 @@ namespace spade::ctrs
         }
         
         template <typename rhs_t>
-        _sp_hybrid auto operator - (const arithmetic_array_t<rhs_t, ar_size>& rhs) const
+        _sp_hybrid auto operator - (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];

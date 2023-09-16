@@ -294,7 +294,6 @@ namespace spade::grid
             
             static constexpr bool periodic_refinement_default = false;
             
-            
             template <typename list_t, typename refs_t, typename constraint_t>
             void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const refs_t& refs, const constraint_t& constraint = amr::constraints::factor2)
             {
