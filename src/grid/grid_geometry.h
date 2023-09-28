@@ -9,7 +9,10 @@
 namespace spade::grid
 {
     //This is for GPU kernels that need to efficiently value-capture grid properties
-    template <coords::coordinate_system coord_t, const int gdim, typename bbox_container_t, typename ibdy_container_t>
+    template <
+        coords::coordinate_system coord_t,
+        const int gdim,
+        template <typename> typename container_tt>
     struct grid_geometry_t
     {
         using coord_type = typename coord_t::coord_type;
@@ -18,11 +21,11 @@ namespace spade::grid
         using iarr_t     = ctrs::array<int, 3>;
         
         //Note that this constitutes a local-only view of the geometry of a grid
-        coord_t             coords;         // Note that this currently constitutes only an analytical coordinate system
-        ctrs::array<int, 3> num_cell;
-        ctrs::array<int, 3> num_exch;
-        bbox_container_t    bounding_boxes; // Bounding box for each block, comp. coordinates
-        ibdy_container_t    domain_boundary;
+        coord_t                               coords;         // Note that this currently constitutes only an analytical coordinate system
+        ctrs::array<int, 3>                   num_cell;
+        ctrs::array<int, 3>                   num_exch;
+        container_tt<bound_box_t<float_t, 3>> bounding_boxes; // Bounding box for each block, comp. coordinates
+        container_tt<bound_box_t<bool, 3>>    domain_boundary;
         
         constexpr static int dim() { return gdim; }
         
