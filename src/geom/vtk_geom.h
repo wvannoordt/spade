@@ -12,6 +12,7 @@
 #include "core/ascii.h"
 
 #include "geom/primitives.h"
+#include "geom/bvh.h"
 
 namespace spade::geom
 {
@@ -31,13 +32,29 @@ namespace spade::geom
         std::vector<vec_t>       normals;
         std::vector<face_t>      faces;
         std::vector<std::pair<std::size_t, std::size_t>> table;
-        bound_box_t<float_t,3>   bbox, bbox_inflated;
+        bound_box_t<float_t,dim>   bbox, bbox_inflated;
+        
+        //Do we actually need to store these?
+        bvh_t<2, uint_t, float_t, std::vector> plane_bvhs[dim]; //yz, xz, xy;
         
         void organize(const std::size_t& ncls = 60)
         {
             n_bin_cls = ncls;
             std::size_t csize = std::pow(n_bin_cls, dim);
             std::vector<uint_t> table;
+        }
+        
+        template <typename rhs_float_t>
+        bool partially_contained_by(const bound_box_t<rhs_float_t, 3>& bnd) const
+        {
+            //This is a total garbage implementation but I just can't be bothered to improve it at the moment
+            for (std::size_t i = 0; i < faces.size(); ++i)
+            {
+                const auto& face   = faces[i];
+                const bool success = primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bnd);
+                if (success) return true;
+            }
+            return false;
         }
     };
     

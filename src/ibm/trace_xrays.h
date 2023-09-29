@@ -10,7 +10,7 @@ namespace spade::ibm
         const auto  is_intersect = [&](const auto& lb_loc)
         {
             const auto bnd = grid.get_bounding_box(lb_loc);
-            return false;
+            return geom.partially_contained_by(bnd);
         };
         
         const auto  lbs = grid.select_blocks(is_intersect, partition::local);
