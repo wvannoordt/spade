@@ -27,21 +27,45 @@ namespace spade::geom
         
         static constexpr int num_edges() { return n_edge; }
         
-        std::size_t n_bin_cls;
-        std::vector<pnt_t>       points;
-        std::vector<vec_t>       normals;
-        std::vector<face_t>      faces;
-        std::vector<std::pair<std::size_t, std::size_t>> table;
+        std::vector<pnt_t>         points;
+        std::vector<vec_t>         normals;
+        std::vector<face_t>        faces;
         bound_box_t<float_t,dim>   bbox, bbox_inflated;
         
-        //Do we actually need to store these?
-        bvh_t<2, uint_t, float_t, std::vector> plane_bvhs[dim]; //yz, xz, xy;
         
-        void organize(const std::size_t& ncls = 60)
+        bvh_t<3, float_t, std::vector> vol_bvh;
+        
+        void calc_bvh()
         {
-            n_bin_cls = ncls;
-            std::size_t csize = std::pow(n_bin_cls, dim);
-            std::vector<uint_t> table;
+            const auto box_check = [&](const uint_t& i, const auto& bnd)
+            {
+                const auto& face = faces[i];
+                return primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bnd);
+            };
+            
+            const auto tri_bbx = [&](const uint_t& i)
+            {
+                const auto& face = faces[i];
+                bound_box_t<float_t,dim> output;
+                
+                for (int d = 0; d < dim; ++d)
+                {
+                    output.min(d) =  1e50;
+                    output.max(d) = -1e50;
+                }
+                
+                for (int k = 0; k < face_t::size(); ++k)
+                {
+                    const auto& pt = points[face[k]];
+                    for (int d = 0; d < dim; ++d)
+                    {                    
+                        output.min(d) = utils::min(output.min(d), pt[d]);
+                        output.max(d) = utils::max(output.max(d), pt[d]);
+                    }
+                }
+            };
+            vol_bvh.calculate(bbox_inflated, faces.size(), box_check, tri_bbx);
+            detail::debug_output_bvh("bvh.vtk", vol_bvh);
         }
         
         template <typename rhs_float_t>
@@ -130,7 +154,7 @@ namespace spade::geom
             surf.normals.push_back(n);
         }
         
-        surf.organize();
+        surf.calc_bvh();
         
         return header;
     }
