@@ -12,18 +12,20 @@ namespace spade::geom
 {
     struct bvh_params_t
     {
-        int max_level        = 6; //supersedes max_elems
+        int max_level        = 3; //supersedes target_max_elems
         int target_max_elems = 10;
     };
     
-    template <const int dim, typename float_t, template <typename> typename container_tt = std::vector>
-    struct bvh_t
+    template <const int dim, typename float_t, template <typename> typename container_tt>
+    struct bvh_impl_t
     {
         using idx_t    = std::size_t;
-        using md_idx_t = ctrs::array<idx_t, dim>;
+        using md_idx_t = ctrs::array<int, dim>;
         static constexpr idx_t no_val = std::string::npos;
+        idx_t num_base_squares;
         int degree  = 4;
-        using bnd_t = bound_box_t<float_t,dim>;
+        using bnd_t  = bound_box_t<float_t,dim>;
+        using ibnd_t = bound_box_t<int, dim>;
         
         constexpr static int bvh_dim() { return dim; }
         
@@ -35,39 +37,51 @@ namespace spade::geom
         container_tt<idx_t> data_begin;
         container_tt<idx_t> data_end;
         container_tt<idx_t> children;
-        container_tt<idx_t> parents;
+        container_tt<int>   levels;
         
-        bvh_t(){}
+        bvh_impl_t(){}
         
-        template <typename element_check_t, typename element_bbox_t>
+        void clear_all()
+        {
+            bounds.clear();
+            data.clear();
+            data_begin.clear();
+            data_end.clear();
+            children.clear();
+            levels.clear();
+        }
+        
+        bnd_t get_subbox(const md_idx_t& ii, const bnd_t& bnd) const
+        {
+            bnd_t output;
+            for (int d = 0; d < bvh_dim(); ++d)
+            {
+                float_t dx = bnd.size(d)/degree;
+                output.min(d) = bnd.min(d) + ii[d]*dx;
+                output.max(d) = output.min(d) + dx;
+            }
+            return output;
+        }
+        
+        template <typename check_t>
         void calculate(
             const bnd_t& bnd,
             const idx_t& lsize,
-            const element_check_t& e_check,
-            const element_bbox_t&  e_bbx,
+            const check_t& e_check,
             const bvh_params_t& params = bvh_params_t())
         {
             glob_bounds = bnd;
-            data.clear();
-            children.clear();
-            parents.clear();
-            idx_t num_base_squares = 1;
+            this->clear_all();
+            num_base_squares = 1;
             for (int i = 0; i < bvh_dim(); ++i) num_base_squares *= degree;
             
             //compute first-level bounding boxes
             for (idx_t i = 0; i < num_base_squares; ++i)
             {
                 auto ii = get_index(i);
-                bnd_t bnd;
-                for (int d = 0; d < bvh_dim(); ++d)
-                {
-                    float_t dx = glob_bounds.size(d)/degree;
-                    bnd.min(d) = glob_bounds.min(d) + ii[d]*dx;
-                    bnd.max(d) = bnd.min(d) + dx;
-                }
+                bnd_t bnd = get_subbox(ii, glob_bounds);
                 bounds.push_back(bnd);
                 children.push_back(no_val);
-                parents.push_back(no_val);
             }
             
             //Now we put every element into the initial bounding boxes
@@ -78,16 +92,109 @@ namespace spade::geom
                 data_begin.push_back(data.size());
                 for (idx_t j = 0; j < lsize; ++j)
                 {
-                    if (e_check(i, bnd))
+                    if (e_check(j, bnd))
                     {
-                        data.push_back(i);
+                        data.push_back(j);
                     }
                 }
                 data_end.push_back(data.size());
             }
+            
+            levels.resize(bounds.size(), 0);
+            
+            //refine over and over until the limits in params are satisfied
+            // this->refine(e_check, params);
+            while (this->refine(e_check, params)) {}
         }
         
-        // idx = i0 + n*i1 + n*n*i2 + n*n*n*i3
+        template <typename check_t>
+        bool refine(const check_t& e_check, const bvh_params_t& params)
+        {
+            bool did_refine = false;
+            const idx_t num_blocks = bounds.size();
+            for (idx_t i = 0; i < num_blocks; ++i)
+            {
+                bool is_terminal       = (children[i] == no_val);
+                bool has_too_many_pts  = ((data_end[i] - data_begin[i]) > params.target_max_elems);
+                bool less_than_max_lev = (levels[i] < params.max_level);
+                if (is_terminal && has_too_many_pts && less_than_max_lev)
+                {
+                    did_refine  = true;
+                    children[i] = bounds.size();
+                    
+                    //Refining the current node
+                    for (idx_t j = 0; j < num_base_squares; ++j)
+                    {
+                        bnd_t bnd = get_subbox(get_index(j), bounds[i]);
+                        bounds.push_back(bnd);
+                        children.push_back(no_val);
+                        levels.push_back(levels[i]+1);
+                        
+                        data_begin.push_back(data.size());
+                        for (idx_t p = data_begin[i]; p < data_end[i]; ++p)
+                        {
+                            if (e_check(data[p], bnd))
+                            {
+                                data.push_back(data[p]);
+                            }
+                        }
+                        data_end.push_back(data.size());
+                    }
+                }
+            }
+            return did_refine;
+        }
+        
+        ibnd_t get_index_bnd(const bnd_t& bvh_bnd, const bnd_t& bnd) const
+        {
+            ibnd_t output;
+            for (int d = 0; d < bvh_dim(); ++d)
+            {
+                const auto dx = bvh_bnd.size(d) / degree;
+                
+                output.min(d) = ((bnd.min(d)-bvh_bnd.min(d))/dx);
+                output.max(d) = ((bnd.max(d)-bvh_bnd.min(d))/dx) + 1;
+                
+                output.min(d) = utils::max(output.min(d), 0);
+                output.max(d) = utils::max(output.max(d), 0);
+                
+                output.min(d) = utils::min(output.min(d), degree);
+                output.max(d) = utils::min(output.max(d), degree);
+            }
+            return output;
+        }
+        
+        template <typename iter_t>
+        void check_elements(const iter_t& iter, const bnd_t& bnd, const bnd_t& bvh_bnd, const idx_t& patch_idx) const
+        {
+            auto ibnd = get_index_bnd(bvh_bnd, bnd);
+            const auto loop = [&](const auto& ii)
+            {
+                idx_t idx = patch_idx+get_index(ii);
+                // print(idx, children.size());
+                if (children[idx] == no_val)
+                {
+                    //Terminal node: loop through all the elements in this region
+                    for (idx_t i = data_begin[idx]; i < data_end[idx]; ++i)
+                    {
+                        iter(data[i]);
+                    }
+                }
+                else
+                {
+                    const auto& next_bvh_bnd = bounds[idx];
+                    check_elements(iter, bnd, next_bvh_bnd, children[idx]);
+                }
+            };
+            
+            dispatch::execute(ibnd, loop, device::cpu);
+        }
+        
+        template <typename iter_t>
+        void check_elements(const iter_t& iter, const bnd_t& bnd) const
+        {
+            check_elements(iter, bnd, glob_bounds, 0);
+        }
         
         // Rare pass by value!!
         md_idx_t get_index(idx_t i) const
@@ -114,6 +221,8 @@ namespace spade::geom
             return output;
         }
     };
+    
+    template <const int dim, typename float_t> using bvh_t = bvh_impl_t<dim, float_t, std::vector>;
     
     namespace detail
     {
@@ -184,6 +293,23 @@ namespace spade::geom
             {
                 mf << 11 << "\n";
             }
+            
+            mf << "CELL_DATA " << nboxes << "\n";
+            
+            const auto write_scalar = [&](const std::string& scname, const auto& get_data)
+            {
+                mf << "SCALARS " << scname << " double\n";
+                mf << "LOOKUP_TABLE default\n";
+                for (std::size_t i = 0; i < bvh.bounds.size(); ++i)
+                {
+                    if (bvh.children[i] == bvh.no_val)
+                    {
+                        mf << get_data(i) << "\n";
+                    }
+                }
+            };
+            
+            write_scalar("count", [&](const auto i) { return bvh.data_end[i] - bvh.data_begin[i]; });
         }
     }
 }

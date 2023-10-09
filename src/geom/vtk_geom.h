@@ -31,9 +31,7 @@ namespace spade::geom
         std::vector<vec_t>         normals;
         std::vector<face_t>        faces;
         bound_box_t<float_t,dim>   bbox, bbox_inflated;
-        
-        
-        bvh_t<3, float_t, std::vector> vol_bvh;
+        bvh_impl_t<3, float_t, std::vector> vol_bvh;
         
         void calc_bvh()
         {
@@ -43,42 +41,30 @@ namespace spade::geom
                 return primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bnd);
             };
             
-            const auto tri_bbx = [&](const uint_t& i)
-            {
-                const auto& face = faces[i];
-                bound_box_t<float_t,dim> output;
-                
-                for (int d = 0; d < dim; ++d)
-                {
-                    output.min(d) =  1e50;
-                    output.max(d) = -1e50;
-                }
-                
-                for (int k = 0; k < face_t::size(); ++k)
-                {
-                    const auto& pt = points[face[k]];
-                    for (int d = 0; d < dim; ++d)
-                    {                    
-                        output.min(d) = utils::min(output.min(d), pt[d]);
-                        output.max(d) = utils::max(output.max(d), pt[d]);
-                    }
-                }
-            };
-            vol_bvh.calculate(bbox_inflated, faces.size(), box_check, tri_bbx);
-            detail::debug_output_bvh("bvh.vtk", vol_bvh);
+            vol_bvh.calculate(bbox_inflated, faces.size(), box_check);
         }
         
         template <typename rhs_float_t>
-        bool partially_contained_by(const bound_box_t<rhs_float_t, 3>& bnd) const
+        bool box_contains_boundary(const bound_box_t<rhs_float_t, 3>& bnd) const
         {
-            //This is a total garbage implementation but I just can't be bothered to improve it at the moment
-            for (std::size_t i = 0; i < faces.size(); ++i)
+            bool output = false;
+            const auto check_tri = [&](const auto& i)
             {
                 const auto& face   = faces[i];
                 const bool success = primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bnd);
-                if (success) return true;
+                return success;
+            };
+            //This is a total garbage implementation but I just can't be bothered to improve it at the moment
+            for (std::size_t i = 0; i < faces.size(); ++i)
+            {
+                if (check_tri(i)) return true;
             }
-            return false;
+            // vol_bvh.check_elements([&](const auto& i)
+            // {
+            //     output = output || check_tri(i);
+            // }, bnd);
+            
+            return output;
         }
     };
     
