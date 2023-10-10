@@ -54,16 +54,12 @@ namespace spade::geom
                 const bool success = primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bnd);
                 return success;
             };
-            //This is a total garbage implementation but I just can't be bothered to improve it at the moment
-            for (std::size_t i = 0; i < faces.size(); ++i)
+
+            vol_bvh.check_elements([&](const auto& i)
             {
-                if (check_tri(i)) return true;
-            }
-            // vol_bvh.check_elements([&](const auto& i)
-            // {
-            //     output = output || check_tri(i);
-            // }, bnd);
-            
+                output = output || check_tri(i);
+            }, bnd);
+
             return output;
         }
     };
