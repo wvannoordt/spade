@@ -12,11 +12,12 @@ int main(int argc, char** argv)
 {
     spade::parallel::mpi_t group(&argc, &argv);
         
-    spade::ctrs::array<int, 3>    num_blocks(20, 4, 2);
-    spade::ctrs::array<int, 3>    cells_in_block(6, 4, 4);
+    spade::ctrs::array<int, 3>    num_blocks(2, 2, 2);
+    spade::ctrs::array<int, 3>    cells_in_block(16, 16, 16);
     spade::ctrs::array<int, 3>    exchange_cells(2, 2, 2);
     // spade::bound_box_t<real_t, 3> bounds(-0.2, 1.2, -0.4, 0.4, -0.4, 0.4);
-    spade::bound_box_t<real_t, 3> bounds(-0.2, 1.2, -0.5, 0.35, 0.0, 0.6);
+    // spade::bound_box_t<real_t, 3> bounds(-0.5, 1.5, -0.5, 0.5, 0.0, 1.0);
+    spade::bound_box_t<real_t, 3> bounds(-2.1, 2.0, -2.1, 2.0, -2.1, 2.0);
     
     spade::coords::identity<real_t> coords;
     
@@ -25,7 +26,7 @@ int main(int argc, char** argv)
     spade::grid::cartesian_grid_t grid(cells_in_block, exchange_cells, blocks, coords, group);
     
     spade::geom::vtk_geom_t<3> geom;
-    spade::geom::read_vtk_geom("test.vtk", geom);
+    spade::geom::read_vtk_geom("sphere.vtk", geom);
     
     using bvh_t = spade::geom::bvh_t<2, real_t>;
     bvh_t b0;
@@ -56,18 +57,13 @@ int main(int argc, char** argv)
         p2[2] = 1.01;
         
         return spade::geom::primitives::box_tri_intersect(p0, p1, p2, ext_bx);
-    };
-    /*
-    b0.calculate(bnd, geom.faces.size(), check);
-    spade::geom::detail::debug_output_bvh("bvh2d.vtk", b0);
-    */
-    
+    };    
     
     bool do_refine = true;
     if (do_refine)
     {
         spade::timing::scoped_tmr_t t0("refine");
-        int maxlevel = 2;
+        int maxlevel = 3;
         {
             while (true)
             {
@@ -84,6 +80,19 @@ int main(int argc, char** argv)
             }
         }
     }
+    if (group.isroot())
+    {
+        std::size_t npt = 1;
+        npt *= cells_in_block[0];
+        npt *= cells_in_block[1];
+        npt *= cells_in_block[2];
+        npt *= grid.get_num_global_blocks();
+        print("num points:", npt);
+        print("num tri:   ", geom.faces.size());
+    }
+    
+    const auto ghosts = spade::ibm::compute_ghosts(grid, geom);
+    spade::io::output_vtk("pts.vtk", ghosts.boundary_points.data(spade::device::cpu));
     
     spade::grid::grid_array phi(grid, 0.0, spade::device::best);
     spade::io::output_vtk("output", "phi", phi);

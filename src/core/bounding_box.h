@@ -40,7 +40,9 @@ namespace spade
             return output;
         }
         
-        _sp_hybrid bool contains(const ctrs::array<dtype, ar_size>& x) const
+        template <ctrs::basic_array arr_t>
+        requires(arr_t::size() == ar_size)
+        _sp_hybrid bool contains(const arr_t& x) const
         {
             for (int d = 0; d < ar_size; ++d)
             {

@@ -276,4 +276,24 @@ namespace spade::io
         detail::output_block_files(arr, out_dir, basename);
         group.sync();
     }
+    
+    template <ctrs::basic_array ctr_t>
+    requires(std::same_as<typename ctr_t::value_type, coords::point_t<typename ctr_t::value_type::value_type>>)
+    static void output_vtk(const std::string& fname, const ctr_t& data, const bool fill_line = false)
+    {
+        std::ofstream mf(fname);
+        mf << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << data.size() << " double\n";
+        for (const auto& x: data) mf << x[0] << " " << x[1] << " " << x[2] << "\n";
+        if (fill_line && (data.size() > 1))
+        {
+            mf << "POLYGONS " << (data.size() - 1) << " " << 3*(data.size() - 1) << "\n";
+            for (std::size_t i = 0; i < data.size()-1; ++i)
+            {
+                mf << "2 " << i << " " << (i+1) << "\n";
+            }
+        }
+        mf << "POINT_DATA " << data.size() << "\nSCALARS Data double\nLOOKUP_TABLE default\n";
+        std::size_t ct = 0;
+        for (const auto& x: data) mf << ct++ << "\n";
+    }
 }

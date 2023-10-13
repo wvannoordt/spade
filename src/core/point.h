@@ -6,7 +6,8 @@
 
 namespace spade::coords
 {
-    template <typename float_t> struct point_t : public ctrs::arithmetic_array_t<float_t, 3, point_t<float_t>>
+    template <typename float_t>
+    struct point_t : public ctrs::arithmetic_array_t<float_t, 3, point_t<float_t>>
     {
         using base_t = ctrs::arithmetic_array_t<float_t, 3, point_t<float_t>>;
         using base_t::base_t;

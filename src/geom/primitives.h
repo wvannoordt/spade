@@ -7,6 +7,7 @@
 namespace spade::geom::primitives
 {
     template <typename T> concept point_3d = (T::size() == 3 && std::floating_point<typename T::value_type>);
+    template <typename T> concept point_2d = (T::size() == 2 && std::floating_point<typename T::value_type>);
     
     template <point_3d arr_t, point_3d nv_t>
     _sp_hybrid static bool box_plane_intersect(const arr_t& point, const nv_t& normalVec, const bound_box_t<typename arr_t::value_type, 3>& box)
@@ -91,6 +92,32 @@ namespace spade::geom::primitives
             r = h[0]*utils::abs(aij[0]) + h[1]*utils::abs(aij[1]) + h[2]*utils::abs(aij[2]);
             if ((r < pmin) || (pmax < -r)) return false;
         }
-    return true;
+        return true;
+    }
+    
+    template <point_2d arr_t>
+    _sp_hybrid static bool point_in_tri(const arr_t& x, const arr_t& p0, const arr_t& p1, const arr_t& p2, const typename arr_t::value_type tol = 1e-7)
+    {
+        using real_t = typename arr_t::value_type;
+        const auto tri_area = [](const arr_t& a, const arr_t& b, const arr_t& c)
+        {
+            auto dx0 = b[0] - a[0];
+            auto dy0 = b[1] - a[1];
+            auto dx1 = c[0] - b[0];
+            auto dy1 = c[1] - b[1];
+            
+            // i    j    k
+            // dx0  dy0  0
+            // dx1  dy1  0
+            
+            return dx0*dy1 - dy0*dx1;
+        };
+        
+        const auto a_all = utils::abs(tri_area(p0, p1, p2));
+        const auto a_0   = utils::abs(tri_area(x,  p1, p2));
+        const auto a_1   = utils::abs(tri_area(p0, x,  p2));
+        const auto a_2   = utils::abs(tri_area(p0, p1, x ));
+        
+        return utils::abs(a_all - a_0 - a_1 - a_2) < tol;
     }
 }

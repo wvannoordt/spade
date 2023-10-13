@@ -26,6 +26,7 @@ namespace spade::geom
         int degree  = 4;
         using bnd_t  = bound_box_t<float_t,dim>;
         using ibnd_t = bound_box_t<int, dim>;
+        using pnt_t  = ctrs::array<float_t, dim>;
         
         constexpr static int bvh_dim() { return dim; }
         
@@ -49,6 +50,13 @@ namespace spade::geom
             data_end.clear();
             children.clear();
             levels.clear();
+        }
+        
+        idx_t get_max_elems() const
+        {
+            idx_t output = 0;
+            for (idx_t i = 0; i < bounds.size(); ++i) output = utils::max(output, data_end[i] - data_begin[i]);
+            return output;   
         }
         
         bnd_t get_subbox(const md_idx_t& ii, const bnd_t& bnd) const
@@ -145,7 +153,7 @@ namespace spade::geom
             return did_refine;
         }
         
-        ibnd_t get_index_bnd(const bnd_t& bvh_bnd, const bnd_t& bnd) const
+        ibnd_t get_index_range(const bnd_t& bvh_bnd, const bnd_t& bnd) const
         {
             ibnd_t output;
             for (int d = 0; d < bvh_dim(); ++d)
@@ -164,10 +172,21 @@ namespace spade::geom
             return output;
         }
         
+        md_idx_t get_index_range(const bnd_t& bvh_bnd, const pnt_t& pnt) const
+        {
+            md_idx_t output;
+            for (int d = 0; d < bvh_dim(); ++d)
+            {
+                const auto dx = bvh_bnd.size(d) / degree;
+                output[d]     = (pnt[d]-bvh_bnd.min(d))/dx;
+            }
+            return output;
+        }
+        
         template <typename iter_t>
         void check_elements(const iter_t& iter, const bnd_t& bnd, const bnd_t& bvh_bnd, const idx_t& patch_idx) const
         {
-            auto ibnd = get_index_bnd(bvh_bnd, bnd);
+            auto ibnd = get_index_range(bvh_bnd, bnd);
             const auto loop = [&](const auto& ii)
             {
                 idx_t idx = patch_idx+get_index(ii);
@@ -191,9 +210,34 @@ namespace spade::geom
         }
         
         template <typename iter_t>
+        void check_elements(const iter_t& iter, const pnt_t& pnt, const bnd_t& bvh_bnd, const idx_t& patch_idx) const
+        {
+            if (!bvh_bnd.contains(pnt)) return;
+            const auto md      = get_index_range(bvh_bnd, pnt);
+            const auto idx     = patch_idx + get_index(md);
+            if (children[idx] == no_val)
+            {
+                for (idx_t i = data_begin[idx]; i < data_end[idx]; ++i)
+                {
+                    iter(data[i]);
+                }
+            }
+            else
+            {
+                check_elements(iter, pnt, bounds[idx], children[idx]);
+            }
+        }
+        
+        template <typename iter_t>
         void check_elements(const iter_t& iter, const bnd_t& bnd) const
         {
             check_elements(iter, bnd, glob_bounds, 0);
+        }
+        
+        template <typename iter_t>
+        void check_elements(const iter_t& iter, const pnt_t& pnt) const
+        {
+            check_elements(iter, pnt, glob_bounds, 0);
         }
         
         // Rare pass by value!!

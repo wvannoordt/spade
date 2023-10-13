@@ -32,8 +32,35 @@ namespace spade::geom
         std::vector<face_t>        faces;
         bound_box_t<float_t,dim>   bbox, bbox_inflated;
         bvh_impl_t<3, float_t, std::vector> vol_bvh;
+        bvh_impl_t<2, float_t, std::vector> axis_bvh[3];
+        std::size_t max_2d_bvh_elems;
         
-        void calc_bvh()
+        mutable std::vector<pnt_t>  xray_buf;
+        mutable std::vector<uint_t> tri_buf;
+        mutable std::vector<uint_t> permute_buf;
+        
+        pnt_t centroid(const uint_t& idx) const
+        {
+            pnt_t output;
+            
+            const auto& face = faces[idx];
+            const auto& p0   = points[face[0]];
+            const auto& p1   = points[face[1]];
+            const auto& p2   = points[face[2]];
+            
+            for (int d = 0; d < output.size(); ++d)
+            {
+                output[d] = (p0[d] + p1[d] + p2[d])/3.0;
+            }
+            return output;
+        }
+        
+        auto get_bounding_box() const
+        {
+            return bbox;
+        }
+        
+        void calc_bvhs()
         {
             const auto box_check = [&](const uint_t& i, const auto& bnd)
             {
@@ -42,6 +69,49 @@ namespace spade::geom
             };
             
             vol_bvh.calculate(bbox_inflated, faces.size(), box_check);
+            
+            max_2d_bvh_elems = 0;
+            for (int d = 0; d < 3; ++d)
+            {
+                auto& bvh    = axis_bvh[d];
+                const int d0 = (d+1)%3;
+                const int d1 = (d+2)%3;
+                
+                const auto tol = 1e-7;
+                const auto box_check = [&](const uint_t& i, const auto& bnd)
+                {
+                    bound_box_t<float_t, 3> bbox_3d;
+                    bbox_3d.min(d0)    = bnd.min(0);
+                    bbox_3d.max(d0)    = bnd.max(0);
+                    bbox_3d.min(d1)    = bnd.min(1);
+                    bbox_3d.max(d1)    = bnd.max(1);
+                    bbox_3d.min(d)     = bbox_inflated.min(d);
+                    bbox_3d.max(d)     = bbox_inflated.max(d);
+                    const auto& face   = faces[i];
+                    const auto& normal = normals[i];
+                    auto plane_normal  = normals[i]; //avoid decltype shenanigans
+                    plane_normal = 0.0;
+                    plane_normal[d] = 1.0;
+                    if (utils::abs(ctrs::dot_prod(normal, plane_normal))<tol) return false;
+                    return primitives::box_tri_intersect(points[face[0]], points[face[1]], points[face[2]], bbox_3d);
+                };
+                
+                bound_box_t<float_t, 2> bbox_2d;
+                bbox_2d.min(0) = bbox_inflated.min(d0);
+                bbox_2d.max(0) = bbox_inflated.max(d0);
+                bbox_2d.min(1) = bbox_inflated.min(d1);
+                bbox_2d.max(1) = bbox_inflated.max(d1);
+                
+                bvh.calculate(bbox_2d, faces.size(), box_check);
+                max_2d_bvh_elems = utils::max(max_2d_bvh_elems, bvh.get_max_elems());
+            }
+            xray_buf.clear();
+            xray_buf.reserve(max_2d_bvh_elems);
+            tri_buf.clear();
+            tri_buf.reserve(max_2d_bvh_elems);
+            permute_buf.clear();
+            permute_buf.reserve(max_2d_bvh_elems);
+            
         }
         
         template <typename rhs_float_t>
@@ -55,13 +125,77 @@ namespace spade::geom
                 return success;
             };
 
-            vol_bvh.check_elements([&](const auto& i)
-            {
-                output = output || check_tri(i);
-            }, bnd);
+            vol_bvh.check_elements([&](const auto& i) { output = output || check_tri(i); }, bnd);
 
             return output;
         }
+        
+        template <typename pfloat_t, typename on_isect_t>
+        void trace_aligned_ray(const int dir, const int sign, const coords::point_t<pfloat_t>& x, const on_isect_t& on_isect) const
+        {
+            using vec_t = ctrs::array<pfloat_t, 3>;
+            using p2d_t = ctrs::array<pfloat_t, 2>;
+            vec_t nvec = 0.0;
+            nvec[dir] = sign;
+            
+            int t0 = (dir+1)%3;
+            int t1 = (dir+2)%3;
+            
+            p2d_t x_prj = {x[t0], x[t1]};
+            
+            const auto& table = axis_bvh[dir];
+            using bvh_type = utils::remove_all<decltype(table)>::type;
+            using bvh_pt_t = typename bvh_type::pnt_t;
+            bvh_pt_t point_2d;
+            point_2d[0] = x[t0];
+            point_2d[1] = x[t1];
+            
+            xray_buf.clear();
+            tri_buf.clear();
+            permute_buf.clear();
+            const auto isect_check = [&](const auto& i)
+            {
+                const auto& face = faces  [i];
+                const auto& norm = normals[i];
+                
+                const auto& p0 = points[face[0]];
+                const auto& p1 = points[face[1]];
+                const auto& p2 = points[face[2]];
+                
+                
+                p2d_t p0_prj = {p0[t0], p0[t1]};
+                p2d_t p1_prj = {p1[t0], p1[t1]};
+                p2d_t p2_prj = {p2[t0], p2[t1]};
+                
+                if (primitives::point_in_tri(x_prj, p0_prj, p1_prj, p2_prj))
+                {
+                    const auto t = sign*ctrs::dot_prod(x-p0, norm)/norm[dir];
+                    pnt_t xb = x;
+                    xb -= t*nvec;
+                    xray_buf.push_back(xb);
+                    tri_buf.push_back(i);
+                    permute_buf.push_back(permute_buf.size());
+                }
+            };
+            
+            table.check_elements(isect_check, point_2d);
+            
+            if (xray_buf.size() == 0) return;
+            
+            std::sort(permute_buf.begin(), permute_buf.end(), [&](const auto& a, const auto& b){ return sign*xray_buf[a][dir] < sign*xray_buf[b][dir]; });
+
+            int tsgn = utils::sign(normals[tri_buf[permute_buf[0]]][dir]);
+            on_isect(xray_buf[0]);
+            for (int j = 1; j < xray_buf.size(); ++j)
+            {
+                // if (tsgn*utils::sign(normals[tri_buf[permute_buf[j]]][dir]) < 0.0)
+                // {
+                    tsgn = -tsgn;
+                    on_isect(xray_buf[permute_buf[j]]);
+                // }
+            }
+        }
+        
     };
     
     template <const int dim, const int n_edge, typename float_t>
@@ -136,8 +270,45 @@ namespace spade::geom
             surf.normals.push_back(n);
         }
         
-        surf.calc_bvh();
+        surf.calc_bvhs();
         
         return header;
+    }
+    
+    namespace detail
+    {
+        template <typename vtk_t, typename subset_t>
+        static void output_subset(const std::string& fname, const vtk_t& geom, const subset_t& subset)
+        {
+            std::ofstream mf(fname);
+            std::size_t count = 0;
+            for (const auto& ifc: subset) count++;
+            
+            mf << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << 3*count << " double\n";
+            for (const auto& ifc: subset)
+            {
+                const auto& fc = geom.faces[ifc];
+                const auto& p0 = geom.points[fc[0]];
+                const auto& p1 = geom.points[fc[1]];
+                const auto& p2 = geom.points[fc[2]];
+                mf << p0[0] << " " << p0[1] << " " << p0[2] << "\n";
+                mf << p1[0] << " " << p1[1] << " " << p1[2] << "\n";
+                mf << p2[0] << " " << p2[1] << " " << p2[2] << "\n";
+            }
+            mf << "POLYGONS " << count << " " << 4*count << "\n";
+            std::size_t idx = 0;
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                mf << "3 " << idx++ << " " << idx++ << " " << idx++ << "\n";
+            }
+            
+            mf << "CELL_DATA " << count << "\n";
+            mf << "SCALARS Data double\nLOOKUP_TABLE default\n";
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                mf << "1" << "\n";
+            }
+            
+        }
     }
 }

@@ -24,6 +24,9 @@
 #include "grid/grid.h"
 #include "grid/exchange_pattern.h"
 
+#include "ibm/ghost_list.h"
+#include "ibm/compute_ghosts.h"
+
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 

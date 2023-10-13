@@ -103,6 +103,8 @@ namespace spade::ctrs
         using value_type = dtype;
         using index_type = int;
         
+        constexpr static bool has_derived = std::same_as<derived_t, detail::no_type_t>;
+        
         dtype data[ar_size];
         _sp_hybrid dtype& operator [] (index_type idx) {return data[idx];}
         _sp_hybrid const dtype& operator [] (index_type idx) const {return data[idx];}
@@ -209,7 +211,7 @@ namespace spade::ctrs
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
-            return output;
+            return output.self();
         }
         
         template <typename rhs_t>
@@ -217,7 +219,7 @@ namespace spade::ctrs
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
-            return output;
+            return output.self();
         }
         
         template <basic_array arr_t>

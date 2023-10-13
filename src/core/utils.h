@@ -105,6 +105,11 @@ namespace spade::utils
         return val<0?-val:val;
     }
     
+    template <typename rtype> _sp_hybrid [[nodiscard]] constexpr static auto sign(const rtype& val)
+    {
+        return val<0?-1:1;
+    }
+    
     static inline void get_format_substrings(std::vector<std::string>& subStrings, const std::string& templateStr)
     {
         std::string delimiter = "{}";

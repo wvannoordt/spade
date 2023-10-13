@@ -184,7 +184,7 @@ namespace spade::grid
             
             std::size_t get_grid_size()                                 const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
             std::size_t  get_num_local_blocks()                         const { return grid_partition.get_num_local_blocks(); }
-            std::size_t get_num_global_blocks()                         const { return grid_partition.get_num_global_blocks(); }
+            std::size_t  get_num_global_blocks()                        const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::global_tag_t&) const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::local_tag_t&)  const { return grid_partition.get_num_local_blocks(); }
             int get_num_cells(const std::size_t& i)                     const { return global_geometry.num_cell[i]; }
