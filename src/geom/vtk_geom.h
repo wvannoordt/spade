@@ -10,6 +10,7 @@
 #include "core/ctrs.h"
 #include "core/point.h"
 #include "core/ascii.h"
+#include "core/except.h"
 
 #include "geom/primitives.h"
 #include "geom/bvh.h"
@@ -21,7 +22,8 @@ namespace spade::geom
     {
         using value_type = float_t;
         using uint_t     = std::size_t;
-        using pnt_t      = coords::point_t<float_t>;
+        template <typename T> using T_pnt_t = coords::point_t<T>;
+        using pnt_t      = T_pnt_t<float_t>;
         using vec_t      = ctrs::array<float_t,3>;
         using face_t     = ctrs::array<uint_t, n_edge>;
         
@@ -77,7 +79,7 @@ namespace spade::geom
                 const int d0 = (d+1)%3;
                 const int d1 = (d+2)%3;
                 
-                const auto tol = 1e-7;
+                const auto tol = 1e-5;
                 const auto box_check = [&](const uint_t& i, const auto& bnd)
                 {
                     bound_box_t<float_t, 3> bbox_3d;
@@ -112,6 +114,44 @@ namespace spade::geom
             permute_buf.clear();
             permute_buf.reserve(max_2d_bvh_elems);
             
+        }
+        
+        template <typename pt_flt_t>
+        T_pnt_t<pt_flt_t> find_closest_boundary_point(const T_pnt_t<pt_flt_t>& x_in, const pt_flt_t& search_radius) const
+        {
+            if (!(bbox_inflated.contains(x_in)))
+            {
+                throw except::sp_exception("can't find closest point if outside bvh!");
+            }
+            
+            const int bvhdim  = decltype(vol_bvh)::bvh_dim();
+            bound_box_t<float_t, bvhdim> search_box;
+            for (int i = 0; i < vol_bvh.bvh_dim(); ++i)
+            {
+                search_box.min(i) = x_in[i] - search_radius;
+                search_box.max(i) = x_in[i] + search_radius;
+            }
+            
+            
+            pt_flt_t min_dist = 1e50;
+            T_pnt_t<pt_flt_t> output(-1e9,-1e9,-1e9);
+            const auto point_check = [&](const auto& iface)
+            {
+                const auto& face  = faces[iface];
+                const auto& p0    = points[face[0]];
+                const auto& p1    = points[face[1]];
+                const auto& p2    = points[face[2]];
+                const auto  x_tri = primitives::closest_point_on_tri(x_in, p0, p1, p2);
+                const auto  dist  = ctrs::array_norm(x_tri - x_in);
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                    output = x_tri;
+                }
+            };
+            
+            vol_bvh.check_elements(point_check, search_box);            
+            return output;
         }
         
         template <typename rhs_float_t>
@@ -182,17 +222,18 @@ namespace spade::geom
             
             if (xray_buf.size() == 0) return;
             
+            // Sorting this appears to remove most of the points!!!!!! Start debugging here...
             std::sort(permute_buf.begin(), permute_buf.end(), [&](const auto& a, const auto& b){ return sign*xray_buf[a][dir] < sign*xray_buf[b][dir]; });
-
+            
             int tsgn = utils::sign(normals[tri_buf[permute_buf[0]]][dir]);
-            on_isect(xray_buf[0]);
+            on_isect(xray_buf[permute_buf[0]], normals[tri_buf[permute_buf[0]]]);
             for (int j = 1; j < xray_buf.size(); ++j)
             {
-                // if (tsgn*utils::sign(normals[tri_buf[permute_buf[j]]][dir]) < 0.0)
-                // {
+                if (tsgn*utils::sign(normals[tri_buf[permute_buf[j]]][dir]) < 0.0)
+                {
                     tsgn = -tsgn;
-                    on_isect(xray_buf[permute_buf[j]]);
-                // }
+                    on_isect(xray_buf[permute_buf[j]], normals[tri_buf[permute_buf[j]]]);
+                }
             }
         }
         

@@ -10,11 +10,14 @@ namespace spade::ibm
     {
         using idx_t = grid::cell_idx_t;
         using pnt_t = coords::point_t<float_t>;
+        using vec_t = ctrs::array<float_t, 3>;
         
         //Stores the points locally
-        device::shared_vector<idx_t> indices;
-        device::shared_vector<pnt_t> boundary_points;
-        device::shared_vector<int>   directions;
-        device::shared_vector<int>   signs;
+        device::shared_vector<idx_t>       indices;
+        device::shared_vector<pnt_t>       boundary_points;
+        device::shared_vector<vec_t>       boundary_normals;
+        device::shared_vector<pnt_t>       closest_points;
+        device::shared_vector<int>         directions;
+        device::shared_vector<int>         signs;
     };
 }

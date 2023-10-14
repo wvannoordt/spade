@@ -76,62 +76,65 @@ namespace spade::ibm
                     int isect_count = 0;
                     const int sign = -1;
                     int sign_local = sign;
-                    const auto on_intersection = [&](const auto& point)
+                    const auto on_intersection = [&](const auto& point, const auto& normal)
                     {
                         from_exterior = !from_exterior;
+                        sign_local    = -sign_local;
                         ++isect_count;
                         if (bnd_extd.contains(point))
                         {
-                            output.boundary_points.push_back(point);
-                            output.directions.push_back(idir);
-                            output.signs.push_back(sign_local);
-                            sign_local = -sign_local;
+                                output.boundary_points.push_back(point);
+                                output.directions.push_back(idir);
+                                output.signs.push_back(sign_local);
+                                output.indices.push_back(icell);
+                                output.boundary_normals.push_back(normal);
                         }
                     };
                     
                     // Perform the ray trace along the [idir] axis in the [sign] direction
                     geom.trace_aligned_ray(idir, sign, x_comp, on_intersection);
-
-                    
-                    // if ((isect_count != 2) && (isect_count != 0) && (idir == 2))
-                    // if ((isect_count != 2) && (isect_count != 0))
-                    // {
-                    //     print("DANG", isect_count);
-                    //     print("g_t_i", global::tr_id);
-                    //     auto& v = output.boundary_points.data(device::cpu);
-                        
-                    //     std::vector<pnt_t> pts;
-                    //     pts.push_back(x_comp);
-                    //     const auto on_intersection2 = [&](const auto& point)
-                    //     {
-                    //         pts.push_back(point);
-                    //     };
-                        
-                    //     // Sad debugging
-                    //     const auto& bvhh = geom.axis_bvh[idir];
-                    //     geom.trace_aligned_ray(idir, sign, x_comp, on_intersection2);
-                    //     print("npt incl. orig.:", pts.size());
-                    //     io::output_vtk("bad_pts.vtk", pts, false);
-                    //     geom::detail::debug_output_bvh("bvh_proj.vtk", bvhh);
-                        
-                    //     // output the triangles considered
-                    //     using p2d_t = ctrs::array<real_t, 2>;
-                    //     int t0 = (idir+1)%3;
-                    //     int t1 = (idir+2)%3;
-                    //     p2d_t x_prj = {x_comp[t0], x_comp[t1]};
-                    //     std::vector<std::size_t> tris;
-                    //     bvhh.check_elements([&](const auto& i) {tris.push_back(i);}, {x_comp[t0], x_comp[t1]});
-                    //     geom::detail::output_subset("tris.vtk", geom, tris);
-                    //     std::cin.get();
-                    // }
-                    
-                    // global::tr_id++;
                 };
+                
                 
                 // Port to GPU later -_-
                 dispatch::execute(ibound, loop_load, device::cpu);
             }
         }
+        
+        // By this point, we have performed all of the x-ray tracing to get the surface points.
+        // now, we will go and figure out the ghost cells from each boundary point.
+        
+        // Note that the indices in output.indices currently stores the cell that 'shot' the ray
+        // so only the block is correct. We will use this to compute the correct index
+        
+        const auto& v = output.boundary_points.data(device::cpu);
+        dispatch::ranges::linear_range_t rg(0, v.size(), device::cpu);
+        const auto comp_ghost_info = [&](const auto& i)
+        {
+            auto& icell         = output.indices[i];
+            const auto  lb      = utils::tag[partition::local](icell.lb());
+            const auto& b_point = output.boundary_points[i];
+            const auto& bbox    = grid.get_bounding_box(lb);
+            const auto& idir    = output.directions[i];
+            const auto& sign    = output.signs[i];
+            const auto  dx      = grid.get_dx(lb);
+            
+            // Note that only the index value in the traced direction is wrong
+            icell[idir]        = (b_point[idir]-bbox.min(idir))/dx[idir];
+            const auto xc_comp = grid.get_comp_coords(icell);
+            const auto xdiff   = b_point[idir] - xc_comp[idir];
+            if (xdiff*sign < 0.0) icell[idir] -= sign;
+            
+            // At this point, icell contains the correct location of the ghost cell.
+            // We procede to find the nearest point on the geometry
+            const auto x_ghost = grid.get_comp_coords(icell);
+            real_t search_radius = 1e-9;
+            for (const auto& dx_v: dx) search_radius = utils::max(search_radius, dx_v);
+            const auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
+            output.closest_points.push_back(nearest_boundary_point);
+        };
+        
+        dispatch::execute(rg, comp_ghost_info, device::cpu);
         
         return output;
     }

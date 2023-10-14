@@ -12,7 +12,7 @@ namespace spade::dispatch::ranges
         idx_t lower;
         idx_t upper;
         
-        linear_range_t(const idx_t& lw, const idx_t& up, const r_device_t& de) : dvc{de}, lower{lw}, upper{up} {}
+        linear_range_t(const auto& lw, const idx_t& up, const r_device_t& de) : dvc{de}, lower{lw}, upper{up} {}
         
         device_t device() const { return dvc; }
         

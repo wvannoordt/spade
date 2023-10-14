@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     spade::ctrs::array<int, 3>    exchange_cells(2, 2, 2);
     // spade::bound_box_t<real_t, 3> bounds(-0.2, 1.2, -0.4, 0.4, -0.4, 0.4);
     // spade::bound_box_t<real_t, 3> bounds(-0.5, 1.5, -0.5, 0.5, 0.0, 1.0);
-    spade::bound_box_t<real_t, 3> bounds(-2.1, 2.0, -2.1, 2.0, -2.1, 2.0);
+    spade::bound_box_t<real_t, 3> bounds(-2.2, 2.2, -2.2, 2.2, -2.2, 2.2);
     
     spade::coords::identity<real_t> coords;
     
@@ -57,13 +57,13 @@ int main(int argc, char** argv)
         p2[2] = 1.01;
         
         return spade::geom::primitives::box_tri_intersect(p0, p1, p2, ext_bx);
-    };    
+    };
     
     bool do_refine = true;
     if (do_refine)
     {
         spade::timing::scoped_tmr_t t0("refine");
-        int maxlevel = 3;
+        int maxlevel = 2;
         {
             while (true)
             {
@@ -93,8 +93,40 @@ int main(int argc, char** argv)
     
     const auto ghosts = spade::ibm::compute_ghosts(grid, geom);
     spade::io::output_vtk("pts.vtk", ghosts.boundary_points.data(spade::device::cpu));
+    spade::io::output_vtk("cls.vtk", ghosts.closest_points.data(spade::device::cpu));
     
-    spade::grid::grid_array phi(grid, 0.0, spade::device::best);
+    std::vector<spade::coords::point_t<real_t>> ips;
+    int ng = ghosts.indices.data(spade::device::cpu).size();
+    for (int i = 0; i < ng; ++i)
+    {
+        const auto& icell = ghosts.indices[i];
+        const auto xg = grid.get_comp_coords(icell);
+        const auto bp = ghosts.closest_points[i];
+        auto nv = bp - xg;
+        nv = nv / spade::ctrs::array_norm(nv);
+        auto ipt = xg + 0.05*nv;
+        ips.push_back(ipt);
+    }
+    
+    spade::io::output_vtk("ips.vtk", ips);
+    
+    using prim_t = spade::fluid_state::prim_t<real_t>;
+    prim_t finit = 0.0;
+    spade::grid::grid_array phi(grid, finit, spade::device::best);
+    auto phi_img = phi.image();
+    int ct = 0;
+    for (const auto& ig: ghosts.indices.data(spade::device::cpu))
+    {
+        auto ff         = phi_img.get_elem(ig);
+        const auto idir = ghosts.directions[ct];
+        
+        if (idir == 0) ff.u() += 1.0;
+        if (idir == 1) ff.v() += 1.0;
+        if (idir == 2) ff.w() += 1.0;
+        
+        phi_img.set_elem(ig, ff);
+        ++ct;
+    }
     spade::io::output_vtk("output", "phi", phi);
     return 0;
 }
