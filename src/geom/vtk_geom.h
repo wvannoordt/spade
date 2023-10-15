@@ -12,6 +12,8 @@
 #include "core/ascii.h"
 #include "core/except.h"
 
+#include "io/io_vtk.h"
+
 #include "geom/primitives.h"
 #include "geom/bvh.h"
 
@@ -119,10 +121,10 @@ namespace spade::geom
         template <typename pt_flt_t>
         T_pnt_t<pt_flt_t> find_closest_boundary_point(const T_pnt_t<pt_flt_t>& x_in, const pt_flt_t& search_radius) const
         {
-            if (!(bbox_inflated.contains(x_in)))
-            {
-                throw except::sp_exception("can't find closest point if outside bvh!");
-            }
+            // if (!(bbox_inflated.contains(x_in)))
+            // {
+            //     throw except::sp_exception("can't find closest point if outside bvh!");
+            // }
             
             const int bvhdim  = decltype(vol_bvh)::bvh_dim();
             bound_box_t<float_t, bvhdim> search_box;
@@ -201,7 +203,6 @@ namespace spade::geom
                 const auto& p0 = points[face[0]];
                 const auto& p1 = points[face[1]];
                 const auto& p2 = points[face[2]];
-                
                 
                 p2d_t p0_prj = {p0[t0], p0[t1]};
                 p2d_t p1_prj = {p1[t0], p1[t1]};

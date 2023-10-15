@@ -27,7 +27,7 @@ namespace spade::pde_algs
         block_flux_interior
     };
     
-    
+    /*
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
@@ -138,7 +138,8 @@ namespace spade::pde_algs
         }
         flux_div(prims, rhs, domain_boundary_flux, flux_funcs...);
     }
-    
+    */
+
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
@@ -197,4 +198,5 @@ namespace spade::pde_algs
         };
         dispatch::execute(var_range, load);
     }
+    
 }

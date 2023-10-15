@@ -40,6 +40,21 @@ namespace spade::device
             devc_data.resize(n);
         }
         
+        auto size() const
+        {
+            return host_data.size();
+        }
+        
+        auto begin() const
+        {
+            return host_data.begin();
+        }
+        
+        auto end() const
+        {
+            return host_data.end();
+        }
+        
         void clear()
         {
             this->resize(0);

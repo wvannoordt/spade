@@ -96,7 +96,7 @@ namespace spade::geom::primitives
     }
     
     template <point_2d arr_t>
-    _sp_hybrid static bool point_in_tri(const arr_t& x, const arr_t& p0, const arr_t& p1, const arr_t& p2, const typename arr_t::value_type tol = 1e-7)
+    _sp_hybrid static bool point_in_tri(const arr_t& x, const arr_t& p0, const arr_t& p1, const arr_t& p2, const typename arr_t::value_type tol = 1e-13)
     {
         using real_t = typename arr_t::value_type;
         const auto tri_area = [](const arr_t& a, const arr_t& b, const arr_t& c)
@@ -118,7 +118,7 @@ namespace spade::geom::primitives
         const auto a_1   = utils::abs(tri_area(p0, x,  p2));
         const auto a_2   = utils::abs(tri_area(p0, p1, x ));
         
-        return utils::abs(a_all - a_0 - a_1 - a_2) < tol;
+        return (utils::abs(a_all - a_0 - a_1 - a_2) < tol) && (utils::abs(a_all) > 1e-10);
     }
     
     template <point_3d arr_t>

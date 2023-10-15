@@ -81,13 +81,14 @@ namespace spade::ibm
                         from_exterior = !from_exterior;
                         sign_local    = -sign_local;
                         ++isect_count;
+                        
                         if (bnd_extd.contains(point))
                         {
-                                output.boundary_points.push_back(point);
-                                output.directions.push_back(idir);
-                                output.signs.push_back(sign_local);
-                                output.indices.push_back(icell);
-                                output.boundary_normals.push_back(normal);
+                            output.boundary_points.push_back(point);
+                            output.directions.push_back(idir);
+                            output.signs.push_back(sign_local);
+                            output.indices.push_back(icell);
+                            output.boundary_normals.push_back(normal);
                         }
                     };
                     
@@ -131,7 +132,7 @@ namespace spade::ibm
             real_t search_radius = 1e-9;
             for (const auto& dx_v: dx) search_radius = utils::max(search_radius, dx_v);
             const auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
-            output.closest_points.push_back(nearest_boundary_point);
+            output.closest_points.push_back(nearest_boundary_point);            
         };
         
         dispatch::execute(rg, comp_ghost_info, device::cpu);
