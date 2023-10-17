@@ -34,9 +34,11 @@ namespace spade::device
         
         void resize(const std::size_t& n)
         {
+#if (_sp_cuda)
             if (raw != nullptr) allocator.deallocate(raw, c_size);
             c_size = n;
             raw = allocator.allocate(n);
+#endif
         }
         
         ~device_vector()

@@ -11,6 +11,7 @@ namespace spade::ibm
         static_assert(std::same_as<typename grid_t::coord_sys_type, coords::identity<typename grid_t::coord_type>>, "ghosts currently only working for identity coordinates");
         using real_t = typename grid_t::coord_type;
         using pnt_t  = typename grid_t::coord_point_type;
+        using vec_t  = typename ghost_list_t<typename grid_t::coord_type>::vec_t;
         
         
         // Select the blocks that intersect the boundary
@@ -44,6 +45,8 @@ namespace spade::ibm
                 
                 // Note that we include xray points inside the exchange cells in the tracing direction
                 auto bnd_extd = grid.get_bounding_box(lb);
+                
+                // Note that there is some issue with intersection detection in exchange cells
                 if (!(domain_boundary.min(idir))) bnd_extd.min(idir) -= grid.get_num_exchange(idir)*dx[idir];
                 if (!(domain_boundary.max(idir))) bnd_extd.max(idir) += grid.get_num_exchange(idir)*dx[idir];
                 
@@ -56,8 +59,7 @@ namespace spade::ibm
                 }
                 ibound.min(idir) = 0;
                 ibound.max(idir) = 1;
-                
-                using vec_t = ctrs::array<real_t, 3>;
+
                 const auto loop_load = [&](const auto& ii)
                 {
                     grid::cell_idx_t icell(ii[0], ii[1], ii[2], lb.value);
@@ -86,7 +88,7 @@ namespace spade::ibm
                         {
                             output.boundary_points.push_back(point);
                             output.directions.push_back(idir);
-                            output.signs.push_back(sign_local);
+                            output.signs.push_back(-utils::sign(normal[idir]*sign));
                             output.indices.push_back(icell);
                             output.boundary_normals.push_back(normal);
                         }
@@ -109,7 +111,7 @@ namespace spade::ibm
         // so only the block is correct. We will use this to compute the correct index
         
         const auto& v = output.boundary_points.data(device::cpu);
-        dispatch::ranges::linear_range_t rg(0, v.size(), device::cpu);
+        dispatch::ranges::linear_range_t rg(0UL, v.size(), device::cpu);
         const auto comp_ghost_info = [&](const auto& i)
         {
             auto& icell         = output.indices[i];
@@ -119,9 +121,12 @@ namespace spade::ibm
             const auto& idir    = output.directions[i];
             const auto& sign    = output.signs[i];
             const auto  dx      = grid.get_dx(lb);
+            const auto  ng      = grid.get_num_exchange(idir);
             
             // Note that only the index value in the traced direction is wrong
-            icell[idir]        = (b_point[idir]-bbox.min(idir))/dx[idir];
+            icell[idir]  = (b_point[idir]-bbox.min(idir) + (ng+1)*dx[idir])/dx[idir];
+            icell[idir] -= (ng+1);
+                        
             const auto xc_comp = grid.get_comp_coords(icell);
             const auto xdiff   = b_point[idir] - xc_comp[idir];
             if (xdiff*sign < 0.0) icell[idir] -= sign;
@@ -132,11 +137,29 @@ namespace spade::ibm
             real_t search_radius = 1e-9;
             for (const auto& dx_v: dx) search_radius = utils::max(search_radius, dx_v);
             const auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
-            output.closest_points.push_back(nearest_boundary_point);            
+            output.closest_points.push_back(nearest_boundary_point);
+            
+            // Compute direction to the closest boundary point
+            vec_t nv = 0.0;
+            nv += (nearest_boundary_point - x_ghost);
+            auto dist       = ctrs::array_norm(nv);
+            const auto diag = ctrs::array_norm(dx);
+            
+            // Figure out this magic number
+            const auto tol = 5e-3;
+            
+            // If the ghost point is too close to the boundary, then
+            // the normal vector is just chosen as the surface normal vector
+            if (dist < tol*diag)
+            {
+                nv  = 0.0*nv;
+                nv += output.boundary_normals[i];
+            }
+            nv /= ctrs::array_norm(nv);
+            output.closest_normals.push_back(nv);
         };
         
         dispatch::execute(rg, comp_ghost_info, device::cpu);
-        
         return output;
     }
 }

@@ -23,6 +23,7 @@
 #include "grid/cartesian_blocks.h"
 #include "grid/grid.h"
 #include "grid/exchange_pattern.h"
+#include "grid/sample_operator.h"
 
 #include "ibm/ghost_list.h"
 #include "ibm/compute_ghosts.h"

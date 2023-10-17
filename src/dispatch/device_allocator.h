@@ -56,8 +56,6 @@ namespace spade::device
             {
                 throw mem_exception("could not deallocate device memory: " + std::string(cudaGetErrorString(er_code)));
             }
-#else
-            if (p != nullptr) throw mem_exception("attempted to deallocate device memory without device support");
 #endif
         }
     };

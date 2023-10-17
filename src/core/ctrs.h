@@ -68,20 +68,13 @@ namespace spade::ctrs
         for (int i = 1; i < arr1.size(); ++i) output += arr1[i]*arr2[i];
         return output;
     }
-
+    
     template <basic_array a1_t, basic_array a2_t>
     _sp_hybrid constexpr static void copy_array(const a1_t& src, a2_t& dest, const typename a2_t::value_type& default_val)
     {
         std::size_t tsize = utils::min(src.size(), dest.size());
         for (std::size_t i = 0; i < dest.size(); ++i) dest[i] = default_val;
         for (std::size_t i = 0; i < tsize;       ++i) dest[i] = src[i];
-    }
-    
-    template <basic_array a1_t, basic_array a2_t>
-    _sp_hybrid constexpr static void copy_array(const a1_t& src, a2_t& dest)
-    {
-        std::size_t tsize = utils::min(src.size(), dest.size());
-        for (std::size_t i = 0; i < tsize; ++i) dest[i] = src[i];
     }
     
     template <basic_array arr_t, typename rhs_t>
@@ -295,6 +288,22 @@ namespace spade::ctrs
     
     template <typename data_t, const std::size_t ar_size> using array = arithmetic_array_t<data_t, ar_size>;
     template <typename data_t> using v3d = array<data_t,3>;
+    
+    
+    template <basic_array rhs_t>
+    _sp_hybrid constexpr static array<typename rhs_t::value_type, rhs_t::size()> to_array(const rhs_t& rhs)
+    {
+        array<typename rhs_t::value_type, rhs_t::size()> output;
+        copy_array(rhs, output);
+        return output;
+    }
+    
+    template <basic_array a1_t, basic_array a2_t>
+    _sp_hybrid constexpr static void copy_array(const a1_t& src, a2_t& dest)
+    {
+        std::size_t tsize = utils::min(src.size(), dest.size());
+        for (std::size_t i = 0; i < tsize; ++i) dest[i] = src[i];
+    }
     
     template <typename dtype, const size_t ar_size, typename derived_t>
     static std::ostream &

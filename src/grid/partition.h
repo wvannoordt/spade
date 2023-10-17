@@ -16,6 +16,7 @@ namespace spade::partition
     class block_partition_t
     {
         public:
+            constexpr static std::size_t no_value = std::numeric_limits<std::size_t>::max();
             block_partition_t()
             {
                 
@@ -28,8 +29,8 @@ namespace spade::partition
                 if (group_in.rank() < (num_global_blocks%group_in.size())) num_local_blocks++;
                 local_block_to_global_block.resize(num_local_blocks);
 
-                std::size_t default_value = std::numeric_limits<std::size_t>::max();
-                global_block_to_local_block.resize(num_global_blocks, default_value);
+                
+                global_block_to_local_block.resize(num_global_blocks, no_value);
                 global_block_to_rank.resize(num_global_blocks);
                 std::size_t current_rank = 0;
                 std::size_t loc_count = 0;
