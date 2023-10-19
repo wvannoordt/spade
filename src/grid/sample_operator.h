@@ -88,6 +88,13 @@ namespace spade::grid
             using vec_t = typename decltype(block_bvh)::pnt_t;
             block_bvh.check_elements(eval, ctrs::to_array(x_sample));
             
+            if (lb.value < 0)
+            {
+                print(lb.value, x_sample);
+                print(bbx);
+                print("sadyy", __FILE__, __LINE__);
+                std::cin.get();
+            }
             const auto block_bbx = grid.get_bounding_box(lb);
             const auto dx = grid.get_dx(lb);
             
@@ -154,15 +161,18 @@ namespace spade::grid
         auto       out_img   = utils::make_vec_image(output);
         const auto arr_img   = arr.image();
         
-        auto kern = _sp_lambda (const auto& i) mutable
+        using real_t = typename arr_t::fundamental_type;
+        
+        auto kern = _sp_lambda (const std::size_t& i) mutable
         {
             auto& result = out_img[i];
+            result = real_t(0.0);
             const auto& coeffs = coeff_img[i];
             const auto& idxs   = idx_img  [i];
             for (int j = 0; j < idxs.size(); ++j)
             {
                 auto data = arr_img.get_elem(idxs[j]);
-                result += coeffs[j]*data;
+                result = result + coeffs[j]*data;
             }
         };
         

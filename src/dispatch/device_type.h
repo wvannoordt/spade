@@ -18,4 +18,9 @@ namespace spade::device
     template <typename T> concept is_gpu    = std::same_as<T, gpu_t>;
     
     template <typename T> concept is_device = is_cpu<T> || is_gpu<T>;
+    
+    template <typename T> concept has_device = requires(const T& t)
+    {
+        t.device();
+    };
 }

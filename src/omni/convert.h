@@ -84,6 +84,19 @@ namespace spade::omni
     {
         return info_list_t<info::coord, info::index>();
     }
+    
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable<
+            info::coord::array_data_type<array_t, index_t::centering_type()>,
+            info::value::array_data_type<array_t, index_t::centering_type()>
+            > kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<info::coord, info::value>();
+    }
 
     template <
         typename array_t,

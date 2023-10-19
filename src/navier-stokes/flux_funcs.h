@@ -23,9 +23,10 @@ namespace spade::convective
             const auto& nv             = omni::access<omni::info::metric>(info);
             const float_t u_n          = nv[0]*q.u() + nv[1]*q.v() + nv[2]*q.w();
             const float_t rho          = q.p()/(gas.get_R(info)*q.T());
-            const float_t enth         = 0.5*(q.u()*q.u()+q.v()*q.v()+q.w()*q.w()) + q.p()/rho + q.p()/(rho*(gas.get_gamma(info)-1.0));
+            const float_t pdiff        = q.p()/rho;
+            const float_t enth         = 0.5*(q.u()*q.u()+q.v()*q.v()+q.w()*q.w()) + q.p()/(rho*(gas.get_gamma(info)-1.0));
             f_u.continuity()           = 0.5*rho*u_n;
-            f_u.energy()               = 0.5*rho*u_n*enth;
+            f_u.energy()               = 0.5*rho*u_n*(enth+pdiff);
             f_u.x_momentum()           = 0.5*rho*q.u()*u_n + 0.5*q.p()*nv[0];
             f_u.y_momentum()           = 0.5*rho*q.v()*u_n + 0.5*q.p()*nv[1];
             f_u.z_momentum()           = 0.5*rho*q.w()*u_n + 0.5*q.p()*nv[2];
@@ -34,17 +35,17 @@ namespace spade::convective
             
             //Note: enth is actually the enthalpy as implemented, 
             //should actually be the conserved quantity total energy (pressure diffusion term)
-            f_d.continuity() -= sigma*rho;
-            f_d.energy()     -= sigma*rho*enth;
-            f_d.x_momentum() -= sigma*rho*q.u();
-            f_d.y_momentum() -= sigma*rho*q.v();
-            f_d.z_momentum() -= sigma*rho*q.w();
+            f_d.continuity() += sigma*rho;
+            f_d.energy()     += sigma*rho*enth;
+            f_d.x_momentum() += sigma*rho*q.u();
+            f_d.y_momentum() += sigma*rho*q.v();
+            f_d.z_momentum() += sigma*rho*q.w();
             
-            f_u.continuity() += sigma*rho;
-            f_u.energy()     += sigma*rho*enth;
-            f_u.x_momentum() += sigma*rho*q.u();
-            f_u.y_momentum() += sigma*rho*q.v();
-            f_u.z_momentum() += sigma*rho*q.w();
+            f_u.continuity() -= sigma*rho;
+            f_u.energy()     -= sigma*rho*enth;
+            f_u.x_momentum() -= sigma*rho*q.u();
+            f_u.y_momentum() -= sigma*rho*q.v();
+            f_u.z_momentum() -= sigma*rho*q.w();
             
             return out;
         }

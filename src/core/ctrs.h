@@ -116,11 +116,11 @@ namespace spade::ctrs
             static_assert(ii<ar_size, "constant literal index must be less than array size"); return data[ii];
         }
         
-        dtype* begin() noexcept {return &data[0];}
-        dtype* end()   noexcept {return &data[0]+ar_size;}
+        _sp_hybrid dtype* begin() noexcept {return &data[0];}
+        _sp_hybrid dtype* end()   noexcept {return &data[0]+ar_size;}
 
-        const dtype* begin() const noexcept {return &data[0];}
-        const dtype* end()   const noexcept {return &data[0]+ar_size;}
+        _sp_hybrid const dtype* begin() const noexcept {return &data[0];}
+        _sp_hybrid const dtype* end()   const noexcept {return &data[0]+ar_size;}
 
         _sp_hybrid constexpr static index_type size() {return ar_size;}
         
@@ -266,7 +266,7 @@ namespace spade::ctrs
     _sp_hybrid auto operator*(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
     {
         arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
-        for (auto& i: output) i*= lhs;
+        for (int i = 0; i < rhs.size(); ++i) output[i] *= lhs;
         return output.self();
     }
     
@@ -274,7 +274,7 @@ namespace spade::ctrs
     _sp_hybrid auto operator/(const arithmetic_array_t<dtype, ar_size, derived_t>& rhs, const dtype& lhs)
     {
         arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
-        for (auto& i: output) i/= lhs;
+        for (int i = 0; i < rhs.size(); ++i) output[i] /= lhs;
         return output.self();
     }
     

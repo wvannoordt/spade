@@ -7,9 +7,31 @@
 #include "core/finite_diff.h"
 
 #include "navier-stokes/fluid_state.h"
+#include "navier-stokes/flux_funcs.h"
 
 namespace spade::convective
-{       
+{
+    template <typename gas_t> struct first_order_t
+    {
+        using float_t        = typename gas_t::value_type;
+        using output_type    = fluid_state::flux_t<float_t>;
+        using flux_func_type = rusanov_t<gas_t>;
+        using info_type      = typename flux_func_type::info_type;
+        using omni_type      = omni::prefab::lr_t<info_type>;
+        
+        flux_func_type flx_fnc;
+        
+        first_order_t(const gas_t& gas_in) : flx_fnc{gas_in} {}
+        
+        
+        _sp_hybrid output_type operator() (const auto& input_data) const
+        {
+            auto flxL = flx_fnc(input_data.cell(0_c));
+            auto flxR = flx_fnc(input_data.cell(1_c));
+            return flxL[1] + flxR[0];
+        }
+    };
+    
     template <typename gas_t> struct totani_lr
     {
         using float_t       = typename gas_t::value_type;

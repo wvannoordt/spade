@@ -19,6 +19,7 @@ namespace spade::utils
     template <typename data_t>
     struct const_vec_image_t
     {
+        using value_type = data_t;
         const data_t* ptr;
         std::size_t csize;
         _sp_hybrid std::size_t size() const { return csize; }

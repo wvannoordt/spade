@@ -160,6 +160,9 @@ namespace spade::ibm
         };
         
         dispatch::execute(rg, comp_ghost_info, device::cpu);
+        
+        output.transfer();
+        
         return output;
     }
 }
