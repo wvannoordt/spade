@@ -49,6 +49,7 @@ namespace spade::convective
         output_type operator() (const auto& input_data) const
         {
             output_type output;
+            
             const auto& ql       = omni::access<omni::info::value> (input_data.cell(0_c));
             const auto& qr       = omni::access<omni::info::value> (input_data.cell(1_c));
             const auto& normal_l = omni::access<omni::info::metric>(input_data.cell(0_c));
