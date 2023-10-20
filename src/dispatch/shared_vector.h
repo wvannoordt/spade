@@ -7,6 +7,16 @@
 
 namespace spade::device
 {
+    // Note that this concept should succeed for std::vector<...>
+    // and shared_vector<...>, BUT NOT device_vector<...> (you can't push_back on device)
+    template <typename T> concept sizeable_vector = requires (T t)
+    {
+        t.resize(1UL);
+        t.push_back(typename T::value_type());
+        t.size();
+        t[0UL];
+    };
+    
     template <typename data_t>
     struct shared_vector
     {
