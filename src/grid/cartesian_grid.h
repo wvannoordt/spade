@@ -304,7 +304,7 @@ namespace spade::grid
                 for (auto& p: dependents) p->on_blocks_update();
             }
             
-            template <typename list_t, typename constraint_t>
+            template <typename list_t, typename constraint_t = decltype(amr::constraints::factor2)>
             void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const constraint_t& constraint = amr::constraints::factor2)
             {
                 const typename block_arrangement_t::refine_type rtype = true;
