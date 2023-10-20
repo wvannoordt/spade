@@ -162,7 +162,6 @@ namespace spade::grid
         const auto arr_img   = arr.image();
         
         using real_t = typename arr_t::fundamental_type;
-        
         auto kern = _sp_lambda (const std::size_t& i) mutable
         {
             auto& result = out_img[i];
