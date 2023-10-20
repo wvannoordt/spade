@@ -250,27 +250,29 @@ namespace spade::grid
             const auto& geometry(const partition::global_tag_t&) const { return global_geometry; }
             const auto& geometry(const partition::local_tag_t&)  const { return local_geometry;  }
             
-            // TODO
-            // template <typename func_t, typename loc_or_glob_t>
-            // auto select_blocks(container_t& output, const func_t& func, const loc_or_glob_t& log) const
-            // {
-            //     for (std::size_t lb = 0; lb < get_num_blocks(log); ++lb)
-            //     {
-            //         auto tag_lb = utils::tag[log](lb);
-            //         if (func(tag_lb)) output.push_back(tag_lb);
-            //     }
-            // }
+            template <typename container_t, typename func_t>
+            requires (partition::partition_tagged<typename container_t::value_type>)
+            void select_blocks(container_t& output, const func_t& func) const
+            {
+                constexpr auto log = []
+                {
+                    if constexpr (std::same_as<typename container_t::value_type::tag_type, partition::local_tag_t>) return partition::local;
+                    else return partition::global;
+                }();
+                
+                for (std::size_t lb = 0; lb < get_num_blocks(log); ++lb)
+                {
+                    auto tag_lb = utils::tag[log](lb);
+                    if (func(tag_lb)) output.push_back(tag_lb);
+                }
+            }
             
             template <typename func_t, typename loc_or_glob_t>
             auto select_blocks(const func_t& func, const loc_or_glob_t& log) const
             {                
                 using idx_t = decltype(utils::tag[log](std::size_t(0)));
                 std::vector<idx_t> output;
-                for (std::size_t lb = 0; lb < get_num_blocks(log); ++lb)
-                {
-                    auto tag_lb = utils::tag[log](lb);
-                    if (func(tag_lb)) output.push_back(tag_lb);
-                }
+                this->select_blocks(output, func);
                 return output;
             }
             

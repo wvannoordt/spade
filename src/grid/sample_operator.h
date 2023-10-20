@@ -88,13 +88,6 @@ namespace spade::grid
             using vec_t = typename decltype(block_bvh)::pnt_t;
             block_bvh.check_elements(eval, ctrs::to_array(x_sample));
             
-            if (lb.value < 0)
-            {
-                print(lb.value, x_sample);
-                print(bbx);
-                print("sadyy", __FILE__, __LINE__);
-                std::cin.get();
-            }
             const auto block_bbx = grid.get_bounding_box(lb);
             const auto dx = grid.get_dx(lb);
             
