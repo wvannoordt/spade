@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/vec_image.h"
+
 namespace spade::grid
 {
     template <class T> concept multiblock_grid = requires(T t, const cell_idx_t& i_c, const face_idx_t& i_f, const node_idx_t& i_n)
@@ -60,7 +62,7 @@ namespace spade::grid
             using dependent_type    = grid_dependent_t;
             
             using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), device::shared_vector>;
-            using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), utils::const_raw_ptr_t>;
+            using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), utils::const_vec_image_t>;
         
         private:
             partition_type grid_partition;    
@@ -101,6 +103,10 @@ namespace spade::grid
                 global_geometry.domain_boundary.clear();
                 local_geometry.bounding_boxes.clear();
                 local_geometry.domain_boundary.clear();
+                
+                for (auto& v: global_geometry.boundary_blocks) v.clear();
+                for (auto& v: local_geometry.boundary_blocks)  v.clear();
+                
                 const auto create_geom = [&](const std::size_t& lim, const auto& loc_glob, auto& geom)
                 {
                     for (std::size_t lb = 0; lb < lim; ++lb)
@@ -111,34 +117,40 @@ namespace spade::grid
                         const auto ibdy           = block_arrangement.is_domain_boundary(lb_glob);
                         geom.bounding_boxes.push_back(box);
                         geom.domain_boundary.push_back(ibdy);
+                        
+                        for (int i = 0; i < 6; ++i)
+                        {
+                            if (ibdy.bnds[i])
+                            {
+                                geom.boundary_blocks[i].push_back(lb);
+                            }
+                        }
+                        
                     }
                 };
                 
                 create_geom(grid_partition.get_num_global_blocks(), partition::global, global_geometry);
                 create_geom(grid_partition.get_num_local_blocks(),  partition::local,  local_geometry);
+                
                 global_geometry.bounding_boxes.transfer();
                 global_geometry.domain_boundary.transfer();
+                for (int i = 0; i < 6; ++i) global_geometry.boundary_blocks[i].transfer();
+                
                 local_geometry.bounding_boxes.transfer();
                 local_geometry.domain_boundary.transfer();
+                for (int i = 0; i < 6; ++i) local_geometry.boundary_blocks[i].transfer();
             }
-            
-            // template <typename device_t>
-            // const auto image(const device_t& dev, const partition::global_tag_t&) const { return global_geometry.image(dev); }
-            
-            // template <typename device_t>
-            // const auto image(const device_t& dev, const partition::local_tag_t&)  const { return  local_geometry.image(dev); }
             
             template <typename loc_glob_t, typename device_t>
             const geomety_image_type image(const loc_glob_t& i, const device_t& dev) const
             {
                 const auto& geom = this->geometry(i);
                 geomety_image_type output(geom.coords, geom.num_cell, geom.num_exch);
-                output.bounding_boxes  = &geom.bounding_boxes.host_data[0];
-                output.domain_boundary = &geom.domain_boundary.host_data[0];
-                if constexpr (device::is_gpu<device_t>)
+                output.bounding_boxes  = utils::make_vec_image(geom.bounding_boxes.data(dev));
+                output.domain_boundary = utils::make_vec_image(geom.domain_boundary.data(dev));
+                for (int i = 0; i < 6; ++i)
                 {
-                    output.bounding_boxes  = &geom.bounding_boxes.devc_data[0];
-                    output.domain_boundary = &geom.domain_boundary.devc_data[0];
+                    output.boundary_blocks[i] = utils::make_vec_image(geom.boundary_blocks[i].data(dev));
                 }
                 return output;
             }

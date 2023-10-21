@@ -26,6 +26,7 @@ namespace spade::grid
         ctrs::array<int, 3>                   num_exch;
         container_tt<bound_box_t<float_t, 3>> bounding_boxes; // Bounding box for each block, comp. coordinates
         container_tt<bound_box_t<bool, 3>>    domain_boundary;
+        ctrs::array<container_tt<int>, 6>     boundary_blocks;
         
         constexpr static int dim() { return gdim; }
         

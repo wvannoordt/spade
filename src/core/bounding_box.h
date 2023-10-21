@@ -87,6 +87,14 @@ namespace spade
             for (auto& b: output) b = !b;
             return output;
         }
+        
+        _sp_hybrid bound_box_t operator || (const bound_box_t<bool, ar_size>& rhs) const
+        {
+            static_assert(std::same_as<dtype, bool>, "cannot apply binary operator || to non-boolean bound box");
+            bound_box_t output = (*this);
+            for (int i = 0; i < bnds.size(); ++i) output.bnds[i] = output.bnds[i] || rhs.bnds[i];
+            return output;
+        }
     };
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)

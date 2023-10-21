@@ -51,29 +51,6 @@ namespace spade::algs
         }
         return grid.group().reduce(reduce_oper.value,reduce_oper.equiv_par_op());
     }
-
-    // template <grid::multiblock_array array_t, class callable_t>
-    // auto& transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
-    // {
-    //     const auto& grid = arr.get_grid();
-    //     const auto nlb = grid.get_num_local_blocks();
-
-    //     const grid::array_centering ctr = array_t::centering_type();
-    //     const auto kernel = omni::to_omni<ctr>(func, arr);
-    //     auto img = arr.image();
-    //     const auto& geom = grid.geometry(partition::local);
-    //     // consider fundamentally separating the block dimension with the ijk dimensions!
-    //     for (auto lb: range(0, nlb))
-    //     {
-    //         const auto loop_func = [&](const auto& elem)
-    //         {
-    //             const auto data = invoke_at(geom, img, elem, kernel);
-    //             img.set_elem(elem, data);
-    //         };
-    //         block_loop(arr, lb, loop_func, exchange_policy);
-    //     }
-    //     return arr;
-    // }
     
     template <grid::multiblock_array array_t, class callable_t>
     void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy=grid::exclude_exchanges)
