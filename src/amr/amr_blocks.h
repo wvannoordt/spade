@@ -257,7 +257,10 @@ namespace spade::amr
             const interface_constraint_t& constraint)
         {
             std::vector<handle_type> nds;
-            for (auto lb: lbs) nds.push_back(this->enumerated_nodes[lb]);
+            for (auto lb: lbs)
+            {
+                nds.push_back(this->enumerated_nodes[lb]);
+            }
             this->refine(nds, is_periodic, directions, constraint);
         }
         

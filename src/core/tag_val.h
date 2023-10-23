@@ -13,6 +13,7 @@ namespace spade::utils
         using tag_type   = tag_t;
         using value_type = val_t;
         tagged_value_t(const val_t v) : value{v} {}
+        tagged_value_t(){}
         operator val_t() const { return value; }
     };
     

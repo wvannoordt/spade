@@ -267,6 +267,6 @@ namespace spade::amr
             }
         }
         
-        amr_node_t(){}
+        amr_node_t(){neighbors.reserve(100);}
     };
 }

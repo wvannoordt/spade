@@ -281,8 +281,17 @@ namespace spade::utils
         }
         
         bool is_null()      const { return container == nullptr; }
-        data_t&       get()       { return (*container)[offset]; }
-        const data_t& get() const { return (*container)[offset]; }
+        data_t& get()
+        {
+            auto& v = (*container);
+            return v[offset];
+        }
+        
+        const data_t& get() const
+        {
+            const auto& v = (*container);
+            return v[offset];
+        }
         
         constexpr static vector_location null() { return vector_location(nullptr, 0); }
     };

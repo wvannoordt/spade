@@ -61,12 +61,10 @@ namespace spade::time_integration
         
         //Timestep
         const auto& dt = axis.timestep();
-        
         //Computing the residuals
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
-            
             //We won't update this copy of the solution during the RHS evaluations
             const auto& sol_base = data.solution(0);
             
@@ -81,7 +79,6 @@ namespace spade::time_integration
             {
                 const int j = jj.value;
                 using table_t = scheme_t::table_type;
-                
                 //Note that this is a temporary workaround owing to a bug in GCC 10.2
                 using coeff_value_t_1 = typename table_t::elem_t<detail::idx_val<decltype(ii)>>;
                 using coeff_value_t = typename coeff_value_t_1::elem_t<detail::idx_val<decltype(jj)>>;
@@ -99,7 +96,6 @@ namespace spade::time_integration
                 }
             });
             trans.transform_inverse(sol);
-            
             //By now, the solution has been augmented to accommodate the
             //evaluation of the ith residual
             auto& cur_resid = data.residual(i);
@@ -112,7 +108,6 @@ namespace spade::time_integration
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });
-        
         auto& new_solution = data.solution(0); //solution is updated in place
         
         //Residual accumulation loop
@@ -126,20 +121,16 @@ namespace spade::time_integration
             {
                 constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, accum_coeff_value_t>::value();
                 auto& resid = data.residual(i);
-                
                 //Multiply the residual by the accumulation coefficient
                 resid *= (coeff*dt);
-                
                 //Update the transformed solution
                 trans.transform_forward(new_solution);
                 new_solution += resid;
                 trans.transform_inverse(new_solution);
-                
                 //Divide to avoid modifying the residual unduly (may be unnecessary!)
                 resid /= (coeff*dt);
             }
         });
-
         axis.time() += dt;
         boundary(new_solution, axis.time());
     }

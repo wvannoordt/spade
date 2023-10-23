@@ -93,7 +93,7 @@ namespace spade::grid
             
             const auto& partition = grid.get_partition();
             using index_t = output_t::index_type;
-            index_t landed_cell(0,0,0,partition.to_local(lb));
+            index_t landed_cell(0, 0, 0, partition.to_local(lb));
             if (landed_cell.lb() == partition.no_value)
             {
                 throw except::sp_exception("cannot currently perform cross-process interpolation");

@@ -59,13 +59,13 @@ namespace spade::grid
             using coord_point_type   = coords::point_t<coord_type>;
             using group_type         = par_group_t;
             using partition_type     = partition::block_partition_t;
-            using dependent_type    = grid_dependent_t;
+            using dependent_type     = grid_dependent_t;
             
             using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), device::shared_vector>;
             using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), utils::const_vec_image_t>;
         
         private:
-            partition_type grid_partition;    
+            partition_type grid_partition;
             geometry_type local_geometry;
             geometry_type global_geometry;
             block_arrangement_t block_arrangement;
@@ -194,7 +194,7 @@ namespace spade::grid
                 }
             }
             
-            std::size_t get_grid_size()                                 const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
+            std::size_t  get_grid_size()                                const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
             std::size_t  get_num_local_blocks()                         const { return grid_partition.get_num_local_blocks(); }
             std::size_t  get_num_global_blocks()                        const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::global_tag_t&) const { return grid_partition.get_num_global_blocks(); }
@@ -257,6 +257,20 @@ namespace spade::grid
                 return this->get_bounding_box(utils::tag[partition::global](lb));
             }
             
+            auto compute_dx_min() const
+            {
+                ctrs::array<dtype,  3> output(1e50, 1e50, 1e50);
+                for (std::size_t lb = 0; lb < this->get_num_global_blocks(); ++lb)
+                {
+                    auto dx = this->get_dx(lb);
+                    for (int i = 0; i < output.size(); ++i)
+                    {
+                        output[i] = utils::min(output[i], dx[i]);
+                    }
+                }
+                return output;
+            }
+            
             const auto& get_coord_sys() const {return global_geometry.get_coords();}
             
             const auto& geometry(const partition::global_tag_t&) const { return global_geometry; }
@@ -266,6 +280,7 @@ namespace spade::grid
             requires (partition::partition_tagged<typename container_t::value_type>)
             void select_blocks(container_t& output, const func_t& func) const
             {
+                output.clear();
                 constexpr auto log = []
                 {
                     if constexpr (std::same_as<typename container_t::value_type::tag_type, partition::local_tag_t>) return partition::local;
@@ -277,6 +292,20 @@ namespace spade::grid
                     auto tag_lb = utils::tag[log](lb);
                     if (func(tag_lb)) output.push_back(tag_lb);
                 }
+                
+                if constexpr ( requires { output.transfer(); } ) output.transfer();
+            }
+            
+            template <typename container_t, typename func_t, typename loc_or_glob_t>
+            void select_blocks(container_t& output, const func_t& func, const loc_or_glob_t& log) const
+            {
+                output.clear();
+                for (std::size_t lb = 0; lb < get_num_blocks(log); ++lb)
+                {
+                    auto tag_lb = utils::tag[log](lb);
+                    if (func(tag_lb)) output.push_back(tag_lb);
+                }
+                if constexpr ( requires { output.transfer(); } ) output.transfer();
             }
             
             template <typename func_t, typename loc_or_glob_t>

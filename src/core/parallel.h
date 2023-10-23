@@ -89,7 +89,7 @@ namespace spade::parallel
                 return (*this);
             }
             
-            template <typename data_t> request_t async_recv(data_t* buf, int count, int source)
+            template <typename data_t> request_t async_recv(data_t* buf, int count, int source) const
             {
                 auto dtype = get_data_type(data_t());
                 request_t p;
@@ -97,13 +97,13 @@ namespace spade::parallel
                 return p;
             }
             
-            template <typename data_t> void sync_send(const data_t* buf, int count, int dest)
+            template <typename data_t> void sync_send(const data_t* buf, int count, int dest) const
             {
                 auto dtype = get_data_type(data_t());
                 MPI_CHECK(MPI_Ssend(buf, count, dtype, dest, 1, this->channel));
             }
             
-            void await_all(int count, request_t reqs[], status_t stats[])
+            void await_all(int count, request_t reqs[], status_t stats[]) const
             {
                 MPI_CHECK(MPI_Waitall(count, reqs, stats));
             }

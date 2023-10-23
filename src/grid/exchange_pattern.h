@@ -24,14 +24,15 @@ namespace spade::grid
         std::vector<std::size_t>            num_recv_elems;
         
         int my_rank;
-        const grid_t& grid;
-        grid_exchange_config_t(const grid_t& grid_in) : grid{grid_in}, num_send_elems{0}, num_recv_elems{0}
+        const grid_t* grid;
+        grid_exchange_config_t(const grid_t& grid_in) : grid{&grid_in}, num_send_elems{0}, num_recv_elems{0}
         {
-            auto np = grid.group().size();
+            auto np = grid->group().size();
             num_send_elems.resize(np);
             num_recv_elems.resize(np);
-            my_rank = grid.group().rank();
+            my_rank = grid->group().rank();
         }
+        grid_exchange_config_t(){} 
         
         template <typename array_t>
         std::size_t get_num_recv_bytes(const array_t& arr) const
@@ -100,27 +101,29 @@ namespace spade::grid
     template <typename par_group_t>
     struct exchange_handle_t
     {
-        par_group_t& group;
+        const par_group_t* group;
         std::vector<std::vector<char>> send_bufs;
         std::vector<std::vector<char>> recv_bufs;
         std::vector<request_t> requests;
         std::vector<status_t>  statuses;
         
-        exchange_handle_t(par_group_t& group_in) : group{group_in}
+        exchange_handle_t(const par_group_t& group_in) : group{&group_in}
         {
-            send_bufs.resize(group.size());
-            recv_bufs.resize(group.size());
+            send_bufs.resize(group->size());
+            recv_bufs.resize(group->size());
             
-            requests.resize(group.size());
-            statuses.resize(group.size());
+            requests.resize(group->size());
+            statuses.resize(group->size());
         }
+        
+        exchange_handle_t(){}
         
         template <typename array_t, typename grid_t>
         requires(std::same_as<typename array_t::grid_type, grid_t>)
         void assure_buffer_size(const array_t& arr, const grid_exchange_config_t<grid_t>& config)
         {
             const std::size_t elem_size = sizeof(typename array_t::alias_type);
-            for (int p = 0; p < group.size(); ++p)
+            for (int p = 0; p < group->size(); ++p)
             {
                 std::size_t num_send_bytes = config.num_send_elems[p]*elem_size;
                 std::size_t num_recv_bytes = config.num_recv_elems[p]*elem_size;
@@ -139,7 +142,7 @@ namespace spade::grid
         
         void await()
         {
-            handle.group.await_all(handle.statuses.size(), handle.requests.data(), handle.statuses.data());
+            handle.group->await_all(handle.statuses.size(), handle.requests.data(), handle.statuses.data());
             config.unpack_from(array, handle.recv_bufs);
         }
     };
@@ -167,6 +170,8 @@ namespace spade::grid
         {
 
         }
+        
+        array_exchange_t(){}
         
         template <typename arr_t>
         void config_gpu_exch(const arr_t& arr)
@@ -254,14 +259,14 @@ namespace spade::grid
         {
             handle.assure_buffer_size(array, config);
             config.pack_to(array, handle.send_bufs);
-            for (std::size_t p = 0; p < handle.group.size(); ++p)
+            for (std::size_t p = 0; p < handle.group->size(); ++p)
             {
-                request_t r = handle.group.async_recv(&handle.recv_bufs[p][0], handle.recv_bufs[p].size(), p);
+                request_t r = handle.group->async_recv(&handle.recv_bufs[p][0], handle.recv_bufs[p].size(), p);
                 handle.requests[p] = r;
             }
-            for (std::size_t p = 0; p < handle.group.size(); ++p)
+            for (std::size_t p = 0; p < handle.group->size(); ++p)
             {
-                handle.group.sync_send(&handle.send_bufs[p][0], handle.send_bufs[p].size(), p);
+                handle.group->sync_send(&handle.send_bufs[p][0], handle.send_bufs[p].size(), p);
             }
             return handle_sentinel_t{array, config, handle};
         }
@@ -353,7 +358,7 @@ namespace spade::grid
     
     
     template <typename grid_t, typename group_t>
-    auto create_exchange(const grid_t& grid, group_t& group, const ctrs::array<bool, grid_t::dim()>& is_periodic)
+    auto create_exchange(const grid_t& grid, const group_t& group, const ctrs::array<bool, grid_t::dim()>& is_periodic)
     {
         grid_exchange_config_t output0(grid);
         exchange_handle_t      output1(group);

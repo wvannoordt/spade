@@ -36,7 +36,7 @@ namespace spade::fluid_state
     template <typename gas_t, fluid_state::is_state_type forward_t>
     struct state_transform_t
     {
-        const gas_t& gas;
+        const gas_t gas;
         const grid::exchange_inclusion_e g_config;
         
         //prim = inverse
