@@ -348,12 +348,6 @@ namespace spade::grid
             dispatch::execute(interpolations, int_load);
             dispatch::execute(injections,     inj_load);
         }
-        
-        // How to do this?
-        // virtual void on_blocks_update() override final
-        // {
-        //     print("UPDATING");
-        // }
     };
     
     

@@ -186,10 +186,14 @@ namespace spade::grid
         using index_type          = get_index_type<centering_type()>::array_type;
         using coord_point_type    = grid_t::coord_point_type;
         using alias_type          = data_alias_t;
-        using container_type      = std::conditional<
-                                        device::is_cpu<device_t>,
-                                        std::vector<fundamental_type>,
-                                        device::device_vector<fundamental_type>>::type;
+        
+        template <typename c_data_t>
+        using container_type
+            = std::conditional<
+                device::is_cpu<device_t>,
+                std::vector<c_data_t>,
+                device::device_vector<c_data_t>
+                >::type;
         
         using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
@@ -200,9 +204,9 @@ namespace spade::grid
         using image_type           = array_image_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
         using const_image_type     = array_image_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
         
-        const grid_t*         grid;
-        container_type        data;
-        mem_map_type          mem_view;
+        const grid_t*                    grid;
+        container_type<fundamental_type> data;
+        mem_map_type                     mem_view;
         
         static_assert(!(device::is_gpu<device_t> && !_sp_cuda), "attempted to declare GPU array without GPU support");
         

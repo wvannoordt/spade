@@ -209,6 +209,19 @@ namespace spade::grid
             const partition::block_partition_t& get_partition()         const { return grid_partition; }
             constexpr static bool is_3d()                                     { return dim()==3; }
             
+            bool is_valid(const cell_idx_t& ii) const
+            {
+                return 
+                    (ii.i()  >= -get_num_exchange(0)) &&
+                    (ii.j()  >= -get_num_exchange(1)) &&
+                    (ii.k()  >= -get_num_exchange(2)) &&
+                    (ii.i()   < get_num_cells(0) + get_num_exchange(0)) &&
+                    (ii.j()   < get_num_cells(1) + get_num_exchange(1)) &&
+                    (ii.k()   < get_num_cells(2) + get_num_exchange(2)) &&
+                    (ii.lb() >= 0) &&
+                    (ii.lb()  < get_num_local_blocks());
+            }
+            
             template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
             {
                 return global_geometry.get_coords(i);

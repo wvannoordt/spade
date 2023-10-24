@@ -174,7 +174,6 @@ namespace spade::grid
                 coeffs[ct] = coeff;
             }
         }
-        
         output.idx.transfer();
         output.coeff.transfer();
         return output;
