@@ -12,6 +12,8 @@ namespace spade
         
         using index_type = ctrs::array<dtype, ar_size>;
         
+        _sp_hybrid constexpr static int size() { return ar_size; }
+        
         _sp_hybrid const auto& data() const {return bnds;}
         
         _sp_hybrid bound_box_t(){}

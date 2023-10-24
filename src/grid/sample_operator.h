@@ -81,12 +81,47 @@ namespace spade::grid
             auto lb = utils::tag[partition::global](-1);
             const auto eval = [&](const std::size_t& lb_cand)
             {
-                const auto block_box = grid.get_bounding_box(utils::tag[partition::global](lb_cand));
+                auto lb_tagged = utils::tag[partition::global](lb_cand);
+                const auto block_box = grid.get_bounding_box(lb_tagged);
                 if (block_box.contains(x_sample)) lb.value = lb_cand;
             };
             
             using vec_t = typename decltype(block_bvh)::pnt_t;
             block_bvh.check_elements(eval, ctrs::to_array(x_sample));
+            
+            if (lb.value < 0)
+            {
+                // If we get here, one of two things happened:
+                // 1. The point we are asking for is genuinely outside of the domain
+                // 2. The point we are asking for is only just outside of the domain, in the exchange cells
+                // We will check for (2), and if it is not the case, assume (1) and throw an exception
+                int num_checked = 0;
+                const auto eval_extended = [&](const std::size_t& lb_cand)
+                {
+                    num_checked++;
+                    auto lb_tagged = utils::tag[partition::global](lb_cand);
+                    auto block_box = grid.get_bounding_box(lb_tagged);
+                    const auto dx  = grid.get_dx(lb_tagged);
+                    for (int d = 0; d < dx.size(); ++d)
+                    {
+                        block_box.min(d) -= dx[d]*grid.get_num_exchange(d);
+                        block_box.max(d) += dx[d]*grid.get_num_exchange(d);
+                    }
+                    if (block_box.contains(x_sample)) lb.value = lb_cand;
+                };
+            
+                using vec_t = typename decltype(block_bvh)::pnt_t;
+                block_bvh.check_elements(eval_extended, ctrs::to_array(x_sample));
+                
+                if (lb.value < 0)
+                {
+                    std::stringstream ss;
+                    ss << "Cannot compute find suitable block for point:\n" << x_sample;
+                    ss << "\nBounds:\n" << bbx;
+                    ss << "\nNum. checks: " << num_checked;
+                    throw except::sp_exception("Error attempting to build sampling operator:\n" + ss.str());
+                }
+            }
             
             const auto block_bbx = grid.get_bounding_box(lb);
             const auto dx = grid.get_dx(lb);

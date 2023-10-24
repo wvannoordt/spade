@@ -296,4 +296,56 @@ namespace spade::io
         std::size_t ct = 0;
         for (const auto& x: data) mf << ct++ << "\n";
     }
+    
+    template <typename bbx_ctr_t>
+    requires (requires { bbx_ctr_t()[0].min(0); bbx_ctr_t()[0].max(0); bbx_ctr_t()[0].size(0); }) // good lord
+    static void output_vtk(const std::string& fname, const bbx_ctr_t& blist)
+    {
+        constexpr static int bdim = bbx_ctr_t::value_type::size();
+        std::ofstream mf(fname);
+        static_assert((bdim == 3) || (bdim == 2), "io only supports 2d/3d bounding box");
+        std::size_t npts = 8*blist.size();
+        if constexpr (bdim==2) npts = 4*blist.size();
+        mf << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET UNSTRUCTURED_GRID\nPOINTS " << npts << " double\n";
+        for (std::size_t i = 0; i < blist.size(); ++i)
+        {
+            const auto& bnd = blist[i];
+            if constexpr (bdim == 3)
+            {
+                mf << bnd.min(0) << " " << bnd.min(1) << " " << bnd.min(2) << "\n";
+                mf << bnd.max(0) << " " << bnd.min(1) << " " << bnd.min(2) << "\n";
+                mf << bnd.min(0) << " " << bnd.max(1) << " " << bnd.min(2) << "\n";
+                mf << bnd.max(0) << " " << bnd.max(1) << " " << bnd.min(2) << "\n";
+                mf << bnd.min(0) << " " << bnd.min(1) << " " << bnd.max(2) << "\n";
+                mf << bnd.max(0) << " " << bnd.min(1) << " " << bnd.max(2) << "\n";
+                mf << bnd.min(0) << " " << bnd.max(1) << " " << bnd.max(2) << "\n";
+                mf << bnd.max(0) << " " << bnd.max(1) << " " << bnd.max(2) << "\n";
+            }
+            else
+            {
+                mf << bnd.min(0) << " " << bnd.min(1) << "\n";
+                mf << bnd.max(0) << " " << bnd.min(1) << "\n";
+                mf << bnd.min(0) << " " << bnd.max(1) << "\n";
+                mf << bnd.max(0) << " " << bnd.max(1) << "\n";
+            }
+        }
+
+        if constexpr (bdim == 3) mf << "CELLS " << blist.size() << " " << 9*blist.size() << "\n";
+        if constexpr (bdim == 2) mf << "CELLS " << blist.size() << " " << 5*blist.size() << "\n";
+        std::size_t ipt = 0;
+        for (std::size_t i = 0; i < blist.size(); ++i)
+        {
+            mf << "8";
+            for (int pp = 0; pp < ((bdim==3)?8:4); ++pp)
+            {
+                mf << " " << ipt++;
+            }
+            mf << "\n";
+        }
+        mf << "CELL_TYPES " << blist.size() << "\n";
+        for (std::size_t pp = 0; pp < blist.size(); ++pp)
+        {
+            mf << ((bdim==3)?11:8) << "\n";
+        }
+    }
 }
