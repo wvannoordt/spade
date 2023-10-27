@@ -24,13 +24,21 @@ namespace spade::grid
         std::vector<std::size_t>            num_recv_elems;
         
         int my_rank;
-        const grid_t* grid;
-        grid_exchange_config_t(const grid_t& grid_in) : grid{&grid_in}, num_send_elems{0}, num_recv_elems{0}
+        const grid_t* grid0;
+        const grid_t* grid1;
+        grid_exchange_config_t(const grid_t& grid_in) : grid0{&grid_in}, grid1{&grid_in}, num_send_elems{0}, num_recv_elems{0}
         {
-            auto np = grid->group().size();
+            auto np = grid0->group().size();
             num_send_elems.resize(np);
             num_recv_elems.resize(np);
-            my_rank = grid->group().rank();
+            my_rank = grid0->group().rank();
+        }
+        grid_exchange_config_t(const grid_t& grid0_in, const grid_t& grid1_in) : grid0{&grid0_in}, grid1{&grid1_in}, num_send_elems{0}, num_recv_elems{0}
+        {
+            auto np = grid0->group().size();
+            num_send_elems.resize(np);
+            num_recv_elems.resize(np);
+            my_rank = grid0->group().rank();
         }
         grid_exchange_config_t(){} 
         
@@ -151,6 +159,9 @@ namespace spade::grid
     struct gpu_exch_t
     {
         constexpr static int interp_size = static_math::pow<2, grid_t::dim()>::value;
+        
+        //Note that these may be relative to different grids
+        //Convention: all sends are from one grid, all recieves are from the other
         device::shared_vector<std::size_t> inj_sends;
         device::shared_vector<std::size_t> inj_recvs;
         device::shared_vector<std::size_t> int_sends;
@@ -170,19 +181,19 @@ namespace spade::grid
         {
 
         }
-        
+
         array_exchange_t(){}
         
         template <typename arr_t>
-        void config_gpu_exch(const arr_t& arr)
+        void config_gpu_exch(const arr_t& src, const arr_t& dst)
         {
             typename arr_t::var_idx_t i0 = 0;
             
-            const auto aimg = arr.image();
-            
-            const auto get_base_offst = [&](const grid::cell_idx_t& icell)
+            const auto src_img = src.image();
+            const auto dst_img = dst.image();
+            const auto get_base_offst = [&](const auto& img, const grid::cell_idx_t& icell)
             {
-                return aimg.map.compute_offset(i0, icell);
+                return img.map.compute_offset(i0, icell);
             };
             
             const auto& injecs = config.send_data.data;
@@ -194,12 +205,12 @@ namespace spade::grid
                 
                 const auto l0 = [&](const auto& arr_i)
                 {
-                    const auto loc_oft = get_base_offst(grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
+                    const auto loc_oft = get_base_offst(src_img, grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
                     device_exch.inj_sends.push_back(loc_oft);
                 };
                 const auto l1 = [&](const auto& arr_i)
                 {
-                    const auto loc_oft = get_base_offst(grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
+                    const auto loc_oft = get_base_offst(dst_img, grid::cell_idx_t(arr_i[0], arr_i[1], arr_i[2], arr_i[3]));
                     device_exch.inj_recvs.push_back(loc_oft);
                 };
                 dispatch::execute(snds, l0, device::cpu);
@@ -238,9 +249,9 @@ namespace spade::grid
                         donor_idx.i()  = intp.patches.source.min(0) + donor_di;
                         donor_idx.j()  = intp.patches.source.min(1) + donor_dj;
                         donor_idx.k()  = intp.patches.source.min(2) + donor_dk;
-                        device_exch.int_sends.push_back(get_base_offst(donor_idx));
+                        device_exch.int_sends.push_back(get_base_offst(src_img, donor_idx));
                     });
-                    const auto loc_oft = get_base_offst(gidx);
+                    const auto loc_oft = get_base_offst(dst_img, gidx);
                     device_exch.int_recvs.push_back(loc_oft);
                 };
                 dispatch::execute(recvs, l0, device::cpu);
@@ -251,6 +262,12 @@ namespace spade::grid
             device_exch.int_sends.transfer();
             device_exch.int_recvs.transfer();
             device_exch.configd = true;
+        }
+        
+        template <typename arr_t>
+        void config_gpu_exch(const arr_t& arr)
+        {
+            config_gpu_exch(arr, arr);
         }
         
         template <typename arr_t>
@@ -309,12 +326,12 @@ namespace spade::grid
             }();
             
             const auto i_inj_s = utils::make_vec_image(device_exch.inj_sends.data(src_arr.device()));
-            const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.data(src_arr.device()));
+            const auto i_inj_r = utils::make_vec_image(device_exch.inj_recvs.data(dst_arr.device()));
             const auto i_int_s = utils::make_vec_image(device_exch.int_sends.data(src_arr.device()));
-            const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.data(src_arr.device()));
+            const auto i_int_r = utils::make_vec_image(device_exch.int_recvs.data(dst_arr.device()));
             
-            dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.data(src_arr.device()).size(), src_arr.device());
-            dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.data(src_arr.device()).size(), src_arr.device());
+            dispatch::ranges::linear_range_t injections    (std::size_t(0), device_exch.inj_recvs.data(dst_arr.device()).size(), dst_arr.device());
+            dispatch::ranges::linear_range_t interpolations(std::size_t(0), device_exch.int_recvs.data(dst_arr.device()).size(), dst_arr.device());
             
             auto inj_load = _sp_lambda (const std::size_t& idx) mutable
             {
@@ -371,7 +388,7 @@ namespace spade::grid
                 }
                 if (!ignore_from_periodic)
                 {
-                    const auto transaction = get_transaction(grid, lb.value, e);
+                    const auto transaction = get_transaction(grid, grid, lb.value, e);
                     
                     // Note that we add as both and the internal logic inside
                     // these calls will handle the rank checking
@@ -387,6 +404,41 @@ namespace spade::grid
                     }
                 }
             }
+        }
+        
+        return array_exchange_t(output0, output1);
+    }
+    
+    template <typename grid_t, typename group_t>
+    auto create_interface(const grid_t& grid0, const grid_t& grid1, const group_t& group)
+    {
+        grid_exchange_config_t output0(grid0, grid1);
+        exchange_handle_t      output1(group);
+
+        for (int i = 0; i < grid_t::dim(); ++i)
+        {
+            if (grid0.get_num_cells(i) == grid1.get_num_cells(i))
+            {
+                std::string message = "attempted to create interface between incompatible grids: number of grid cells does not match";
+                throw except::sp_exception(message);
+            }
+            if (grid0.get_num_exchange(i) == grid1.get_num_exchange(i))
+            {
+                std::string message = "attempted to create interface between incompatible grids: number of exchange cells does not match";
+                throw except::sp_exception(message);
+            }
+        }
+        
+        using real_t = typename grid_t::coord_type;
+        const real_t tol = 1e-5;
+        int matched_boundary = -1;
+        for (int i = 0; i < grid_t::dim(); ++i)
+        {
+            
+        }
+        if (matched_boundary < 0)
+        {
+            throw except::sp_exception("Attempted to create interface, but grids do not align");
         }
         
         return array_exchange_t(output0, output1);

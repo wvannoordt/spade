@@ -8,7 +8,8 @@ namespace spade::grid
 {
     template <typename grid_t>
     auto get_transaction(
-        const grid_t& grid,
+        const grid_t& src_grid,
+        const grid_t& dst_grid,
         const std::size_t&,
         const neighbor_relation_t& relation)
     {
@@ -16,19 +17,19 @@ namespace spade::grid
         auto lb_ini  = utils::tag[partition::global](relation.lb_ini);
         auto lb_term = utils::tag[partition::global](relation.lb_term);
         
-        output.rank_send = grid.get_partition().get_rank(lb_ini);
-        output.rank_recv = grid.get_partition().get_rank(lb_term);
+        output.rank_send = src_grid.get_partition().get_rank(lb_ini);
+        output.rank_recv = dst_grid.get_partition().get_rank(lb_term);
 
-        output.source.min(3) = grid.get_partition().to_local(lb_ini).value;
+        output.source.min(3) = src_grid.get_partition().to_local(lb_ini).value;
         output.source.max(3) = output.source.min(3)+1;
-        output.dest.min(3)   = grid.get_partition().to_local(lb_term).value;
+        output.dest.min(3)   = dst_grid.get_partition().to_local(lb_term).value;
         output.dest.max(3)   = output.dest.min(3)+1;
         
         for (int d = 0; d < 3; ++d)
         {
             const int sign = relation.edge[d];
-            const int nx   = grid.get_num_cells(d);
-            const int ng   = grid.get_num_exchange(d);
+            const int nx   = src_grid.get_num_cells(d);
+            const int ng   = src_grid.get_num_exchange(d);
             switch (sign)
             {
                 case -1:
@@ -69,7 +70,8 @@ namespace spade::grid
     
     template <typename grid_t>
     auto get_transaction(
-        const grid_t& grid,
+        const grid_t& src_grid,
+        const grid_t& dst_grid,
         const std::size_t& lb_ini,
         const amr::amr_neighbor_t<grid_t::dim()>& relation)
     {
@@ -83,12 +85,12 @@ namespace spade::grid
         
         
         //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
-        auto ptch = get_transaction(grid, lb_ini, base_relation);
+        auto ptch = get_transaction(src_grid, dst_grid, lb_ini, base_relation);
         output.patches = ptch;
         
         
         auto& self  = relation.endpoint.get();
-        auto& neigh = grid.get_blocks().enumerated_nodes[lb_ini].get();
+        auto& neigh = src_grid.get_blocks().enumerated_nodes[lb_ini].get();
         
         output.i_coeff = 0;
         output.i_incr  = 0;
