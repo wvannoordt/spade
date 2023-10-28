@@ -410,35 +410,118 @@ namespace spade::grid
     }
     
     template <typename grid_t, typename group_t>
-    auto create_interface(const grid_t& grid0, const grid_t& grid1, const group_t& group)
+    auto create_interface(const grid_t& src_grid, const grid_t& dst_grid, const group_t& group)
     {
-        grid_exchange_config_t output0(grid0, grid1);
+        grid_exchange_config_t output0(src_grid, dst_grid);
         exchange_handle_t      output1(group);
 
+        // todo: something more sophisticated than this...
         for (int i = 0; i < grid_t::dim(); ++i)
         {
-            if (grid0.get_num_cells(i) == grid1.get_num_cells(i))
+            // Note: could probably do a better job of exceptions here!
+            if (src_grid.get_num_cells(i) != dst_grid.get_num_cells(i))
             {
-                std::string message = "attempted to create interface between incompatible grids: number of grid cells does not match";
-                throw except::sp_exception(message);
+                std::stringstream ss;
+                ss << "attempted to create interface between incompatible grids:";
+                ss << "number of grid cells does not match\n";
+                ss << "Num. cells, donor: [";
+                ss << src_grid.get_num_cells(0) << ", ";
+                ss << src_grid.get_num_cells(1) << ", ";
+                ss << src_grid.get_num_cells(2) << "]\n";
+                ss << "Num. cells, recvr: [";
+                ss << dst_grid.get_num_cells(0) << ", ";
+                ss << dst_grid.get_num_cells(1) << ", ";
+                ss << dst_grid.get_num_cells(2) << "]\n";
+                
+                throw except::sp_exception(ss.str());
             }
-            if (grid0.get_num_exchange(i) == grid1.get_num_exchange(i))
+            if (src_grid.get_num_exchange(i) != dst_grid.get_num_exchange(i))
             {
-                std::string message = "attempted to create interface between incompatible grids: number of exchange cells does not match";
-                throw except::sp_exception(message);
+                std::stringstream ss;
+                ss << "attempted to create interface between incompatible grids:";
+                ss << "number of exchange cells does not match\n";
+                ss << "Num. exchange, donor: [";
+                ss << src_grid.get_num_exchange(0) << ", ";
+                ss << src_grid.get_num_exchange(1) << ", ";
+                ss << src_grid.get_num_exchange(2) << "]\n";
+                ss << "Num. exchange, recvr: [";
+                ss << dst_grid.get_num_exchange(0) << ", ";
+                ss << dst_grid.get_num_exchange(1) << ", ";
+                ss << dst_grid.get_num_exchange(2) << "]\n";
+                throw except::sp_exception(ss.str());
             }
         }
         
         using real_t = typename grid_t::coord_type;
         const real_t tol = 1e-5;
-        int matched_boundary = -1;
+        const auto rt_eq = [&](const real_t a, const real_t b) { return utils::abs(a-b)<tol; };
+        int match_dir = -1;
+        int src_pm = -1;
+        int dst_pm = -1;
+        const auto& src_bnd = src_grid.get_bounds();
+        const auto& dst_bnd = dst_grid.get_bounds();
         for (int i = 0; i < grid_t::dim(); ++i)
         {
-            
+            if (rt_eq(src_bnd.min(i), dst_bnd.max(i)))
+            {
+                match_dir = i;
+                src_pm    = 0;
+                dst_pm    = 1;
+            }
+            if (rt_eq(src_bnd.max(i), dst_bnd.min(i)))
+            {
+                match_dir = i;
+                src_pm    = 1;
+                dst_pm    = 0;
+            }
         }
-        if (matched_boundary < 0)
+        if (match_dir < 0)
         {
             throw except::sp_exception("Attempted to create interface, but grids do not align");
+        }
+        
+        // match_dir is the direction in which the interface is normal
+        // src_pm = 1 if the interface is on the maximal face in "i" direction relative to the source grid, etc.
+        
+        const auto mk_lam = [&](const int& idir, const int& pm, const grid_t& grid)
+        {
+            
+            const auto output = [&](const auto& lb)
+            {
+                const auto& idb = grid.is_domain_boundary(lb);
+                return idb(idir, pm);
+            };
+            return output;
+        };
+        
+        const auto src_check = mk_lam(match_dir, src_pm, src_grid);
+        const auto dst_check = mk_lam(match_dir, dst_pm, dst_grid);
+        const auto src_lbs = src_grid.select_blocks(src_check, partition::global);
+        const auto dst_lbs = dst_grid.select_blocks(dst_check, partition::global);
+        
+        const auto extended_bbx = [&](const auto& grd, const auto& lb)
+        {
+            auto bbx      = grd.get_bounding_box(lb);
+            const auto dx = grd.get_dx(lb);
+            for (int d = 0; d < grd.dim(); ++d)
+            {
+                bbx.min(d) -= grd.get_num_exchange(d)*dx[d];
+                bbx.max(d) += grd.get_num_exchange(d)*dx[d];
+            }
+            return bbx;
+        };
+        
+        for (const auto& src_lb: src_lbs)
+        {
+            const auto src_bbx = src_grid.get_bounding_box(src_lb);
+            for (const auto& dst_lb: dst_lbs)
+            {
+                const auto dst_bbx_ext = extended_bbx(dst_grid, dst_lb);
+                if (src_bbx.intersects(dst_bbx_ext))
+                {
+                    // src_lb donates to dst_lb
+                }
+            }
         }
         
         return array_exchange_t(output0, output1);
