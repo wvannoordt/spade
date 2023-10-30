@@ -60,6 +60,8 @@ namespace spade::grid
             using group_type         = par_group_t;
             using partition_type     = partition::block_partition_t;
             using dependent_type     = grid_dependent_t;
+            using blocks_type        = block_arrangement_t;
+            using array_desig_type   = array_descriptor_t;
             
             using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), device::shared_vector>;
             using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), utils::const_vec_image_t>;

@@ -117,7 +117,8 @@ namespace spade::amr
         }
     };
     
-    template <typename T1, typename T2> static std::ostream & operator<<(std::ostream & os, const amr_exact_coord_t<T1, T2> & pos)
+    template <typename T1, typename T2>
+    static std::ostream& operator<<(std::ostream & os, const amr_exact_coord_t<T1, T2> & pos)
     {
         os << "P:" << pos.partition << "[";
         T2 mask = 1;

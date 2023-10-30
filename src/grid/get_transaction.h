@@ -72,8 +72,8 @@ namespace spade::grid
     auto get_transaction(
         const grid_t& src_grid,
         const grid_t& dst_grid,
-        const std::size_t& lb_ini,
-        const amr::amr_neighbor_t<grid_t::dim()>& relation)
+        const std::size_t& lb_ini, // sits on src_grid
+        const amr::amr_neighbor_t<grid_t::dim()>& relation) // relation points from src to dst
     {
         patch_fill_t<grid_t::dim()> output;
         neighbor_relation_t base_relation;

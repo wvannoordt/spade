@@ -8,6 +8,8 @@
 #include "core/md_loop.h"
 #include "core/poly_vec.h"
 
+#include "amr/amr.h"
+
 #include "grid/grid.h"
 #include "grid/partition.h"
 #include "grid/transactions.h"
@@ -272,10 +274,10 @@ namespace spade::grid
         
         template <typename arr_t>
         [[nodiscard("exchange sentinel must be used to complete exchange")]]
-        auto async_exchange(arr_t& array)
+        auto async_exchange(const arr_t& src_array, arr_t& dst_array)
         {
-            handle.assure_buffer_size(array, config);
-            config.pack_to(array, handle.send_bufs);
+            handle.assure_buffer_size(src_array, config);
+            config.pack_to(src_array, handle.send_bufs);
             for (std::size_t p = 0; p < handle.group->size(); ++p)
             {
                 request_t r = handle.group->async_recv(&handle.recv_bufs[p][0], handle.recv_bufs[p].size(), p);
@@ -285,14 +287,22 @@ namespace spade::grid
             {
                 handle.group->sync_send(&handle.send_bufs[p][0], handle.send_bufs[p].size(), p);
             }
-            return handle_sentinel_t{array, config, handle};
+            return handle_sentinel_t{dst_array, config, handle};
         }
         
         template <typename arr_t>
         requires device::is_cpu<typename arr_t::device_type>
-        void exchange(arr_t& array)
+        void exchange(const arr_t& src, arr_t& dst)
         {
-            auto handle = this->async_exchange(array);
+            auto handle = this->async_exchange(src, dst);
+            handle.await();
+        }
+        
+        template <typename arr_t>
+        requires device::is_cpu<typename arr_t::device_type>
+        void exchange(arr_t& arr)
+        {
+            auto handle = this->async_exchange(arr, arr);
             handle.await();
         }
         
@@ -412,6 +422,11 @@ namespace spade::grid
     template <typename grid_t, typename group_t>
     auto create_interface(const grid_t& src_grid, const grid_t& dst_grid, const group_t& group)
     {
+        static_assert(grid_t::dim() == 3, "can only perform interface generation on 3d grids");
+        using required_blocks_type = amr::amr_blocks_t<typename grid_t::coord_type, typename grid_t::array_desig_type>;
+        static_assert(std::same_as<typename grid_t::blocks_type, required_blocks_type>, "can only perform interface generation grids with AMR block configs");
+        
+        
         grid_exchange_config_t output0(src_grid, dst_grid);
         exchange_handle_t      output1(group);
 
@@ -460,6 +475,8 @@ namespace spade::grid
         int dst_pm = -1;
         const auto& src_bnd = src_grid.get_bounds();
         const auto& dst_bnd = dst_grid.get_bounds();
+        
+        // Note: need more checks in here to ensure this doesn't completely break
         for (int i = 0; i < grid_t::dim(); ++i)
         {
             if (rt_eq(src_bnd.min(i), dst_bnd.max(i)))
@@ -520,6 +537,75 @@ namespace spade::grid
                 if (src_bbx.intersects(dst_bbx_ext))
                 {
                     // src_lb donates to dst_lb
+                    // We create a fake pair of nodes to build the exchange
+                    
+                    using node_t = typename required_blocks_type::node_type;
+                    const node_t& src_node = src_grid.get_blocks().get_amr_node(src_lb.value);
+                    const node_t& dst_node = dst_grid.get_blocks().get_amr_node(dst_lb.value);
+                    
+                    // Prepare for something unholy
+                    node_t fake_src_node;
+                    node_t fake_dst_node;
+                    
+                    fake_src_node.amr_position = src_node.amr_position;
+                    fake_dst_node.amr_position = dst_node.amr_position;
+                    
+                    fake_src_node.level = src_node.level;
+                    fake_dst_node.level = dst_node.level;
+                    
+                    fake_src_node.tag = src_node.tag;
+                    fake_dst_node.tag = dst_node.tag;
+                    
+                    if (src_pm == 1)
+                    {
+                        //Add 2 to avoid the periodic neighbor conditions
+                        fake_src_node.amr_position.min(match_dir).num_partitions += 2;
+                        fake_src_node.amr_position.max(match_dir).num_partitions += 2;
+                        
+                        // "expand the grid to include the new node"
+                        fake_dst_node.amr_position.min(match_dir).num_partitions = 
+                            fake_src_node.amr_position.min(match_dir).num_partitions;
+                    
+                        fake_dst_node.amr_position.max(match_dir).num_partitions = 
+                            fake_src_node.amr_position.max(match_dir).num_partitions;
+                        
+                        // "situate the new node at the end"
+                        fake_dst_node.amr_position.min(match_dir).partition = 
+                            fake_src_node.amr_position.max(match_dir).partition;
+                            
+                        int part_diff = dst_node.amr_position.max(match_dir).partition
+                            - dst_node.amr_position.min(match_dir).partition;
+                        
+                        fake_dst_node.amr_position.max(match_dir).partition = 
+                            fake_dst_node.amr_position.min(match_dir).partition + part_diff;
+                        
+                        
+                        
+                    }
+                    if (dst_pm == 1)
+                    {
+                        throw except::sp_exception("haven't implemented \"upwind\" interface (and this implementation is awful)");
+                    }
+                    
+                    std::vector<node_t> proxy{fake_src_node};
+                    using handle_type = typename node_t::handle_type;
+                    handle_type handle(&proxy, 0);
+                    const bool periodic_neighs = false;
+                    fake_dst_node.create_neighbor(handle, periodic_neighs);
+                    for (const auto& e:fake_dst_node.neighbors)
+                    {                        
+                        const auto transaction = get_transaction(src_grid, dst_grid, src_lb.value, e);
+                        if (transaction.reducible())
+                        {
+                            output0.add_send(transaction.reduce());
+                            output0.add_recv(transaction.reduce());
+                        }
+                        else
+                        {
+                            output0.add_send(transaction);
+                            output0.add_recv(transaction);
+                        }
+                    }
                 }
             }
         }

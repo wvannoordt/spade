@@ -108,7 +108,7 @@ namespace spade::amr
         }
         
         template <typename condition_t>
-        void create_neighbor(handle_type& candidate, const condition_t& condition)
+        void create_neighbor(handle_type& candidate, const condition_t& condition, const bool periodic_neighs)
         {
             if (!candidate.get().terminal()) return;
             ctrs::array<ctrs::array<bool, 3>, 3> table;
@@ -123,11 +123,11 @@ namespace spade::amr
                 const auto& m_min = candidate.get().amr_position.min(d);
                 const auto& m_max = candidate.get().amr_position.max(d);
                 
-                const auto uboundary_wrap = [](const auto& test, const auto& x0, const auto& x1)
+                const auto uboundary_wrap = [periodic_neighs](const auto& test, const auto& x0, const auto& x1)
                 {
                     auto y0 = x0;
                     auto y1 = x1;
-                    if (test.partition == test.num_partitions)
+                    if ((test.partition == test.num_partitions) && periodic_neighs)
                     {
                         y1.partition += y1.num_partitions;
                         y0.partition += y0.num_partitions;
@@ -135,11 +135,11 @@ namespace spade::amr
                     return std::make_tuple(y0, y1);
                 };
                 
-                const auto lboundary_wrap = [](const auto& test, const auto& x0, const auto& x1)
+                const auto lboundary_wrap = [periodic_neighs](const auto& test, const auto& x0, const auto& x1)
                 {
                     auto y0 = x0;
                     auto y1 = x1;
-                    if (test.partition == 0 && test.bits == 0)
+                    if (((test.partition == 0) && (test.bits == 0)) && periodic_neighs)
                     {
                         y1.partition -= y1.num_partitions;
                         y0.partition -= y0.num_partitions;
@@ -178,7 +178,12 @@ namespace spade::amr
         
         void create_neighbor(handle_type& candidate)
         {
-            this->create_neighbor(candidate, [](const auto&){return true;});
+            this->create_neighbor(candidate, [](const auto&){return true;}, true);
+        }
+        
+        void create_neighbor(handle_type& candidate, const bool periodic_neighs)
+        {
+            this->create_neighbor(candidate, [](const auto&){return true;}, periodic_neighs);
         }
         
         template <typename condition_t>

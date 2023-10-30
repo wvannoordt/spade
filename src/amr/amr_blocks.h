@@ -115,7 +115,8 @@ namespace spade::amr
         }
         
         std::size_t total_num_blocks() const { return enumerated_nodes.size(); }
-        template <typename filter_t> std::size_t get_num_blocks(const filter_t& filter) const
+        template <typename filter_t>
+        std::size_t get_num_blocks(const filter_t& filter) const
         {
             std::size_t output = 0;
             for (const auto p: enumerated_nodes)
