@@ -72,25 +72,22 @@ namespace spade::grid
     auto get_transaction(
         const grid_t& src_grid,
         const grid_t& dst_grid,
-        const std::size_t& lb_ini, // sits on src_grid
-        const amr::amr_neighbor_t<grid_t::dim()>& relation) // relation points from src to dst
+        const std::size_t& lb_ini,
+        const amr::amr_neighbor_t<grid_t::dim()>& relation)
     {
         patch_fill_t<grid_t::dim()> output;
         neighbor_relation_t base_relation;
         base_relation.edge = -1*relation.edge;
         if constexpr (grid_t::dim() == 2) base_relation.edge[2] = 0;
         base_relation.lb_ini  = relation.endpoint.get().tag;
-        base_relation.lb_term = lb_ini;
-        
-        
+        base_relation.lb_term = lb_ini;        
         
         //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
         auto ptch = get_transaction(src_grid, dst_grid, lb_ini, base_relation);
         output.patches = ptch;
         
-        
         auto& self  = relation.endpoint.get();
-        auto& neigh = src_grid.get_blocks().enumerated_nodes[lb_ini].get();
+        auto& neigh = dst_grid.get_blocks().get_amr_node(lb_ini);
         
         output.i_coeff = 0;
         output.i_incr  = 0;

@@ -578,9 +578,6 @@ namespace spade::grid
                         
                         fake_dst_node.amr_position.max(match_dir).partition = 
                             fake_dst_node.amr_position.min(match_dir).partition + part_diff;
-                        
-                        
-                        
                     }
                     if (dst_pm == 1)
                     {
@@ -593,8 +590,8 @@ namespace spade::grid
                     const bool periodic_neighs = false;
                     fake_dst_node.create_neighbor(handle, periodic_neighs);
                     for (const auto& e:fake_dst_node.neighbors)
-                    {                        
-                        const auto transaction = get_transaction(src_grid, dst_grid, src_lb.value, e);
+                    {
+                        const auto transaction = get_transaction(src_grid, dst_grid, dst_lb.value, e);
                         if (transaction.reducible())
                         {
                             output0.add_send(transaction.reduce());
