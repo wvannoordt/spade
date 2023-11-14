@@ -25,9 +25,9 @@ int main(int argc, char** argv)
     const real_t fill = 0.0;
     
     // Mesh will tell us how many ODEs to solve
-    spade::ode::uniform_mesh_t mesh(y_wm, y, 100);
-    spade::ode::system_t system(fill, mesh, {u_wm, T_wm, ystar_wm, rho_wm, mu_wm, mut_wm});
-    
+    spade::sym::vector_t vars {u_wm, T_wm, ystar_wm, rho_wm, mu_wm, mut_wm};
+    // spade::ode::system_t system(fill, spade::ode::constant_mesh_t(y_wm, y, 100), vars);
+    /*
     using buffer_type = decltype(system)::buffer_type;
     
     spade::ode::expression_t mu_expr(mu_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
         const real_t mu_w  = data[mu_wm][0];
         const real_t du_dy = (data[u_wm][1] - data[u_wm][0])/(data[y_wm][1] - data[y_wm][0]);
         const real_t tau = mu_w*du_dy;
-        return data[][]*sqrt(tau*data[rho_wm][0])/data[mu_wm][i];
+        return data[y_wm][]*sqrt(tau*data[rho_wm][0])/data[mu_wm][i];
     });
     
     spade::ode::expression_t mut_expr(mut_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
@@ -72,14 +72,14 @@ int main(int argc, char** argv)
     });
     
     //Boundary conditions (tbd)
-    // system.set_boundary([=] _sp_hybrid(const std::size_t i){ /* something with the expression, etc */ return 0.0; });
+    // system.set_boundary([=] _sp_hybrid(const std::size_t i){ return 0.0; });
     
     //Initialize data
-    // system.initialize(u_wm, []/*...*/);
+    // system.initialize(u_wm, []);
     
     //The order in which these expressions are presented is the order in which they are solved
     
     spade::ode::solve_bvp(system, {rho_expr, ystar_expr, mu_expr, mut_expr, T_expr, u_expr});
-    
+    */
     return 0;
 }

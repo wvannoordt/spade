@@ -44,7 +44,6 @@ namespace spade::convective
         
         muscl_t(const gas_t& gas_in) : flx_fnc{gas_in} {}
         
-        
         _sp_hybrid output_type operator() (const auto& input_data) const
         {
             auto flx = flx_fnc(input_data.face(0_c));

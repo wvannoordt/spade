@@ -185,11 +185,18 @@ namespace spade::grid
         output.resize(oper.size());
         const auto idx_img   = utils::make_vec_image(oper.idx.data(  arr.device()));
         const auto coeff_img = utils::make_vec_image(oper.coeff.data(arr.device()));
-        auto       out_img   = utils::make_vec_image(output);
+        
+        constexpr static bool is_shared_vec = requires { output.transfer(); };
+        auto out_img   = [&]()
+        {
+            if constexpr (is_shared_vec) return utils::make_vec_image(output.data(arr.device()));
+            else                        return utils::make_vec_image(output);
+        }();
+        
         const auto arr_img   = arr.image();
         
         using real_t = typename arr_t::fundamental_type;
-        auto kern = _sp_lambda (const std::size_t& i) mutable
+        auto kern = [=] _sp_hybrid (const std::size_t& i) mutable
         {
             auto& result = out_img[i];
             result = real_t(0.0);
@@ -204,6 +211,8 @@ namespace spade::grid
         
         auto rg = dispatch::ranges::from_array(out_img, arr.device());
         dispatch::execute(rg, kern);
+        
+        if constexpr (is_shared_vec && device::is_gpu<typename arr_t::device_type>) output.itransfer();
     }
     
     //todo: update this to include an omni kernel
