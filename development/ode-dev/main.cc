@@ -41,7 +41,9 @@ int main(int argc, char** argv)
     spade::ode::expression_t rho_expr(rho_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
     {
         //WRONG!!!!!! set based on dP/dy == 0
-        return data[rho_wm][npts-1];
+        const real_t rgas  = 287.15;
+        const real_t p_F   = rgas*data[rho_wm][npts-1]*data[T_wm][npts-1];
+        return p_F/(rgas*data[T_wm][i]);
     });
     
     spade::ode::expression_t ystar_expr(ystar_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
@@ -73,7 +75,7 @@ int main(int argc, char** argv)
     });
     
     //Boundary conditions (tbd)
-    // system.set_boundary([=] _sp_hybrid(const std::size_t i){ return 0.0; });
+    system.set_boundary(system.lower, [=] _sp_hybrid (const std::size_t i){ return 0.0; });
     
     //Initialize data
     // system.initialize(u_wm, []);

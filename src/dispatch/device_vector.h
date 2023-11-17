@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "dispatch/device_allocator.h"
 
 namespace spade::device
@@ -49,4 +50,7 @@ namespace spade::device
         _sp_hybrid data_t& operator[]       (const std::size_t& idx)       { return raw[idx]; }
         _sp_hybrid const data_t& operator[] (const std::size_t& idx) const { return raw[idx]; }
     };
+    
+    template <typename data_t, typename device_t>
+    using auto_vector = std::conditional<is_cpu<device_t>, std::vector<data_t>, device_vector<data_t>>::type;
 }

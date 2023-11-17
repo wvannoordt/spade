@@ -44,7 +44,7 @@ namespace spade::ode
         
         using cpu_container_type = std::vector<value_type>;
         using gpu_container_type = device::device_vector<value_type>;
-        using container_type     = typename std::conditional<device::is_gpu<device_t>, gpu_container_type, cpu_container_type>::type;
+        using container_type     = device::auto_vector<value_type, device_t>;
         
         mesh_type mesh;
         container_type data;
