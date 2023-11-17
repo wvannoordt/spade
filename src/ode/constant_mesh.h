@@ -17,6 +17,7 @@ namespace spade::ode
         : xs{xs_in}, count{count_in} {}
         
         std::size_t num_instances() const { return count; }
+        std::size_t total_elements() const { return num_instances()*xs.size(); }
         
         data_t get_x(const int i, const int) const
         {

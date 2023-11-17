@@ -223,12 +223,14 @@ namespace spade::utils
         return str;
     }
     
-    template <typename str_t> static std::string to_string(const str_t& str)
+    template <typename str_t>
+    static std::string to_string(const str_t& str)
     {
         return std::to_string(str);
     }
     
-    template <typename data_t, const padding::padding pd = padding::right> static inline std::string pad_str(const data_t& data, const std::size_t& pad_size, const char& pad_char = ' ')
+    template <typename data_t, const padding::padding pd = padding::right>
+    static inline std::string pad_str(const data_t& data, const std::size_t& pad_size, const char& pad_char = ' ')
     {
         std::string output = to_string(data);
         if constexpr (pd == padding::left)
@@ -261,6 +263,27 @@ namespace spade::utils
     {
         typedef get_pack_type_helper<0,idx,types_t...>::type type;
     };
+    
+    namespace detail
+    {        
+        template <typename T, typename... Ts>
+        struct index_of_pack_impl;
+        
+        template <typename T, typename... Ts>
+        struct index_of_pack_impl<T, T, Ts...>
+        {
+            constexpr static int value = 0;
+        };
+        
+        template <typename T, typename U, typename... Ts>
+        struct index_of_pack_impl<T, U, Ts...>
+        {
+            constexpr static int value = 1 + index_of_pack_impl<T, Ts...>::value;
+        };
+    }
+    
+    template <typename T, typename... Ts>
+    constexpr static int index_of_pack = detail::index_of_pack_impl<T, Ts...>::value;
     
     // Used to store a reallocation-agnostic
     // reference to a vector element
