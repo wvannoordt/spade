@@ -84,6 +84,33 @@ namespace spade::dispatch
         }
     };
     
+    template <typename idx_t, typename dev_t>
+    struct kernel_params_t<idx_t, ranges::bilinear_range_t<idx_t, dev_t>>
+    {
+        using range_type   = ranges::bilinear_range_t<idx_t, dev_t>;
+        using range_t      = range_type;
+        using index_type   = typename range_t::index_type;
+        using triplet_type = d3_t;
+        
+        constexpr static int blocksize = 16;
+        triplet_type grid_size;
+        triplet_type block_size;
+        range_type irange;
+        
+        _sp_hybrid index_type get_index(const triplet_type& thr_idx, const triplet_type& blo_idx, const triplet_type& blo_dim, const triplet_type& grd_dim) const
+        {
+            index_type output;
+            output[0] = irange.i0 + thr_idx.x + blo_idx.x*blo_dim.x;
+            output[1] = irange.j0 + thr_idx.y + blo_idx.y*blo_dim.y;
+            return output;
+        }
+        
+        _sp_hybrid bool is_valid(const index_type& i) const
+        {
+            return (i[0] < irange.i1) && (i[0] >= irange.i0) && (i[1] < irange.j1) && (i[1] >= irange.j0);
+        }
+    };
+    
     template <grid::grid_index index_t, typename r_device_t>
     static auto get_launch_params(const ranges::grid_idx_range_t<index_t, r_device_t>& range_in)
     {
@@ -130,6 +157,28 @@ namespace spade::dispatch
         triplet_type bsize;
         bsize.x = blocksize;
         bsize.y = 1;
+        bsize.z = 1;        
+        
+        return kernel_params_t<index_t, range_t>{gsize, bsize, range_in};
+    }
+    
+    template <typename index_t, typename r_device_t>
+    static auto get_launch_params(const ranges::bilinear_range_t<index_t, r_device_t>& range_in)
+    {
+        using range_t = ranges::bilinear_range_t<index_t, r_device_t>;
+        using index_type = typename range_t::index_type;
+        using triplet_type = typename kernel_params_t<index_t, range_t>::triplet_type;
+        
+        constexpr int blocksize = kernel_params_t<index_t, range_t>::blocksize;
+        
+        triplet_type gsize;
+        gsize.x =  1 + ((range_in.i1 - range_in.i0 - 1) / blocksize);
+        gsize.y =  1 + ((range_in.j1 - range_in.j0 - 1) / blocksize);
+        gsize.z =  1;
+        
+        triplet_type bsize;
+        bsize.x = blocksize;
+        bsize.y = blocksize;
         bsize.z = 1;        
         
         return kernel_params_t<index_t, range_t>{gsize, bsize, range_in};

@@ -18,6 +18,7 @@ namespace spade::ode
         
         std::size_t num_instances() const { return count; }
         std::size_t total_elements() const { return num_instances()*xs.size(); }
+        std::size_t mesh_size() const { return xs.size(); }
         
         data_t get_x(const int i, const int) const
         {

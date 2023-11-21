@@ -5,7 +5,7 @@ MPI_ENABLE := 1
 endif
 
 ifndef cuda
-cuda := 1
+cuda := 0
 endif
 
 ifeq (${MPI_ENABLE},1)
