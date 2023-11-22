@@ -63,7 +63,7 @@ namespace spade::ode
             output.buffers[0] = container_image_t{ys_raw.ptr, ngrd};
             for (int j = 0; j < output.buffers.size() - 1; ++j)
             {
-                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd}; //arithmetic is wrong
+                output.buffers[1+j] = container_image_t{data_raw.ptr + instance*ngrd*variables_t::size() + j*ngrd, ngrd}; //arithmetic is wrong
             }
             
             return output;
@@ -77,7 +77,7 @@ namespace spade::ode
             output.buffers[0] = container_image_t{ys_raw.ptr, ngrd};
             for (int j = 0; j < output.buffers.size() - 1; ++j)
             {
-                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd}; //arithmetic is wrong
+                output.buffers[1+j] = container_image_t{data_raw.ptr + instance*ngrd*variables_t::size() + j*ngrd, ngrd}; //arithmetic is wrong
             }
             
             return output;

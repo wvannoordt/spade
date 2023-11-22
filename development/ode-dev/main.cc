@@ -38,9 +38,9 @@ int main(int argc, char** argv)
     }, spade::ode::xplicit);
     
     const real_t p_F = 101325.0;
+    const real_t rgas  = 287.15;
     spade::ode::expression_t rho_expr(rho_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
     {
-        const real_t rgas  = 287.15;
         return p_F/(rgas*data[T_wm][i]);
     }, spade::ode::xplicit);
     
@@ -65,22 +65,44 @@ int main(int argc, char** argv)
     const real_t u_F = 69.54;
     spade::ode::expression_t u_expr (u_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
     {
-        real_t rhs  = 0.0;
-        real_t lhs0 = 0.0;
-        real_t lhs1 = 0.0;
-        real_t lhs2 = 0.0;
+        const real_t diff_L = 0.5*(data[mu_wm][i-1] + data[mut_wm][i-1] + data[mu_wm][i] + data[mut_wm][i]);
+        const real_t diff_R = 0.5*(data[mu_wm][i+1] + data[mut_wm][i+1] + data[mu_wm][i] + data[mut_wm][i]);
+        const real_t dy_L   = data[y_wm][i]   - data[y_wm][i-1];
+        const real_t dy_R   = data[y_wm][i+1] - data[y_wm][i];
+        const real_t dy_LR  = dy_L + dy_R;
+        const real_t c_L    = diff_L/(dy_L*dy_LR);
+        const real_t c_R    = diff_R/(dy_R*dy_LR);
+        
+        real_t lhs0 = c_L;
+        real_t lhs1 = -(c_L + c_R);
+        real_t lhs2 = c_R;
+        real_t rhs  = lhs0*data[u_wm][i-1] + lhs1*data[u_wm][i] + lhs2*data[u_wm][i+1];
+        
         return spade::ode::tridiag(lhs0, lhs1, lhs2, rhs);
     }, spade::ode::make_bcs(spade::ode::dirichlet(0.0), spade::ode::dirichlet(u_F)));
     
-    const real_t T_F = 300.0;
+    const real_t T_F   = 300.0;
+    const real_t gamma = 1.4;
+    const real_t pr    = 0.71;
+    const real_t pr_t  = 0.9;
     spade::ode::expression_t T_expr (T_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
     {
-        real_t rhs  = 0.0;
-        real_t lhs0 = 0.0;
-        real_t lhs1 = 0.0;
-        real_t lhs2 = 0.0;
+        const real_t cp     = gamma*rgas/(gamma-real_t(1.0));
+        const real_t diff_L = 0.5*(data[mu_wm][i-1]/pr + data[mut_wm][i-1]/pr_t + data[mu_wm][i]/pr + data[mut_wm][i]/pr_t)*cp;
+        const real_t diff_R = 0.5*(data[mu_wm][i+1]/pr + data[mut_wm][i+1]/pr_t + data[mu_wm][i]/pr + data[mut_wm][i]/pr_t)*cp;
+        const real_t dy_L   = data[y_wm][i]   - data[y_wm][i-1];
+        const real_t dy_R   = data[y_wm][i+1] - data[y_wm][i];
+        const real_t dy_LR  = dy_L + dy_R;
+        const real_t c_L    = diff_L/(dy_L*dy_LR);
+        const real_t c_R    = diff_R/(dy_R*dy_LR);
+        
+        real_t lhs0 = c_L;
+        real_t lhs1 = -(c_L + c_R);
+        real_t lhs2 = c_R;
+        real_t rhs  = lhs0*data[T_wm][i-1] + lhs1*data[T_wm][i] + lhs2*data[T_wm][i+1];
+        
         return spade::ode::tridiag(lhs0, lhs1, lhs2, rhs);
-    }, spade::ode::make_bcs(spade::ode::neumann(0.0), spade::ode::dirichlet(T_F)));
+    }, spade::ode::make_bcs(spade::ode::neumann(0.0), spade::ode::dirichlet(T_F))); //Note that we need to adjust the boundary condition to be e.g. a lambda
     
     auto expressions = spade::ode::make_expressions(rho_expr, ystar_expr, mu_expr, mut_expr, T_expr, u_expr);
     //The order in which these expressions are presented is the order in which they are solved
@@ -91,7 +113,6 @@ int main(int argc, char** argv)
     for (int i = 0; i < npts; ++i)
     {
         const auto buf = img.get_buffer(0);
-        print(&buf[u_wm][0], &buf[T_wm][0]);
         sol << buf[y_wm][i] << " " << buf[u_wm][i] << " " << buf[T_wm][i] << std::endl;
     }
     
