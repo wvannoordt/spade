@@ -60,10 +60,10 @@ namespace spade::ode
             buffer_type output;
             const std::size_t ngrd = ys_raw.size();
             
-            output.buffers[0] = container_image_t{ys_raw.ptr + ngrd*instance, ngrd};
+            output.buffers[0] = container_image_t{ys_raw.ptr, ngrd};
             for (int j = 0; j < output.buffers.size() - 1; ++j)
             {
-                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd};
+                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd}; //arithmetic is wrong
             }
             
             return output;
@@ -74,10 +74,10 @@ namespace spade::ode
             const_buffer_type output;
             const std::size_t ngrd = ys_raw.size();
             
-            output.buffers[0] = container_image_t{ys_raw.ptr + ngrd*instance, ngrd};
+            output.buffers[0] = container_image_t{ys_raw.ptr, ngrd};
             for (int j = 0; j < output.buffers.size() - 1; ++j)
             {
-                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd};
+                output.buffers[1+j] = container_image_t{data_raw.ptr + ngrd*instance*j, ngrd}; //arithmetic is wrong
             }
             
             return output;
@@ -92,7 +92,7 @@ namespace spade::ode
         using mesh_type        = mesh_t;
         using variable_list    = variables_t;
         using device_type      = device_t;
-        using mesh_symbol      = typename mesh_t::symbol_type;
+        using mesh_sym         = typename mesh_t::symbol_type;
         
         using cpu_container_type = std::vector<value_type>;
         using gpu_container_type = device::device_vector<value_type>;
@@ -111,6 +111,8 @@ namespace spade::ode
             const std::size_t total_elems = mesh.total_elements()*variables_t::size();
             data.resize(total_elems);
         }
+        
+        constexpr static mesh_sym mesh_symbol() { return mesh_sym();}
         
         device_type device() const { return devc; }
         

@@ -264,6 +264,9 @@ namespace spade::utils
         typedef get_pack_type_helper<0,idx,types_t...>::type type;
     };
     
+    template <const std::size_t idx, typename... types_t>
+    using pack_element = typename get_pack_type<idx, types_t...>::type;
+    
     namespace detail
     {        
         template <typename T, typename... Ts>

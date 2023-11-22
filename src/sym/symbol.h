@@ -39,6 +39,9 @@ namespace spade::sym
         template <is_symbol new_var_t>
         using extend = vector_t<vars_t..., new_var_t>;
         
+        template <const int i>
+        using elem = utils::pack_element<i, vars_t...>;
+        
         vector_t (const vars_t&...){}
     };
 }

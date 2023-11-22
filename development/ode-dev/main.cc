@@ -27,7 +27,7 @@ int main(int argc, char** argv)
     spade::sym::vector_t vars {u_wm, T_wm, ystar_wm, rho_wm, mu_wm, mut_wm};
     spade::ode::system_t system(fill, spade::ode::constant_mesh_t(y_wm, y, 2), vars, spade::device::best);
     
-    using buffer_type = decltype(system)::buffer_type;
+    using buffer_type = decltype(system)::const_buffer_type;
     
     spade::ode::expression_t mu_expr(mu_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
     {
@@ -85,5 +85,16 @@ int main(int argc, char** argv)
     auto expressions = spade::ode::make_expressions(rho_expr, ystar_expr, mu_expr, mut_expr, T_expr, u_expr);
     //The order in which these expressions are presented is the order in which they are solved
     spade::ode::solve_bvp(system, expressions);
+    
+    std::ofstream sol("out.dat");
+    auto img = system.image();
+    for (int i = 0; i < npts; ++i)
+    {
+        const auto buf = img.get_buffer(0);
+        print(&buf[u_wm][0], &buf[T_wm][0]);
+        sol << buf[y_wm][i] << " " << buf[u_wm][i] << " " << buf[T_wm][i] << std::endl;
+    }
+    
+    
     return 0;
 }
