@@ -97,6 +97,16 @@ namespace spade
             for (int i = 0; i < bnds.size(); ++i) output.bnds[i] = output.bnds[i] || rhs.bnds[i];
             return output;
         }
+        
+        _sp_hybrid ctrs::array<dtype, ar_size> center() const
+        {
+            ctrs::array<dtype, ar_size> output;
+            for (int i = 0; i < ar_size; ++i)
+            {
+                output[i] = dtype(0.5)*(min(i) + max(i));
+            }
+            return output;
+        }
     };
     
     template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)

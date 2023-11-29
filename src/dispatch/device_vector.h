@@ -42,6 +42,11 @@ namespace spade::device
 #endif
         }
         
+        void clear()
+        {
+            this->resize(0);
+        }
+        
         ~device_vector()
         {
             if (raw != nullptr) allocator.deallocate(raw, c_size);

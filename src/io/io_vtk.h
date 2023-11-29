@@ -348,4 +348,18 @@ namespace spade::io
             mf << ((bdim==3)?11:8) << "\n";
         }
     }
+    
+    template <grid::multiblock_grid grid_t>
+    static void output_vtk(const std::string& fname, const grid_t& grid)
+    {
+        using bbx_type = decltype(grid.get_bounding_box(0));
+        std::vector<bbx_type> boxes;
+        for (std::size_t lb = 0; lb < grid.get_num_global_blocks(); ++lb)
+        {
+            auto lbt = utils::tag[partition::global](lb);
+            boxes.push_back(grid.get_bounding_box(lbt));
+        }
+        output_vtk(fname, boxes);
+    }
+    
 }

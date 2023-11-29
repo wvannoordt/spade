@@ -214,6 +214,11 @@ namespace spade::grid
         
         fundamental_type* get_base() { return &data[0]; }
         
+        void clear()
+        {
+            data.clear();
+        }
+        
         const auto& var_map() const
         {
             return std::get<0>(mem_view.mmap.views);

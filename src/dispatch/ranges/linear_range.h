@@ -30,7 +30,7 @@ namespace spade::dispatch::ranges
     template <ctrs::basic_array arr_t, typename device_t>
     static auto from_array(const arr_t& arr, const device_t& device)
     {
-        return linear_range_t(0UL*arr.size(), arr.size(), device);
+        return linear_range_t(int(0*arr.size()), int(arr.size()), device);
     }
     
     // to-do: get rid of this crap

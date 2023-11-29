@@ -35,11 +35,12 @@ namespace spade::ode
                 
                 // If expr is an ODE, this gives the boundary conditions.
                 // If not an ODE, gives the kind of expression that expr is (explicit, algebraic, etc)
-                const auto spec = expr.specifier;
+                const auto spec      = expr.specifier;
+                const auto mesh_sym  = sys.mesh_symbol();
                 if constexpr (is_ode<decltype(spec)>)
                 {
-                    const auto m_b  = detail::lin_coeffs(spec, buf[sys.mesh_symbol()][0], buf[sys.mesh_symbol()].back());
-                    buf[sym_t()][iw] = m_b[0] + buf[sys.mesh_symbol()][iw]*m_b[1];
+                    const auto m_b  = detail::lin_coeffs(spec, buf[mesh_sym][0], buf[mesh_sym].back());
+                    buf[sym_t()][iw] = m_b[0] + buf[mesh_sym][iw]*m_b[1];
                 }
             });
         };

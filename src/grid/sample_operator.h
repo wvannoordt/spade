@@ -119,7 +119,8 @@ namespace spade::grid
                     ss << "Cannot compute find suitable block for point:\n" << x_sample;
                     ss << "\nBounds:\n" << bbx;
                     ss << "\nNum. checks: " << num_checked;
-                    throw except::sp_exception("Error attempting to build sampling operator:\n" + ss.str());
+                    std::vector<pnt_t> points{x_sample};
+                    throw except::points_exception<typename pnt_t::value_type>("Error attempting to build sampling operator:\n" + ss.str(), points);
                 }
             }
             
