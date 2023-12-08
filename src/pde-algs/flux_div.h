@@ -167,7 +167,7 @@ namespace spade::pde_algs
         constexpr int grid_dim = ar_grid.dim();
         auto var_range         = dispatch::support_of(prims, grid::exclude_exchanges);
         
-        auto load = _sp_lambda (const grid::cell_idx_t& icell) mutable
+        auto load = [=] _sp_hybrid (const grid::cell_idx_t& icell) mutable
         {
             const auto xyz = geom_image.get_comp_coords(icell);
             const real_type jac = coords::calc_jacobian(geom_image.get_coord_sys(), xyz, icell);
@@ -196,6 +196,7 @@ namespace spade::pde_algs
             });
             rhs_img.set_elem(icell, relem);
         };
+
         dispatch::execute(var_range, load);
     }
     

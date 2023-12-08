@@ -72,6 +72,7 @@ namespace spade::device
         
         void transfer()
         {
+            if (host_data.size() == 0) return;
 #if(_sp_cuda)
             devc_data.resize(host_data.size());
             std::string err_string = "no error";
@@ -86,6 +87,7 @@ namespace spade::device
         
         void itransfer()
         {
+            if (devc_data.size() == 0) return;
 #if(_sp_cuda)
             host_data.resize(devc_data.size());
             std::string err_string = "no error";

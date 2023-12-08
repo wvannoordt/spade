@@ -32,6 +32,8 @@ namespace spade::time_integration
         
         static constexpr std::size_t var_size() {return 2;}
         static constexpr std::size_t rhs_size() {return table_t::cols();}
+
+        static constexpr bool is_rk_specialization = true;
     };
     
     using rk2_t = rk_t<

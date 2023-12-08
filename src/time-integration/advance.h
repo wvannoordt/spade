@@ -48,6 +48,7 @@ namespace spade::time_integration
     
     //explicit RK scheme (TODO: implement concept for this)
     template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t>
+    requires (data_t::scheme_type::is_rk_specialization)
     void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const boundary_t& boundary, const trans_t& trans)
     {
         //Note that we assume that the boundary has been set before we begin integration.
@@ -133,5 +134,60 @@ namespace spade::time_integration
         });
         axis.time() += dt;
         boundary(new_solution, axis.time());
+    }
+
+    template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t>
+    requires (data_t::scheme_type::is_crank_nichol_specialization)
+    void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const boundary_t& boundary, const trans_t& trans)
+    {
+        //Note that we assume that the boundary has been set before we begin integration.
+        //Note also that the boundary pertains to the untransformed state
+
+        //Number of RHS evaluations
+        auto& q0 = data.solution(0);
+        auto& q1 = data.solution(1);
+
+        auto& r0 = data.residual(0);
+        auto& r1 = data.residual(1);
+
+        rhs(r0, q0, axis.time());
+        
+        q1 = q0;
+        trans.transform_forward(q0);
+        auto& w0 = q0;
+
+        const auto& dt = axis.timestep();
+
+        using coeff_t = typename data_t::scheme_type::coeff_type;
+        const coeff_t& theta = data.scheme_data.coeff;
+
+        bool converged = false;
+        int num_its = 0;
+        while (!converged)
+        {
+            rhs(r1, q1, axis.time());
+            trans.transform_forward(q1);
+            auto& w1 = q1;
+            w1 *= theta/(coeff_t(1.0) - theta);
+            w1 += w0;
+            r1 += r0;
+            r1 *= coeff_t(0.5);
+            r1 *= dt;
+            w1 += r1;
+            w1 *= (coeff_t(1.0) - theta);
+            trans.transform_inverse(q1);
+            boundary(q1, axis.time());
+            num_its++;
+            converged = num_its > 65;
+        }
+
+        // We don't actuallt need to do this!
+        // trans.transform_inverse(q0);
+
+        // Update solution
+        q0 = q1;
+        
+        axis.time() += dt;
+        boundary(q0, axis.time());
     }
 }

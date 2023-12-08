@@ -46,6 +46,7 @@ namespace spade::grid
         // We will use a BVH to check which block each point is in.
         // Might want to consider pre-computing this somewhere
         geom::bvh_t<dim, typename pnt_t::value_type> block_bvh;
+        geom::bvh_params_t bvhparams{4, 1000};
         
         // Perform in computational coordinates, node that we strictly
         // need a 2D BVH ig the grid is 2D
@@ -62,11 +63,11 @@ namespace spade::grid
         const auto el_check = [&](const std::size_t& lb_glob, const auto& bnd_in)
         {
             const auto lb = utils::tag[partition::global](lb_glob);
-            const auto block_box = grid.get_bounding_box(lb);
+            const auto block_box = grid.get_bounding_box(lb).inflate(1.1);
             return block_box.intersects(bnd_in);
         };
         
-        block_bvh.calculate(bnd, grid.get_num_global_blocks(), el_check);
+        block_bvh.calculate(bnd, grid.get_num_global_blocks(), el_check, bvhparams);
 
         //We will now compute the indices of each point in the interpolation cloud using the BVH
         using output_t = interp_oper_t<grid_t, coeff_t, arr_t::centering_type(), 12>;
@@ -88,7 +89,6 @@ namespace spade::grid
             
             using vec_t = typename decltype(block_bvh)::pnt_t;
             block_bvh.check_elements(eval, ctrs::to_array(x_sample));
-            
             if (lb.value < 0)
             {
                 // If we get here, one of two things happened:

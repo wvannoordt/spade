@@ -46,6 +46,7 @@ namespace spade::device
         
         void deallocate(data_t* p, std::size_t n) noexcept
         {
+            if (p == nullptr) return;
 #if(_sp_cuda)
             --count;
             auto er_code = cudaFree(p);

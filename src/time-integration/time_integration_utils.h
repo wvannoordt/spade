@@ -24,12 +24,15 @@ namespace spade::time_integration
     {
         ctrs::array<var_state_t, scheme_t::var_size()> solution_data;
         ctrs::array<rhs_state_t, scheme_t::rhs_size()> residual_data;
-        const scheme_t& scheme_data;
+        const scheme_t scheme_data;
         
         using index_type = int;
         using solution_type = var_state_t;
         using residual_type = rhs_state_t;
         using scheme_type   = scheme_t;
+        
+        //For memory-optimization / external initialization
+        integrator_data_t(const scheme_t& scheme_in) : scheme_data{scheme_in} {}
         
         integrator_data_t(const var_state_t& q, const rhs_state_t& r, const scheme_t& scheme_in) : scheme_data{scheme_in}
         {

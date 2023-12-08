@@ -35,6 +35,7 @@ namespace spade::device
         
         void resize(const std::size_t& n)
         {
+            if (n == c_size) return;
 #if (_sp_cuda)
             if (raw != nullptr) allocator.deallocate(raw, c_size);
             c_size = n;
