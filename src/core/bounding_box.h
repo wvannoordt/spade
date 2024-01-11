@@ -16,8 +16,8 @@ namespace spade
         
         _sp_hybrid const auto& data() const {return bnds;}
         
-        _sp_hybrid bound_box_t(){}
-        _sp_hybrid bound_box_t(const dtype& v)
+        _sp_hybrid constexpr bound_box_t(){}
+        _sp_hybrid constexpr bound_box_t(const dtype& v)
         {
             for (int i = 0; i < 2*ar_size; ++i) bnds[i] = v;
         }
@@ -109,7 +109,8 @@ namespace spade
         }
     };
     
-    template <typename dtype, const size_t ar_size> static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)
+    template <typename dtype, const size_t ar_size>
+    static std::ostream & operator<<(std::ostream & os, const bound_box_t<dtype, ar_size> & pos)
     {
         os << "{";
         for (auto i: range(0, ar_size))
@@ -119,5 +120,32 @@ namespace spade
         }
         os << "}";
         return os;
+    }
+    
+    namespace utils
+    {
+        namespace detail
+        {
+            template <typename bbx_t>
+            static void r_bbx_fl(const int idx, bbx_t& bbx) {}
+            template <typename bbx_t, std::integral idx0_t, std::integral idx1_t, std::integral... idxs_t>
+            static void r_bbx_fl(const int idx, bbx_t& bbx, const idx0_t& low, const idx1_t high, const idxs_t&... idxs)
+            {
+                bbx.min(idx) = low;
+                bbx.max(idx) = high;
+                r_bbx_fl(idx+1, bbx, idxs...);
+            }
+        }
+        template <std::integral idx0_t, std::integral idx1_t, std::integral... idxs_t>
+        requires(sizeof...(idxs_t) == 2*((sizeof...(idxs_t))/2))
+        static constexpr auto make_bounds(const idx0_t& low, const idx1_t high, const idxs_t&... idxs)
+        {
+            using oint_type   = std::common_type<idx0_t, idx1_t, idxs_t...>::type;
+            constexpr int osz = 1 + ((sizeof...(idxs_t))/2);
+            using output_type = bound_box_t<oint_type, osz>;
+            output_type output;
+            detail::r_bbx_fl(0, output, low, high, idxs...);
+            return output;
+        }
     }
 }

@@ -27,10 +27,11 @@ int main(int argc, char** argv)
     spade::sym::vector_t vars {u_wm, T_wm, ystar_wm, rho_wm, mu_wm, mut_wm};
     spade::ode::system_t system(fill, spade::ode::constant_mesh_t(y_wm, y, 2), vars, spade::device::best);
     
-    using buffer_type = decltype(system)::const_buffer_type;
+    using buffer_type = decltype(system)::buffer_type;
     
-    spade::ode::expression_t mu_expr(mu_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t mu_expr(mu_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        const int i = i_wall;
         constexpr real_t T_ref  = 110.4;
         constexpr real_t mu_ref = 1.0e-3;
         const real_t T = data[T_wm][i];
@@ -39,21 +40,25 @@ int main(int argc, char** argv)
     
     const real_t p_F = 101325.0;
     const real_t rgas  = 287.15;
-    spade::ode::expression_t rho_expr(rho_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t rho_expr(rho_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        const int i = i_wall;
         return p_F/(rgas*data[T_wm][i]);
     }, spade::ode::xplicit);
     
-    spade::ode::expression_t ystar_expr(ystar_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t ystar_expr(ystar_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        // print(i_inst, i_wall);
+        const int i = i_wall;
         const real_t mu_w  = data[mu_wm][0];
         const real_t du_dy = (data[u_wm][1] - data[u_wm][0])/(data[y_wm][1] - data[y_wm][0]);
         const real_t tau = mu_w*du_dy;
         return data[y_wm][i]*sqrt(tau*data[rho_wm][0])/data[mu_wm][i];
     }, spade::ode::xplicit);
     
-    spade::ode::expression_t mut_expr(mut_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t mut_expr(mut_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        const int i = i_wall;
         const real_t a_plus = real_t(17.0);
         const real_t kappa  = real_t(0.41);
         const real_t y_coord = data[ystar_wm][i];
@@ -63,8 +68,9 @@ int main(int argc, char** argv)
     
     //So on and so forth
     const real_t u_F = 69.54;
-    spade::ode::expression_t u_expr (u_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t u_expr (u_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        const int i = i_wall;
         const real_t diff_L = 0.5*(data[mu_wm][i-1] + data[mut_wm][i-1] + data[mu_wm][i] + data[mut_wm][i]);
         const real_t diff_R = 0.5*(data[mu_wm][i+1] + data[mut_wm][i+1] + data[mu_wm][i] + data[mut_wm][i]);
         const real_t dy_L   = data[y_wm][i]   - data[y_wm][i-1];
@@ -85,8 +91,9 @@ int main(int argc, char** argv)
     const real_t gamma = 1.4;
     const real_t pr    = 0.71;
     const real_t pr_t  = 0.9;
-    spade::ode::expression_t T_expr (T_wm, [=] _sp_hybrid (const int i, const buffer_type& data)
+    spade::ode::expression_t T_expr (T_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
+        const int i = i_wall;
         const real_t cp     = gamma*rgas/(gamma-real_t(1.0));
         const real_t diff_L = 0.5*(data[mu_wm][i-1]/pr + data[mut_wm][i-1]/pr_t + data[mu_wm][i]/pr + data[mut_wm][i]/pr_t)*cp;
         const real_t diff_R = 0.5*(data[mu_wm][i+1]/pr + data[mut_wm][i+1]/pr_t + data[mu_wm][i]/pr + data[mut_wm][i]/pr_t)*cp;
@@ -104,9 +111,9 @@ int main(int argc, char** argv)
         return spade::ode::tridiag(lhs0, lhs1, lhs2, rhs);
     }, spade::ode::make_bcs(spade::ode::neumann(0.0), spade::ode::dirichlet(T_F))); //Note that we need to adjust the boundary condition to be e.g. a lambda
     
-    auto expressions = spade::ode::make_expressions(rho_expr, ystar_expr, mu_expr, mut_expr, T_expr, u_expr);
+    auto expressions = spade::ode::make_expressions(rho_expr, mu_expr, ystar_expr, mut_expr, u_expr, T_expr);
     //The order in which these expressions are presented is the order in which they are solved
-    spade::ode::solve_bvp(system, expressions);
+    spade::ode::solve_bvp(system, expressions, spade::utils::converge_crit_t{1.0e-7, 100});
     
     std::ofstream sol("out.dat");
     auto img = system.image();

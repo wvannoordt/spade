@@ -1,22 +1,12 @@
 #pragma once
 
 #include "core/cuda_incl.h"
+#include "dispatch/ranges/kernel_config.h"
 #include "dispatch/ranges/grid_idx_range.h"
 #include "dispatch/ranges/linear_range.h"
 
 namespace spade::dispatch
 {
-    
-    struct dim3_wrapper_t
-    {
-        int x, y, z;
-    };
-    
-#if (_sp_cuda)
-    using d3_t = dim3;
-#else
-    using d3_t = dim3_wrapper_t;
-#endif
     
     template <typename idx_t, typename range_t> struct kernel_params_t{};
     
@@ -26,7 +16,7 @@ namespace spade::dispatch
         using range_type = ranges::grid_idx_range_t<idx_t, dev_t>;
         using range_t      = range_type;
         using index_type   = idx_t;
-        using triplet_type = d3_t;
+        using triplet_type = ranges::d3_t;
         
         constexpr static int blocksize = 4;
         triplet_type grid_size;
@@ -64,7 +54,7 @@ namespace spade::dispatch
         using range_type   = ranges::linear_range_t<idx_t, dev_t>;
         using range_t      = range_type;
         using index_type   = typename range_t::index_type;
-        using triplet_type = d3_t;
+        using triplet_type = ranges::d3_t;
         
         constexpr static int blocksize = 32;
         triplet_type grid_size;
@@ -90,7 +80,7 @@ namespace spade::dispatch
         using range_type   = ranges::bilinear_range_t<idx_t, dev_t>;
         using range_t      = range_type;
         using index_type   = typename range_t::index_type;
-        using triplet_type = d3_t;
+        using triplet_type = ranges::d3_t;
         
         constexpr static int blocksize = 16;
         triplet_type grid_size;

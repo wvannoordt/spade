@@ -62,7 +62,7 @@ namespace spade::algs
         auto d_image         = arr.image();
         const auto g_image   = arr.get_grid().image(arr.device());
         
-        auto loop_load = _sp_lambda (const index_type& index) mutable
+        auto loop_load = [=] _sp_hybrid (const index_type& index) mutable
         {
             const auto data = invoke_at(g_image, d_image, index, kernel);
             d_image.set_elem(index, data);
