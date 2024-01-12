@@ -12,6 +12,7 @@ namespace spade::dispatch
     template <typename outer_range_t, typename callable_t, typename exec_space_t, typename shmem_t>
     struct kernel_t
     {
+        using shared_type     = shmem_t;
         using exec_space_type = exec_space_t;
         using index_type      = typename outer_range_t::index_type;
         outer_range_t o_range;

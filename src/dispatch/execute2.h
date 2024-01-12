@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <string>
 
 #include "dispatch/device_type.h"
@@ -12,7 +13,6 @@ namespace spade::dispatch::proto
 {
     namespace detail
     {
-
 #if (_sp_cuda)
         template <typename kernel_t>
         __global__ void k_gpu_impl(kernel_t kern)
@@ -25,11 +25,25 @@ namespace spade::dispatch::proto
             char* shmem_start = base + thrds.shmem_size();
             auto& function    = kern.function;
             thrds.set_idx(threadIdx);
-            const auto index = kern.compute_index(gridDim, blockIdx);
+            const auto index  = kern.compute_index(gridDim, blockIdx);
+            
+            constexpr bool has_shmem = !(kernel_t::shared_type::is_empty());
+            if constexpr (has_shmem)
+            {
+                kern.shmem.bind_ptr(shmem_start);
+            }
             if (thrds.valid() && kern.valid(index))
             {
-                if constexpr (kernel_t::index_type::size() == 1) function(index[0], thrds);
-                else function(index, thrds);
+                if constexpr (has_shmem)
+                {
+                    if constexpr (kernel_t::index_type::size() == 1) function(index[0], thrds, kern.shmem);
+                    else function(index, thrds, kern.shmem);
+                }
+                else
+                {
+                    if constexpr (kernel_t::index_type::size() == 1) function(index[0], thrds);
+                    else function(index, thrds);
+                }
             }
         }
 #endif

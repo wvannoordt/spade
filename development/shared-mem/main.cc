@@ -40,7 +40,27 @@ int main(int argc, char** argv)
     
     
     
+    auto shmem = spade::dispatch::shmem::make_shmem(
+        spade::dispatch::shmem::vec<real_t>(bnd_inner.volume()),
+        spade::dispatch::shmem::vec<int>   (bnd_inner.volume()),
+        spade::dispatch::shmem::vec<char>  (bnd_inner.volume()));
     spade::dispatch::proto::execute(o_range, loop, kpool);
+    
+    using shmem_t = decltype(shmem);
+    
+    const auto loop2 = [=] _sp_hybrid (const std::size_t& idx, const threads_t& threads, shmem_t& shmem)
+    {
+        auto& v_r = shmem[0_c];
+        auto& v_i = shmem[1_c];
+        auto& v_c = shmem[2_c];
+        
+        threads.exec([&](const auto i) { v_r[i] = real_t(i)+real_t(0.25); });
+        threads.sync();
+        threads.exec([&](const auto i) { printf("%f\n", v_r[i]);});
+    };
+    
+    spade::dispatch::proto::execute(o_range, loop2, kpool, shmem);
+    
     
     
     return 0;
