@@ -8,7 +8,8 @@ namespace spade::dispatch
     template <typename irange_t, device::is_device device_t>
     class kernel_threads_t
     {
-        using index_type = irange_t::index_type;
+        public:
+            using index_type = irange_t::index_type;
         
         constexpr static bool is_gpu_impl = device::is_gpu<device_t>;
         
@@ -16,6 +17,13 @@ namespace spade::dispatch
             //This might be absolutely terrible
             index_type k_index;
             volatile char* shmem_base = nullptr;
+            
+            _sp_device void i_sncthr() const
+            {
+#if (_sp_cuda)
+                __syncthreads();
+#endif    
+            }
         
         public:
             irange_t irange;
@@ -46,11 +54,26 @@ namespace spade::dispatch
                 }
                 else
                 {
+                    //TODO:: replace later with the cpu for-loop for multidimensional range
+                    static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
                     for (index_type i{irange.bounds.min(0)}; i<irange.bounds.max(0); ++i)
                     {
                         func(i);
                     }
                 }
+            }
+            
+            _sp_hybrid void sync() const
+            {
+                if constexpr (is_gpu_impl)
+                {
+                    i_sncthr();
+                }
+            }
+            
+            _sp_hybrid bool valid() const
+            {
+                return irange.bounds.contains(k_index);
             }
     };
 }

@@ -21,20 +21,22 @@ int main(int argc, char** argv)
     
     //"composite" usage, to enforce cooperation between block threads
     //Note that you need to have BOTH the threads and the shared data arguments
-    auto bnd_outer = spade::utils::make_bounds(0, 500);
-    auto bnd_inner = spade::utils::make_bounds(0, 32);
-    auto range     = spade::dispatch::ranges::make_range(bnd_outer);
-    spade::dispatch::kernel_threads_t kpool(range, device);
+    auto bnd_outer = spade::utils::make_bounds(0, 2);
+    auto bnd_inner = spade::utils::make_bounds(0, 5);
+    auto o_range   = spade::dispatch::ranges::make_range(bnd_outer);
+    auto i_range   = spade::dispatch::ranges::make_range(bnd_inner);
+    spade::dispatch::kernel_threads_t kpool(i_range, device);
     
     using threads_t = decltype(kpool);
     const auto loop = [=] _sp_hybrid (const std::size_t& idx, const threads_t& threads)
     {
-        threads.exec([&](const auto& i){ printf("i: %d", i); });
+        threads.exec([&](const auto& i){ printf("i, idx: %d, %d\n", i, int(idx)); });
+        threads.sync();
     };
     
     
     
-    spade::dispatch::proto::execute(range, loop, kpool);
+    spade::dispatch::proto::execute(o_range, loop, kpool);
     
     
     return 0;

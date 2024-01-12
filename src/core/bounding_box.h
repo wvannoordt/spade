@@ -46,9 +46,10 @@ namespace spade
         requires(arr_t::size() == ar_size)
         _sp_hybrid bool contains(const arr_t& x) const
         {
+            #pragma unroll
             for (int d = 0; d < ar_size; ++d)
             {
-                if ((x[d]<min(d)) || (x[d]>max(d))) return false;
+                if ((x[d]<min(d)) || (x[d]>=max(d))) return false;
             }
             return true;
         }

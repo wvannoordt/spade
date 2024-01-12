@@ -19,14 +19,18 @@ namespace spade::dispatch::proto
         {
             //The size of this is a kernel launch parameter
             extern __shared__ char sh_mem_raw[];
-            
             char* base        = (char*)sh_mem_raw;
             auto& thrds       = kern.space;
             thrds.set_shmem_base(base);
             char* shmem_start = base + thrds.shmem_size();
             auto& function    = kern.function;
             thrds.set_idx(threadIdx);
-            function(0, thrds);
+            const auto index = kern.compute_index(gridDim, blockIdx);
+            if (thrds.valid() && kern.valid(index))
+            {
+                if constexpr (kernel_t::index_type::size() == 1) function(index[0], thrds);
+                else function(index, thrds);
+            }
         }
 #endif
     }

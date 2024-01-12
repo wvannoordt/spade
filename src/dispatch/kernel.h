@@ -12,16 +12,29 @@ namespace spade::dispatch
     template <typename outer_range_t, typename callable_t, typename exec_space_t, typename shmem_t>
     struct kernel_t
     {
+        using exec_space_type = exec_space_t;
+        using index_type      = typename outer_range_t::index_type;
         outer_range_t o_range;
         callable_t function;
         exec_space_t space;
         shmem_t shmem;
         
-        std::size_t shmem_size() const
+        _sp_hybrid std::size_t shmem_size() const
         {
             std::size_t output = shmem.bytes();
             if constexpr (!device::is_device<exec_space_t>) output += space.shmem_size();
             return output;
+        }
+        
+        _sp_hybrid index_type compute_index(const ranges::d3_t& g_dim, const ranges::d3_t& b_idx) const
+        {
+            static_assert(outer_range_t::index_type::size() == 1, "only 1-dimensional inner range currently supported!");
+            return b_idx.x;
+        }
+        
+        _sp_hybrid bool valid(const index_type& idx) const
+        {
+            return o_range.bounds.contains(idx);
         }
     };
     

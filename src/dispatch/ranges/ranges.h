@@ -13,7 +13,7 @@ namespace spade::dispatch::ranges
         
         using index_type = ctrs::array<idx_t, ar_size>;
         
-        bool is_empty() const { return bounds.volume() == 0; }
+        _sp_hybrid bool is_empty() const { return bounds.volume() == 0; }
     };
     
     template <std::integral idx_t, const std::size_t rank>
