@@ -32,6 +32,10 @@ int main(int argc, char** argv)
     {
         threads.exec([&](const auto& i){ printf("i, idx: %d, %d\n", i, int(idx)); });
         threads.sync();
+        auto result0 = threads.sum([&](const auto& i) { return real_t(i + 100*idx); });
+        auto result1 = threads.max([&](const auto& i) { return real_t(i + 100*idx); });
+        auto result2 = threads.min([&](const auto& i) { return real_t(i + 100*idx); });
+        threads.exec([&](const auto& i){ printf("%f, %f, %f\n", result0, result1, result2); });
     };
     
     
