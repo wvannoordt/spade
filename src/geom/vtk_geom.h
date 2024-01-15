@@ -262,25 +262,38 @@ namespace spade::geom
         std::size_t num_points;
         fh.parse(j0, num_points, j1);
         
-        float_t x, y, z;
         surf.bbox.min(0) =  1e50;
         surf.bbox.min(1) =  1e50;
         surf.bbox.min(2) =  1e50;
         surf.bbox.max(0) = -1e50;
         surf.bbox.max(1) = -1e50;
         surf.bbox.max(2) = -1e50;
-        surf.points.reserve(num_points);
+        surf.points.resize(num_points);
+        std::size_t i_pt = 0;
+        int i_xyz = 0;
+        float_t x;
+        while (i_pt < num_points)
+        {
+            while (!fh.try_parse(x)) fh.next_line();
+            surf.points[i_pt][i_xyz] = x;
+            i_xyz++;
+            if (i_xyz >= 3)
+            {
+                i_xyz = 0;
+                i_pt++;
+            }
+        }
+
         for (std::size_t i = 0; i < num_points; ++i)
         {
-            fh.next_line();
-            fh.parse(x, y, z);
-            surf.points.push_back(pnt_t(x, y, z));
-            surf.bbox.min(0) = utils::min(surf.bbox.min(0), x);
-            surf.bbox.min(1) = utils::min(surf.bbox.min(1), y);
-            surf.bbox.min(2) = utils::min(surf.bbox.min(2), z);
-            surf.bbox.max(0) = utils::max(surf.bbox.max(0), x);
-            surf.bbox.max(1) = utils::max(surf.bbox.max(1), y);
-            surf.bbox.max(2) = utils::max(surf.bbox.max(2), z);
+            const auto& pt = surf.points[i];
+
+            surf.bbox.min(0) = utils::min(surf.bbox.min(0), pt[0]);
+            surf.bbox.min(1) = utils::min(surf.bbox.min(1), pt[1]);
+            surf.bbox.min(2) = utils::min(surf.bbox.min(2), pt[2]);
+            surf.bbox.max(0) = utils::max(surf.bbox.max(0), pt[0]);
+            surf.bbox.max(1) = utils::max(surf.bbox.max(1), pt[1]);
+            surf.bbox.max(2) = utils::max(surf.bbox.max(2), pt[2]);
         }
         
         surf.bbox_inflated = surf.bbox.inflate(1.0001);

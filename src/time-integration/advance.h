@@ -178,7 +178,7 @@ namespace spade::time_integration
             trans.transform_inverse(q1);
             boundary(q1, axis.time());
             num_its++;
-            converged = num_its > 65;
+            converged = (num_its > 35);
         }
 
         // We don't actuallt need to do this!
