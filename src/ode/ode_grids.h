@@ -18,7 +18,10 @@ namespace spade::ode
         constexpr float_t tol = float_t(1e-9);
         const auto fx   = [&](const float_t& r) { return float_t(1.0) - std::pow(r, n) - (xn/dx)*(float_t(1.0) - r); };
         const auto dfdx = [&](const float_t& r) { return - n*std::pow(r, n-1) + (xn/dx); };
-        const auto [ratio, its, err] = num_algs::newton(float_t(2.0), fx, dfdx, max_its, tol);
+        const auto result = num_algs::newton(float_t(2.0), fx, dfdx, max_its, tol);
+        auto ratio = result.x;
+        auto its   = result.its;
+        auto err   = result.eps;
         if (its > max_its)
         {
             std::stringstream msg;

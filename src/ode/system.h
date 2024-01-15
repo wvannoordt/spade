@@ -12,6 +12,7 @@ namespace spade::ode
     template <typename container_img_t, typename data_t, sym::is_symbol mesh_sym_t, sym::is_vector variables_t>
     struct ode_buffer_t
     {
+        using value_type    = data_t;
         using variable_list = variables_t;
         using mesh_symbol   = mesh_sym_t;
         

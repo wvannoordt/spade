@@ -11,8 +11,7 @@ namespace spade::time_integration
     {
         using coeff_type = coeff_t;
         coeff_t coeff;
-        crank_nicholson_t() : coeff{0.875} {}
-        crank_nicholson_t(const coeff_t& coeff_in) : coeff{coeff_in} {}
+        crank_nicholson_t(const coeff_t& coeff_in=0.875) : coeff{coeff_in} {}
 
         static constexpr std::size_t var_size() {return 2;}
         static constexpr std::size_t rhs_size() {return 2;}
