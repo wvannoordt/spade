@@ -21,11 +21,19 @@ int main(int argc, char** argv)
     
     //"composite" usage, to enforce cooperation between block threads
     //Note that you need to have BOTH the threads and the shared data arguments
-    auto bnd_outer = spade::utils::make_bounds(0, 2);
+    auto bnd_outer = spade::utils::make_bounds(0, 6);
     auto bnd_inner = spade::utils::make_bounds(0, 5);
     auto o_range   = spade::dispatch::ranges::make_range(bnd_outer);
     auto i_range   = spade::dispatch::ranges::make_range(bnd_inner);
     spade::dispatch::kernel_threads_t kpool(i_range, device);
+    //   0  1  2  3  4
+    //0: [x  x  x  x  x]
+    //1: x  x  x  x  x
+    //2: x  x  x  x  x
+    // x  x  x  x  x
+    // x  x  x  x  x
+    // x  x  x  x  x
+    
     
     using threads_t = decltype(kpool);
     const auto loop = [=] _sp_hybrid (const std::size_t& idx, const threads_t& threads)
@@ -38,13 +46,12 @@ int main(int argc, char** argv)
         threads.exec([&](const auto& i){ printf("%f, %f, %f\n", result0, result1, result2); });
     };
     
-    
+    spade::dispatch::proto::execute(o_range, loop, kpool);
     
     auto shmem = spade::dispatch::shmem::make_shmem(
         spade::dispatch::shmem::vec<real_t>(bnd_inner.volume()),
         spade::dispatch::shmem::vec<int>   (bnd_inner.volume()),
         spade::dispatch::shmem::vec<char>  (bnd_inner.volume()));
-    spade::dispatch::proto::execute(o_range, loop, kpool);
     
     using shmem_t = decltype(shmem);
     
@@ -55,13 +62,22 @@ int main(int argc, char** argv)
         auto& v_c = shmem[2_c];
         
         threads.exec([&](const auto i) { v_r[i] = real_t(i)+real_t(0.25); });
+        threads.exec([&](const auto i) { v_i[i] = -i; });
+        threads.exec([&](const auto i) { v_c[i] = i+1; });
         threads.sync();
         threads.exec([&](const auto i) { printf("%f\n", v_r[i]);});
+        threads.sync();
+        threads.exec([&](const auto i) { printf("%d\n", v_i[i]);});
+        threads.sync();
+        threads.exec([&](const auto i) { printf("%d\n", v_c[i]);});
+        threads.sync();
+        threads.exec([&](const auto i) { printf("%d\n", v_i[i]);});
+        threads.sync();
+        threads.exec([&](const auto i) { printf("%f\n", v_r[i]);});
+        threads.sync();
     };
     
     spade::dispatch::proto::execute(o_range, loop2, kpool, shmem);
-    
-    
     
     return 0;
 }
