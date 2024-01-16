@@ -45,7 +45,7 @@ namespace spade::grid
             return base[map.compute_offset(idxs...)];
         }
         
-        _sp_hybrid void set_elem(const index_type& idx, const alias_type& alias)
+        _sp_hybrid _finline_ void set_elem(const index_type& idx, const alias_type& alias)
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {

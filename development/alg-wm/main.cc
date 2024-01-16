@@ -61,8 +61,6 @@ int main(int argc, char** argv)
             return u_plus_end0 - u_plus_end1;
         };
         
-        
-        
         const real_t u_tau_ini = u_img[i]*0.1;
         const auto result = spade::num_algs::newton(u_tau_ini, func, spade::num_algs::num_deriv(1.0e-6), 100, real_t(1.0e-6));
         tau_img[i] = rho_loc*result.x*result.x;

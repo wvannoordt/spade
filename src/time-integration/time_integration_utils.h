@@ -41,6 +41,14 @@ namespace spade::time_integration
             residual_data = r;
         }
         
+        integrator_data_t(var_state_t&& q, rhs_state_t&& r, const scheme_t& scheme_in) : scheme_data{scheme_in}
+        {
+            solution_data[0] = std::move(q);
+            residual_data[0] = std::move(r);
+            for (int i = 1; i < solution_data.size(); ++i) solution_data[i] = solution_data[0];
+            for (int i = 1; i < residual_data.size(); ++i) residual_data[i] = residual_data[0];
+        }
+        
         const rhs_state_t& residual(const index_type i = 0) const {return residual_data[i];}
         rhs_state_t& residual(const index_type i = 0) {return residual_data[i];}
         const var_state_t& solution(const index_type i = 0) const {return solution_data[i];}

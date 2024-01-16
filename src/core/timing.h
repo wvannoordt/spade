@@ -12,11 +12,11 @@ namespace spade::timing
                 start = std::chrono::high_resolution_clock::now();
             }
             
-            ~scoped_tmr_t(void)
+            ~scoped_tmr_t()
             {
                 end = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                print(name, "took", duration.count(), "ms.");
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                print(name, "took", duration.count()/1000.0, "ms.");
             }
             
         private:

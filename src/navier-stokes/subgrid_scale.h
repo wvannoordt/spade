@@ -7,16 +7,16 @@ namespace spade::subgrid_scale
     template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct subgrid_interface_t
     {
-        derived_t&       self()       {return *static_cast<      derived_t*>(this);}
-        const derived_t& self() const {return *static_cast<const derived_t*>(this);}
+        _sp_hybrid derived_t&       self()       {return *static_cast<      derived_t*>(this);}
+        _sp_hybrid const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
         using info_type = ilist_t;
 
-        auto get_mu_t(const auto& input) const
+        _sp_hybrid auto get_mu_t(const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_mu_t(args...);}, input);
         }
-        auto get_prt(const auto& input) const
+        _sp_hybrid auto get_prt(const auto& input) const
         {
             return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_prt(args...);}, input);
         }
@@ -35,13 +35,13 @@ namespace spade::subgrid_scale
         using value_type = float_t;
 
         float_t cw, delta, prt;
-        const gas_t& gas;
+        const gas_t gas;
         wale_t(const gas_t& gas_in, const float_t& cw_in, const float_t& delta_in, const float_t& prt_in)
          : cw{cw_in}, delta{delta_in}, prt{prt_in}, gas{gas_in} {}
 
-        float_t get_prt(const auto& info) const {return prt;}
+        _sp_hybrid float_t get_prt(const auto& info) const {return prt;}
 
-        float_t get_mu_t(const auto& info) const
+        _sp_hybrid float_t get_mu_t(const auto& info) const
         {
             //for notation, see:
             //Nicoud, F., and Ducros, F.,

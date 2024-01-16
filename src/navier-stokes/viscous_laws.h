@@ -162,26 +162,26 @@ namespace spade::viscous_laws
         using info_type = omni::info_union<typename laminar_t::info_type, typename turb_t::info_type>;
         using value_type = decltype(typename laminar_t::value_type() + typename turb_t::value_type());
 
-        const laminar_t& lam;
-        const turb_t& turb;
+        const laminar_t lam;
+        const turb_t turb;
         sgs_visc_t(const laminar_t& lam_in, const turb_t& turb_in) : lam{lam_in}, turb{turb_in} {}
 
-        value_type get_visc(const auto& data) const
+        _sp_hybrid value_type get_visc(const auto& data) const
         {
             const auto lv = lam.get_visc(data);
             const auto tv = turb.get_mu_t(data);
             return lv + tv;
         }
         
-        value_type get_beta(const auto& data) const
+        _sp_hybrid value_type get_beta(const auto& data) const
         {
             return -0.66666666667*this->get_visc(data);
         }
         
-        value_type get_diffuse(const auto& data) const
+        _sp_hybrid value_type get_diffuse(const auto& data) const
         {
             const auto ld = lam.get_diffuse(data);
-            const auto td = turb.get_mu_t(data)/turb.get_prt(data);;
+            const auto td = turb.get_mu_t(data)/turb.get_prt(data);
             return ld + td;
         }
     };

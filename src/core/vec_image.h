@@ -9,8 +9,10 @@ namespace spade::utils
     struct vec_image_t
     {
         using value_type = data_t;
+        
         data_t* ptr;
         std::size_t csize;
+        
         _sp_hybrid std::size_t size() const { return csize; }
         _sp_hybrid data_t& back() { return ptr[csize-1]; }
         _sp_hybrid data_t& operator [] (const std::size_t& idx) { return ptr[idx]; }
@@ -21,8 +23,10 @@ namespace spade::utils
     struct const_vec_image_t
     {
         using value_type = data_t;
+        
         const data_t* ptr;
         std::size_t csize;
+        
         _sp_hybrid std::size_t size() const { return csize; }
         _sp_hybrid const data_t& back() const { return ptr[csize-1]; }
         _sp_hybrid const data_t& operator [] (const std::size_t& idx) const { return ptr[idx]; }

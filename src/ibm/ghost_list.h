@@ -23,7 +23,7 @@ namespace spade::ibm
         container_t<int>   directions;
         container_t<int>   signs;
         
-        // Oh for to be able to use dedicing this
+        // Oh for to be able to use deducing this
         template <typename device_t>
         image_type image(const device_t& device)
         {

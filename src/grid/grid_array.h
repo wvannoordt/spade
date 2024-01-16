@@ -257,10 +257,28 @@ namespace spade::grid
             // this->mem_view.compute_coeffs({1,2,3,4,0});
             // this->mem_view.compute_coeffs({4, 3, 2, 1, 0});
             // this->mem_view.compute_coeffs({0, 4, 3, 2, 1});
-            // this->mem_view.compute_coeffs({1, 3, 2, 4, 0});
             this->mem_view.compute_offset_base();
             auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
             data.resize(total_size);
+        }
+        
+        grid_array(const grid_array& rhs) = default;
+        
+        grid_array(grid_array&& rhs)
+        {
+            grid = rhs.grid;
+            data = std::move(rhs.data);
+            mem_view = rhs.mem_view;
+        }
+        
+        grid_array& operator = (const grid_array& rhs) = default;
+        
+        grid_array& operator = (grid_array&& rhs)
+        {
+            grid = rhs.grid;
+            data = std::move(rhs.data);
+            mem_view = rhs.mem_view;
+            return *this;
         }
         
         const const_image_type image() const { return {&data[0], data.size(), mem_view}; }

@@ -21,6 +21,17 @@ namespace spade::device
             this->resize(n);
         }
         
+        device_vector(const device_vector& rhs) 
+        {
+            if (rhs.size() != 0)
+            {
+                this->resize(rhs.size());
+#if (_sp_cuda)
+                cudaMemcpy(this->raw, rhs.raw, c_size*sizeof(value_type), cudaMemcpyDeviceToDevice);
+#endif
+            }
+        }
+        
         device_vector& operator = (const device_vector& rhs)
         {
             if (rhs.size() == 0) return *this;
@@ -28,6 +39,31 @@ namespace spade::device
 #if (_sp_cuda)
             if (rhs.size() > 0) cudaMemcpy(this->raw, rhs.raw, c_size*sizeof(value_type), cudaMemcpyDeviceToDevice);
 #endif
+            return *this;
+        }
+        
+        device_vector(device_vector&& rhs) 
+        {
+            clear();
+            if (rhs.size() != 0)
+            {
+                this->raw    = rhs.raw;
+                this->c_size = rhs.c_size;
+                rhs.raw      = nullptr;
+                rhs.c_size   = 0;
+            }
+        }
+        
+        device_vector& operator = (device_vector&& rhs)
+        {
+            clear();
+            if (rhs.size() != 0)
+            {
+                this->raw    = rhs.raw;
+                this->c_size = rhs.c_size;
+                rhs.raw      = nullptr;
+                rhs.c_size   = 0;
+            }
             return *this;
         }
         

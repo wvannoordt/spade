@@ -71,7 +71,7 @@ namespace spade::time_integration
             
             //The solution used when we evaluate the RHS
             auto& sol = data.solution(1);
-            sol = sol_base; //expensive!
+            sol = sol_base;//expensive!
             
             //solution augmentation loop
             //Begin by applying the forward transform
@@ -106,6 +106,7 @@ namespace spade::time_integration
             //Evaluate the residual at t + c*dt
             axis.time() += time_coeff*dt;
             if constexpr (i > 0) boundary(sol, axis.time());
+            
             rhs(cur_resid, sol, axis.time());
             axis.time() -= time_coeff*dt;
         });

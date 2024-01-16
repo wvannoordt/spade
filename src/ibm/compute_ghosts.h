@@ -124,7 +124,7 @@ namespace spade::ibm
                             // the normal vector is just chosen as the surface normal vector
                             if (dist < tol*diag)
                             {
-                                nv  = 0.0*nv;
+                                nv  = real_t(0.0)*nv;
                                 nv += normal;
                             }
                             nv /= ctrs::array_norm(nv);
