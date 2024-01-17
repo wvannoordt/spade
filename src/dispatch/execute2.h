@@ -72,11 +72,4 @@ namespace spade::dispatch::proto
         }
 #endif
     }
-    /*
-    template <std::integral idx_t, const std::size_t ar_size, typename kernel_t, device::is_cpu device_t>
-    inline void execute(const ranges::basic_range_t<idx_t, ar_size>& range, kernel_t& kernel, const device_t& device)
-    {
-        if (range.is_empty()) return;
-    }
-    */
 }

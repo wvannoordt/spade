@@ -25,3 +25,5 @@
 #include "omni/interpret.h"
 
 #include "omni/make_kernel.h"
+
+#include "omni/compose.h"

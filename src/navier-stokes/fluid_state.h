@@ -104,7 +104,7 @@ namespace spade::fluid_state
     {
         ptype rho = prim.p() / (gas.get_R()*prim.T());
         ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
-        ptype rhoE = 0.5*rhoU2 + (prim.p()/((gas.get_gamma() - 1.0)));
+        ptype rhoE = ctype(0.5)*rhoU2 + (prim.p()/((gas.get_gamma() - ctype(1.0))));
         ptype rhoU = rho*prim.u();
         ptype rhoV = rho*prim.v();
         ptype rhoW = rho*prim.w();
@@ -119,12 +119,12 @@ namespace spade::fluid_state
     _sp_hybrid static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
     {
         ptype rho = cons.rho();
-        ptype invrho = 1.0/rho;
+        ptype invrho = ctype(1.0)/rho;
         ptype u = invrho*cons.rho_u();
         ptype v = invrho*cons.rho_v();
         ptype w = invrho*cons.rho_w();
         ptype rhoU2 = rho*(u*u+v*v+w*w);
-        ptype p = (gas.get_gamma() - 1.0)*(cons.rho_H() - 0.5*rhoU2);
+        ptype p = (gas.get_gamma() - ctype(1.0))*(cons.rho_H() - ctype(0.5)*rhoU2);
         ptype T = p/(gas.get_R()*rho);
         prim.p() = p;
         prim.T() = T;

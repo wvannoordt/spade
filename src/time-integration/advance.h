@@ -75,6 +75,7 @@ namespace spade::time_integration
             
             //solution augmentation loop
             //Begin by applying the forward transform
+{timing::scoped_tmr_t tmr("trns");
             trans.transform_forward(sol);
             algs::static_for<0, i>([&](const auto& jj) -> void
             {
@@ -97,6 +98,7 @@ namespace spade::time_integration
                 }
             });
             trans.transform_inverse(sol);
+}
             //By now, the solution has been augmented to accommodate the
             //evaluation of the ith residual
             auto& cur_resid = data.residual(i);
@@ -106,13 +108,15 @@ namespace spade::time_integration
             //Evaluate the residual at t + c*dt
             axis.time() += time_coeff*dt;
             if constexpr (i > 0) boundary(sol, axis.time());
-            
+{timing::scoped_tmr_t tmr("rhs");
             rhs(cur_resid, sol, axis.time());
+}
             axis.time() -= time_coeff*dt;
         });
         auto& new_solution = data.solution(0); //solution is updated in place
         
         //Residual accumulation loop
+{timing::scoped_tmr_t tmr("accum");
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
@@ -133,6 +137,7 @@ namespace spade::time_integration
                 resid /= (coeff*dt);
             }
         });
+    }
         axis.time() += dt;
         boundary(new_solution, axis.time());
     }

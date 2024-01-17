@@ -33,11 +33,12 @@ namespace spade::omni
                     1.0/ar_grid.get_dx(2, idx.lb())
                 );
                 grid::cell_idx_t ic = grid::face_to_cell(idx, 0);
-                
+
                 out = 0.0;
-                auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const grid::cell_idx_t& idx)
+                
+                auto apply_coeff_at = [&](const int& iset, const typename array_t::value_type& coeff, const grid::cell_idx_t& idx_in)
                 {
-                    auto q = array.get_elem(ic);
+                    auto q = array.get_elem(idx_in);
                     if constexpr (ctrs::basic_array<typename array_t::alias_type>)
                     {
                         for (std::size_t i = 0; i < out[iset].size(); ++i) out[iset][i] += coeff*q[i]*invdx[iset];
@@ -67,6 +68,7 @@ namespace spade::omni
                     apply_coeff_at(idir[ii], -0.25, ic);
                     ic[idir[ii]] += 1;
                 }
+                
                 using real_type = typename array_t::value_type;
                 static_assert(std::same_as<typename utils::remove_all<decltype(ar_grid.get_coord_sys())>::type, coords::identity<real_type>>, "gradient transformation required for general coordinates");
                 // const auto& x_face = ar_grid.get_comp_coords(iface);
