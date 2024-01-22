@@ -5,8 +5,8 @@
 
 namespace spade::ibm
 {
-    template <typename grid_t, typename geom_t>
-    static ghost_list_t<typename grid_t::coord_type> compute_ghosts(const grid_t& grid, const geom_t& geom)
+    template <typename array_t, typename grid_t, typename geom_t>
+    static ghost_list_t<typename grid_t::coord_type> compute_ghosts(const array_t& array, const grid_t& grid, const geom_t& geom)
     {
         static_assert(std::same_as<typename grid_t::coord_sys_type, coords::identity<typename grid_t::coord_type>>, "ghosts currently only working for identity coordinates");
         using real_t = typename grid_t::coord_type;
@@ -21,8 +21,8 @@ namespace spade::ibm
             for (int d = 0; d < grid.dim(); ++d)
             {
                 // bounding box includes exchange cells
-                bnd_with_exch.min(d) -= grid.get_num_exchange(d)*dx[d];
-                bnd_with_exch.max(d) += grid.get_num_exchange(d)*dx[d];
+                bnd_with_exch.min(d) -= array.get_num_exchange(d)*dx[d];
+                bnd_with_exch.max(d) += array.get_num_exchange(d)*dx[d];
             }
             return geom.box_contains_boundary(bnd_with_exch);
         };
@@ -49,8 +49,8 @@ namespace spade::ibm
                 auto bnd_extd = grid.get_bounding_box(lb);
                 
                 // Note that there is some issue with intersection detection in exchange cells
-                if (!(domain_boundary.min(idir))) bnd_extd.min(idir) -= grid.get_num_exchange(idir)*dx[idir];
-                if (!(domain_boundary.max(idir))) bnd_extd.max(idir) += grid.get_num_exchange(idir)*dx[idir];
+                if (!(domain_boundary.min(idir))) bnd_extd.min(idir) -= array.get_num_exchange(idir)*dx[idir];
+                if (!(domain_boundary.max(idir))) bnd_extd.max(idir) += array.get_num_exchange(idir)*dx[idir];
                 
                 // Compute the indices that we will trace from
                 bound_box_t<int, 3> ibound;
@@ -93,7 +93,7 @@ namespace spade::ibm
                             const auto& b_point  = point;
                             const auto& bbox     = grid.get_bounding_box(lb);
                             const auto  dx       = grid.get_dx(lb);
-                            const auto  ng       = grid.get_num_exchange(idir);
+                            const auto  ng       = array.get_num_exchange(idir);
                             
                             auto icell = icell_orig;
                             // Note that only the index value in the traced direction is wrong

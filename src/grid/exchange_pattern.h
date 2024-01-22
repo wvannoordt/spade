@@ -378,9 +378,12 @@ namespace spade::grid
     };
     
     
-    template <typename grid_t, typename group_t>
-    auto create_exchange(const grid_t& grid, const group_t& group, const ctrs::array<bool, grid_t::dim()>& is_periodic)
+    template <typename array_t, typename group_t>
+    auto create_exchange(const array_t& array, const group_t& group, const ctrs::array<bool, array_t::grid_type::dim()>& is_periodic)
     {
+        const auto& grid = array.get_grid();
+        using grid_t = typename array_t::grid_type;
+        const auto  num_exchanges = array.get_num_exchange();
         grid_exchange_config_t output0(grid);
         exchange_handle_t      output1(group);
         
@@ -398,7 +401,7 @@ namespace spade::grid
                 }
                 if (!ignore_from_periodic)
                 {
-                    const auto transaction = get_transaction(grid, grid, lb.value, e);
+                    const auto transaction = get_transaction(num_exchanges, grid, grid, lb.value, e);
                     
                     // Note that we add as both and the internal logic inside
                     // these calls will handle the rank checking

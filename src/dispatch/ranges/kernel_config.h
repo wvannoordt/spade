@@ -46,8 +46,20 @@ namespace spade::dispatch::ranges
             //This will need to be modified if we ever support multidimensional thread pools
             blck_dim.x = thrds.size();
             
-            static_assert(kernel_t::index_type::size() == 1, "only 1-dimensional outer range currently supported!");
-            grid_dim.x = kernel.o_range.bounds.volume();
+            if constexpr (kernel_t::index_type::size() == 1)
+            {
+                grid_dim.x = kernel.o_range.bounds.volume();
+            }
+            else if constexpr (kernel_t::index_type::size() == 3)
+            {
+                grid_dim.x = kernel.o_range.bounds.size(0);
+                grid_dim.y = kernel.o_range.bounds.size(1);
+                grid_dim.z = kernel.o_range.bounds.size(2);
+            }
+            else
+            {
+                throw except::sp_exception("IMPLEMENTATION FOR RANGE NOT FOUND");
+            }
         }
         
         return kernel_config_t{grid_dim, blck_dim, kernel.shmem_size()};

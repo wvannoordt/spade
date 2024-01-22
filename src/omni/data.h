@@ -47,6 +47,9 @@ namespace spade::omni
         }
     }
     
+    template <typename list_t, typename array_t, grid::array_centering ctr> using get_list_data = 
+        info_list_data_t<0, list_t::num_infos(), list_t, array_t, ctr>;
+    
     template <const int i0, const int i1, typename stencil_t, typename array_t>
     struct stencil_data_sublist_t
     {

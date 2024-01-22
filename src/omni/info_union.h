@@ -39,10 +39,10 @@ namespace spade::omni
         };
     }
 
-    //Only useful thing in this header
+    // Takes the union of info lists
     template <typename... infos_t>
     using info_union = typename detail::multi_union_t<infos_t...>::type;
-
+    
     namespace detail
     {
         template <typename kernel_t, typename... kernels_t>
@@ -57,6 +57,48 @@ namespace spade::omni
             using type = typename kernel_t::info_type;
         };
     }
+    
+    namespace detail
+    {
+        template <typename cur_list_t, typename... infos_t>
+        struct shmem_only;
+        
+        template <typename cur_list_t, typename info_t, typename... infos_t>
+        struct shmem_only<cur_list_t, info_t, infos_t...>
+        {
+            using loc_type = typename std::conditional<info_t::is_shmem_buffered, typename cur_list_t::expand_list<info_t>, cur_list_t>::type;
+            using type     = typename shmem_only<loc_type, infos_t...>::type;
+        };
+        
+        template <typename cur_list_t, typename info_t>
+        struct shmem_only<cur_list_t, info_t>
+        {
+            using loc_type = typename std::conditional<info_t::is_shmem_buffered, typename cur_list_t::expand_list<info_t>, cur_list_t>::type;
+            using type     = loc_type;
+        };
+        
+        template <typename nothing_t>
+        struct shmem_info_impl;
+        
+        template <>
+        struct shmem_info_impl<info_list_t<>>
+        {
+            using type = info_list_t<>;
+        };
+        
+        template <typename... infos_t>
+        struct shmem_info_impl<info_list_t<infos_t...>>
+        {
+            using type = shmem_only<info_list_t<>, infos_t...>::type;
+        };
+    }
 
+    // Combined the "info type" of a series of types
     template <typename... kernels_t> using combine_infos = typename detail::combine_info_impl<kernels_t...>::type;
+    
+    // Given an info list, extracts only the shmem-bufferable infos
+    template <typename list_t>
+    using shmem_info_list = typename detail::shmem_info_impl<list_t>::type;
+    
+    
 }

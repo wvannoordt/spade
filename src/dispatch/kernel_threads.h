@@ -58,7 +58,7 @@ namespace spade::dispatch
             // This is a goofy idea so far...
             _sp_hybrid std::size_t shmem_size() const { return size()*sizeof(double); }
             
-            _sp_hybrid void set_shmem_base(volatile char* bin) { shmem_base = bin; }
+            _sp_hybrid void set_shmem_base(volatile char* bin) const { shmem_base = bin; }
             
             _sp_hybrid device_t device() const { return k_device; }
             
@@ -79,7 +79,7 @@ namespace spade::dispatch
                 {
                     //TODO:: replace later with the cpu for-loop for multidimensional range
                     static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
-                    for (index_type i{irange.bounds.min(0)}; i<irange.bounds.max(0); ++i)
+                    for (typename index_type::value_type i{irange.bounds.min(0)}; i<irange.bounds.max(0); ++i)
                     {
                         func(this->reduce_idx(i));
                     }

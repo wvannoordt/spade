@@ -15,6 +15,7 @@
 
 #define _sp_device __device__
 #define _sp_hybrid __host__ __device__
+#define _sp_inline __forceinline__
 
 //This has been defined as _sp_hybrid instead of _sp_device because static analysis of the closure type is not
 //correct for just __device__ lambdas.
@@ -29,5 +30,7 @@
 #define _sp_hybrid
 #define _sp_lambda [=]
 #define _sp_cu_guard(mycode) 
+
+#define _sp_inline 
 
 #endif

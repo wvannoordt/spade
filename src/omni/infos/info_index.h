@@ -9,6 +9,7 @@ namespace spade::omni
         struct index : public info_base<index>
         {
             constexpr static bool requires_direction = false;
+            constexpr static bool is_shmem_buffered  = false;
             
             template <typename array_t, const grid::array_centering center>
             using array_data_type = typename grid::get_index_type<center>::array_type;

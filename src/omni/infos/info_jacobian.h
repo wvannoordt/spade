@@ -9,6 +9,7 @@ namespace spade::omni
         struct jacobian : public info_base<jacobian>
         {
             constexpr static bool requires_direction = false;
+            constexpr static bool is_shmem_buffered  = false;
             
             template <typename array_t, const grid::array_centering center>
             using array_data_type = typename array_t::grid_type::coord_type;

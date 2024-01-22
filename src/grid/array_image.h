@@ -70,5 +70,57 @@ namespace spade::grid
                 return (*this)(idx);
             }
         }
+        
+        template <typename rhs_type>
+        _sp_hybrid _finline_ void incr_elem(const index_type& idx, const rhs_type& rhs)
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) += rhs[i];
+            }
+            else
+            {
+                (*this)(idx) += rhs;
+            }
+        }
+        
+        template <typename rhs_type>
+        _sp_hybrid _finline_ void decr_elem(const index_type& idx, const rhs_type& rhs)
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) -= rhs[i];
+            }
+            else
+            {
+                (*this)(idx) -= rhs;
+            }
+        }
+        
+        template <typename rhs_type>
+        _sp_hybrid _finline_ void mult_elem(const index_type& idx, const rhs_type& rhs)
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) *= rhs[i];
+            }
+            else
+            {
+                (*this)(idx) *= rhs;
+            }
+        }
+        
+        template <typename rhs_type>
+        _sp_hybrid _finline_ void divi_elem(const index_type& idx, const rhs_type& rhs)
+        {
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) /= rhs[i];
+            }
+            else
+            {
+                (*this)(idx) /= rhs;
+            }
+        }
     };
 }

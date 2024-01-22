@@ -10,6 +10,7 @@ namespace spade::omni
         {
 
             constexpr static bool requires_direction = false;
+            constexpr static bool is_shmem_buffered  = true;
             
             template <typename array_t, const grid::array_centering center>
             using array_data_type
@@ -68,7 +69,6 @@ namespace spade::omni
                     apply_coeff_at(idir[ii], -0.25, ic);
                     ic[idir[ii]] += 1;
                 }
-                
                 using real_type = typename array_t::value_type;
                 static_assert(std::same_as<typename utils::remove_all<decltype(ar_grid.get_coord_sys())>::type, coords::identity<real_type>>, "gradient transformation required for general coordinates");
                 // const auto& x_face = ar_grid.get_comp_coords(iface);

@@ -69,18 +69,17 @@ namespace spade::grid
         private:
             partition_type grid_partition;
             geometry_type local_geometry;
-            geometry_type global_geometry;
             block_arrangement_t block_arrangement;
             const par_group_t& grid_group;
             std::vector<dependent_type*> dependents;
 
         public:
-
+            geometry_type global_geometry;
+            
             constexpr static std::size_t grid_dim = array_descriptor_t::size();
             
             cartesian_grid_t(
                 const array_descriptor_t& cells_in_block_in,
-                const array_descriptor_t& exchange_cells_in,
                 const block_arrangement_t& block_arrangement_in,
                 const coord_t& coord_system_in,
                 const par_group_t& group_in
@@ -88,8 +87,8 @@ namespace spade::grid
             : block_arrangement{block_arrangement_in},
               grid_group{group_in}
             {
-                local_geometry  = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
-                global_geometry = geometry_type(coord_system_in, cells_in_block_in, exchange_cells_in);
+                local_geometry  = geometry_type(coord_system_in, cells_in_block_in);
+                global_geometry = geometry_type(coord_system_in, cells_in_block_in);
                 compute_geometry();
             }
             
@@ -147,7 +146,7 @@ namespace spade::grid
             const geomety_image_type image(const loc_glob_t& i, const device_t& dev) const
             {
                 const auto& geom = this->geometry(i);
-                geomety_image_type output(geom.coords, geom.num_cell, geom.num_exch);
+                geomety_image_type output(geom.coords, geom.num_cell);
                 output.bounding_boxes  = utils::make_vec_image(geom.bounding_boxes.data(dev));
                 output.domain_boundary = utils::make_vec_image(geom.domain_boundary.data(dev));
                 for (int i = 0; i < 6; ++i)
@@ -165,44 +164,12 @@ namespace spade::grid
             
             constexpr static int dim() {return grid_dim;}
             
-            //This function doesn't have long to live.
-            md_range_t<int,4> get_range(const array_centering& centering_in, const exchange_inclusion_e& do_guards=exclude_exchanges) const
-            {
-                const auto& exchange_cells = global_geometry.num_exch;
-                const auto& cells_in_block = global_geometry.num_cell;
-                int iexchg = 0;
-                int i3d = 0;
-                if (dim()==3) i3d = 1;
-                if (do_guards==include_exchanges) iexchg = 1;
-                switch (centering_in)
-                {
-                    case cell_centered:
-                    {
-                        return md_range_t<int,4>(
-                            -iexchg*exchange_cells[0],cells_in_block[0]+iexchg*exchange_cells[0],
-                            -iexchg*exchange_cells[1],cells_in_block[1]+iexchg*exchange_cells[1],
-                            -i3d*iexchg*exchange_cells[2],cells_in_block[2]+i3d*iexchg*exchange_cells[2],
-                            0,grid_partition.get_num_local_blocks());
-                    }
-                    case node_centered:
-                    {
-                        return md_range_t<int,4>(
-                            -iexchg*exchange_cells[0],1+cells_in_block[0]+iexchg*exchange_cells[0],
-                            -iexchg*exchange_cells[1],1+cells_in_block[1]+iexchg*exchange_cells[1],
-                            -i3d*iexchg*exchange_cells[2],(1-i3d)+cells_in_block[2]+i3d*iexchg*exchange_cells[2],
-                            0,grid_partition.get_num_local_blocks());
-                    }
-                    default: return md_range_t<int,4>(0,0,0,0,0,0,0,0);
-                }
-            }
-            
             std::size_t  get_grid_size()                                const { return get_num_cells(0)*get_num_cells(1)*get_num_cells(2)*get_num_global_blocks(); }
             std::size_t  get_num_local_blocks()                         const { return grid_partition.get_num_local_blocks(); }
             std::size_t  get_num_global_blocks()                        const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::global_tag_t&) const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::local_tag_t&)  const { return grid_partition.get_num_local_blocks(); }
             int get_num_cells(const std::size_t& i)                     const { return global_geometry.num_cell[i]; }
-            int get_num_exchange(const std::size_t& i)                  const { return global_geometry.num_exch[i]; }
             bound_box_t<dtype,  3> get_bounds()                         const { return block_arrangement.get_bounds(); }
             const par_group_t& group()                                  const { return grid_group; }
             const coord_t& coord_sys()                                  const { return global_geometry.get_coords(); }
@@ -210,19 +177,6 @@ namespace spade::grid
             auto& get_blocks()                                                { return block_arrangement; }
             const partition::block_partition_t& get_partition()         const { return grid_partition; }
             constexpr static bool is_3d()                                     { return dim()==3; }
-            
-            bool is_valid(const cell_idx_t& ii) const
-            {
-                return 
-                    (ii.i()  >= -get_num_exchange(0)) &&
-                    (ii.j()  >= -get_num_exchange(1)) &&
-                    (ii.k()  >= -get_num_exchange(2)) &&
-                    (ii.i()   < get_num_cells(0) + get_num_exchange(0)) &&
-                    (ii.j()   < get_num_cells(1) + get_num_exchange(1)) &&
-                    (ii.k()   < get_num_cells(2) + get_num_exchange(2)) &&
-                    (ii.lb() >= 0) &&
-                    (ii.lb()  < get_num_local_blocks());
-            }
             
             template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
             {

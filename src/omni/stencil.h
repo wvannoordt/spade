@@ -47,10 +47,58 @@ namespace spade::omni
         using info_type     = info_t;
     };
 
+    namespace detail
+    {
+        template <typename offset_query_t, typename... info_lists_t>
+        struct search_info_impl;
+        
+        template <typename offset_query_t, typename info_list_t, typename... info_lists_t>
+        struct search_info_impl<offset_query_t, info_list_t, info_lists_t...>
+        {
+            using type = typename std::conditional<
+                std::same_as<typename info_list_t::position_type, offset_query_t>,
+                typename info_list_t::info_type,
+                typename search_info_impl<offset_query_t, info_lists_t...>::type>::type;
+        };
+        
+        template <typename offset_query_t, typename info_list_t>
+        struct search_info_impl<offset_query_t, info_list_t>
+        {
+            using type = typename info_list_t::info_type;
+        };
+        
+        
+        template <const int multi, const int val, const int new_val>
+        struct extent_reduce_impl
+        {
+            constexpr static int value = (multi*new_val > multi*val)?(multi*new_val):(multi*val);
+        };
+        
+        template <const int multi, const int idx, const int current, typename... elems_t>
+        struct extent_impl;
+        
+        template <const int multi, const int idx, const int current, typename offset_t, typename list_t, typename... elems_t>
+        struct extent_impl<multi, idx, current, elem_t<offset_t, list_t>, elems_t...>
+        {
+            constexpr static int nval        = offset_t::template elem<idx>;
+            constexpr static int new_current = extent_reduce_impl<multi, current, nval>::value;
+            constexpr static int value       = extent_impl<multi, idx, current, elems_t...>::value;
+        };
+        
+        template <const int multi, const int idx, const int current, typename offset_t, typename list_t>
+        struct extent_impl<multi, idx, current, elem_t<offset_t, list_t>>
+        {
+            constexpr static int value = extent_reduce_impl<multi, current, offset_t::template elem<idx>>::value;
+        };
+    }
+    
     template <const grid::array_centering center_val, typename... idx_list_t>
     struct stencil_t
     {
         template <typename offset_query_t> static constexpr bool contains_at = (std::same_as<typename idx_list_t::position_type, offset_query_t> || ...);
+        
+        template <typename offset_query_t> using info_at
+            = typename std::conditional<contains_at<offset_query_t>, typename detail::search_info_impl<offset_query_t, idx_list_t...>::type, info_list_t<>>::type;
         
         template <const int idx> using stencil_element = typename utils::get_pack_type<idx, idx_list_t...>::type;
         constexpr static int num_elements() {return sizeof...(idx_list_t);}
@@ -68,6 +116,11 @@ namespace spade::omni
         //adds a stencil point to the list (even if it already exists)
         template <typename new_elem_t> using extend = stencil_t<center_val, idx_list_t..., new_elem_t>;
         template <const grid::array_centering new_center> using recenter = stencil_t<new_center, idx_list_t...>;
+        
+        template <const int multi, const int idx> constexpr static int extent_impl = detail::extent_impl<multi, idx, -100*multi, idx_list_t...>::value;
+        
+        template <const int idx> constexpr static int max_extent = extent_impl< 1, idx>;
+        template <const int idx> constexpr static int min_extent = extent_impl<-1, idx>;
     };
 
     namespace detail

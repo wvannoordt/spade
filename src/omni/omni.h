@@ -3,11 +3,6 @@
 #include "grid/grid_index_types.h"
 
 #include "omni/info.h"
-#include "omni/geom.h"
-#include "omni/stencil.h"
-#include "omni/data.h"
-#include "omni/access.h"
-#include "omni/retrieve.h"
 
 #include "omni/infos/info_coord.h"
 #include "omni/infos/info_gradient.h"
@@ -16,6 +11,12 @@
 #include "omni/infos/info_metric.h"
 #include "omni/infos/info_normal.h"
 #include "omni/infos/info_value.h"
+
+#include "omni/geom.h"
+#include "omni/stencil.h"
+#include "omni/data.h"
+#include "omni/access.h"
+#include "omni/retrieve.h"
 
 #include "omni/convert.h"
 #include "omni/info_union.h"
@@ -27,3 +28,6 @@
 #include "omni/make_kernel.h"
 
 #include "omni/compose.h"
+
+#include "omni/stencil_shmem.h"
+#include "omni/buffered.h"

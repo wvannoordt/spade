@@ -30,7 +30,7 @@ namespace spade::time_integration
         using accum_type = accum_t; //How do we combine the substep residuals?
         using dt_type    = dt_t;    //At what points in time do we evaluate t?
         
-        static constexpr std::size_t var_size() {return 2;}
+        static constexpr std::size_t var_size() {return 1;}
         static constexpr std::size_t rhs_size() {return table_t::cols();}
 
         static constexpr bool is_rk_specialization = true;

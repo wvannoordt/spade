@@ -63,6 +63,9 @@ namespace spade::omni
     
     template <const int di, const int dj, const int dk> struct offset_t
     {
+        
+        template <const int i> constexpr static int elem = (i==0)?di:((i==1)?dj:dk);
+        
         constexpr static bool is_1d = ((dj==0) && (dk==0));
         
         constexpr static int del_i() { return di; }

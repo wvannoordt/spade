@@ -14,8 +14,10 @@ namespace spade::ibm
         using image_type       = ghost_list_t<float_t, utils::vec_image_t>;
         using const_image_type = ghost_list_t<float_t, utils::const_vec_image_t>;
         
+        //container_t is either std::vector<...> for CPU or device::device_vector<...> for GPU
+        
         //Stores the points locally
-        container_t<idx_t> indices;
+        container_t<idx_t> indices;          // i, j, k, lb of the ghost points
         container_t<pnt_t> boundary_points;
         container_t<vec_t> boundary_normals;
         container_t<pnt_t> closest_points;

@@ -42,13 +42,12 @@ namespace spade::algs
             if (boundaries(idir, pm))
             {
                 grid::cell_idx_t ll, ur;
-                bound_box_t<int, 4> indices;
                 ll.lb() = 0;
                 ur.lb() = g_img.boundary_blocks[ibndy].size();
                 for (int i = 0; i < 3; ++i)
                 {
-                    ll[i] = -grid.get_num_exchange(i);
-                    ur[i] =  grid.get_num_cells(i) + grid.get_num_exchange(i);
+                    ll[i] = -arr.get_num_exchange(i);
+                    ur[i] =  grid.get_num_cells(i) + arr.get_num_exchange(i);
                 }
                 
                 // Lower boundary

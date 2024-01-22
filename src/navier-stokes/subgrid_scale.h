@@ -83,8 +83,11 @@ namespace spade::subgrid_scale
             auto sum_sij  = tsum(sij);
 
             const float_t eps = float_t(1e-8);
-            auto nu_turb = cw*cw*delta*delta*std::pow(sum_sdij, float_t(1.5))/(eps + std::pow(sum_sij, float_t(2.5)) + std::pow(sum_sdij, float_t(1.25)));
-            return rho*nu_turb;
+            const auto sqrt0 = sqrt(sum_sdij);
+            const auto sqrt1 = sqrt(sqrt0);
+            const auto sqrt2 = sqrt(sum_sij);
+            auto nu_turb0 = cw*cw*delta*delta*sum_sdij*sqrt0/(eps + sum_sij*sum_sij*sqrt2 + sum_sdij*sqrt1);
+            return rho*nu_turb0;
         }
     };
 }

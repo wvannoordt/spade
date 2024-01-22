@@ -16,7 +16,7 @@ namespace spade::omni
     requires(sizeof...(extracts_t) == list_t::num_infos())
     _sp_hybrid static auto invoke_call(const list_t&, const kernel_t& kernel, const info_data_t& info_list, const extracts_t&... args)
     {
-        const auto pp = kernel(args...);
+        const auto& pp = kernel(args...);
         return pp;
     }
 
@@ -146,11 +146,10 @@ namespace spade::omni
         using info_list_type = decltype(lamda_info_list(array_t(), index_t(), kernel));
         using omni_type = stencil_t<index_t::centering_type(), elem_t<offset_t<0, 0, 0>, info_list_type>>;
         omni_lambda_wrapper_t(const kernel_t& kernel_in, const array_t&, const index_t&) : kernel{kernel_in}{}
-        _sp_hybrid auto operator() (const auto& input_data) const
+        _sp_hybrid _finline_ auto operator() (const auto& input_data) const
         {
-            const auto elem = input_data.template seek_element<index_t::centering_type()>(0_c);
-            const auto outp = invoke_call(kernel, elem);
-            return outp;
+            const auto& elem = input_data.template seek_element<index_t::centering_type()>(0_c);
+            return invoke_call(kernel, elem);
         }
     };
 

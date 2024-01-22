@@ -1,5 +1,7 @@
 #pragma once
 
+#include <source_location>
+
 #include "core/except.h"
 #include "core/ctrs.h"
 #include "dispatch/device_type.h"
@@ -54,7 +56,7 @@ namespace spade::dispatch
     }
     
     template <typename range_t, typename kernel_t, typename device_t>
-    static void execute(const range_t& range, kernel_t& kernel, const device_t& device)
+    static void execute(const range_t& range, kernel_t& kernel, const device_t& device, const std::source_location location = std::source_location::current())
     {
         using loop_index_type = typename range_t::index_type;
         const auto bound_box  = [&]()
@@ -98,7 +100,8 @@ namespace spade::dispatch
             std::string er_str = std::string(cudaGetErrorString(er_code));
             if (er_code != cudaSuccess)
             {
-                throw except::sp_exception("Error after kernel call: " + er_str);
+                std::string source_loc_str = "(" + std::string(location.file_name()) + ", line " + std::to_string(location.line()) + ")";
+                throw except::sp_exception("Error after kernel call: " + er_str + " " + source_loc_str);
             }
 #endif
         }
@@ -106,9 +109,9 @@ namespace spade::dispatch
     
     template <typename range_t, typename kernel_t>
     requires (device::is_cpu<typename range_t::device_t> || device::is_gpu<typename range_t::device_t>)
-    static void execute(const range_t& range, kernel_t& kernel)
+    static void execute(const range_t& range, kernel_t& kernel, const std::source_location location = std::source_location::current())
     {
-        execute(range, kernel, range.device());
+        execute(range, kernel, range.device(), location);
     }
     
     
@@ -118,9 +121,14 @@ namespace spade::dispatch
     {
 #if (_sp_cuda)
         template <typename kernel_t>
+        requires (!device::is_device<typename kernel_t::exec_space_type>)
         __global__ void k_gpu_impl(kernel_t kern)
         {
             //The size of this is a kernel launch parameter
+            ranges::outer_config_t g_dim{gridDim};
+            ranges::outer_config_t b_idx{blockIdx};
+            ranges::inner_config_t b_dim{blockDim};
+            ranges::inner_config_t t_idx{threadIdx};
             extern __shared__ char sh_mem_raw[];
             char* base        = (char*)sh_mem_raw;
             auto& thrds       = kern.space;
@@ -128,7 +136,7 @@ namespace spade::dispatch
             char* shmem_start = base + thrds.shmem_size();
             auto& function    = kern.function;
             thrds.set_idx(threadIdx);
-            const auto index  = kern.compute_index(gridDim, blockIdx);
+            const auto index  = compute_index(kern.o_range, g_dim, b_idx);
             
             constexpr bool has_shmem = !(kernel_t::shared_type::is_empty());
             if constexpr (has_shmem)
@@ -149,30 +157,101 @@ namespace spade::dispatch
                 }
             }
         }
+        
+        template <typename kernel_t>
+        requires (device::is_device<typename kernel_t::exec_space_type>)
+        __global__ void k_gpu_impl(kernel_t kern)
+        {
+            auto& function    = kern.function;
+            const auto index  = kern.o_range.compute_index(gridDim, blockIdx, blockDim, threadIdx);
+            if (kern.valid(index))
+            {
+                if constexpr (kernel_t::index_type::size() == 1) function(index[0]);
+                else function(index);
+            }
+        }
 #endif
     }
     
-    template <std::integral idx_t, const std::size_t ar_size, typename kernel_t, typename comp_space_t, typename shmem_t = shmem::empty_t>
-    inline void execute(const ranges::basic_range_t<idx_t, ar_size>& range, kernel_t& kernel_in, const comp_space_t& space, const shmem_t& shmem = shmem::empty_t())
+    template <
+        std::integral idx_t,
+        const std::size_t ar_size,
+        typename idx_alias_t,
+        typename kernel_t,
+        typename comp_space_t,
+        typename shmem_t = shmem::empty_t>
+    inline void execute(
+        const ranges::basic_range_t<idx_t, ar_size, idx_alias_t>& range,
+        kernel_t& kernel_in,
+        const comp_space_t& space,
+        const shmem_t& shmem = shmem::empty_t(),
+        const std::source_location location = std::source_location::current())
     {
         if (range.is_empty()) return;
+        
+        if constexpr (!device::is_device<comp_space_t>)
+        {
+            if (space.irange.is_empty()) return;
+        }
+        
         //We compute the kernel launch parameters
         auto kernel = make_kernel(range, kernel_in, space, shmem);
-        const auto config = ranges::compute_config(kernel);
+
         
-        const auto gconf      = config.grid_dim.data;
-        const auto bconf      = config.block_dim.data;
-        const auto shmem_size = config.shmem_size;
-        
-#if (_sp_cuda)
-        detail::k_gpu_impl<<<gconf, bconf, shmem_size, 0>>>(kernel);
-        cudaDeviceSynchronize();
-        auto er_code = cudaGetLastError();
-        std::string er_str = std::string(cudaGetErrorString(er_code));
-        if (er_code != cudaSuccess)
+        const auto& device = [&]()
         {
-            throw except::sp_exception("Error after kernel call: " + er_str);
-        }
+            if constexpr (!device::is_device<comp_space_t>) return space.device();
+            else return space;
+        }();
+        
+        using device_t = typename utils::remove_all<decltype(device)>::type;
+        
+        constexpr bool is_gpu_impl = device::is_gpu<device_t>;
+        
+        if constexpr (is_gpu_impl)
+        {
+            const auto config = ranges::compute_config(kernel);
+            const auto gconf      = config.grid_dim.data;
+            const auto bconf      = config.block_dim.data;
+            const auto shmem_size = config.shmem_size;
+#if (_sp_cuda)
+            detail::k_gpu_impl<<<gconf, bconf, shmem_size, 0>>>(kernel);
+            cudaDeviceSynchronize();
+            auto er_code = cudaGetLastError();
+            std::string er_str = std::string(cudaGetErrorString(er_code));
+            if (er_code != cudaSuccess)
+            {
+                std::string source_loc_str = "(" + std::string(location.file_name()) + ", line " + std::to_string(location.line()) + ")";
+                throw except::sp_exception("Error after kernel call: " + er_str + " " + source_loc_str);
+            }
 #endif
+        }
+        else
+        {
+            std::size_t nbytes = shmem.bytes();
+            if constexpr (!device::is_device<comp_space_t>) nbytes += space.shmem_size();
+            std::vector<char> shmem_buf(nbytes);
+            char* shmem_base = &shmem_buf[0];
+            auto shmem_kern = shmem;
+            shmem_kern.bind_ptr(shmem_base);
+            if constexpr (!device::is_device<comp_space_t>)
+            {
+                space.set_shmem_base(shmem_base + shmem.bytes());
+            }
+            
+            using loop_index_type = idx_alias_t;
+            loop_index_type i;
+            auto loop = [&](const loop_index_type& idx) mutable
+            {
+                kernel_in(idx, space, shmem_kern);
+            };
+            
+            using bound_type = decltype(range.bounds);
+            detail::cpu_dispatch_impl<
+                    loop_index_type,
+                    bound_type,
+                    loop_index_type::size()-1,
+                    decltype(loop)>(i, range.bounds, loop);
+        }
     }
 }

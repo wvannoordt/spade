@@ -145,7 +145,7 @@ namespace spade::io
             bf << "<VTKFile type=\"PStructuredGrid\" version=\"0.1\" byte_order=\"" << endian_str() << "\">\n";
             bf << "<PStructuredGrid WholeExtent=\"";
             bf << utils::join(vtk_extent.data(), " ");
-            bf << "\" GhostLevel=\"" << utils::min(grid.get_num_exchange(0), grid.get_num_exchange(1), grid.get_num_exchange(2), 0) << "\">\n";
+            bf << "\" GhostLevel=\"" << utils::min(arr.get_num_exchange(0), arr.get_num_exchange(1), arr.get_num_exchange(2), 0) << "\">\n";
             bf << "<" << data_str << " Scalars = \"" << utils::join(varnames, ",") << "\">\n";
             for (const auto& name: varnames)
             {

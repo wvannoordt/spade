@@ -44,6 +44,8 @@ namespace spade::dispatch::shmem
             if constexpr (idx == 0) return *(data);
             else return next[udci::idx_const_t<idx-1>()];
         }
+        
+        template <const int idx> using type_at = typename std::conditional<idx==0, data_t, typename shmem_t<datas_t...>::type_at<idx-1>>::type;
     };
     
     template <typename data_t, typename... datas_t>
@@ -67,6 +69,8 @@ namespace spade::dispatch::shmem
             if constexpr (idx == 0) return data;
             else return next[udci::idx_const_t<idx-1>()];
         }
+        
+        template <const int idx> using type_at = typename std::conditional<idx==0, vec_t<data_t>, typename shmem_t<datas_t...>::type_at<idx-1>>::type;
     };
     
     template <typename data_t>
@@ -86,6 +90,8 @@ namespace spade::dispatch::shmem
         {
             return data;
         }
+        
+        template <const int idx> using type_at = vec_t<data_t>;
     };
     
     template <typename data_t>
@@ -105,6 +111,8 @@ namespace spade::dispatch::shmem
         {
             return *data;
         }
+        
+        template <const int idx> using type_at = data_t;
     };
     
     

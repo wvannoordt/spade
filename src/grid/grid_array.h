@@ -24,6 +24,7 @@
 #include "dispatch/device_vector.h"
 #include "dispatch/execute.h"
 #include "dispatch/ranges/linear_range.h"
+#include "dispatch/support_of.h"
 
 
 namespace spade::grid
@@ -110,42 +111,42 @@ namespace spade::grid
             static constexpr std::size_t value = count_rank_t<idx_t>::value;
         };
         
-        template <const array_centering centering, typename grid_map_t, typename grid_t>
+        template <const array_centering centering, typename grid_map_t, typename grid_t, typename iarray_t>
         requires (centering == cell_centered)
-        void insert_grid_dims(grid_map_t& map, const grid_t& grid)
+        void insert_grid_dims(grid_map_t& map, const grid_t& grid, const iarray_t& exch)
         {
             //i
-            std::get<cell_idx_t::i_idx>(map.views).i0 = -grid.get_num_exchange(0);
-            std::get<cell_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0);
+            std::get<cell_idx_t::i_idx>(map.views).i0 = -exch[0];
+            std::get<cell_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + exch[0];
             
             //j
-            std::get<cell_idx_t::j_idx>(map.views).i0 = -grid.get_num_exchange(1);
-            std::get<cell_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1);
+            std::get<cell_idx_t::j_idx>(map.views).i0 = -exch[1];
+            std::get<cell_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + exch[1];
             
             //k
-            std::get<cell_idx_t::k_idx>(map.views).i0 = -grid.get_num_exchange(2);
-            std::get<cell_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2);
+            std::get<cell_idx_t::k_idx>(map.views).i0 = -exch[2];
+            std::get<cell_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + exch[2];
             
             //lb
             std::get<cell_idx_t::lb_idx>(map.views).i0 = 0;
             std::get<cell_idx_t::lb_idx>(map.views).i1 = grid.get_num_local_blocks();
         }
         
-        template <const array_centering centering, typename grid_map_t, typename grid_t>
+        template <const array_centering centering, typename grid_map_t, typename grid_t, typename iarray_t>
         requires (centering == face_centered)
-        void insert_grid_dims(grid_map_t& map, const grid_t& grid)
+        void insert_grid_dims(grid_map_t& map, const grid_t& grid, const iarray_t& exch)
         {
             //i
-            std::get<face_idx_t::i_idx>(map.views).i0 = -grid.get_num_exchange(0);
-            std::get<face_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + grid.get_num_exchange(0) + 1;
+            std::get<face_idx_t::i_idx>(map.views).i0 = -exch[0];
+            std::get<face_idx_t::i_idx>(map.views).i1 =  grid.get_num_cells(0) + exch[0] + 1;
             
             //j
-            std::get<face_idx_t::j_idx>(map.views).i0 = -grid.get_num_exchange(1);
-            std::get<face_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + grid.get_num_exchange(1) + 1;
+            std::get<face_idx_t::j_idx>(map.views).i0 = -exch[1];
+            std::get<face_idx_t::j_idx>(map.views).i1 =  grid.get_num_cells(1) + exch[1] + 1;
             
             //k
-            std::get<face_idx_t::k_idx>(map.views).i0 = -grid.get_num_exchange(2);
-            std::get<face_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + grid.get_num_exchange(2) + 1;
+            std::get<face_idx_t::k_idx>(map.views).i0 = -exch[2];
+            std::get<face_idx_t::k_idx>(map.views).i1 =  grid.get_num_cells(2) + exch[2] + 1;
             
             //lb
             std::get<face_idx_t::lb_idx>(map.views).i0 = 0;
@@ -203,7 +204,9 @@ namespace spade::grid
         
         using image_type           = array_image_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
         using const_image_type     = array_image_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
+        using iarray_t             = typename grid_t::array_desig_type;
         
+        iarray_t                         num_exch;
         const grid_t*                    grid;
         container_type<fundamental_type> data;
         mem_map_type                     mem_view;
@@ -239,6 +242,9 @@ namespace spade::grid
             return std::get<1>(mem_view.mmap.views);
         }
         
+        int      get_num_exchange(int i) const { return num_exch[i]; }
+        iarray_t get_num_exchange()      const { return num_exch; }
+        
         auto get_device() const {return device_t();}
 
         std::size_t cell_element_size() const {return mem_map::map_size(var_map());}
@@ -247,11 +253,12 @@ namespace spade::grid
         grid_array(
             const grid_t& grid_in,
             const data_alias_t& fill_elem,
+            const typename grid_t::array_desig_type& num_exch_in,
             const device_t& dev_in = device::cpu_t()
-            ) : grid{&grid_in}
+            ) : grid{&grid_in}, num_exch{num_exch_in}
         {
             auto& grid_map = block_map();
-            detail::insert_grid_dims<centering_type()>(grid_map, grid_in);
+            detail::insert_grid_dims<centering_type()>(grid_map, grid_in, num_exch);
             this->mem_view.compute_coeffs();
             // this->mem_view.compute_coeffs({0,1,2,3,4});
             // this->mem_view.compute_coeffs({1,2,3,4,0});
@@ -266,8 +273,9 @@ namespace spade::grid
         
         grid_array(grid_array&& rhs)
         {
-            grid = rhs.grid;
-            data = std::move(rhs.data);
+            grid     = rhs.grid;
+            num_exch = rhs.num_exch;
+            data     = std::move(rhs.data);
             mem_view = rhs.mem_view;
         }
         
@@ -275,8 +283,9 @@ namespace spade::grid
         
         grid_array& operator = (grid_array&& rhs)
         {
-            grid = rhs.grid;
-            data = std::move(rhs.data);
+            grid     = rhs.grid;
+            num_exch = rhs.num_exch;
+            data     = std::move(rhs.data);
             mem_view = rhs.mem_view;
             return *this;
         }
@@ -289,13 +298,17 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator -= (const rhs_t& rhs)
         {
-            std::size_t i0 = 0;
-            std::size_t i1 = this->data.size();
-            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
-            auto vimg         = utils::make_vec_image(this->data);
-            const auto rimg   = utils::make_vec_image(rhs.data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] -= rimg[i]; };
-            dispatch::execute(lrange, fnc);
+            auto my_img = this->image();
+            const auto rhs_img = rhs.image();
+            const auto rg = dispatch::support_of(*this, grid::exclude_exchanges);
+            
+            auto loop = [=] _sp_hybrid (const index_type& idx) mutable
+            {
+                const auto rhs_elem = rhs_img.get_elem(idx);
+                my_img.decr_elem(idx, rhs_elem);
+            };
+            
+            dispatch::execute(rg, loop);
             return *this;
         }
         
@@ -303,13 +316,17 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator += (const rhs_t& rhs)
         {
-            std::size_t i0 = 0;
-            std::size_t i1 = this->data.size();
-            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
-            auto vimg         = utils::make_vec_image(this->data);
-            const auto rimg   = utils::make_vec_image(rhs.data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] += rimg[i]; };
-            dispatch::execute(lrange, fnc);
+            auto my_img = this->image();
+            const auto rhs_img = rhs.image();
+            const auto rg = dispatch::support_of(*this, grid::exclude_exchanges);
+            
+            auto loop = [=] _sp_hybrid (const index_type& idx) mutable
+            {
+                const auto rhs_elem = rhs_img.get_elem(idx);
+                my_img.incr_elem(idx, rhs_elem);
+            };
+            
+            dispatch::execute(rg, loop);
             return *this;
         }
         
@@ -317,13 +334,17 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator *= (const rhs_t& rhs)
         {
-            std::size_t i0 = 0;
-            std::size_t i1 = this->data.size();
-            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
-            auto vimg         = utils::make_vec_image(this->data);
-            const auto rimg   = utils::make_vec_image(rhs.data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] *= rimg[i]; };
-            dispatch::execute(lrange, fnc);
+            auto my_img = this->image();
+            const auto rhs_img = rhs.image();
+            const auto rg = dispatch::support_of(*this, grid::exclude_exchanges);
+            
+            auto loop = [=] _sp_hybrid (const index_type& idx) mutable
+            {
+                const auto rhs_elem = rhs_img.get_elem(idx);
+                my_img.mult_elem(idx, rhs_elem);
+            };
+            
+            dispatch::execute(rg, loop);
             return *this;
         }
         
@@ -331,13 +352,17 @@ namespace spade::grid
         requires elementwise_compatible<grid_array, rhs_t>
         grid_array& operator /= (const rhs_t& rhs)
         {
-            std::size_t i0 = 0;
-            std::size_t i1 = this->data.size();
-            const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
-            auto vimg         = utils::make_vec_image(this->data);
-            const auto rimg   = utils::make_vec_image(rhs.data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] /= rimg[i]; };
-            dispatch::execute(lrange, fnc);
+            auto my_img = this->image();
+            const auto rhs_img = rhs.image();
+            const auto rg = dispatch::support_of(*this, grid::exclude_exchanges);
+            
+            auto loop = [=] _sp_hybrid (const index_type& idx) mutable
+            {
+                const auto rhs_elem = rhs_img.get_elem(idx);
+                my_img.divi_elem(idx, rhs_elem);
+            };
+            
+            dispatch::execute(rg, loop);
             return *this;
         }
         

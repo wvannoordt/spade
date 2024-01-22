@@ -24,7 +24,7 @@ namespace spade::io
             std::size_t block_elems = mem_map::map_size(array.var_map())*mem_map::map_size(array.block_map()) / grid.get_num_local_blocks();
             using data_t = typename array_t::value_type;
             std::size_t block_size_bytes = block_elems*sizeof(data_t);
-            ctrs::array<int, 3> nexch (grid.get_num_exchange(0), grid.get_num_exchange(1), grid.get_num_exchange(2));
+            ctrs::array<int, 3> nexch (array.get_num_exchange(0), array.get_num_exchange(1), array.get_num_exchange(2));
             for (auto lb: range(0, grid.get_num_local_blocks()))
             {
                 std::size_t lb_glob = array.get_grid().get_partition().get_global_block(lb);

@@ -6,8 +6,9 @@
 
 namespace spade::grid
 {
-    template <typename grid_t>
+    template <typename nexchg_t, typename grid_t>
     auto get_transaction(
+        const nexchg_t& num_exchgs,
         const grid_t& src_grid,
         const grid_t& dst_grid,
         const std::size_t&,
@@ -29,7 +30,7 @@ namespace spade::grid
         {
             const int sign = relation.edge[d];
             const int nx   = src_grid.get_num_cells(d);
-            const int ng   = src_grid.get_num_exchange(d);
+            const int ng   = num_exchgs[d];
             switch (sign)
             {
                 case -1:
@@ -68,8 +69,9 @@ namespace spade::grid
         return output;
     };
     
-    template <typename grid_t>
+    template <typename nexchg_t, typename grid_t>
     auto get_transaction(
+        const nexchg_t& num_exchgs,
         const grid_t& src_grid,
         const grid_t& dst_grid,
         const std::size_t& lb_ini,
@@ -83,7 +85,7 @@ namespace spade::grid
         base_relation.lb_term = lb_ini;        
         
         //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
-        auto ptch = get_transaction(src_grid, dst_grid, lb_ini, base_relation);
+        auto ptch = get_transaction(num_exchgs, src_grid, dst_grid, lb_ini, base_relation);
         output.patches = ptch;
         
         auto& self  = relation.endpoint.get();

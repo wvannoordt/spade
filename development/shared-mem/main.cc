@@ -1,5 +1,4 @@
 #include "spade.h"
-#include "dispatch/execute2.h"
 using real_t = double;
 
 int main(int argc, char** argv)
@@ -46,7 +45,7 @@ int main(int argc, char** argv)
         threads.exec([&](const auto& i){ printf("%f, %f, %f\n", result0, result1, result2); });
     };
     
-    spade::dispatch::proto::execute(o_range, loop, kpool);
+    spade::dispatch::execute(o_range, loop, kpool);
     
     auto shmem = spade::dispatch::shmem::make_shmem(
         spade::dispatch::shmem::vec<real_t>(bnd_inner.volume()),
@@ -77,7 +76,7 @@ int main(int argc, char** argv)
         threads.sync();
     };
     
-    spade::dispatch::proto::execute(o_range, loop2, kpool, shmem);
+    spade::dispatch::execute(o_range, loop2, kpool, shmem);
     
     return 0;
 }

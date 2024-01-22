@@ -70,7 +70,7 @@ namespace spade::grid
         block_bvh.calculate(bnd, grid.get_num_global_blocks(), el_check, bvhparams);
 
         //We will now compute the indices of each point in the interpolation cloud using the BVH
-        using output_t = interp_oper_t<grid_t, coeff_t, arr_t::centering_type(), 12>;
+        using output_t = interp_oper_t<grid_t, coeff_t, arr_t::centering_type(), 8>;
         output_t output;
         
         output.idx.resize(points.size());
@@ -104,8 +104,8 @@ namespace spade::grid
                     const auto dx  = grid.get_dx(lb_tagged);
                     for (int d = 0; d < dx.size(); ++d)
                     {
-                        block_box.min(d) -= dx[d]*grid.get_num_exchange(d);
-                        block_box.max(d) += dx[d]*grid.get_num_exchange(d);
+                        block_box.min(d) -= dx[d]*arr.get_num_exchange(d);
+                        block_box.max(d) += dx[d]*arr.get_num_exchange(d);
                     }
                     if (block_box.contains(x_sample)) lb.value = lb_cand;
                 };
