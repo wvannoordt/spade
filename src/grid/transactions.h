@@ -8,13 +8,23 @@ namespace spade::grid
     
     enum transaction_tag_t
     {
-        null_transaction      = 0,
-        face_transaction      = 1,
-        half_face_transaction = 2,
-        qutr_face_transaction = 3,
-        edge_transaction      = 4,
-        half_edge_transaction = 5,
-        crnr_transaction      = 6
+        null_transaction       = 0,
+        zface_transaction      = 1,
+        yface_transaction      = 2,
+        xface_transaction      = 3,
+        zhalf_face_transaction = 4,
+        yhalf_face_transaction = 5,
+        xhalf_face_transaction = 6,
+        zqutr_face_transaction = 7,
+        yqutr_face_transaction = 8,
+        xqutr_face_transaction = 9,
+        zedge_transaction      = 10,
+        yedge_transaction      = 11,
+        xedge_transaction      = 12,
+        zhalf_edge_transaction = 13,
+        yhalf_edge_transaction = 14,
+        xhalf_edge_transaction = 15,
+        crnr_transaction       = 16
     };
     
     //To-do
@@ -33,13 +43,23 @@ namespace spade::grid
     {
         switch (tg)
         {
-            case null_transaction:      return "null_transaction";
-            case face_transaction:      return "face_transaction";
-            case half_face_transaction: return "half_face_transaction";
-            case qutr_face_transaction: return "qutr_face_transaction";
-            case edge_transaction:      return "edge_transaction";
-            case half_edge_transaction: return "half_edge_transaction";
-            case crnr_transaction:      return "crnr_transaction";
+            case null_transaction:       return "null_transaction";
+            case zface_transaction:      return "zface_transaction";
+            case yface_transaction:      return "yface_transaction";
+            case xface_transaction:      return "xface_transaction";
+            case zhalf_face_transaction: return "zhalf_face_transaction";
+            case yhalf_face_transaction: return "yhalf_face_transaction";
+            case xhalf_face_transaction: return "xhalf_face_transaction";
+            case zqutr_face_transaction: return "zqutr_face_transaction";
+            case yqutr_face_transaction: return "yqutr_face_transaction";
+            case xqutr_face_transaction: return "xqutr_face_transaction";
+            case zedge_transaction:      return "zedge_transaction";
+            case yedge_transaction:      return "yedge_transaction";
+            case xedge_transaction:      return "xedge_transaction";
+            case zhalf_edge_transaction: return "zhalf_edge_transaction";
+            case yhalf_edge_transaction: return "yhalf_edge_transaction";
+            case xhalf_edge_transaction: return "xhalf_edge_transaction";
+            case crnr_transaction:       return "crnr_transaction";
         }
         return "trs2str ERR";
     }

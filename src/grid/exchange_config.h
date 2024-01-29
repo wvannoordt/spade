@@ -129,7 +129,7 @@ namespace spade::grid
                         }
                         cur_size++;
                     }
-                    sizes_here[int(face_transaction)-1] = cur_size;
+                    sizes_here[int(zface_transaction)-1] = cur_size;
                     std::size_t cur_offst = 0;
                     auto& offst_here = v_offst[prc];
                     offst_here = 0UL;
@@ -290,8 +290,8 @@ namespace spade::grid
         int my_rank;
         
         
-        constexpr static int injec_table_size = 6; // corner, half-edge, full-edge, quarter-face, half-face, full-face (note that onle corner, edge, face will be used);
-        constexpr static int intrp_table_size = 6; // corner, half-edge, full-edge, quarter-face, half-face, full-face
+        constexpr static int injec_table_size = int(crnr_transaction); //See transaction_tag_t, transactions.h
+        constexpr static int intrp_table_size = int(crnr_transaction); //See transaction_tag_t, transactions.h
         
         message_offset_t<injec_table_size> injec_offsets;
         message_offset_t<intrp_table_size> intrp_offsets;
@@ -409,7 +409,7 @@ namespace spade::grid
         std::ofstream mf1(fname1);
         config.intrp_offsets.report(mf1, config.send_data[1_c], config.recv_data[1_c]);
         */
-
+        
         return config;
     }
 }

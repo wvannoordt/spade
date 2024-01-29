@@ -32,7 +32,7 @@ namespace spade::grid
             
             const auto& accums = getv(offsets.send_elem_accum, offsets.recv_elem_accum)[dest];
             const auto& offst  = getv(offsets.send_offsets, offsets.recv_offsets)[dest];
-            while(variety > int(face_transaction))
+            while(variety > int(zface_transaction))
             {
                 if (accums[variety-2] > thread_id) break;
                 variety--;

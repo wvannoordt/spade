@@ -18,6 +18,8 @@
 #include "core/arith_tuple.h"
 #include "core/avg.h"
 
+#include "parallel/compute_pool.h"
+
 #include "ode/ode.h"
 
 #include "sym/sym.h"

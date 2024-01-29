@@ -27,12 +27,27 @@ namespace spade::grid
         output.dest.min(3)   = dst_grid.get_partition().get_any_local(lb_term);
         output.dest.max(3)   = output.dest.min(3) + 1;
         
+        // Here we need to classify this transaction
         int dsum = 0;
         for (const auto& ii: relation.edge) dsum += utils::abs(ii);
-        
-        ctrs::array<transaction_tag_t, 4> tags{null_transaction, face_transaction, edge_transaction, crnr_transaction};
-        
-        output.tag = tags[dsum];
+        ctrs::array<transaction_tag_t, 4> tags{null_transaction, xface_transaction, xedge_transaction, crnr_transaction};
+        int tag_id = int(tags[dsum]);
+        if (dsum == 1) // face
+        {
+            for (int d = 0; d < relation.edge.size(); ++d)
+            {
+                if (relation.edge[d] != 0) tag_id -= d;
+            }
+        }
+        if (dsum == 2) // edge
+        {
+            for (int d = 0; d < relation.edge.size(); ++d)
+            {
+                if (relation.edge[d] == 0) tag_id -= d;
+            }
+        }
+        output.tag = transaction_tag_t(tag_id);
+        // Transaction tag has been computed.
         
         for (int d = 0; d < 3; ++d)
         {
@@ -107,7 +122,7 @@ namespace spade::grid
             int edgediff   = base_relation.edge[d];
             if (edgediff == 0 && level_diff > 0)
             {
-                tag++;
+                tag += 3;
             }
         }
         
