@@ -5,13 +5,57 @@
 
 namespace spade::grid
 {
-    //Note: this will take some significant re-working for GPU implementation!
+    
+    enum transaction_tag_t
+    {
+        null_transaction      = 0,
+        face_transaction      = 1,
+        half_face_transaction = 2,
+        qutr_face_transaction = 3,
+        edge_transaction      = 4,
+        half_edge_transaction = 5,
+        crnr_transaction      = 6
+    };
+    
+    //To-do
+    // static_assert(
+    //     utils::is_decreasing<
+    //         crnr_transaction,
+    //         half_edge_transaction,
+    //         edge_transaction,
+    //         qutr_face_transaction,
+    //         half_face_transaction,
+    //         face_transaction,
+    //         null_transaction
+    //     >, "Invalid ordering for transaction varieties!");
+    
+    inline std::string trs2str(const transaction_tag_t& tg)
+    {
+        switch (tg)
+        {
+            case null_transaction:      return "null_transaction";
+            case face_transaction:      return "face_transaction";
+            case half_face_transaction: return "half_face_transaction";
+            case qutr_face_transaction: return "qutr_face_transaction";
+            case edge_transaction:      return "edge_transaction";
+            case half_edge_transaction: return "half_edge_transaction";
+            case crnr_transaction:      return "crnr_transaction";
+        }
+        return "trs2str ERR";
+    }
+    
+    inline std::ostream& operator << (std::ostream& os, const transaction_tag_t& tg)
+    {
+        os << trs2str(tg);
+        return os;
+    }
 
     //transaction pattern for a rectangular copy of a region of cells,
     //used for direct injection for cartesian configurations or
     //same-level transactions on AMR grids
     struct grid_rect_copy_t
     {
+        transaction_tag_t tag = null_transaction;
         bound_box_t<int, 4> source, dest;
         int rank_recv, rank_send;
         std::size_t send_volume() const { return source.volume(); }
@@ -19,6 +63,8 @@ namespace spade::grid
         
         int receiver() const { return rank_recv; }
         int sender()   const { return rank_send; }
+        
+        transaction_tag_t get_tag() const { return tag; }
         
         template <typename arr_t>
         _finline_ std::size_t insert(const arr_t& array, char* buf) const
@@ -63,6 +109,8 @@ namespace spade::grid
     template <const std::size_t gdim>
     struct patch_fill_t
     {
+        transaction_tag_t tag = null_transaction;
+        
         // for construction of this object, see get_transaction.h
         constexpr static int max_size = static_math::pow<2, gdim>::value;
         
@@ -77,6 +125,8 @@ namespace spade::grid
         
         int receiver() const { return patches.receiver(); }
         int sender()   const { return patches.sender(); }
+        
+        transaction_tag_t get_tag() const { return tag; }
         
         template <typename arr_t>
         _finline_ std::size_t insert(const arr_t& array, char* buf) const

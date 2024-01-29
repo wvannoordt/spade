@@ -4,5 +4,5 @@
 
 namespace spade::consts
 {
-    const real_t pi = 3.1415926535;
+    constexpr static real_t pi = 3.1415926535;
 }

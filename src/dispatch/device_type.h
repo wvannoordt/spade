@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+#include <algorithm>
 #include <type_traits>
 #include <concepts>
 #include "core/cuda_incl.h"
@@ -23,4 +25,56 @@ namespace spade::device
     {
         t.device();
     };
+    
+    inline int device_count()
+    {
+        int out = 0;
+#if (_sp_cuda)
+        cudaGetDeviceCount(&out);
+#endif
+        return out;
+    }
+    
+    inline void set_device(const int dev_id)
+    {
+#if (_sp_cuda)
+        cudaSetDevice(dev_id);
+#endif
+    }
+    
+    inline bool enable_p2p(int thread_id, std::vector<int> devices)
+    {
+        std::sort(devices.begin(), devices.end());
+        if (std::unique(devices.begin(), devices.end()) != devices.end())
+        {
+            throw except::sp_exception("Duplicate device in launch configuration!");
+        }
+#if (_sp_cuda)
+        for (auto d: devices)
+        {
+            if (d != devices[thread_id])
+            {
+                int can_access;
+                cudaDeviceCanAccessPeer(&can_access, devices[thread_id], d);
+                if (can_access != 1)
+                {
+                    return false;
+                }
+                else
+                {
+                    auto code = cudaDeviceEnablePeerAccess(d, 0);
+                    if (code == cudaErrorInvalidDevice)
+                    {
+                        throw except::sp_exception("Failed to enable P2P access on device " + std::to_string(d) + ": invalid device");
+                    }
+                    if (code == cudaErrorInvalidValue)
+                    {
+                        throw except::sp_exception("Failed to enable P2P access on device " + std::to_string(d) + ": invalid value");
+                    }
+                }
+            }
+        }
+#endif
+        return true;
+    }
 }

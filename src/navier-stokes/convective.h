@@ -60,12 +60,12 @@ namespace spade::convective
         using info_type     = omni::info_union<own_info_type, sub_info_type>;
         using omni_type     = omni::prefab::lr_t<info_type>;
         
-        const gas_t& gas;
+        const gas_t gas;
         
         totani_lr(const gas_t& gas_in) : gas{gas_in}{}
         
         
-        output_type operator() (const auto& input_data) const
+        _sp_hybrid output_type operator() (const auto& input_data) const
         {
             output_type output;
             
@@ -271,12 +271,13 @@ namespace spade::convective
         : flux_func{flux_func_in} {}
         
         _sp_hybrid output_type operator()(const auto& input) const
-        {
+        {            
             fluid_state::flux_t<float_t> output;
             auto fp0 = flux_func(input.cell(0_c));
             auto fp1 = flux_func(input.cell(1_c));
             auto fp2 = flux_func(input.cell(2_c));
             auto fp3 = flux_func(input.cell(3_c));
+            
             const auto& f0_u = fp0[0];
             const auto& f0_d = fp0[1];
             const auto& f1_u = fp1[0];

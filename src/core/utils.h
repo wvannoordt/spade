@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
+#include <variant>
 #include <iostream>
 #include <cstdlib>
 #include <type_traits>
@@ -356,4 +357,19 @@ namespace spade::utils
     
     template <typename T> using raw_ptr_t       = T*;
     template <typename T> using const_raw_ptr_t = const T*;
+    
+    namespace detail
+    {
+        template <typename check_t, typename variant_t>
+        struct variant_contains_impl;
+        
+        template <typename check_t, typename... variant_types_t>
+        struct variant_contains_impl<check_t, std::variant<variant_types_t...>>
+        {
+            constexpr static bool value = (std::same_as<check_t, variant_types_t> || ...);
+        };
+    }
+    
+    template <typename check_t, typename variant_t>
+    constexpr static bool variant_contains = detail::variant_contains_impl<check_t, variant_t>::value;
 }

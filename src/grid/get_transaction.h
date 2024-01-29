@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/except.h"
+#include "core/ctrs.h"
 #include "grid/transactions.h"
 #include "amr/amr_node.h"
 
@@ -21,10 +22,17 @@ namespace spade::grid
         output.rank_send = src_grid.get_partition().get_rank(lb_ini);
         output.rank_recv = dst_grid.get_partition().get_rank(lb_term);
 
-        output.source.min(3) = src_grid.get_partition().to_local(lb_ini).value;
-        output.source.max(3) = output.source.min(3)+1;
-        output.dest.min(3)   = dst_grid.get_partition().to_local(lb_term).value;
-        output.dest.max(3)   = output.dest.min(3)+1;
+        output.source.min(3) = src_grid.get_partition().get_any_local(lb_ini);
+        output.source.max(3) = output.source.min(3) + 1;
+        output.dest.min(3)   = dst_grid.get_partition().get_any_local(lb_term);
+        output.dest.max(3)   = output.dest.min(3) + 1;
+        
+        int dsum = 0;
+        for (const auto& ii: relation.edge) dsum += utils::abs(ii);
+        
+        ctrs::array<transaction_tag_t, 4> tags{null_transaction, face_transaction, edge_transaction, crnr_transaction};
+        
+        output.tag = tags[dsum];
         
         for (int d = 0; d < 3; ++d)
         {
@@ -90,6 +98,20 @@ namespace spade::grid
         
         auto& self  = relation.endpoint.get();
         auto& neigh = dst_grid.get_blocks().get_amr_node(lb_ini);
+        
+        int tag = int(ptch.tag);
+        
+        for (int d = 0; d < grid_t::dim(); ++d)
+        {
+            int level_diff = self.level[d] - neigh.level[d];
+            int edgediff   = base_relation.edge[d];
+            if (edgediff == 0 && level_diff > 0)
+            {
+                tag++;
+            }
+        }
+        
+        output.tag = transaction_tag_t(tag);
         
         output.i_coeff = 0;
         output.i_incr  = 0;

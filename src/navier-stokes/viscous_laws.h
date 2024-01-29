@@ -103,17 +103,17 @@ namespace spade::viscous_laws
             : mu_ref{mu_ref_in}, T_ref{T_ref_in}, power{power_in}, prandtl{prandtl_in}
             { }
             
-            template <fluid_state::is_state_type state_t> dtype get_visc(const state_t& q) const
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_visc(const state_t& q) const
             {
                 return mu_ref*std::pow(q.T()/T_ref, power);
             }
             
-            template <fluid_state::is_state_type state_t> dtype get_beta(const state_t& q) const
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_beta(const state_t& q) const
             {
                 return -0.66666666667*this->get_visc(q);
             }
             
-            template <fluid_state::is_state_type state_t> dtype get_diffuse(const state_t& q) const
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_diffuse(const state_t& q) const
             {
                 return this->get_visc(q)/prandtl;
             }
@@ -140,17 +140,17 @@ namespace spade::viscous_laws
             cfunc{c_in}
             {}
             
-            value_type get_visc(const state_t& q) const
+            _sp_hybrid value_type get_visc(const state_t& q) const
             {
                 return vfunc(q);
             }
             
-            value_type get_beta(const state_t& q) const
+            _sp_hybrid value_type get_beta(const state_t& q) const
             {
                 return bfunc(q);
             }
             
-            value_type get_diffuse(const state_t& q) const
+            _sp_hybrid value_type get_diffuse(const state_t& q) const
             {
                 return cfunc(q);
             }

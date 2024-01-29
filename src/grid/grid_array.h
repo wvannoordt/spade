@@ -211,6 +211,8 @@ namespace spade::grid
         container_type<fundamental_type> data;
         mem_map_type                     mem_view;
         
+        constexpr static int dim() { return grid_t::dim(); }
+        
         static_assert(!(device::is_gpu<device_t> && !_sp_cuda), "attempted to declare GPU array without GPU support");
         
         device_t device() const { return device_t(); }

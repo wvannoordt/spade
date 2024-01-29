@@ -32,10 +32,25 @@ namespace spade::dispatch::ranges
     {
         d3_t grid_dim {1,1,1};
         d3_t blck_dim {1,1,1};
+        
+        const auto i_div_up = [](int a, int b){ return (a % b != 0) ? (a / b + 1) : (a / b); };
+        
         if constexpr (device::is_device<typename kernel_t::exec_space_type>)
         {
             //In this case, there is no "thread pool" object to deal with, so we just compute the
             //parameters as we normally would.
+            if constexpr (kernel_t::index_type::size() == 1)
+            {
+                // 
+                //  | + | + | + | + | + | + | + | + | + | + | + | + |
+                
+                grid_dim.x = i_div_up(kernel.o_range.bounds.volume(), 32);
+                blck_dim.x = 32;
+            }
+            else
+            {
+                throw except::sp_exception("IMPLEMENTATION FOR RANGE NOT FOUND");
+            }
         }
         else
         {

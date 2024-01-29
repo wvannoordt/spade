@@ -13,7 +13,7 @@ namespace spade::time_integration
         coeff_t coeff;
         crank_nicholson_t(const coeff_t& coeff_in=0.875) : coeff{coeff_in} {}
 
-        static constexpr std::size_t var_size() {return 2;}
+        static constexpr std::size_t var_size() {return 1;}
         static constexpr std::size_t rhs_size() {return 2;}
 
         constexpr static bool is_crank_nichol_specialization = true;

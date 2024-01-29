@@ -27,6 +27,7 @@
 #include "grid/cartesian_blocks.h"
 #include "grid/grid.h"
 #include "grid/exchange_pattern.h"
+#include "grid/make_exchange.h"
 #include "grid/sample_operator.h"
 #include "grid/boundary_fill.h"
 

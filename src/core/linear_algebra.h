@@ -117,6 +117,12 @@ namespace spade::linear_algebra
         }
     };
     
+    template <typename data_t, const std::size_t mat_size>
+    _sp_hybrid inline dense_mat<data_t, mat_size> transpose(const dense_mat<data_t, mat_size>& rhs)
+    {
+        return dense_mat<data_t, mat_size>().fill([&](int i, int j) { return rhs(j,i); });
+    }
+    
     template <typename rhs_t, typename data_t, const std::size_t mat_size>
     _sp_hybrid  dense_mat<data_t, mat_size> operator * (const rhs_t& rhs, const dense_mat<data_t, mat_size>& mat)
     {

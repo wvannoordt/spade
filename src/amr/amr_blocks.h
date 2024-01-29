@@ -128,7 +128,7 @@ namespace spade::amr
         
         bound_box_t<bool, 3> is_domain_boundary(const std::size_t& i) const
         {
-            return enumerated_nodes[i].get().is_domain_boundary();
+            return enumerated_nodes[i].get().is_domain_boundary();;
         }
         
         // re-collects the global list of amr nodes and their bounding boxes,

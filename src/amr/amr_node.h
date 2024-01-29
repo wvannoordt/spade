@@ -229,12 +229,6 @@ namespace spade::amr
             for (auto& n: subnodes) n.collect_nodes(node_list);
         }
         
-        bool UCONTAIN(const ctrs::array<double, 2>& x) const
-        {
-            const auto pp = ubox();
-            return (pp.min(0) < x[0]) && (pp.max(0) > x[0]) && (pp.min(1) < x[1]) && (pp.max(1) > x[1]);
-        }
-        
         auto ubox() const
         {
             bound_box_t<double, grid_dim> out;
@@ -249,6 +243,7 @@ namespace spade::amr
         bound_box_t<bool, 3> is_domain_boundary() const
         {
             bound_box_t<bool, 3> out;
+            out.bnds = false;
             out.min(2) = true;
             out.max(2) = true;
             for (int i = 0; i < dim(); ++i)

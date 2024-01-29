@@ -279,7 +279,7 @@ namespace spade::pde_algs
                     threads.sync();
                     
                     // Here we increment the left-hand element
-                    const auto icell_l = face_to_cell(iface, 0);
+                    const auto icell_l    = face_to_cell(iface, 0);
                     const auto xyz_l      = geom_image.get_coords(icell_r);
                     const real_type jac_l = coords::calc_jacobian(geom_image.get_coord_sys(), xyz_l, icell_l);
                     if (i_face_line > 0) rhs_img.decr_elem(icell_l, jac_l*flux);

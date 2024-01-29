@@ -44,9 +44,9 @@ namespace spade::device
             host_data.push_back(nval);
         }
         
-        void resize(const std::size_t& n)
+        void resize(const std::size_t& n, const data_t val = data_t())
         {
-            host_data.resize(n);
+            host_data.resize(n, val);
             devc_data.resize(n);
         }
         
@@ -61,6 +61,16 @@ namespace spade::device
         }
         
         auto end() const
+        {
+            return host_data.end();
+        }
+        
+        auto begin()
+        {
+            return host_data.begin();
+        }
+        
+        auto end()
         {
             return host_data.end();
         }

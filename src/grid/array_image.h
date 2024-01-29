@@ -1,5 +1,7 @@
 #pragma once
 
+#include <syncstream>
+
 namespace spade::grid
 {
     namespace detail

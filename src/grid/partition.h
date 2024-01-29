@@ -13,6 +13,8 @@ namespace spade::partition
     static struct local_tag_t{}  local;
     
     template <typename T> concept partition_tagged = utils::has_tag<T, global_tag_t> || utils::has_tag<T, local_tag_t>;
+    
+    template <typename group_t>
     class block_partition_t
     {
         public:
@@ -22,15 +24,15 @@ namespace spade::partition
                 
             }
             
-            block_partition_t(const auto& block_config_in, const parallel::mpi_t& group_in)
+            block_partition_t(const auto& block_config_in, const group_t& group_in)
             {
                 num_global_blocks = block_config_in.total_num_blocks();
                 num_local_blocks = num_global_blocks/group_in.size();
                 if (group_in.rank() < (num_global_blocks%group_in.size())) num_local_blocks++;
                 local_block_to_global_block.resize(num_local_blocks);
-
-                
+                std::vector<std::size_t> partial(group_in.size(), 0);
                 global_block_to_local_block.resize(num_global_blocks, no_value);
+                global_block_to_local_block_full.resize(num_global_blocks, no_value);
                 global_block_to_rank.resize(num_global_blocks);
                 std::size_t current_rank = 0;
                 std::size_t loc_count = 0;
@@ -43,6 +45,13 @@ namespace spade::partition
                         global_block_to_local_block[lb] = loc_count;
                         ++loc_count;
                     }
+                    
+                    std::size_t glob_block = lb;
+                    std::size_t rank       = current_rank;
+                    std::size_t locl_block = partial[current_rank];
+                    global_block_to_local_block_full[glob_block] = locl_block;
+                    
+                    ++partial[current_rank];
                     ++current_rank;
                     current_rank %= group_in.size();
                 }
@@ -55,6 +64,11 @@ namespace spade::partition
             std::size_t get_global_block(const std::size_t& lb_loc)   const { return local_block_to_global_block[lb_loc]; }
             std::size_t get_local_block (const std::size_t& lb_glob)  const { return global_block_to_local_block[lb_glob]; }
             std::size_t get_global_rank (const std::size_t& lb_glob)  const { return global_block_to_rank[lb_glob]; }
+            std::size_t get_any_local (const partition_tagged auto& lb) const
+            {
+                std::size_t blog = this->to_global(lb).value;
+                return global_block_to_local_block_full[blog];
+            }
             
             std::size_t get_rank (const partition_tagged auto& lb)  const { return global_block_to_rank[to_global(lb).value]; }
             
@@ -73,9 +87,11 @@ namespace spade::partition
             }
             
         private:
+            //To-do: IMPROVE THIS CRAP
             std::size_t num_local_blocks, num_global_blocks;
             std::vector<std::size_t> local_block_to_global_block;
             std::vector<std::size_t> global_block_to_local_block;
+            std::vector<std::size_t> global_block_to_local_block_full;
             std::vector<std::size_t> global_block_to_rank;
     };
 }

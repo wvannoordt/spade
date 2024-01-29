@@ -10,6 +10,7 @@ namespace spade::dispatch::shmem
     {
         _sp_hybrid constexpr static bool is_empty() { return true; }
         _sp_hybrid constexpr static std::size_t bytes() { return 0; }
+        _sp_hybrid void bind_ptr(volatile char*) {}
     };
     
     template <typename data_t>

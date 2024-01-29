@@ -297,9 +297,33 @@ namespace spade::io
         for (const auto& x: data) mf << ct++ << "\n";
     }
     
-    template <typename bbx_ctr_t>
+    namespace detail
+    {
+        template <std::integral int_t>
+        inline std::string get_ascii_name(const int_t&) { return "int"; }
+        
+        template <std::floating_point dbl_t>
+        inline std::string get_ascii_name(const dbl_t&) { return "double"; }
+        
+        inline void cell_data_out_ascii(std::ostream& mf, std::size_t required_size) {}
+        
+        template <typename data_t, typename... others_t>
+        inline void cell_data_out_ascii(std::ostream& mf, std::size_t required_size, const std::string& scal_name, const std::vector<data_t>& data, const others_t&... others)
+        {
+            if (data.size() != required_size)
+            {
+                throw except::sp_exception("attempted to write to VTK file with incorrectly-sized scalar \"" + scal_name + "\"!");
+            }
+            mf << "SCALARS " << scal_name << " " << get_ascii_name(data_t()) << "\n";
+            mf << "LOOKUP_TABLE default\n";
+            for (const auto& d: data) mf << d << "\n";
+            cell_data_out_ascii(mf, required_size, others...);
+        }
+    }
+    
+    template <typename bbx_ctr_t, typename... others_t>
     requires (requires { bbx_ctr_t()[0].min(0); bbx_ctr_t()[0].max(0); bbx_ctr_t()[0].size(0); }) // good lord
-    static void output_vtk(const std::string& fname, const bbx_ctr_t& blist)
+    static void output_vtk(const std::string& fname, const bbx_ctr_t& blist, const others_t&... others)
     {
         constexpr static int bdim = bbx_ctr_t::value_type::size();
         std::ofstream mf(fname);
@@ -347,19 +371,36 @@ namespace spade::io
         {
             mf << ((bdim==3)?11:8) << "\n";
         }
+        
+        if constexpr(sizeof...(others_t) > 0)
+        {
+            mf << "CELL_DATA " << blist.size() << "\n";
+            detail::cell_data_out_ascii(mf, blist.size(), others...);
+        }
     }
     
     template <grid::multiblock_grid grid_t>
     static void output_vtk(const std::string& fname, const grid_t& grid)
     {
+        const auto& group = grid.group();
         using bbx_type = decltype(grid.get_bounding_box(0));
         std::vector<bbx_type> boxes;
+        std::vector<int> ranks;
+        std::vector<int> block_local;
+        std::vector<int> block_global;
+        
+        const auto& pp = grid.get_partition();
+        
         for (std::size_t lb = 0; lb < grid.get_num_global_blocks(); ++lb)
         {
             auto lbt = utils::tag[partition::global](lb);
+            ranks.push_back(pp.get_rank(lbt));
+            block_local.push_back(pp.get_any_local(lbt)); //TODO
+            block_global.push_back(lb);
             boxes.push_back(grid.get_bounding_box(lbt));
         }
-        output_vtk(fname, boxes);
+        
+        if (group.isroot()) output_vtk(fname, boxes, "rank", ranks, "block_id_local", block_local, "block_id_global", block_global);
     }
     
 }

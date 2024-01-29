@@ -1,5 +1,7 @@
 #pragma once
 
+#include <syncstream>
+
 #include "core/vec_image.h"
 
 namespace spade::grid
@@ -58,7 +60,7 @@ namespace spade::grid
             using coord_sys_type     = coord_t;
             using coord_point_type   = coords::point_t<coord_type>;
             using group_type         = par_group_t;
-            using partition_type     = partition::block_partition_t;
+            using partition_type     = partition::block_partition_t<par_group_t>;
             using dependent_type     = grid_dependent_t;
             using blocks_type        = block_arrangement_t;
             using array_desig_type   = array_descriptor_t;
@@ -116,6 +118,7 @@ namespace spade::grid
                         const std::size_t lb_glob = grid_partition.to_global(bidx).value;
                         const auto box            = block_arrangement.get_block_box(lb_glob);
                         const auto ibdy           = block_arrangement.is_domain_boundary(lb_glob);
+                        
                         geom.bounding_boxes.push_back(box);
                         geom.domain_boundary.push_back(ibdy);
                         
@@ -175,7 +178,7 @@ namespace spade::grid
             const coord_t& coord_sys()                                  const { return global_geometry.get_coords(); }
             const auto& get_blocks()                                    const { return block_arrangement; }
             auto& get_blocks()                                                { return block_arrangement; }
-            const partition::block_partition_t& get_partition()         const { return grid_partition; }
+            const auto& get_partition()                                 const { return grid_partition; }
             constexpr static bool is_3d()                                     { return dim()==3; }
             
             template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
@@ -231,7 +234,7 @@ namespace spade::grid
                 ctrs::array<dtype,  3> output(1e50, 1e50, 1e50);
                 for (std::size_t lb = 0; lb < this->get_num_global_blocks(); ++lb)
                 {
-                    auto dx = this->get_dx(lb);
+                    auto dx = this->get_dx(utils::tag[partition::global](lb));
                     for (int i = 0; i < output.size(); ++i)
                     {
                         output[i] = utils::min(output[i], dx[i]);

@@ -26,6 +26,7 @@ namespace spade::grid
         std::vector<std::size_t>            num_recv_elems;
         
         int my_rank;
+        
         const grid_t* grid0;
         const grid_t* grid1;
         grid_exchange_config_t(const grid_t& grid_in) : grid0{&grid_in}, grid1{&grid_in}, num_send_elems{0}, num_recv_elems{0}
@@ -221,7 +222,7 @@ namespace spade::grid
             for (const auto& intp: interp)
             {
                 const auto& recvs = intp.patches.dest;
-                const auto l0 = [&](const auto& arr_i)
+                const auto  l0 = [&](const auto& arr_i)
                 {
                     grid::cell_idx_t gidx(arr_i[0], arr_i[1], arr_i[2], arr_i[3]);
                     int di = gidx.i() - intp.patches.dest.min(0);

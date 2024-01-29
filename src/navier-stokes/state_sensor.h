@@ -41,4 +41,21 @@ namespace spade::state_sensor
             return theta_sq / (theta_sq + vort_sq + epsilon);
         }
     };
+    
+    template <typename float_t> struct const_sensor_t
+    : public sensor_interface_t<const_sensor_t<float_t>, omni::info_list_t<>>
+    {
+        using base_t = sensor_interface_t<const_sensor_t<float_t>, omni::info_list_t<>>;
+        using base_t::get_sensor;
+        using base_t::info_type;
+
+        float_t alpha;
+
+        const_sensor_t(const float_t& alpha_in) : alpha{alpha_in} {}
+
+        _sp_hybrid float_t get_sensor(const auto& info) const
+        {
+            return alpha;
+        }
+    };
 }

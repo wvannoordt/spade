@@ -32,12 +32,32 @@ namespace spade::device
             }
         }
         
+        operator std::vector<data_t>() const
+        {
+            std::vector<data_t> out(c_size);
+            data_t* base = out.data();
+#if (_sp_cuda)
+            cudaMemcpy(base, raw, c_size*sizeof(value_type), cudaMemcpyDeviceToHost);
+#endif
+            return out;
+        }
+        
         device_vector& operator = (const device_vector& rhs)
         {
             if (rhs.size() == 0) return *this;
             this->resize(rhs.size());
 #if (_sp_cuda)
             if (rhs.size() > 0) cudaMemcpy(this->raw, rhs.raw, c_size*sizeof(value_type), cudaMemcpyDeviceToDevice);
+#endif
+            return *this;
+        }
+    
+        device_vector& operator = (const std::vector<data_t>& rhs)
+        {
+            if (rhs.size() == 0) return *this;
+            this->resize(rhs.size());
+#if (_sp_cuda)
+            if (rhs.size() > 0) cudaMemcpy(this->raw, rhs.data(), c_size*sizeof(value_type), cudaMemcpyHostToDevice);
 #endif
             return *this;
         }

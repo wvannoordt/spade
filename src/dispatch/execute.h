@@ -163,7 +163,11 @@ namespace spade::dispatch
         __global__ void k_gpu_impl(kernel_t kern)
         {
             auto& function    = kern.function;
-            const auto index  = kern.o_range.compute_index(gridDim, blockIdx, blockDim, threadIdx);
+            ranges::outer_config_t g_dim{gridDim};
+            ranges::outer_config_t b_idx{blockIdx};
+            ranges::inner_config_t b_dim{blockDim};
+            ranges::inner_config_t t_idx{threadIdx};
+            const auto index  = compute_index(kern.o_range, g_dim, b_idx, b_dim, t_idx);
             if (kern.valid(index))
             {
                 if constexpr (kernel_t::index_type::size() == 1) function(index[0]);
@@ -241,17 +245,29 @@ namespace spade::dispatch
             
             using loop_index_type = idx_alias_t;
             loop_index_type i;
-            auto loop = [&](const loop_index_type& idx) mutable
+            if constexpr (!device::is_device<comp_space_t>)
             {
-                kernel_in(idx, space, shmem_kern);
-            };
-            
-            using bound_type = decltype(range.bounds);
-            detail::cpu_dispatch_impl<
-                    loop_index_type,
-                    bound_type,
-                    loop_index_type::size()-1,
-                    decltype(loop)>(i, range.bounds, loop);
+                auto loop = [&](const loop_index_type& idx) mutable
+                {
+                    kernel_in(idx, space, shmem_kern);
+                };
+                
+                using bound_type = decltype(range.bounds);
+                detail::cpu_dispatch_impl<
+                        loop_index_type,
+                        bound_type,
+                        loop_index_type::size()-1,
+                        decltype(loop)>(i, range.bounds, loop);
+            }
+            else
+            {
+                using bound_type = decltype(range.bounds);
+                detail::cpu_dispatch_impl<
+                        loop_index_type,
+                        bound_type,
+                        loop_index_type::size()-1,
+                        decltype(kernel_in)>(i, range.bounds, kernel_in);
+            }
         }
     }
 }

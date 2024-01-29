@@ -49,7 +49,7 @@ namespace spade::ctrs
         using data_t = typename arr_t::value_type;
         data_t output = data_t();
         for (int i = 0; i < arr.size(); ++i) output += arr[i]*arr[i];
-        return std::sqrt(output);
+        return sqrt(output);
     }
     
     template <basic_array arr_t>
@@ -158,7 +158,7 @@ namespace spade::ctrs
             std::copy(this->begin(), this->end(), llist.begin());
         }
         
-       _sp_hybrid  arithmetic_array_t(const dtype& val) {fill(val);}
+       _sp_hybrid arithmetic_array_t(const dtype& val) {fill(val);}
         // arithmetic_array_t(dtype&& val)
         // {
         //     data[0] = std::move(val);

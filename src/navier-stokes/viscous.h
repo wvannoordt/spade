@@ -17,7 +17,7 @@ namespace spade::viscous
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::gradient, omni::info::metric>;
         using sub_info_type = omni::info_union<typename vlaw_t::info_type, typename gas_model_t::info_type>;
         using info_type     = omni::info_union<own_info_type, sub_info_type>;
-        using omni_type = omni::prefab::face_mono_t<info_type>;
+        using omni_type     = omni::prefab::face_mono_t<info_type>;
         
         visc_lr(const vlaw_t& vlaw_in, const gas_model_t& gas_in) : vlaw{vlaw_in}, gas{gas_in} {}
         

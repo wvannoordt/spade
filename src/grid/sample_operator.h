@@ -21,8 +21,8 @@ namespace spade::grid
         std::size_t size() const { return idx.size(); }
     };
     
-    template <typename arr_t, ctrs::basic_array container_t>
-    static auto create_interpolation(const arr_t& arr, const container_t& points)
+    template <typename arr_t, ctrs::basic_array container_t, typename inclusion_crit_t>
+    static auto create_interpolation(const arr_t& arr, const container_t& points, const inclusion_crit_t& inclusion_crit)
     {
         static_assert(
             std::floating_point<typename arr_t::fundamental_type>,
@@ -149,6 +149,8 @@ namespace spade::grid
             
             indices = landed_cell;
             coeffs  = 0.0;
+            
+            // const bool success = strategy(indices, coeffs, grid, landed_cell, x_sample);
             
             int nmx = 4;
             if (dim==3) nmx = 8;
