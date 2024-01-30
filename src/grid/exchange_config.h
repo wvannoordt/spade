@@ -56,8 +56,8 @@ namespace spade::grid
             output.recv_elem_size  = utils::make_vec_image(recv_elem_size.data(device));
             output.recv_elem_accum = utils::make_vec_image(recv_elem_accum.data(device));
             
-            output.send_elem_size  = utils::make_vec_image(recv_elem_size.data(device));
-            output.send_elem_accum = utils::make_vec_image(recv_elem_accum.data(device));
+            output.send_elem_size  = utils::make_vec_image(send_elem_size.data(device));
+            output.send_elem_accum = utils::make_vec_image(send_elem_accum.data(device));
             
             output.individual_sizes = individual_sizes;
             
@@ -400,15 +400,15 @@ namespace spade::grid
         config.injec_offsets.count(group, config.send_data[0_c], config.recv_data[0_c]);
         config.intrp_offsets.count(group, config.send_data[1_c], config.recv_data[1_c]);
         
-        /*
-        std::string fname0 = utils::zfill(group.rank(), 2) + ".inject.log";
-        std::ofstream mf0(fname0);
-        config.injec_offsets.report(mf0, config.send_data[0_c], config.recv_data[0_c]);
         
-        std::string fname1 = utils::zfill(group.rank(), 2) + ".interp.log";
-        std::ofstream mf1(fname1);
-        config.intrp_offsets.report(mf1, config.send_data[1_c], config.recv_data[1_c]);
-        */
+        // std::string fname0 = utils::zfill(group.rank(), 2) + ".inject.log";
+        // std::ofstream mf0(fname0);
+        // config.injec_offsets.report(mf0, config.send_data[0_c], config.recv_data[0_c]);
+        
+        // std::string fname1 = utils::zfill(group.rank(), 2) + ".interp.log";
+        // std::ofstream mf1(fname1);
+        // config.intrp_offsets.report(mf1, config.send_data[1_c], config.recv_data[1_c]);
+        
         
         return config;
     }

@@ -31,7 +31,7 @@ namespace spade::grid
             const std::size_t transaction_offst  = getv(offsets.send_rank_offsets, offsets.recv_rank_offsets)[dest];
             
             const auto& accums = getv(offsets.send_elem_accum, offsets.recv_elem_accum)[dest];
-            const auto& offst  = getv(offsets.send_offsets, offsets.recv_offsets)[dest];
+            const auto& offst  = getv(offsets.send_offsets,    offsets.recv_offsets)[dest];
             while(variety > int(zface_transaction))
             {
                 if (accums[variety-2] > thread_id) break;
@@ -118,8 +118,6 @@ namespace spade::grid
                 std::size_t num_injec_cells = config.injec_offsets.send_message_size[dest];
                 std::size_t num_intrp_cells = config.intrp_offsets.send_message_size[dest];
                 
-                if (num_intrp_cells > 0) throw except::sp_exception("Exchanges not quite working for interpolation!");
-                
                 // First we do all of the direct injections since they are trivial
                 const auto inject_offsets = config.injec_offsets.image(array.device());
                 const auto inject_exchgs  = utils::make_vec_image(config.send_data[0_c].data(array.device()));
@@ -127,7 +125,7 @@ namespace spade::grid
                 
                 
                 //The first section of the buffer is only for the direct injections
-                dest_buffer.csize -= num_injec_cells;
+                dest_buffer.csize -= alias_type::size()*num_injec_cells;
                 auto injec_range   = dispatch::ranges::make_range(0UL, num_injec_cells);
                 auto injec_load    = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
@@ -163,15 +161,56 @@ namespace spade::grid
                 
                 // Now we perform the interpolation exchanges.
                 // Note that this is ruthlessly hacky.
-                dest_buffer.ptr   += num_injec_cells;
-                dest_buffer.csize  = num_intrp_cells;
+                dest_buffer.ptr   += alias_type::size()*num_injec_cells;
+                dest_buffer.csize  = alias_type::size()*num_intrp_cells;
                 
                 const auto interp_offsets = config.intrp_offsets.image(array.device());
                 const auto interp_exchgs  = utils::make_vec_image(config.send_data[1_c].data(array.device()));
                 auto intrp_range = dispatch::ranges::make_range(0UL, num_intrp_cells);
                 auto intrp_load  = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
-                    dest_buffer[idx] = value_type();
+                    const auto nijk = detail::get_nijk_from_offsets(
+                        idx,
+                        interp_offsets,
+                        interp_exchgs,
+                        rank,
+                        dest,
+                        [&](const auto& exch) { return exch.patches.dest; }, 0_c);
+                    
+                    const auto& exch_obj = interp_exchgs[nijk[0]];
+                    const int ix         = nijk[1];
+                    const int iy         = nijk[2];
+                    const int iz         = nijk[3];
+                    const auto& bbx      = exch_obj.patches.source;
+                    constexpr int max_size = exch_obj.max_size;
+                    
+                    alias_type value          = data_type(0.0);
+                    constexpr data_type coeff = data_type(1.0)/max_size;
+                    algs::static_for<0,max_size>([&](const auto iii)
+                    {
+                        constexpr int iv = iii.value;
+                        constexpr int d0 = (iv >> 0)&1;
+                        constexpr int d1 = (iv >> 1)&1;
+                        constexpr int d2 = (iv >> 2)&1;
+                        int i0 = ix<<(exch_obj.i_coeff[0]+1);
+                        int j0 = iy<<(exch_obj.i_coeff[1]+1);
+                        int k0 = iz<<(exch_obj.i_coeff[2]+1);
+                        i0 = i0 >> 1;
+                        j0 = j0 >> 1;
+                        k0 = k0 >> 1;
+                        const int donor_di = i0 + d0*exch_obj.i_incr[0];
+                        const int donor_dj = j0 + d1*exch_obj.i_incr[1];
+                        const int donor_dk = k0 + d2*exch_obj.i_incr[2];
+                        grid::cell_idx_t cell_idx(
+                            bbx.min(0) + donor_di,
+                            bbx.min(1) + donor_dj,
+                            bbx.min(2) + donor_dk,
+                            bbx.min(3)
+                        );
+                        value += array_img.get_elem(cell_idx);
+                    });
+                    value *= coeff;
+                    detail::pack_element(value, dest_buffer, idx);
                 };
                 
                 dispatch::execute(intrp_range, intrp_load, array.device());
@@ -191,15 +230,13 @@ namespace spade::grid
                 std::size_t num_injec_cells = config.injec_offsets.recv_message_size[dest];
                 std::size_t num_intrp_cells = config.intrp_offsets.recv_message_size[dest];
                 
-                if (num_intrp_cells) throw except::sp_exception("Exchanges not quite working for interpolation!");
-                
                 // First we do all of the direct injections since they are trivial
                 const auto inject_offsets = config.injec_offsets.image(array.device());
                 const auto inject_exchgs  = utils::make_vec_image(config.recv_data[0_c].data(array.device()));
                 auto src_buffer = utils::make_vec_image(message.recv_buffers[dest].data(array.device()));
                 
                 //The first section of the buffer is only for the direct injections
-                src_buffer.csize -= num_injec_cells;
+                src_buffer.csize  -= alias_type::size()*num_injec_cells;
                 auto injec_range   = dispatch::ranges::make_range(0UL, num_injec_cells);
                 auto injec_load    = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
@@ -209,7 +246,7 @@ namespace spade::grid
                         inject_exchgs,
                         rank,
                         dest,
-                        [&](const auto& exch) { return exch.dest; }, 0_c);
+                        [&](const auto& exch) { return exch.dest; }, 1_c);
                     
                     
                     const auto& exch_obj = inject_exchgs[nijk[0]];
@@ -234,15 +271,39 @@ namespace spade::grid
                 
                 // Now we perform the interpolation exchanges.
                 // Note that this is ruthlessly hacky.
-                src_buffer.ptr   += num_injec_cells;
-                src_buffer.csize  = num_intrp_cells;
+                src_buffer.ptr   += alias_type::size()*num_injec_cells;
+                src_buffer.csize  = alias_type::size()*num_intrp_cells;
                 
                 const auto interp_offsets = config.intrp_offsets.image(array.device());
                 const auto interp_exchgs  = utils::make_vec_image(config.recv_data[1_c].data(array.device()));
                 auto intrp_range = dispatch::ranges::make_range(0UL, num_intrp_cells);
                 auto intrp_load  = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
-                    // Something
+                        const auto nijk = detail::get_nijk_from_offsets(
+                        idx,
+                        interp_offsets,
+                        interp_exchgs,
+                        rank,
+                        dest,
+                        [&](const auto& exch) { return exch.patches.dest; }, 1_c);
+                    
+                    
+                    const auto& exch_obj = interp_exchgs[nijk[0]];
+                    const int ix         = nijk[1];
+                    const int iy         = nijk[2];
+                    const int iz         = nijk[3];
+                    const auto& bbx      = exch_obj.patches.dest;
+                    cell_idx_t i_cell_dest
+                    (
+                        bbx.min(0) + ix, // i
+                        bbx.min(1) + iy, // j
+                        bbx.min(2) + iz, // k
+                        bbx.min(3)       // lb
+                    );
+                    
+                    alias_type value;
+                    detail::unpack_element(value, src_buffer, idx);
+                    array_img.set_elem(i_cell_dest, value);
                 };
                 
                 dispatch::execute(intrp_range, intrp_load, array.device());
