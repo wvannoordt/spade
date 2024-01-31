@@ -238,6 +238,16 @@ namespace spade::geom
             }
         }
         
+        bool is_interior(const pnt_t& x) const
+        {
+            int rcount = 0;
+            constexpr int dir = 0;
+            this->trace_aligned_ray(dir, 1, x, [&](const auto& xxx, const auto&)
+            {
+                if (xxx[dir] > x[dir]) ++rcount;
+            });
+            return (rcount % 2) != 0;
+        }
     };
     
     template <const int dim, const int n_edge, typename float_t>

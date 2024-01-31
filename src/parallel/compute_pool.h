@@ -200,6 +200,17 @@ namespace spade::parallel
             return this->thread_broadcast(base, sum_glob);
         }
         
+        template <device::is_device device_t>
+        bool has_shared_memory(const int rank, const int dest, const device_t&)
+        {
+            if constexpr (device::is_gpu<device_t>) return rank == dest;
+            else
+            {
+                auto dest_pid = env.rank_pids[dest];
+                return this->pid().node == dest_pid.node;
+            }
+        }
+        
         const proc_id_t& pid() const { return pool_pid; }
         int    rank()  const { return this->pid().rank; }
         int    size()  const { return this->pid().num_rank; }

@@ -46,10 +46,13 @@ namespace spade::grid
         
         for (int prc = 0; prc < group.size(); ++prc)
         {
-            output.send_buffers[prc].resize(num_vars*(g_config.injec_offsets.send_message_size[prc] + g_config.intrp_offsets.send_message_size[prc]));
-            output.recv_buffers[prc].resize(num_vars*(g_config.injec_offsets.recv_message_size[prc] + g_config.intrp_offsets.recv_message_size[prc]));
-            output.send_buffers[prc].transfer();
-            output.recv_buffers[prc].transfer();
+            if (prc != group.rank())
+            {
+                output.send_buffers[prc].resize(num_vars*(g_config.injec_offsets.send_message_size[prc] + g_config.intrp_offsets.send_message_size[prc]));
+                output.recv_buffers[prc].resize(num_vars*(g_config.injec_offsets.recv_message_size[prc] + g_config.intrp_offsets.recv_message_size[prc]));
+                output.send_buffers[prc].transfer();
+                output.recv_buffers[prc].transfer();
+            }
         }
         
         return output;

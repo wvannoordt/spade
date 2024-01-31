@@ -290,12 +290,12 @@ namespace spade::convective
             for (std::size_t k = 0; k < output.size(); ++k)
             {
                 //upwind
-                const float_t r0  = -0.5*f0_u[k]+1.5*f1_u[k]; //sten0
-                const float_t r1  =  0.5*f1_u[k]+0.5*f2_u[k]; //sten1
+                const float_t r0  = float_t(-0.5)*f0_u[k]+float_t(1.5)*f1_u[k]; //sten0
+                const float_t r1  = float_t( 0.5)*f1_u[k]+float_t(0.5)*f2_u[k]; //sten1
                 
                 //downwind
-                const float_t r2  =  0.5*f1_d[k]+0.5*f2_d[k]; //sten2
-                const float_t r3  =  1.5*f2_d[k]-0.5*f3_d[k]; //sten3
+                const float_t r2  =  float_t(0.5)*f1_d[k]+float_t(0.5)*f2_d[k]; //sten2
+                const float_t r3  =  float_t(1.5)*f2_d[k]-float_t(0.5)*f3_d[k]; //sten3
                 
                 const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
                 const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
