@@ -4,7 +4,7 @@
 
 namespace spade::sampling
 {
-    static struct multilinear_t
+    const static struct multilinear_t
     {
         constexpr static int stencil_size() { return 8; }
         
@@ -18,7 +18,7 @@ namespace spade::sampling
             >
         requires (
             (indices_t::size() == coeffs_t::size()) &&
-            indices_t::size() >= stencil_size()
+            (indices_t::size() >= stencil_size())
             )
         bool try_make_cloud(
             indices_t& indices,
@@ -53,7 +53,11 @@ namespace spade::sampling
                 indices[ct].k()  = lower_left.k() + di[2];
                 indices[ct].lb() = lower_left.lb();
                 
-                //Need to check these!
+                if (exclude_crit(indices[ct]))
+                {
+                    return false;
+                }
+                
                 coeff_t coeff = 1.0;
                 for (int d = 0; d < grid_t::dim(); ++d)
                 {
@@ -67,4 +71,125 @@ namespace spade::sampling
             return true;
         }
     } multilinear;
+    
+    const static struct nearest_t
+    {
+        constexpr static int stencil_size() { return 1; }
+    
+        template <
+            ctrs::basic_array                              indices_t,
+            ctrs::basic_array                              coeffs_t,
+            grid::multiblock_grid                          grid_t,
+            ctrs::basic_array                              reduced_t,
+            ctrs::basic_array                              delta_t,
+            std::invocable<typename indices_t::value_type> exclude_t
+            >
+        requires (
+            (indices_t::size() == coeffs_t::size()) &&
+            (indices_t::size() >= stencil_size())
+            )
+        bool try_make_cloud(
+            indices_t& indices,
+            coeffs_t& coeffs,
+            const grid_t& grid,
+            const typename indices_t::value_type& landed_cell,
+            const typename grid_t::coord_point_type& x_sample,
+            const reduced_t& reduced_idx,
+            const delta_t& deltai,
+            const exclude_t& exclude_crit) const
+        {
+            indices   = landed_cell;
+            coeffs    = 0.0;
+            coeffs[0] = 1.0;
+            
+            return !exclude_crit(landed_cell);
+        }
+    } nearest;
+    
+    template <typename... strategies_t>
+    struct sample_strategy_cascade_t;
+    
+    template <typename strategy_t, typename... strategies_t>
+    struct sample_strategy_cascade_t<strategy_t, strategies_t...>
+    {
+        using next_type = sample_strategy_cascade_t<strategies_t...>;
+        constexpr static int stencil_size()
+        {
+            return (strategy_t::stencil_size() > next_type::stencil_size()) ? strategy_t::stencil_size() : next_type::stencil_size();
+        }
+        
+        const strategy_t here;
+        const next_type  next;
+        
+        template <
+            ctrs::basic_array                              indices_t,
+            ctrs::basic_array                              coeffs_t,
+            grid::multiblock_grid                          grid_t,
+            ctrs::basic_array                              reduced_t,
+            ctrs::basic_array                              delta_t,
+            std::invocable<typename indices_t::value_type> exclude_t
+            >
+        requires (
+            (indices_t::size() == coeffs_t::size()) &&
+            (indices_t::size() >= stencil_size())
+            )
+        bool try_make_cloud(
+            indices_t& indices,
+            coeffs_t& coeffs,
+            const grid_t& grid,
+            const typename indices_t::value_type& landed_cell,
+            const typename grid_t::coord_point_type& x_sample,
+            const reduced_t& reduced_idx,
+            const delta_t& deltai,
+            const exclude_t& exclude_crit) const
+        {
+            if (!here.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit))
+            {
+                return next.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
+            }
+            return true;
+        }
+    };
+    
+    template <typename strategy_t>
+    struct sample_strategy_cascade_t<strategy_t>
+    {
+        constexpr static int stencil_size()
+        {
+            return strategy_t::stencil_size();
+        }
+        
+        const strategy_t here;
+        
+        template <
+            ctrs::basic_array                              indices_t,
+            ctrs::basic_array                              coeffs_t,
+            grid::multiblock_grid                          grid_t,
+            ctrs::basic_array                              reduced_t,
+            ctrs::basic_array                              delta_t,
+            std::invocable<typename indices_t::value_type> exclude_t
+            >
+        requires (
+            (indices_t::size() == coeffs_t::size()) &&
+            (indices_t::size() >= stencil_size())
+            )
+        bool try_make_cloud(
+            indices_t& indices,
+            coeffs_t& coeffs,
+            const grid_t& grid,
+            const typename indices_t::value_type& landed_cell,
+            const typename grid_t::coord_point_type& x_sample,
+            const reduced_t& reduced_idx,
+            const delta_t& deltai,
+            const exclude_t& exclude_crit) const
+        {
+            return here.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
+        }
+    };
+    
+    template <typename... strategies_t>
+    inline auto prioritize(const strategies_t&... strategies)
+    {
+        return sample_strategy_cascade_t<strategies_t...>{strategies...};
+    }
 }
