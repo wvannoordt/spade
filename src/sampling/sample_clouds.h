@@ -106,6 +106,41 @@ namespace spade::sampling
         }
     } nearest;
     
+    const static struct wlsqr_t
+    {
+        //Need to check this!
+        constexpr static int stencil_size() { return 20; }
+    
+        template <
+            ctrs::basic_array                              indices_t,
+            ctrs::basic_array                              coeffs_t,
+            grid::multiblock_grid                          grid_t,
+            ctrs::basic_array                              reduced_t,
+            ctrs::basic_array                              delta_t,
+            std::invocable<typename indices_t::value_type> exclude_t
+            >
+        requires (
+            (indices_t::size() == coeffs_t::size()) &&
+            (indices_t::size() >= stencil_size())
+            )
+        bool try_make_cloud(
+            indices_t& indices,
+            coeffs_t& coeffs,
+            const grid_t& grid,
+            const typename indices_t::value_type& landed_cell,
+            const typename grid_t::coord_point_type& x_sample,
+            const reduced_t& reduced_idx,
+            const delta_t& deltai,
+            const exclude_t& exclude_crit) const
+        {
+            indices   = landed_cell;
+            coeffs    = 0.0;
+            coeffs[0] = 1.0;
+            
+            return !exclude_crit(landed_cell);
+        }
+    } wlsqr;
+    
     template <typename... strategies_t>
     struct sample_strategy_cascade_t;
     

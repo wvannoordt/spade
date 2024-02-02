@@ -181,7 +181,12 @@ namespace spade::algs
         };
         
         dispatch::execute(range, loop, kpool, k_shmem);
+        
+        //Compute result on this rank
         const auto local_result = destructive_reduce(reduc.buffer, reduc.binary_op);
+        
+        throw except::sp_exception("need to further compute reduction in parallel pool");
+        
         return local_result;
     }
 }
