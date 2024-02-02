@@ -33,8 +33,10 @@ namespace spade::utils
     };
     
     template <typename vec_t>
+    requires (!(requires(vec_t v) { v.transfer(); v.itransfer(); }))
     const auto make_vec_image(const vec_t& v) { return const_vec_image_t{&v[0], v.size()}; }
     
     template <typename vec_t>
+    requires (!(requires(vec_t v) { v.transfer(); v.itransfer(); }))
     auto make_vec_image(vec_t& v) { return vec_image_t{&v[0], v.size()}; }
 }

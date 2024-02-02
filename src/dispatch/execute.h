@@ -10,29 +10,12 @@
 #include "dispatch/ranges/kernel_config.h"
 #include "dispatch/kernel_threads.h"
 #include "dispatch/kernel.h"
+#include "dispatch/range_loop.h"
 
 namespace spade::dispatch
 {
     namespace detail
-    {
-        template <typename index_t, typename bbx_type, const int idx, typename kernel_t>
-        requires ((idx < 0) && ctrs::basic_array<index_t>)
-        static void cpu_dispatch_impl(index_t& i, const bbx_type& bounds, kernel_t& kernel)
-        {
-            if constexpr (index_t::size() == 1) kernel(i[0]);
-            else                                kernel(i);
-        }
-        
-        template <typename index_t, typename bbx_type, const int idx, typename kernel_t>
-        requires ((idx >= 0) && ctrs::basic_array<index_t>)
-        static void cpu_dispatch_impl(index_t& i, const bbx_type& bounds, kernel_t& kernel)
-        {
-            for (i[idx] = bounds.min(idx); i[idx] < bounds.max(idx); ++i[idx])
-            {
-                cpu_dispatch_impl<index_t, bbx_type, idx-1, kernel_t>(i, bounds, kernel);
-            }
-        }
-        
+    {        
 #if(_sp_cuda)
         
         template <typename launch_params_t, typename kern_t>
@@ -247,7 +230,7 @@ namespace spade::dispatch
             loop_index_type i;
             if constexpr (!device::is_device<comp_space_t>)
             {
-                auto loop = [&](const loop_index_type& idx) mutable
+                auto loop = [&](const auto& idx) mutable
                 {
                     kernel_in(idx, space, shmem_kern);
                 };

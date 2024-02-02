@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/algs.h"
+#include "algs/algs.h"
 #include "core/unsafe_cast.h"
 #include "omni/omni.h"
 

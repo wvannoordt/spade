@@ -162,8 +162,6 @@ namespace spade::sampling
             {
                 failed_points.push_back(x_sample);
             }
-            
-            // const bool success = strategy(indices, coeffs, grid, landed_cell, x_sample);
         }
         
         if (failed_points.size() > 0)

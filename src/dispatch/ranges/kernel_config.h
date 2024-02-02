@@ -33,8 +33,6 @@ namespace spade::dispatch::ranges
         d3_t grid_dim {1,1,1};
         d3_t blck_dim {1,1,1};
         
-        const auto i_div_up = [](int a, int b){ return (a % b != 0) ? (a / b + 1) : (a / b); };
-        
         if constexpr (device::is_device<typename kernel_t::exec_space_type>)
         {
             //In this case, there is no "thread pool" object to deal with, so we just compute the
@@ -43,8 +41,8 @@ namespace spade::dispatch::ranges
             {
                 // 
                 //  | + | + | + | + | + | + | + | + | + | + | + | + |
-                
-                grid_dim.x = i_div_up(kernel.o_range.bounds.volume(), 32);
+                using intgr_t = decltype(kernel.o_range.bounds.volume());
+                grid_dim.x = utils::i_div_up(kernel.o_range.bounds.volume(), intgr_t(32));
                 blck_dim.x = 32;
             }
             else
@@ -56,10 +54,22 @@ namespace spade::dispatch::ranges
         {
             const auto& thrds = kernel.space;
             //In this case, we are separating the kernel into an "outer" and "inner" range
-            static_assert(kernel_t::exec_space_type::index_type::size() == 1, "only 1-dimensional inner range currently supported!");
+            static_assert(
+                (kernel_t::exec_space_type::index_type::size() == 1) ||
+                (kernel_t::exec_space_type::index_type::size() == 3),
+                "only 1-dimensional inner range currently supported!");
             
             //This will need to be modified if we ever support multidimensional thread pools
-            blck_dim.x = thrds.size();
+            if constexpr (kernel_t::exec_space_type::index_type::size() == 1)
+            {
+                blck_dim.x = thrds.size();
+            }
+            else if constexpr (kernel_t::exec_space_type::index_type::size() == 3)
+            {
+                blck_dim.x = thrds.irange.bounds.size(0);
+                blck_dim.y = thrds.irange.bounds.size(1);
+                blck_dim.z = thrds.irange.bounds.size(2);
+            }
             
             if constexpr (kernel_t::index_type::size() == 1)
             {

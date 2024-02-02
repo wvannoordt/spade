@@ -1,16 +1,16 @@
 #pragma once
 
 #include <vector>
+#include "dispatch/device_type.h"
 #include "dispatch/device_allocator.h"
 
 namespace spade::device
 {
     //todo: improve this implementation
-    template <typename data_t>
+    template <typename data_t, typename allocator_t = device_allocator_t<data_t>>
     struct device_vector
     {
         using value_type = data_t;
-        using allocator_t = device_allocator_t<data_t>;
         allocator_t allocator;
         data_t* raw = nullptr;
         std::size_t c_size = 0;
@@ -115,4 +115,33 @@ namespace spade::device
     
     template <typename data_t, typename device_t>
     using auto_vector = std::conditional<is_cpu<device_t>, std::vector<data_t>, device_vector<data_t>>::type;
+    
+    template <typename data_t, typename allocator_t>
+    inline cpu_t from_vector(const std::vector<data_t, allocator_t>&)
+    {
+        return cpu;
+    }
+    
+    template <typename data_t, typename allocator_t>
+    inline gpu_t from_vector(const device_vector<data_t, allocator_t>&)
+    {
+        return gpu;
+    }
+    
+    //Might be best to do bounds checking here
+    template <typename data_t, typename allocator_t>
+    inline data_t inspect_at(const std::vector<data_t, allocator_t>& data, const std::size_t idx)
+    {
+        return data[idx];
+    }
+    
+    template <typename data_t, typename allocator_t>
+    inline data_t inspect_at(const device_vector<data_t, allocator_t>& data, const std::size_t idx)
+    {
+        data_t out;
+#if (_sp_cuda)
+        cudaMemcpy(&out, data.raw + idx, sizeof(data_t), cudaMemcpyDeviceToHost);
+#endif
+        return out;
+    }
 }

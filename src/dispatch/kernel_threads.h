@@ -4,6 +4,7 @@
 
 #include "dispatch/device_type.h"
 #include "dispatch/ranges/kernel_config.h"
+#include "dispatch/range_loop.h"
 
 namespace spade::dispatch
 {
@@ -62,10 +63,31 @@ namespace spade::dispatch
             
             _sp_hybrid device_t device() const { return k_device; }
             
+            _sp_hybrid bool isroot() const
+            {
+                if constexpr (is_gpu_impl)
+                {
+                    k_index == 0;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            
             _sp_hybrid void set_idx(const ranges::d3_t& b_idx)
             {
-                static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
-                k_index = b_idx.x;
+                static_assert((index_type::size() == 1) || (index_type::size() == 3), "only 1/3-dimensional inner range currently supported!");
+                if constexpr (index_type::size() == 1)
+                {
+                    k_index = b_idx.x;
+                }
+                else if constexpr (index_type::size() == 3)
+                {
+                    k_index[0] = b_idx.x;
+                    k_index[1] = b_idx.y;
+                    k_index[2] = b_idx.z;
+                }
             }
             
             template <typename func_t>
@@ -78,11 +100,11 @@ namespace spade::dispatch
                 else
                 {
                     //TODO:: replace later with the cpu for-loop for multidimensional range
-                    static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
-                    for (typename index_type::value_type i{irange.bounds.min(0)}; i<irange.bounds.max(0); ++i)
-                    {
-                        func(this->reduce_idx(i));
-                    }
+                    dispatch::range_loop(irange, func);
+                    // for (typename index_type::value_type i{irange.bounds.min(0)}; i<irange.bounds.max(0); ++i)
+                    // {
+                    //     func(this->reduce_idx(i));
+                    // }
                 }
             }
             

@@ -10,9 +10,7 @@
 #include "core/typedef.h"
 #include "core/cli_args.h"
 #include "core/parallel.h"
-#include "core/algs.h"
 #include "core/timing.h"
-#include "core/reduce_ops.h"
 #include "core/linear_algebra.h"
 #include "core/mtimer.h"
 #include "core/arith_tuple.h"
@@ -31,6 +29,8 @@
 #include "grid/exchange_pattern.h"
 #include "grid/make_exchange.h"
 #include "grid/boundary_fill.h"
+
+#include "algs/algs.h"
 
 #include "sampling/sample_operator.h"
 #include "sampling/sample_clouds.h"

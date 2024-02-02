@@ -6,6 +6,9 @@
 #include "core/utils.h"
 #include "core/except.h"
 #include "core/base_64.h"
+#include "grid/grid.h"
+#include "dispatch/execute.h"
+#include "dispatch/support_of.h"
 
 namespace spade::io
 {

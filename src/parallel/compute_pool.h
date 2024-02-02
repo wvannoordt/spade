@@ -10,6 +10,8 @@
 #include "mpi.h"
 #include "core/except.h"
 #include "core/vec_image.h"
+#include "dispatch/device_type.h"
+#include "dispatch/device_vector.h"
 
 namespace spade::parallel
 {

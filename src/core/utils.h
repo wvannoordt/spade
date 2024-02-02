@@ -111,6 +111,12 @@ namespace spade::utils
         return val<0?-1:1;
     }
     
+    template <std::integral int_t>
+    _sp_hybrid [[nodiscard]] inline constexpr int i_div_up(int_t a, int_t b)
+    {
+        return (a % b != 0) ? (a / b + 1) : (a / b);
+    };
+    
     static inline void get_format_substrings(std::vector<std::string>& subStrings, const std::string& templateStr)
     {
         std::string delimiter = "{}";

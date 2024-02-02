@@ -2,6 +2,7 @@
 
 #include "core/converge_crit.h"
 #include "ode/expression.h"
+#include "dispatch/execute.h"
 
 namespace spade::ode
 {

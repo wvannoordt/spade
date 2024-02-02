@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <utility>
 
 #include "omni/access.h"
 
@@ -151,6 +152,11 @@ namespace spade::omni
             const auto& elem = input_data.template seek_element<index_t::centering_type()>(0_c);
             return invoke_call(kernel, elem);
         }
+        
+        // Lord have mercy on me
+        //                            Create a fake instance of this type
+        //                                                                 get the type of the call operator with appropriate data
+        using output_type = decltype(std::declval<omni_lambda_wrapper_t>().operator()(stencil_data_t<omni_type, array_t>()));
     };
 
     template <const grid::array_centering ctr, typename kernel_t, typename array_t> static auto to_omni(const kernel_t& func, const array_t& array)

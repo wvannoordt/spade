@@ -143,9 +143,9 @@ namespace spade::sampling
             const delta_t& deltai,
             const exclude_t& exclude_crit) const
         {
-            if (!here.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit))
+            if (!here.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit))
             {
-                return next.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
+                return next.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
             }
             return true;
         }
@@ -183,7 +183,7 @@ namespace spade::sampling
             const delta_t& deltai,
             const exclude_t& exclude_crit) const
         {
-            return here.template try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
+            return here.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclude_crit);
         }
     };
     
