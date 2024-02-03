@@ -168,15 +168,15 @@ namespace spade::parallel
             this->sync();
         }
         
-        template <typename data_t>
+        template <typename data_t, typename binary_t>
         requires (spade::utils::variant_contains<data_t, communicable_t>)
-        auto thread_sum(const data_t& local_val) const
+        auto thread_reduce(const data_t& local_val, const binary_t& bin_op) const
         {
             this->post(local_val);
-            data_t sum = 0;
-            for (const auto& v: env.buffer)
+            data_t sum = std::get<data_t>(env.buffer[0]);
+            for (int pp = 1; pp < this->num_threads(); ++pp)
             {
-                sum += std::get<data_t>(v);
+                sum = bin_op(sum, std::get<data_t>(env.buffer[pp]));
             }
             return sum;
         }
@@ -188,18 +188,29 @@ namespace spade::parallel
             return std::get<data_t>(env.buffer[thread_id]);
         }
         
+        template <typename data_t, typename binary_t>
+        auto reduce(const data_t& val, const binary_t& bin_op) const
+        {
+            data_t reduc_val = this->thread_reduce(val, bin_op);
+            auto   dtype     = get_mpi_type(reduc_val);
+            auto   base      = this->base_id();
+            data_t output;
+            if (this->isbase())
+            {
+                std::vector<data_t> alldata;
+                alldata.resize(this->num_nodes());
+                alldata[this->node()] = reduc_val;
+                mpi_check(MPI_Allgather(&reduc_val, 1, dtype, &alldata[0], 1, dtype, this->comm));
+                output = alldata[0];
+                for (int pp = 1; pp < alldata.size(); ++pp) output = bin_op(output, alldata[pp]);
+            } 
+            return this->thread_broadcast(base, output);
+        }
+        
         template <typename data_t>
         auto sum(const data_t& val) const
         {
-            data_t sum_thr  = this->thread_sum(val);
-            data_t sum_glob = 0;
-            auto dtype = get_mpi_type(sum_thr);
-            auto base = this->base_id();
-            if (this->isbase())
-            {
-                mpi_check(MPI_Allreduce(&sum_thr, &sum_glob, 1, dtype, MPI_SUM, this->comm));
-            } 
-            return this->thread_broadcast(base, sum_glob);
+            return this->reduce(val, [](const data_t& d0, const data_t& d1) { return d0 + d1; });
         }
         
         template <device::is_device device_t>
@@ -214,15 +225,18 @@ namespace spade::parallel
         }
         
         const proc_id_t& pid() const { return pool_pid; }
-        int    rank()  const { return this->pid().rank; }
-        int    size()  const { return this->pid().num_rank; }
-        int  thread()  const { return this->pid().thread; }
-        int  base_id() const { return 0; }
-        int  root_id() const { return 0; }
-        bool isroot()  const { return this->rank()   == this->root_id(); }
-        bool isbase()  const { return this->thread() == this->base_id(); }
-        bool is_root() const { return this->isroot(); } //This is why we have proper naming conventions
-        bool is_base() const { return this->isbase(); } //This is *also* why we have proper naming conventions
+        int    rank()      const { return this->pid().rank; }
+        int    size()      const { return this->pid().num_rank; }
+        int  thread()      const { return this->pid().thread; }
+        int  num_nodes()   const { return this->pid().num_node; }
+        int  num_threads() const { return this->pid().num_thread; }
+        int  node()        const { return this->pid().node; }
+        int  base_id()     const { return 0; }
+        int  root_id()     const { return 0; }
+        bool isroot()      const { return this->rank()   == this->root_id(); }
+        bool isbase()      const { return this->thread() == this->base_id(); }
+        bool is_root()     const { return this->isroot(); } //This is why we have proper naming conventions
+        bool is_base()     const { return this->isbase(); } //This is *also* why we have proper naming conventions
         
         const pool_t& pause() const
         {
