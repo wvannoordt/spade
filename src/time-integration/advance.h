@@ -206,6 +206,7 @@ namespace spade::time_integration
             trans.transform_inverse(q);   //  q{i+1}
             del *= coeff_t(1.0)/beta;     //            w0 - wi + gam*R0 + gam*Ri
             del -= res;                   //            w0 + gam*R0
+            
             boundary(q, axis.time());
             
             num_its++;

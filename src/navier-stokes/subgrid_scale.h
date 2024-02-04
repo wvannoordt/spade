@@ -50,7 +50,7 @@ namespace spade::subgrid_scale
 
             const auto& val       = omni::access<omni::info::value>(info);
             const auto& grad      = omni::access<omni::info::gradient>(info);
-            const auto& rgas      = gas.get_gamma(info);
+            const auto& rgas      = gas.get_R(info);
             const auto  rho       = val.p()/(rgas*val.T());
             const auto  gij       = [&](const int i, const int j){ return grad[j].u(i); };
             const auto  gij2_impl = [&](const int i, const int j){ return gij(i,0)*gij(0,j) + gij(i,1)*gij(1,j) + gij(i,2)*gij(2,j); };
@@ -82,12 +82,12 @@ namespace spade::subgrid_scale
             auto sum_sdij = tsum(sdij);
             auto sum_sij  = tsum(sij);
 
-            const float_t eps = float_t(1e-8);
-            const auto sqrt0 = sqrt(sum_sdij);
-            const auto sqrt1 = sqrt(sqrt0);
-            const auto sqrt2 = sqrt(sum_sij);
-            auto nu_turb0 = cw*cw*delta*delta*sum_sdij*sqrt0/(eps + sum_sij*sum_sij*sqrt2 + sum_sdij*sqrt1);
-            return rho*nu_turb0;
+            const float_t eps   = float_t(1e-8);
+            const auto sqrt0    = sqrt(sum_sdij);
+            const auto sqrt1    = sqrt(sqrt0);
+            const auto sqrt2    = sqrt(sum_sij);
+            const auto mu_turb0 = rho*cw*cw*delta*delta*sum_sdij*sqrt0/(eps + sum_sij*sum_sij*sqrt2 + sum_sdij*sqrt1);
+            return mu_turb0;
         }
     };
 }
