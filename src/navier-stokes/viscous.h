@@ -10,14 +10,30 @@
 
 namespace spade::viscous
 {
-    template <typename vlaw_t, typename gas_model_t> struct visc_lr
+#warning "viscous flux still using cell-centered SGS"
+    template <typename vlaw_t, typename gas_model_t> 
+    struct visc_lr
     {
+        // using float_t       = vlaw_t::value_type;
+        // using output_type   = fluid_state::flux_t<float_t>;
+        // using own_info_type = omni::info_list_t<omni::info::value, omni::info::gradient, omni::info::metric>;
+        // using sub_info_type = omni::info_union<typename vlaw_t::info_type, typename gas_model_t::info_type>;
+        // using info_type     = omni::info_union<own_info_type, sub_info_type>;
+        // using omni_type     = omni::prefab::face_mono_t<info_type>;
+        
         using float_t       = vlaw_t::value_type;
         using output_type   = fluid_state::flux_t<float_t>;
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::gradient, omni::info::metric>;
-        using sub_info_type = omni::info_union<typename vlaw_t::info_type, typename gas_model_t::info_type>;
-        using info_type     = omni::info_union<own_info_type, sub_info_type>;
-        using omni_type     = omni::prefab::face_mono_t<info_type>;
+        using gas_info_type = typename gas_model_t::info_type;
+        using vsc_info_type = typename vlaw_t::info_type;
+        using info_type     = omni::info_union<own_info_type, gas_info_type>;
+        
+        using visc_stencil  = omni::prefab::lr_t<vsc_info_type>;
+        using face_stencil  = omni::prefab::face_mono_t<info_type>;
+        using omni_type     = omni::stencil_union<visc_stencil, face_stencil>;
+        
+        const vlaw_t vlaw;
+        const gas_model_t gas;
         
         visc_lr(const vlaw_t& vlaw_in, const gas_model_t& gas_in) : vlaw{vlaw_in}, gas{gas_in} {}
         
@@ -29,8 +45,15 @@ namespace spade::viscous
             const auto& face_grad   = omni::access<omni::info::gradient>(input.face(0_c));
             const auto& n           = omni::access<omni::info::metric>  (input.face(0_c));
             
-            const auto& visc        = vlaw.get_visc(input.face(0_c));
-            const auto& visc2       = vlaw.get_beta(input.face(0_c));
+            const auto& l_visc        = vlaw.get_visc(input.cell(0_c));
+            const auto& l_visc2       = vlaw.get_beta(input.cell(0_c));
+            
+            const auto& r_visc        = vlaw.get_visc(input.cell(1_c));
+            const auto& r_visc2       = vlaw.get_beta(input.cell(1_c));
+            
+            const auto visc  = float_t(0.5)*(l_visc  + r_visc);
+            const auto visc2 = float_t(0.5)*(l_visc2 + r_visc2);
+            
             const auto& div         = face_grad[0].u() + face_grad[1].v() + face_grad[2].w();
             linear_algebra::dense_mat<float_t, 3> tau;
             ctrs::array<float_t, 3> ht;
@@ -62,8 +85,5 @@ namespace spade::viscous
             output.z_momentum() = -(n[0]*tau(2,0)+n[1]*tau(2,1)+n[2]*tau(2,2));
             return output;
         }
-        
-        const vlaw_t vlaw;
-        const gas_model_t gas;
     };
 }

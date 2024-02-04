@@ -89,9 +89,9 @@ namespace spade::omni
                 using flt_t = typename grid_t::coord_type;
                 const ctrs::array<typename grid_t::coord_type, 3> invdx
                 (
-                    flt_t(1.0)/ar_grid.get_dx(0), //todo: update with block index
-                    flt_t(1.0)/ar_grid.get_dx(1),
-                    flt_t(1.0)/ar_grid.get_dx(2)
+                    flt_t(1.0)/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
+                    flt_t(1.0)/ar_grid.get_dx(1, idx.lb()),
+                    flt_t(1.0)/ar_grid.get_dx(2, idx.lb())
                 );
 
                 auto ic = idx;
