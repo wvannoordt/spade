@@ -139,14 +139,14 @@ namespace spade::pde_algs
         flux_div(prims, rhs, domain_boundary_flux, flux_funcs...);
     }
     */
-/*
+
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
         typename flux_func_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
-    static void flux_div(
+    static void flux_div_OLD(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func)
@@ -198,7 +198,7 @@ namespace spade::pde_algs
             dispatch::execute(var_range, load);
         }
     }
-  */  
+  
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,

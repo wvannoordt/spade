@@ -102,6 +102,25 @@ namespace spade::linear_algebra
                 return (*this)(0,0)*(*this)(1,1) - (*this)(1,0)*(*this)(0,1);
             }
         }
+    
+        //Matrix multiplication    
+        _sp_hybrid dense_mat<data_t, mat_size> operator * (const dense_mat<data_t, mat_size>& mat) const
+        {
+            dense_mat<data_t, mat_size> output;
+            for (std::size_t k = 0; k < mat_size; ++k)
+            {
+                for (std::size_t i = 0; i < mat_size; ++i)
+                {
+                    value_type sum = 0.0;
+                    for (std::size_t j = 0; j < mat_size; ++j)
+                    {
+                        sum += (*this)(i,j)*mat(j,k);
+                    }
+                    output(i,k) = sum;
+                }
+            }
+            return output;
+        }
 
         template <typename kern_t>
         _sp_hybrid dense_mat& fill(const kern_t& kern)

@@ -174,7 +174,7 @@ namespace spade::time_integration
         auto& res = data.residual(1);
 
         using coeff_t          = typename data_t::scheme_type::coeff_type;
-        const coeff_t beta     = (coeff_t(1.0) - data.scheme_data.coeff)/data.scheme_data.coeff;
+        const coeff_t beta     = (coeff_t(1.0) - data.scheme_data.coeff);
         const coeff_t alpha    = data.scheme_data.coeff;
         
         const auto& dt = axis.timestep();
@@ -185,26 +185,31 @@ namespace spade::time_integration
         trans.transform_forward(q);
         del += q;
         trans.transform_inverse(q);
-        del *= beta;
         
         bool converged = false;
         int num_its = 0;
         axis.time() += dt;
+        
+        coeff_t err = coeff_t(1e10);
+        
         while (!converged)
-        {
-            rhs(res, q, axis.time());
-            res *= (gamma*beta);
-            del += res;
-            trans.transform_forward(q);
-            q += del;
-            q *= alpha;
-            trans.transform_inverse(q);
-            
-            del -= res;
+        {                                 //  q         del                               res
+            rhs(res, q, axis.time());     //  qi        w0 + gam*R0                       Ri
+            res *= gamma;                 //                                              gam*Ri
+            del += res;                   //            w0 + gam*R0 + gam*Ri
+            trans.transform_forward(q);   //  wi
+            del -= q;                     //            w0 - wi + gam*R0 + gam*Ri
+            del *= beta;                  //            bet*(w0 - wi + gam*R0 + gam*Ri)
+            res -= q;                     //                                              gam*Ri - wi
+            q   += del;                   //  w{i+1}
+            err  = scheme.err_func(del);  // (compute |w{i+1} - wi|)
+            trans.transform_inverse(q);   //  q{i+1}
+            del *= coeff_t(1.0)/beta;     //            w0 - wi + gam*R0 + gam*Ri
+            del -= res;                   //            w0 + gam*R0
             boundary(q, axis.time());
             
             num_its++;
-            converged = (num_its > 16);
+            converged = ((err < scheme.crit.tolerance()) || (num_its > scheme.crit.max_its()));
         }
     }
 }

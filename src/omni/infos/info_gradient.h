@@ -27,11 +27,12 @@ namespace spade::omni
                 using grid_t = utils::remove_all<decltype(ar_grid)>::type;
                 const int idir0 = idx.dir();
                 const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
-                const ctrs::array<typename grid_t::coord_type, 3> invdx
+                using flt_t = typename grid_t::coord_type;
+                const ctrs::array<flt_t, 3> invdx
                 (
-                    1.0/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
-                    1.0/ar_grid.get_dx(1, idx.lb()),
-                    1.0/ar_grid.get_dx(2, idx.lb())
+                    flt_t(1.0)/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
+                    flt_t(1.0)/ar_grid.get_dx(1, idx.lb()),
+                    flt_t(1.0)/ar_grid.get_dx(2, idx.lb())
                 );
                 grid::cell_idx_t ic = grid::face_to_cell(idx, 0);
 
@@ -50,23 +51,24 @@ namespace spade::omni
                     }
                 };
                 
-                apply_coeff_at(idir[0],  -1.0, ic);
+                using vl_t = typename array_t::value_type;
+                apply_coeff_at(idir[0],  vl_t(-1.0), ic);
                 for (int ii = 1; ii < grid_t::dim(); ++ii)
                 {
                     ic[idir[ii]] += 1;
-                    apply_coeff_at(idir[ii],  0.25, ic);
+                    apply_coeff_at(idir[ii],  vl_t(0.25), ic);
                     ic[idir[ii]] -= 2;
-                    apply_coeff_at(idir[ii], -0.25, ic);
+                    apply_coeff_at(idir[ii], vl_t(-0.25), ic);
                     ic[idir[ii]] += 1;
                 }
                 ic[idir[0]] += 1;
-                apply_coeff_at(idir[0],   1.0, ic);
+                apply_coeff_at(idir[0],   vl_t(1.0), ic);
                 for (int ii = 1; ii < grid_t::dim(); ++ii)
                 {
                     ic[idir[ii]] += 1;
-                    apply_coeff_at(idir[ii],  0.25, ic);
+                    apply_coeff_at(idir[ii],  vl_t(0.25), ic);
                     ic[idir[ii]] -= 2;
-                    apply_coeff_at(idir[ii], -0.25, ic);
+                    apply_coeff_at(idir[ii], vl_t(-0.25), ic);
                     ic[idir[ii]] += 1;
                 }
                 using real_type = typename array_t::value_type;
@@ -84,11 +86,12 @@ namespace spade::omni
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
                 using grid_t = utils::remove_all<decltype(ar_grid)>::type;
+                using flt_t = typename grid_t::coord_type;
                 const ctrs::array<typename grid_t::coord_type, 3> invdx
                 (
-                    1.0/ar_grid.get_dx(0), //todo: update with block index
-                    1.0/ar_grid.get_dx(1),
-                    1.0/ar_grid.get_dx(2)
+                    flt_t(1.0)/ar_grid.get_dx(0), //todo: update with block index
+                    flt_t(1.0)/ar_grid.get_dx(1),
+                    flt_t(1.0)/ar_grid.get_dx(2)
                 );
 
                 auto ic = idx;

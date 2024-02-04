@@ -129,16 +129,13 @@ namespace spade::ibm
                             }
                             nv /= ctrs::array_norm(nv);
                             
-                            if (domain_bbx.contains(x_ghost))
-                            {
-                                output.closest_normals.push_back(nv);
-                                output.boundary_points.push_back(point);
-                                output.directions.push_back(idir);
-                                output.signs.push_back(gp_sign);
-                                output.indices.push_back(icell);
-                                output.boundary_normals.push_back(normal);
-                                output.closest_points.push_back(nearest_boundary_point);
-                            }
+                            output.closest_normals.push_back(nv);
+                            output.boundary_points.push_back(point);
+                            output.directions.push_back(idir);
+                            output.signs.push_back(gp_sign);
+                            output.indices.push_back(icell);
+                            output.boundary_normals.push_back(normal);
+                            output.closest_points.push_back(nearest_boundary_point);
                             
                         }
                     };
