@@ -25,7 +25,7 @@ namespace spade::device
         using value_type = data_t;
         
         std::vector<data_t, host_allocator_t>   host_data;
-        device_vector<data_t, dev_allocator_t> devc_data; // we will make this an array later when we do multiple gpus
+        device_vector<data_t, dev_allocator_t>  devc_data;
         
         template <device::is_device device_t>
         auto& data(const device_t&)

@@ -37,9 +37,13 @@ namespace spade::dispatch
 
 #endif
     }
-    
+#if (USE_SOURCE_LOCATION)
     template <typename range_t, typename kernel_t, typename device_t>
     static void execute(const range_t& range, kernel_t& kernel, const device_t& device, const std::source_location location = std::source_location::current())
+#else
+    template <typename range_t, typename kernel_t, typename device_t>
+    static void execute(const range_t& range, kernel_t& kernel, const device_t& device)
+#endif
     {
         using loop_index_type = typename range_t::index_type;
         const auto bound_box  = [&]()
@@ -83,19 +87,32 @@ namespace spade::dispatch
             std::string er_str = std::string(cudaGetErrorString(er_code));
             if (er_code != cudaSuccess)
             {
+#if (USE_SOURCE_LOCATION)
                 std::string source_loc_str = "(" + std::string(location.file_name()) + ", line " + std::to_string(location.line()) + ")";
+#else
+                std::string source_loc_str = "(unkown source location)";
+#endif
                 throw except::sp_exception("Error after kernel call: " + er_str + " " + source_loc_str);
             }
 #endif
         }
     }
     
+#if (USE_SOURCE_LOCATION)
     template <typename range_t, typename kernel_t>
     requires (device::is_cpu<typename range_t::device_t> || device::is_gpu<typename range_t::device_t>)
     static void execute(const range_t& range, kernel_t& kernel, const std::source_location location = std::source_location::current())
     {
         execute(range, kernel, range.device(), location);
     }
+#else
+    template <typename range_t, typename kernel_t>
+    requires (device::is_cpu<typename range_t::device_t> || device::is_gpu<typename range_t::device_t>)
+    static void execute(const range_t& range, kernel_t& kernel)
+    {
+        execute(range, kernel, range.device());
+    }
+#endif
     
     
     
@@ -171,8 +188,11 @@ namespace spade::dispatch
         const ranges::basic_range_t<idx_t, ar_size, idx_alias_t>& range,
         kernel_t& kernel_in,
         const comp_space_t& space,
-        const shmem_t& shmem = shmem::empty_t(),
-        const std::source_location location = std::source_location::current())
+#if (USE_SOURCE_LOCATION)
+        const shmem_t& shmem = shmem::empty_t(), const std::source_location location = std::source_location::current())
+#else
+        const shmem_t& shmem = shmem::empty_t())
+#endif
     {
         if (range.is_empty()) return;
         
@@ -208,7 +228,11 @@ namespace spade::dispatch
             std::string er_str = std::string(cudaGetErrorString(er_code));
             if (er_code != cudaSuccess)
             {
+#if (USE_SOURCE_LOCATION)
                 std::string source_loc_str = "(" + std::string(location.file_name()) + ", line " + std::to_string(location.line()) + ")";
+#else
+                std::string source_loc_str = "(unkown source location)";
+#endif
                 throw except::sp_exception("Error after kernel call: " + er_str + " " + source_loc_str);
             }
 #endif
