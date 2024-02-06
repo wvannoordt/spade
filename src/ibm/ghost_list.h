@@ -5,7 +5,7 @@
 
 namespace spade::ibm
 {
-    template <typename float_t, template <typename> typename container_t = device::shared_vector>
+    template <typename float_t, template <typename> typename container_t = device::basic_shared_vector>
     struct ghost_list_t
     {
         using idx_t = grid::cell_idx_t;

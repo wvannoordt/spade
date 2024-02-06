@@ -196,7 +196,7 @@ namespace spade::io
             
             using device_t = typename arr_t::device_type;
             constexpr bool is_gpu_device = device::is_gpu<device_t>;
-            using vec_t = std::conditional<is_gpu_device, device::shared_vector<data_float_t>, std::vector<data_float_t>>::type;
+            using vec_t = std::conditional<is_gpu_device, device::shared_vector<data_float_t, device::pinned_allocator_t<data_float_t>, device::device_allocator_t<data_float_t>>, std::vector<data_float_t>>::type;
             vec_t data_raw;
             
             coord_raw.reserve(3*(grid.get_num_cells(0)+1)*(grid.get_num_cells(1)+1)*(grid.get_num_cells(2)+1));
@@ -222,7 +222,7 @@ namespace spade::io
                     copy_block_variable_data(arr, data_raw, ct, lb);
                     
                     bf << "<DataArray type=\"" << get_fundamental_str(data_float_t()) << "\" Name=\"" << name << "\" format=\"" << format_str << "\">\n";
-                    const std::vector<data_float_t>& rdat = [&]()
+                    const auto& rdat = [&]()
                     {
                         if constexpr (is_gpu_device)
                         {

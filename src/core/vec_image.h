@@ -17,6 +17,13 @@ namespace spade::utils
         _sp_hybrid data_t& back() { return ptr[csize-1]; }
         _sp_hybrid data_t& operator [] (const std::size_t& idx) { return ptr[idx]; }
         _sp_hybrid const data_t& operator [] (const std::size_t& idx) const { return ptr[idx]; }
+        
+        vec_image_t& swap (vec_image_t& rhs)
+        {
+            std::swap(rhs.ptr,   ptr);
+            std::swap(rhs.csize, csize);
+            return *this;
+        }
     };
     
     template <typename data_t>
@@ -30,6 +37,13 @@ namespace spade::utils
         _sp_hybrid std::size_t size() const { return csize; }
         _sp_hybrid const data_t& back() const { return ptr[csize-1]; }
         _sp_hybrid const data_t& operator [] (const std::size_t& idx) const { return ptr[idx]; }
+        
+        const_vec_image_t& swap (const_vec_image_t& rhs)
+        {
+            std::swap(rhs.ptr,   ptr);
+            std::swap(rhs.csize, csize);
+            return *this;
+        }
     };
     
     template <typename vec_t>

@@ -17,13 +17,15 @@ namespace spade::device
         t[0UL];
     };
     
-    template <typename data_t>
-    struct shared_vector
+    template <typename... any_t> struct shared_vector;
+    
+    template <typename data_t, typename host_allocator_t, typename dev_allocator_t>
+    struct shared_vector<data_t, host_allocator_t, dev_allocator_t>
     {
         using value_type = data_t;
         
-        std::vector<data_t>   host_data;
-        device_vector<data_t> devc_data; // we will make this an array later when we do multiple gpus
+        std::vector<data_t, host_allocator_t>   host_data;
+        device_vector<data_t, dev_allocator_t> devc_data; // we will make this an array later when we do multiple gpus
         
         template <device::is_device device_t>
         auto& data(const device_t&)
@@ -113,4 +115,9 @@ namespace spade::device
         data_t&       operator[] (const std::size_t& idx)       { return host_data[idx]; }
         const data_t& operator[] (const std::size_t& idx) const { return host_data[idx]; }
     };
+    
+    template <typename data_t>
+    struct shared_vector<data_t> : public shared_vector<data_t, std::allocator<data_t>, device_allocator_t<data_t>> {};
+    
+    template <typename data_t> using basic_shared_vector = shared_vector<data_t>;
 }

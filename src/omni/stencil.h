@@ -71,7 +71,7 @@ namespace spade::omni
         template <const int multi, const int val, const int new_val>
         struct extent_reduce_impl
         {
-            constexpr static int value = (multi*new_val > multi*val)?(multi*new_val):(multi*val);
+            constexpr static int value = (multi*new_val > multi*val) ? new_val : val;
         };
         
         template <const int multi, const int idx, const int current, typename... elems_t>
@@ -82,7 +82,7 @@ namespace spade::omni
         {
             constexpr static int nval        = offset_t::template elem<idx>;
             constexpr static int new_current = extent_reduce_impl<multi, current, nval>::value;
-            constexpr static int value       = extent_impl<multi, idx, current, elems_t...>::value;
+            constexpr static int value       = extent_impl<multi, idx, new_current, elems_t...>::value;
         };
         
         template <const int multi, const int idx, const int current, typename offset_t, typename list_t>
