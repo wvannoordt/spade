@@ -63,8 +63,8 @@ namespace spade::detail
         }
     }
     
-    template<typename data_t>
-    static inline void stream_base_64(std::ostream& strm, const std::vector<data_t>& data)
+    template<typename data_t, typename alloc_t>
+    static inline void stream_base_64(std::ostream& strm, const std::vector<data_t, alloc_t>& data)
     {
         unsigned int bytes = data.size() * sizeof(data_t);
         stream_base_64(strm, &bytes, 1);

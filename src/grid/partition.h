@@ -36,6 +36,12 @@ namespace spade::partition
                 global_block_to_rank.resize(num_global_blocks);
                 std::size_t current_rank = 0;
                 std::size_t loc_count = 0;
+                
+                std::size_t blocks_per_proc = num_global_blocks/group_in.size();
+                std::size_t block_counter = 0;
+                
+                std::size_t num_extra_blocks = num_global_blocks - blocks_per_proc*group_in.size();
+                
                 for (auto lb: range(0, num_global_blocks))
                 {
                     global_block_to_rank[lb] = current_rank;
@@ -50,11 +56,29 @@ namespace spade::partition
                     std::size_t rank       = current_rank;
                     std::size_t locl_block = partial[current_rank];
                     global_block_to_local_block_full[glob_block] = locl_block;
-                    
                     ++partial[current_rank];
-                    ++current_rank;
-                    current_rank %= group_in.size();
+                    
+                    ++block_counter;
+                    
+                    bool addblock = (num_extra_blocks > 0) && (current_rank < num_extra_blocks);
+                    std::size_t num_extra_blocks_here = addblock;
+                    if (block_counter == blocks_per_proc + num_extra_blocks_here)
+                    {
+                        block_counter = 0;
+                        ++current_rank;
+                        current_rank %= group_in.size();
+                    }
                 }
+                
+                // if (group_in.isroot())
+                // {
+                //     for (auto i: partial)
+                //     {
+                //         print(i, num_extra_blocks, num_global_blocks, group_in.size());
+                //     }
+                // }
+                // group_in.pause();
+                
                 if (num_global_blocks != group_in.sum(num_local_blocks))
                     throw except::sp_exception("grid partition failed consistency check");
             }

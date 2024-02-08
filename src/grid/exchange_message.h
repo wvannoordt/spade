@@ -7,8 +7,8 @@ namespace spade::grid
     template <typename data_t, typename device_t>
     struct exchange_message_t
     {
-        std::vector<device::shared_vector<data_t>> send_buffers;
-        std::vector<device::shared_vector<data_t>> recv_buffers;
+        std::vector<device::shared_vector<data_t, device::pinned_allocator_t<data_t>, device::device_allocator_t<data_t>>> send_buffers;
+        std::vector<device::shared_vector<data_t, device::pinned_allocator_t<data_t>, device::device_allocator_t<data_t>>> recv_buffers;
         
         template <typename group_t>
         void send_all(group_t& group)

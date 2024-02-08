@@ -240,7 +240,12 @@ namespace spade::parallel
         
         const pool_t& pause() const
         {
-            if (this->is_root()) std::cin.get();
+            if (this->is_root())
+            {
+                //Note: we can implement some kind of logging here at some point!
+                std::cout << "Paused. Press \"Enter\" to continue..." << std::endl;
+                std::cin.get();
+            }
             this->sync();
             return *this;
         }

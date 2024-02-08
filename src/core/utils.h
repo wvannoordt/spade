@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <type_traits>
 
+#include "core/sbool.h"
+
 namespace spade::utils
 {
     template<class T, class U=

@@ -5,7 +5,7 @@
 
 namespace spade::grid
 {
-    template <const int variety_size, template <typename> typename container_t = device::shared_vector>
+    template <const int variety_size, template <typename> typename container_t = device::basic_shared_vector>
     struct message_offset_t
     {
         using image_type = message_offset_t<variety_size, utils::const_vec_image_t>;

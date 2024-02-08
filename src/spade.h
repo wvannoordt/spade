@@ -35,18 +35,19 @@
 #include "sampling/sample_operator.h"
 #include "sampling/sample_clouds.h"
 
-#include "ibm/ghost_list.h"
-#include "ibm/compute_ghosts.h"
+#include "omni/omni.h"
+#include "omni/prefab.h"
 
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
-#include "omni/omni.h"
-#include "omni/prefab.h"
-
-#include "pde-algs/pde_algs.h"
+#include "ibm/ghost_list.h"
+#include "ibm/compute_ghosts.h"
+#include "ibm/boundary_info.h"
 
 #include "io/io.h"
+
+#include "pde-algs/pde_algs.h"
 
 #include "time-integration/explicit.h"
 #include "time-integration/integrator.h"
