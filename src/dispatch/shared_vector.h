@@ -82,6 +82,9 @@ namespace spade::device
             this->resize(0);
         }
         
+        data_t& back()             { return host_data.back(); }
+        const data_t& back() const { return host_data.back(); }
+        
         void transfer()
         {
             if (host_data.size() == 0) return;

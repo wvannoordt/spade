@@ -46,7 +46,6 @@ namespace spade::geom
         pnt_t centroid(const uint_t& idx) const
         {
             pnt_t output;
-            
             const auto& face = faces[idx];
             const auto& p0   = points[face[0]];
             const auto& p1   = points[face[1]];

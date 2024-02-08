@@ -10,6 +10,8 @@
 #include "dispatch/execute.h"
 #include "dispatch/support_of.h"
 
+#include "ibm/boundary_info.h"
+
 namespace spade::io
 {
     // Resources:
@@ -404,6 +406,115 @@ namespace spade::io
         }
         
         if (group.isroot()) output_vtk(fname, boxes, "rank", ranks, "block_id_local", block_local, "block_id_global", block_global);
+    }
+    
+    template <
+        const int grid_dim,
+        const int nlayers,
+        typename float_t,
+        template <typename> typename container_t,
+        grid::multiblock_grid grid_t>
+    inline void output_vtk(
+        const std::string& direc,
+        const std::string& title,
+        const ibm::boundary_info_t<grid_dim, nlayers, float_t, container_t>& info,
+        const grid_t& grid)
+    {
+        
+        const auto make_filename = [&](const std::string& thing)
+        {
+            std::filesystem::path out_path = direc;
+            out_path /= title;
+            std::string output = out_path;
+            output += ".";
+            output += thing;
+            output += ".vtk";
+            return output;
+        };
+        
+        std::ofstream mf(make_filename("ghosts"));
+        ctrs::array<std::size_t, grid_t::dim()> n_elems = 0;
+        std::size_t total_points = 0;
+        for (int d = 0; d < grid_t::dim(); ++d)
+        {
+            n_elems[d]    = info.aligned[d].indices.size();
+            total_points += n_elems[d]*nlayers;
+        }
+        
+        mf << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << total_points << " double\n";
+        for (int d = 0; d < grid_t::dim(); ++d)
+        {
+            for (std::size_t ii = 0; ii < n_elems[d]; ++ii)
+            {
+                for (int lyr = 0; lyr < nlayers; ++lyr)
+                {
+                    const auto icell = info.aligned[d].indices[ii][lyr];
+                    const auto xx = grid.get_coords(icell);
+                    mf << xx[0] << " " << xx[1] << " " << xx[2] << "\n";
+                }
+            }
+        }
+        
+        mf << "POINT_DATA " << total_points << "\n";
+        
+        const auto scalar_out = [&](auto& flh, const std::string& scname, const auto& fnc)
+        {
+            flh << "SCALARS " << scname << " double\nLOOKUP_TABLE default\n";
+            for (int d = 0; d < grid_t::dim(); ++d)
+            {
+                for (std::size_t ii = 0; ii < n_elems[d]; ++ii)
+                {
+                    for (int lyr = 0; lyr < nlayers; ++lyr)
+                    {
+                        flh << fnc(d, ii, lyr) << "\n";
+                    }
+                }
+            }
+        };
+        
+        const auto vector_out = [&](auto& flh, const std::string& scname, const auto& fnc)
+        {
+            flh << "VECTORS " << scname << " double\n";
+            for (int d = 0; d < grid_t::dim(); ++d)
+            {
+                for (std::size_t ii = 0; ii < n_elems[d]; ++ii)
+                {
+                    for (int lyr = 0; lyr < nlayers; ++lyr)
+                    {
+                        auto vl = fnc(d, ii, lyr);
+                        flh << vl[0] << " " << vl[1] << " " << vl[2] << "\n";
+                    }
+                }
+            }
+        };
+        
+        scalar_out(mf, "layer",       [&](const int dir, const int id, const int layer){ return layer; });
+        scalar_out(mf, "fillable",    [&](const int dir, const int id, const int layer){ return info.aligned[dir].can_fill[id][layer]; });
+        scalar_out(mf, "direction",   [&](const int dir, const int id, const int layer){ return dir; });
+        scalar_out(mf, "id",          [&](const int dir, const int id, const int layer){ return id; });
+        vector_out(mf, "boundary_pt", [&](const int dir, const int id, const int layer){ return info.aligned[dir].boundary_points[id]       - grid.get_coords(info.aligned[dir].indices[id][layer]); });
+        vector_out(mf, "closest_pt",  [&](const int dir, const int id, const int layer)
+        {
+            return info.aligned[dir].closest_points[id][layer] - grid.get_coords(info.aligned[dir].indices[id][layer]);
+        });
+        
+        
+        std::ofstream mf2(make_filename("bndy_pts"));
+        mf2 << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << total_points << " double\n";
+        for (int d = 0; d < grid_t::dim(); ++d)
+        {
+            for (std::size_t ii = 0; ii < n_elems[d]; ++ii)
+            {
+                for (int lyr = 0; lyr < nlayers; ++lyr)
+                {
+                    const auto xx = info.aligned[d].closest_points[ii][lyr];
+                    mf2 << xx[0] << " " << xx[1] << " " << xx[2] << "\n";
+                }
+            }
+        }
+        mf2 << "POINT_DATA " << total_points << "\n";
+        scalar_out(mf2, "layer",       [&](const int dir, const int id, const int layer){ return layer; });
+        scalar_out(mf2, "direction",   [&](const int dir, const int id, const int layer){ return dir; });
     }
     
 }
