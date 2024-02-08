@@ -26,7 +26,7 @@ namespace spade::ibm
         layer_arr_t   <pnt_t> closest_points;   // Closest point on the boundary
         layer_arr_t   <vec_t> closest_normals;  // Normal vector at the closest point on the boundary
         no_layer_arr_t<int>   signs;            // sign of 1 means x[dir]_ghost < x[dir]_irreg
-        layer_arr_t   <sbool> can_fill;            // indicates whether or not the ghost cell can be inserted into the domain.
+        layer_arr_t   <sbool> can_fill;         // indicates whether or not the ghost cell can be inserted into the domain.
         
         void transfer()
         {

@@ -485,18 +485,19 @@ namespace spade::io
                         flh << vl[0] << " " << vl[1] << " " << vl[2] << "\n";
                     }
                 }
-            }
+            }   
         };
         
         scalar_out(mf, "layer",       [&](const int dir, const int id, const int layer){ return layer; });
         scalar_out(mf, "fillable",    [&](const int dir, const int id, const int layer){ return info.aligned[dir].can_fill[id][layer]; });
         scalar_out(mf, "direction",   [&](const int dir, const int id, const int layer){ return dir; });
         scalar_out(mf, "id",          [&](const int dir, const int id, const int layer){ return id; });
+        scalar_out(mf, "i",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].i();  });
+        scalar_out(mf, "j",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].j();  });
+        scalar_out(mf, "k",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].k();  });
+        scalar_out(mf, "lb",          [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].lb(); });
         vector_out(mf, "boundary_pt", [&](const int dir, const int id, const int layer){ return info.aligned[dir].boundary_points[id]       - grid.get_coords(info.aligned[dir].indices[id][layer]); });
-        vector_out(mf, "closest_pt",  [&](const int dir, const int id, const int layer)
-        {
-            return info.aligned[dir].closest_points[id][layer] - grid.get_coords(info.aligned[dir].indices[id][layer]);
-        });
+        vector_out(mf, "closest_pt",  [&](const int dir, const int id, const int layer){ return info.aligned[dir].closest_points[id][layer] - grid.get_coords(info.aligned[dir].indices[id][layer]); });
         
         
         std::ofstream mf2(make_filename("bndy_pts"));
@@ -514,7 +515,7 @@ namespace spade::io
         }
         mf2 << "POINT_DATA " << total_points << "\n";
         scalar_out(mf2, "layer",       [&](const int dir, const int id, const int layer){ return layer; });
-        scalar_out(mf2, "direction",   [&](const int dir, const int id, const int layer){ return dir; });
+        scalar_out(mf2, "direction",   [&](const int dir, const int id, const int layer){ return dir;   });
     }
     
 }
