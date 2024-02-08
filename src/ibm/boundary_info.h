@@ -150,7 +150,6 @@ namespace spade::ibm
         };
         const auto lbs = grid.select_blocks(is_intersect, partition::local);
         
-        
         output_t output;
 
         // We will only trace rays from the bounding box of the geometry
@@ -167,25 +166,14 @@ namespace spade::ibm
             // We will only modify the list in this direction
             auto& list = output.aligned[idir];
             
+            const auto ng = sampled_array.get_num_exchange(idir);
+            const auto nx = grid.get_num_cells(idir);
+            
             for (const auto& lb: lbs)
             {
                 // We will not consider xray intersection points outside of the domain
                 const auto domain_boundary = grid.is_domain_boundary(lb);
                 const auto dx = grid.get_dx(lb);
-                
-                // Note that we include xray points inside the exchange cells in the tracing direction
-                auto bnd_extd = grid.get_bounding_box(lb);
-                
-                if (!(domain_boundary.min(idir))) bnd_extd.min(idir) -= sampled_array.get_num_exchange(idir)*dx[idir];
-                else                              bnd_extd.min(idir) -= 0.49999*dx[idir]; 
-                if (!(domain_boundary.max(idir))) bnd_extd.max(idir) += sampled_array.get_num_exchange(idir)*dx[idir];
-                else                              bnd_extd.max(idir) += 0.49999*dx[idir];
-                
-                bnd_extd.min(idir0) -= dx[idir0];
-                bnd_extd.max(idir0) += dx[idir0];
-                
-                bnd_extd.min(idir1) -= dx[idir1];
-                bnd_extd.max(idir1) += dx[idir1];
                 
                 // Note that there is some issue with intersection detection in exchange cells
                 
@@ -207,6 +195,7 @@ namespace spade::ibm
                     auto x_comp  = grid.get_comp_coords(icell_orig);
                     x_comp[idir] = geom_bbx.max(idir);
                     
+                    
                     // Now we trace the ray {x_comp, ray_vec}
                     
                     // We assume that we start out with a point outside
@@ -219,13 +208,26 @@ namespace spade::ibm
                     {
                         ++isect_count;
                         
+                        
                         const auto  gp_sign  = -utils::sign(normal[idir]*sign);
                         const auto  lb       = utils::tag[partition::local](icell_orig.lb());
                         const auto& b_point  = point;
                         const auto& bbox     = grid.get_bounding_box(lb);
                         const auto  dx       = grid.get_dx(lb);
-                        const auto  ng       = sampled_array.get_num_exchange(idir);
-                        const auto  nx       = grid.get_num_cells(idir);
+                            
+                        // Note that we include xray points inside the exchange cells in the tracing direction
+                        auto bnd_extd = grid.get_bounding_box(lb);
+                        
+                        if (!(domain_boundary.min(idir))) bnd_extd.min(idir) -= sampled_array.get_num_exchange(idir)*dx[idir];
+                        else                              bnd_extd.min(idir) -= gp_sign*0.49999*dx[idir]; 
+                        if (!(domain_boundary.max(idir))) bnd_extd.max(idir) += sampled_array.get_num_exchange(idir)*dx[idir];
+                        else                              bnd_extd.max(idir) -= gp_sign*0.49999*dx[idir];
+                        
+                        bnd_extd.min(idir0) -= dx[idir0];
+                        bnd_extd.max(idir0) += dx[idir0];
+                        
+                        bnd_extd.min(idir1) -= dx[idir1];
+                        bnd_extd.max(idir1) += dx[idir1];
                             
                         auto icell = icell_orig;
                         // Note that only the index value in the traced direction is wrong
@@ -263,6 +265,7 @@ namespace spade::ibm
                         
                         if (bnd_extd.contains(point))
                         {
+                            
                             list.signs.push_back(gp_sign);
                             list.indices.push_back(icell);
                             list.boundary_points.push_back(point);
@@ -273,6 +276,7 @@ namespace spade::ibm
                             auto& icells_recent   = list.indices.back();
                             auto& nvs_recent      = list.closest_normals.back();
                             auto& bndypts_recent  = list.closest_points.back();
+                            
                             
                             for (int ilayer = 1; ilayer < num_layers; ++ilayer)
                             {
@@ -310,17 +314,6 @@ namespace spade::ibm
                             
                             list.can_fill.push_back(utils::sbool{true});
                             auto& can_fill_recent = list.can_fill.back();
-                            
-                            for (int ilayer = 0; ilayer < num_layers; ++ilayer)
-                            {
-                                const auto icell_loc     = icells_recent[ilayer];
-                                const auto xg            = grid.get_comp_coords(icell_loc);
-                                
-                                int i_idir = icell_loc.i(idir);
-                                bool is_domain_bndy_cell = (domain_boundary.min(idir) && (i_idir < 0)) || (domain_boundary.max(idir) && (i_idir >= nx));
-                                
-                                can_fill_recent[ilayer]  = !geom.is_interior(xg) || is_domain_bndy_cell;
-                            }
                         }
                     };
                     
@@ -329,6 +322,20 @@ namespace spade::ibm
                 };
                 // Port to GPU later -_-
                 dispatch::execute(ibound, loop_load, device::cpu);
+            }
+            
+            std::size_t num_in_this_dir = list.indices.size();
+            for (std::size_t id = 0; id < num_in_this_dir; ++id)
+            {
+                for (int ilayer = 0; ilayer < num_layers; ++ilayer)
+                {
+                    const auto icell_loc = list.indices[id][ilayer];
+                    const auto xg        = grid.get_comp_coords(icell_loc);
+                    int i_idir = icell_loc.i(idir);
+                    const auto domain_boundary = grid.is_domain_boundary(utils::tag[partition::local](icell_loc.lb()));
+                    bool is_domain_bndy_cell = (domain_boundary.min(idir) && (i_idir < 0)) || (domain_boundary.max(idir) && (i_idir >= nx));
+                    list.can_fill[id][ilayer]  = geom.is_interior(xg);// || is_domain_bndy_cell;
+                }
             }
         }
         output.transfer();
