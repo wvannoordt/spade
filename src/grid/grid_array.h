@@ -244,6 +244,11 @@ namespace spade::grid
             return std::get<1>(mem_view.mmap.views);
         }
         
+        std::size_t get_base_offset(const index_type& ii) const
+        {
+            return mem_view.compute_offset(var_idx_t(0), ii);
+        }
+        
         int      get_num_exchange(int i) const { return num_exch[i]; }
         iarray_t get_num_exchange()      const { return num_exch; }
         

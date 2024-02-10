@@ -329,6 +329,27 @@ namespace spade::utils
         }
         
         constexpr static vector_location null() { return vector_location(nullptr, 0); }
+        
+        //These are probably a stupid idea
+        data_t& operator* ()
+        {
+            return this->get();
+        }
+        
+        const data_t& operator* () const
+        {
+            return this->get();
+        }
+        
+        data_t* operator-> ()
+        {
+            return &(this->get());
+        }
+        
+        const data_t* operator-> () const
+        {
+            return &(this->get());
+        }
     };
     
     template <typename T, typename... Ts>

@@ -495,6 +495,9 @@ namespace spade::io
         scalar_out(mf, "i",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].i();  });
         scalar_out(mf, "j",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].j();  });
         scalar_out(mf, "k",           [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].k();  });
+        scalar_out(mf, "x",           [&](const int dir, const int id, const int layer){ return grid.get_coords(info.aligned[dir].indices[id][layer])[0]; });
+        scalar_out(mf, "y",           [&](const int dir, const int id, const int layer){ return grid.get_coords(info.aligned[dir].indices[id][layer])[1]; });
+        scalar_out(mf, "z",           [&](const int dir, const int id, const int layer){ return grid.get_coords(info.aligned[dir].indices[id][layer])[2]; });
         scalar_out(mf, "lb",          [&](const int dir, const int id, const int layer){ return info.aligned[dir].indices[id][layer].lb(); });
         vector_out(mf, "boundary_pt", [&](const int dir, const int id, const int layer){ return info.aligned[dir].boundary_points[id]       - grid.get_coords(info.aligned[dir].indices[id][layer]); });
         vector_out(mf, "closest_pt",  [&](const int dir, const int id, const int layer){ return info.aligned[dir].closest_points[id][layer] - grid.get_coords(info.aligned[dir].indices[id][layer]); });
@@ -516,6 +519,44 @@ namespace spade::io
         mf2 << "POINT_DATA " << total_points << "\n";
         scalar_out(mf2, "layer",       [&](const int dir, const int id, const int layer){ return layer; });
         scalar_out(mf2, "direction",   [&](const int dir, const int id, const int layer){ return dir;   });
+        
+        std::size_t diag_size = info.diags.indices.size();
+        std::ofstream mf3(make_filename("diags"));
+        mf3 << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << diag_size << " double\n";
+        for (const auto& didx: info.diags.indices)
+        {
+            const auto x = grid.get_coords(didx);
+            mf3 << x[0] << " " << x[1] << " " << x[2] << "\n";
+        }
+        mf3 << "POINT_DATA " << diag_size << "\n";
+        
+        const auto diag_scalar_out = [&](auto& flh, const std::string& scname, const auto& fnc)
+        {
+            flh << "SCALARS " << scname << " double\nLOOKUP_TABLE default\n";
+            for (std::size_t id = 0; id < diag_size; ++id)
+            {
+                flh << fnc(id) << "\n";
+            }
+        };
+
+        const auto diag_vector_out = [&](auto& flh, const std::string& scname, const auto& fnc)
+        {
+            flh << "VECTORS " << scname << " double\n";
+            for (std::size_t id = 0; id < diag_size; ++id)
+            {
+                auto xx = fnc(id);
+                flh << xx[0] << " " << xx[1] << " " << xx[2] << "\n";
+            }
+        };
+        
+        diag_scalar_out(mf3, "i",          [&](const std::size_t& id){ return info.diags.indices[id].i();  });
+        diag_scalar_out(mf3, "j",          [&](const std::size_t& id){ return info.diags.indices[id].j();  });
+        diag_scalar_out(mf3, "k",          [&](const std::size_t& id){ return info.diags.indices[id].k();  });
+        diag_scalar_out(mf3, "lb",         [&](const std::size_t& id){ return info.diags.indices[id].lb(); });
+        diag_scalar_out(mf3, "x",          [&](const std::size_t& id){ return grid.get_coords(info.diags.indices[id])[0]; });
+        diag_scalar_out(mf3, "y",          [&](const std::size_t& id){ return grid.get_coords(info.diags.indices[id])[1]; });
+        diag_scalar_out(mf3, "z",          [&](const std::size_t& id){ return grid.get_coords(info.diags.indices[id])[2]; });
+        diag_scalar_out(mf3, "fillable",   [&](const std::size_t& id){ return info.diags.can_fill[id]; });
+        diag_vector_out(mf3, "closest_pt", [&](const std::size_t& id){ return info.diags.closest_points[id] - grid.get_coords(info.diags.indices[id]); });
     }
-    
 }

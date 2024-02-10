@@ -77,6 +77,13 @@ namespace spade::ctrs
         for (std::size_t i = 0; i < tsize;       ++i) dest[i] = src[i];
     }
     
+    template <basic_array a1_t, basic_array a2_t>
+    requires(a1_t::size() == a2_t::size())
+    _sp_hybrid constexpr static void copy_array(const a1_t& src, a2_t& dest)
+    {
+        for (std::size_t i = 0; i < a2_t::size(); ++i) dest[i] = src[i];
+    }
+    
     template <basic_array arr_t, typename rhs_t>
     _sp_hybrid static void fill_array(arr_t& arr, const rhs_t& val)
     {
@@ -363,4 +370,13 @@ namespace spade::ctrs
         unsafe_vector_alias_t(){}
         unsafe_vector_alias_t(data_t* base_in, const std::size_t& safe_size_in){base = base_in; safe_size = safe_size_in;}
     };
+    
+    template <typename target_t, typename data_t, const std::size_t ar_size, typename derived_t>
+    _sp_hybrid inline target_t array_cast(const arithmetic_array_t<data_t, ar_size, derived_t>& arr)
+    {
+        //Kind of stupid but quite useful.
+        target_t output;
+        copy_array(arr, output);
+        return output;
+    }
 }

@@ -28,7 +28,7 @@ namespace spade::convective
         {
             auto flxL = flx_fnc(input_data.cell(0_c));
             auto flxR = flx_fnc(input_data.cell(1_c));
-            return flxL[1] + flxR[0];
+            return flxL[0] + flxR[1];
         }
     };
     

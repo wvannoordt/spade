@@ -292,7 +292,7 @@ namespace spade::grid
             static constexpr bool periodic_refinement_default = false;
             
             template <typename list_t, typename refs_t, typename constraint_t>
-            void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const refs_t& refs, const constraint_t& constraint = amr::constraints::factor2)
+            void refine_blocks(const list_t& list, const ctrs::array<bool, dim()>& periodic, const refs_t& refs, const constraint_t& constraint = amr::constraints::factor2)
             {
                 std::size_t vsize = 1;
                 constexpr bool list_is_vec = utils::is_std_vector<list_t>;
@@ -331,7 +331,7 @@ namespace spade::grid
             }
             
             template <typename list_t, typename constraint_t = decltype(amr::constraints::factor2)>
-            void refine_blocks(const list_t& list, ctrs::array<bool, dim()>& periodic, const constraint_t& constraint = amr::constraints::factor2)
+            void refine_blocks(const list_t& list, const ctrs::array<bool, dim()>& periodic, const constraint_t& constraint = amr::constraints::factor2)
             {
                 const typename block_arrangement_t::refine_type rtype = true;
                 this->refine_blocks(list, periodic, rtype, constraint);
