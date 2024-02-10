@@ -7,9 +7,9 @@ namespace spade::utils
     struct sbool
     {
         bool val;
-        operator bool() const       { return val; }
-        sbool() = default;
-        sbool(const bool d) {val = d;}
-        sbool& operator = (const bool rhs) { val = rhs; return *this; }
+        _sp_hybrid operator bool() const       { return val; }
+        _sp_hybrid sbool() = default;
+        _sp_hybrid sbool(const bool d) {val = d;}
+        _sp_hybrid sbool& operator = (const bool rhs) { val = rhs; return *this; }
     };
 }

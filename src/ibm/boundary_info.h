@@ -45,6 +45,34 @@ namespace spade::ibm
             signs.transfer();
             can_fill.transfer();
         }
+        
+        template <device::is_device device_t>
+        image_type image(const device_t& dev)
+        {
+            image_type output;
+            output.indices          = utils::make_vec_image(indices.data(dev));
+            output.boundary_points  = utils::make_vec_image(boundary_points.data(dev));
+            output.boundary_normals = utils::make_vec_image(boundary_normals.data(dev));
+            output.closest_points   = utils::make_vec_image(closest_points.data(dev));
+            output.closest_normals  = utils::make_vec_image(closest_normals.data(dev));
+            output.signs            = utils::make_vec_image(signs.data(dev));
+            output.can_fill         = utils::make_vec_image(can_fill.data(dev));
+            return output;
+        }
+        
+        template <device::is_device device_t>
+        const_image_type image(const device_t& dev) const
+        {
+            const_image_type output;
+            output.indices          = utils::make_vec_image(indices.data(dev));
+            output.boundary_points  = utils::make_vec_image(boundary_points.data(dev));
+            output.boundary_normals = utils::make_vec_image(boundary_normals.data(dev));
+            output.closest_points   = utils::make_vec_image(closest_points.data(dev));
+            output.closest_normals  = utils::make_vec_image(closest_normals.data(dev));
+            output.signs            = utils::make_vec_image(signs.data(dev));
+            output.can_fill         = utils::make_vec_image(can_fill.data(dev));
+            return output;
+        }
     };
     
     template <typename float_t, template <typename> typename container_t = device::basic_shared_vector>
@@ -71,6 +99,28 @@ namespace spade::ibm
             closest_normals.transfer();
             can_fill.transfer();
         }
+        
+        template <device::is_device device_t>
+        image_type image(const device_t& dev)
+        {
+            image_type output;
+            output.indices         = utils::make_vec_image(indices.data(dev));
+            output.closest_points  = utils::make_vec_image(closest_points.data(dev));
+            output.closest_normals = utils::make_vec_image(closest_normals.data(dev));
+            output.can_fill        = utils::make_vec_image(can_fill.data(dev));
+            return output;
+        }
+        
+        template <device::is_device device_t>
+        const_image_type image(const device_t& dev) const
+        {
+            const_image_type output;
+            output.indices         = utils::make_vec_image(indices.data(dev));
+            output.closest_points  = utils::make_vec_image(closest_points.data(dev));
+            output.closest_normals = utils::make_vec_image(closest_normals.data(dev));
+            output.can_fill        = utils::make_vec_image(can_fill.data(dev));
+            return output;
+        }
     };
     
     
@@ -90,10 +140,37 @@ namespace spade::ibm
         ctrs::array<ghost_info_t<nlayers, float_t, container_t>, grid_dim> aligned;
         diag_ghost_info_t<float_t, container_t> diags;
         
+        using image_type       = boundary_info_t<grid_dim, nlayers, float_t, utils::vec_image_t>;
+        using const_image_type = boundary_info_t<grid_dim, nlayers, float_t, utils::const_vec_image_t>;
+        
         void transfer()
         {
             for (auto& l: aligned) l.transfer();
             diags.transfer();
+        }
+        
+        template <device::is_device device_t>
+        image_type image(const device_t& dev)
+        {
+            image_type output;
+            output.diags   = diags.image(dev);
+            for (int d = 0; d  < aligned.size(); ++d)
+            {
+                output.aligned[d] = aligned[d].image(dev);
+            }
+            return output;
+        }
+        
+        template <device::is_device device_t>
+        const_image_type image(const device_t& dev) const
+        {
+            const_image_type output;
+            output.diags   = diags.image(dev);
+            for (int d = 0; d  < aligned.size(); ++d)
+            {
+                output.aligned[d] = aligned[d].image(dev);
+            }
+            return output;
         }
     };
     

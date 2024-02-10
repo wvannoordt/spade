@@ -41,9 +41,7 @@
 #include "amr/amr_blocks.h"
 #include "amr/amr.h"
 
-#include "ibm/ghost_list.h"
-#include "ibm/compute_ghosts.h"
-#include "ibm/boundary_info.h"
+#include "ibm/ibm.h"
 
 #include "io/io.h"
 

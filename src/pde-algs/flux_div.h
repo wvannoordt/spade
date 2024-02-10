@@ -233,7 +233,7 @@ namespace spade::pde_algs
             auto k_shmem = omni::get_shmem<omni_type>(num_faces, prims);
             using shmem_type = decltype(k_shmem);
             
-            spade::dispatch::kernel_threads_t kpool(dispatch::ranges::make_range(0, num_faces), prims.device());
+            dispatch::kernel_threads_t kpool(dispatch::ranges::make_range(0, num_faces), prims.device());
             auto range = dispatch::ranges::make_range(0, ar_grid.get_num_cells(idir0), 0, ar_grid.get_num_cells(idir1), 0, ar_grid.get_num_local_blocks());
             using index_type = decltype(range)::index_type;
             using threads_type = decltype(kpool);
