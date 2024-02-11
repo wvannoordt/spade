@@ -32,8 +32,8 @@ namespace spade::convective
             f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + float_t(0.5)*q.p()*nv[1];
             f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + float_t(0.5)*q.p()*nv[2];
             f_d = f_u;
-            const real_t sigma = float_t(0.5)*(abs(u_norm) + sqrt(gas.get_gamma(info)*gas.get_R(info)*q.T()));
-            
+            const real_t sigma = float_t(0.5)*(abs(u_n) + sqrt(gas.get_gamma(info)*pdiff));
+
             f_d.continuity() -= sigma*rho;
             f_d.energy()     -= sigma*rho*engy;
             f_d.x_momentum() -= sigma*rho*q.u();
