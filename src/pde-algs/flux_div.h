@@ -284,6 +284,7 @@ namespace spade::pde_algs
                     const real_type jac_l = coords::calc_jacobian(geom_image.get_coord_sys(), xyz_l, icell_l);
                     if (i_face_line > 0) rhs_img.decr_elem(icell_l, jac_l*flux);
                 });
+                
             };
             spade::dispatch::execute(range, loop, kpool, k_shmem);
         }

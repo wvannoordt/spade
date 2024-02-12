@@ -274,6 +274,11 @@ namespace spade::grid
             this->mem_view.compute_offset_base();
             auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
             data.resize(total_size);
+            var_offset = 0;
+            if constexpr (ctrs::basic_array<alias_type>)
+            {
+                var_offset = mem_map.compute_offset(1, index_type()) - mem_map.compute_offset(0, index_type());
+            }
         }
         
         grid_array(const grid_array& rhs) = default;
@@ -297,8 +302,8 @@ namespace spade::grid
             return *this;
         }
         
-        const const_image_type image() const { return {&data[0], data.size(), mem_view}; }
-        image_type             image()       { return {&data[0], data.size(), mem_view}; }
+        const const_image_type image() const { return {&data[0], data.size(), mem_view, var_offset}; }
+        image_type             image()       { return {&data[0], data.size(), mem_view, var_offset}; }
 
         //TODO: clean this up a little bit with more lambdas!
         template <multiblock_array rhs_t>

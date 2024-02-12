@@ -29,6 +29,7 @@ namespace spade::grid
         base_t      base;
         std::size_t csize;
         mem_map_t   map;
+        std::size_t var_offset;
         
         constexpr static auto centering_type() { return ctr; }
         
