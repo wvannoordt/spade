@@ -256,7 +256,14 @@ namespace spade::dispatch
             {
                 auto loop = [&](const auto& idx) mutable
                 {
-                    kernel_in(idx, space, shmem_kern);
+                    if constexpr (shmem_t::is_empty())
+                    {
+                        kernel_in(idx, space);
+                    }
+                    else
+                    {
+                        kernel_in(idx, space, shmem_kern);
+                    }
                 };
                 
                 using bound_type = decltype(range.bounds);
