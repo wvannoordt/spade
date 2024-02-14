@@ -190,7 +190,8 @@ namespace spade::grid
             std::size_t  get_num_global_blocks()                        const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::global_tag_t&) const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::local_tag_t&)  const { return grid_partition.get_num_local_blocks(); }
-            int get_num_cells(const std::size_t& i)                     const { return global_geometry.num_cell[i]; }
+            int  get_num_cells(const std::size_t& i)                    const { return global_geometry.num_cell[i]; }
+            auto get_num_cells()                                        const { return global_geometry.num_cell; }
             bound_box_t<dtype,  3> get_bounds()                         const { return block_arrangement.get_bounds(); }
             const par_group_t& group()                                  const { return grid_group; }
             const coord_t& coord_sys()                                  const { return global_geometry.get_coords(); }

@@ -217,7 +217,7 @@ namespace spade::dispatch
         
         if constexpr (is_gpu_impl)
         {
-            const auto config = ranges::compute_config(kernel);
+            const auto config     = ranges::compute_config(kernel);
             const auto gconf      = config.grid_dim.data;
             const auto bconf      = config.block_dim.data;
             const auto shmem_size = config.shmem_size;

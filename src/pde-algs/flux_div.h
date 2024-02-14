@@ -205,7 +205,7 @@ namespace spade::pde_algs
         typename flux_func_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
-    static void flux_div(
+    static void flux_div_BAD(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func)
@@ -287,6 +287,112 @@ namespace spade::pde_algs
                 
             };
             spade::dispatch::execute(range, loop, kpool, k_shmem);
+        }
+    }
+    
+    template <
+        grid::multiblock_array sol_arr_t,
+        grid::multiblock_array rhs_arr_t,
+        typename flux_func_t>
+    requires
+        grid::has_centering_type<sol_arr_t, grid::cell_centered>
+    inline void flux_div(
+        const sol_arr_t& prims,
+        rhs_arr_t& rhs,
+        const flux_func_t& flux_func)
+    {
+        using real_type     = sol_arr_t::value_type;
+        using alias_type    = sol_arr_t::alias_type;
+        using omni_type     = typename flux_func_t::omni_type;
+        using flux_t        = rhs_arr_t::alias_type;
+        
+        const auto& grid    = prims.get_grid();
+        const auto grid_img = grid.image(partition::local, prims.device());
+        const auto q_img    = prims.image();
+        auto rhs_img        = rhs.image();
+        
+        constexpr int tile_size = 4; //we will operate on tiles of size tile_size^3
+        
+        auto nx     = grid.get_num_cells();
+        auto ntiles = nx;
+        
+        int total_tiles = 1;
+        for (int d = 0; d < nx.size(); ++d)
+        {
+            ntiles[d]    = utils::i_div_up(nx[d], tile_size);
+            total_tiles *= ntiles[d];
+        }
+        
+        ctrs::array<int, 2> num_tiles_by_parity;
+        num_tiles_by_parity[1] = total_tiles/2;
+        num_tiles_by_parity[0] = total_tiles - num_tiles_by_parity[1];
+        
+        for (int parity = 0; parity < 2; ++parity)
+        {
+            const auto tile_range = dispatch::ranges::make_range(0, tile_size, 0, tile_size, 0, tile_size);
+            dispatch::kernel_threads_t kpool(tile_range, prims.device());
+            using threads_type = decltype(kpool);
+            int num_tiles_here = num_tiles_by_parity[parity];
+            
+            auto k_shmem = omni::get_shmem<omni_type>(1, prims);
+            using shmem_type = decltype(k_shmem);
+            
+            const auto outer_range = dispatch::ranges::make_range(0, num_tiles_here, 0, int(grid.get_num_local_blocks()));
+            
+            auto loop = [=] _sp_hybrid (const ctrs::array<int, 2>& outer_raw, const threads_type& threads, shmem_type& shmem) mutable
+            {
+                bool n0_even = ((ntiles[0])           & 1) == 0;
+                bool n1_even = ((ntiles[1])           & 1) == 0;
+                bool n2_even = ((ntiles[2])           & 1) == 0;
+                
+                int tile_id_1d = parity + 2*outer_raw[0];
+                
+                if (n0_even || n1_even || n2_even)
+                {
+                    int i0 = tile_id_1d / ntiles[0];
+                    int i1 = tile_id_1d / (ntiles[0]*ntiles[1]);
+                    bool i0_odd  = (i0                    & 1) > 0;
+                    bool i1_odd  = (i1                    & 1) > 0;
+                    if ((i0_odd && n0_even) == (i1_odd && n1_even)) tile_id_1d += 1-2*parity;
+                }
+                
+                // This is potentially slow!
+                // ix + nx*iy + nx*ny*iz
+                ctrs::array<int, 3> tile_id;
+                tile_id[0]  = tile_id_1d % ntiles[0];
+                tile_id_1d -= tile_id[0];
+                tile_id_1d /= ntiles[0];
+                // tile_id_1d  = i0;
+                tile_id[1]  = tile_id_1d % ntiles[1];
+                tile_id_1d -= tile_id[1];
+                tile_id_1d /= ntiles[1];
+                // tile_id_1d  = i1;
+                tile_id[2]  = tile_id_1d;
+                
+                threads.exec([&](const ctrs::array<int, 3>& inner_raw)
+                {
+                    grid::cell_idx_t i_cell(
+                        tile_id[0]*tile_size + inner_raw[0],
+                        tile_id[1]*tile_size + inner_raw[1],
+                        tile_id[2]*tile_size + inner_raw[2],
+                        outer_raw[1]);
+                    
+                    bool is_interior = true;
+                    is_interior = is_interior && (i_cell.i() >= 0);
+                    is_interior = is_interior && (i_cell.j() >= 0);
+                    is_interior = is_interior && (i_cell.k() >= 0);
+                    is_interior = is_interior && (i_cell.i() < nx[0]);
+                    is_interior = is_interior && (i_cell.j() < nx[1]);
+                    is_interior = is_interior && (i_cell.k() < nx[2]);
+                    if (is_interior)
+                    {
+                        flux_t val = real_type(3-parity);
+                        if (is_interior) rhs_img.set_elem(i_cell, val);
+                    }
+                });
+            };
+            
+            dispatch::execute(outer_range, loop, kpool, k_shmem);
         }
     }
 }

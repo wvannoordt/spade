@@ -210,6 +210,7 @@ namespace spade::grid
         const grid_t*                    grid;
         container_type<fundamental_type> data;
         mem_map_type                     mem_view;
+        std::size_t                      var_offset;
         
         constexpr static int dim() { return grid_t::dim(); }
         
@@ -277,7 +278,7 @@ namespace spade::grid
             var_offset = 0;
             if constexpr (ctrs::basic_array<alias_type>)
             {
-                var_offset = mem_map.compute_offset(1, index_type()) - mem_map.compute_offset(0, index_type());
+                var_offset = mem_view.compute_offset(1, index_type()) - mem_view.compute_offset(0, index_type());
             }
         }
         
