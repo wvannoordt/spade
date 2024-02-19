@@ -26,13 +26,22 @@ namespace spade::viscous_laws
     
     template <class T> concept viscous_law = state_dependent_viscosity<T> || state_independent_viscosity<T>;
 
+    template <typename data_t>
+    struct visc_result_t
+    {
+        data_t mu;    // viscosity
+        data_t beta;  // second viscosity
+        data_t alpha; // heat conductivity
+    };
+    
     template <typename derived_t, typename ilist_t = omni::info_list_t<>>
     struct visc_law_interface_t
     {
         _sp_hybrid derived_t&       self()       {return *static_cast<      derived_t*>(this);}
         _sp_hybrid const derived_t& self() const {return *static_cast<const derived_t*>(this);}
 
-        using info_type  = ilist_t;
+        using info_type   = ilist_t;
+        // using result_type = visc_result_t<typename derived_t::value_type>;
 
         _sp_hybrid auto get_visc        (const auto& input) const
         {
@@ -54,15 +63,25 @@ namespace spade::viscous_laws
     : public visc_law_interface_t<constant_viscosity_t<dtype>>
     {
         using base_t = visc_law_interface_t<constant_viscosity_t<dtype>>;
+        using value_type = dtype;
+        using result_type = visc_result_t<value_type>;
         using base_t::get_visc;
         using base_t::get_beta;
         using base_t::get_diffuse;
         using base_t::info_type;
 
-        typedef dtype value_type;
+        dtype visc;
+        dtype prandtl_inv;
+        dtype beta;
+        
         constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in)
-        : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl{prandtl_in}
+        : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl_inv{dtype(1.0)/prandtl_in}
         { }
+        
+        _sp_hybrid result_type get_all(const auto&) const
+        {
+            return result_type{this->get_visc(), this->get_beta(), this->get_diffuse()};
+        }
         
         _sp_hybrid dtype get_visc() const
         {
@@ -76,12 +95,8 @@ namespace spade::viscous_laws
         
         _sp_hybrid dtype get_diffuse() const
         {
-            return visc/prandtl;
+            return visc*prandtl_inv;
         }
-        
-        dtype visc;
-        dtype prandtl;
-        dtype beta;
     };
     
     template <typename dtype> struct power_law_t
@@ -161,10 +176,24 @@ namespace spade::viscous_laws
     {
         using info_type = omni::info_union<typename laminar_t::info_type, typename turb_t::info_type>;
         using value_type = decltype(typename laminar_t::value_type() + typename turb_t::value_type());
+        using result_type = visc_result_t<value_type>;
 
         const laminar_t lam;
         const turb_t turb;
         sgs_visc_t(const laminar_t& lam_in, const turb_t& turb_in) : lam{lam_in}, turb{turb_in} {}
+        
+        _sp_hybrid result_type get_all(const auto& data) const
+        {
+            const auto lam_all  = lam.get_all(data);
+            
+            const auto mu_t     = turb.get_mu_t(data);
+            const auto pr_t     = turb.get_prt(data);
+            
+            return result_type{
+                lam_all.mu    + mu_t,
+                lam_all.beta  - 0.66666666667*mu_t,
+                lam_all.alpha + mu_t/pr_t};
+        }
 
         _sp_hybrid value_type get_visc(const auto& data) const
         {

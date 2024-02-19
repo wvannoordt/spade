@@ -28,7 +28,6 @@ namespace spade::dispatch
         private:
             //This might be absolutely terrible
             index_type k_index;
-            mutable volatile char* shmem_base = nullptr;
             
             _sp_device void i_sncthr() const
             {
@@ -57,9 +56,9 @@ namespace spade::dispatch
             _sp_hybrid std::size_t size() const { return irange.bounds.volume(); }
             
             // This is a goofy idea so far...
-            _sp_hybrid std::size_t shmem_size() const { return size()*sizeof(double); }
+            // _sp_hybrid std::size_t shmem_size() const { return size()*sizeof(double); }
             
-            _sp_hybrid void set_shmem_base(volatile char* bin) const { shmem_base = bin; }
+            // _sp_hybrid void set_shmem_base(volatile char* bin) const { shmem_base = bin; }
             
             _sp_hybrid device_t device() const { return k_device; }
             
@@ -77,10 +76,15 @@ namespace spade::dispatch
             
             _sp_hybrid void set_idx(const ranges::d3_t& b_idx)
             {
-                static_assert((index_type::size() == 1) || (index_type::size() == 3), "only 1/3-dimensional inner range currently supported!");
+                static_assert((index_type::size() == 1) || (index_type::size() == 2) || (index_type::size() == 3), "only 1/2/3-dimensional inner range currently supported!");
                 if constexpr (index_type::size() == 1)
                 {
                     k_index = b_idx.x;
+                }
+                if constexpr (index_type::size() == 2)
+                {
+                    k_index[0] = b_idx.x;
+                    k_index[1] = b_idx.y;
                 }
                 else if constexpr (index_type::size() == 3)
                 {
@@ -119,61 +123,6 @@ namespace spade::dispatch
             _sp_hybrid bool valid() const
             {
                 return irange.bounds.contains(k_index);
-            }
-            
-            template <const k_thread_reduce_op oper, typename data_t, typename func_t>
-            _sp_hybrid inline auto threads_reduce(const reduction_t<oper, data_t>&, const func_t& func) const
-            {
-                using output_t = data_t;
-                if constexpr (is_gpu_impl)
-                {
-                    utils::vec_image_t buf {(output_t*)shmem_base, this->size()};
-                    static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
-                    buf[this->reduce_idx(k_index)] = func(this->reduce_idx(k_index));
-                    
-                    //This is probably a bit slow and janky! Note: we should do this with interleaving
-                    //if it becomes a bottleneck
-                    static_assert(index_type::size() == 1, "only 1-dimensional inner range currently supported!");
-                    const auto root = irange.bounds.min(0);
-                    if (k_index == root)
-                    {
-                        for (typename index_type::value_type i = root; i < irange.bounds.max(0); ++i)
-                        {
-                            if constexpr (oper == k_reduce_sum) buf[root] += (i!=root)*buf[i];
-                            if constexpr (oper == k_reduce_max) buf[root] = utils::min(buf[root], buf[i]);
-                            if constexpr (oper == k_reduce_min) buf[root] = utils::max(buf[root], buf[i]);
-                        }
-                    }
-                    this->sync();
-                    return buf[root];
-                }
-                else
-                {
-                    
-                }
-                
-                return output_t();
-            }
-            
-            template <typename func_t>
-            _sp_hybrid inline auto sum(const func_t& func) const
-            {
-                using data_t = decltype(func(this->reduce_idx(index_type())));
-                return this->threads_reduce(reduction_t<k_reduce_sum, data_t>(), func);
-            }
-            
-            template <typename func_t>
-            _sp_hybrid inline auto min(const func_t& func) const
-            {
-                using data_t = decltype(func(this->reduce_idx(index_type())));
-                return this->threads_reduce(reduction_t<k_reduce_min, data_t>(), func);
-            }
-            
-            template <typename func_t>
-            _sp_hybrid inline auto max(const func_t& func) const
-            {
-                using data_t = decltype(func(this->reduce_idx(index_type())));
-                return this->threads_reduce(reduction_t<k_reduce_max, data_t>(), func);
             }
     };
 }

@@ -53,8 +53,9 @@ namespace spade::viscous
             // const auto visc  = float_t(0.5)*(l_visc  + r_visc);
             // const auto visc2 = float_t(0.5)*(l_visc2 + r_visc2);
             
-            const auto visc  = vlaw.get_visc(input.face(0_c));
-            const auto visc2 = vlaw.get_beta(input.face(0_c));
+            const auto all_visc = vlaw.get_all(input.face(0_c));
+            const auto visc  = all_visc.mu;
+            const auto visc2 = all_visc.beta;
             
             const auto& div         = face_grad[0].u() + face_grad[1].v() + face_grad[2].w();
             linear_algebra::dense_mat<float_t, 3> tau;
@@ -73,7 +74,7 @@ namespace spade::viscous
             const auto gam       = gas.get_gamma(input.face(0_c));
             const auto rgas      = gas.get_R(input.face(0_c));
             const auto spec_heat = gam*rgas/(gam-float_t(1.0));
-            const auto dfs       = vlaw.get_diffuse(input.face(0_c));
+            const auto dfs       = all_visc.alpha;
             const auto cond      = spec_heat*dfs;
 
 

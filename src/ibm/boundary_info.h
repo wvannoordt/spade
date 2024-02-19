@@ -336,18 +336,36 @@ namespace spade::ibm
                             const auto xdiff   = b_point[idir] - xc_comp[idir];
                             if (xdiff*gp_sign < 0.0) icell[idir] -= gp_sign;
                             
+                            const auto diag = ctrs::array_norm(dx);
+                            
                             // At this point, icell contains the correct location of the ghost cell.
                             // We proceed to find the nearest point on the geometry
                             const auto x_ghost = grid.get_comp_coords(icell);
                             real_t search_radius = 1e-9;
                             for (const auto& dx_v: dx) search_radius = utils::max(search_radius, 2*ng*dx_v);
-                            const auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
+                            auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
+                            
+                            
+                            
+                            const auto dot_prod_tol = -0.5;
+                            vec_t tmp1 = 0.0;
+                            tmp1 += (nearest_boundary_point - x_ghost);
+                            tmp1 /= ctrs::array_norm(tmp1);
+                            vec_t tmp2 = 0.0;
+                            tmp2 += (point - x_ghost);
+                            tmp2 /= ctrs::array_norm(tmp2);
+                            if ((ctrs::dot_prod(tmp1, tmp2) < dot_prod_tol))
+                            {
+                                pnt_t x_search = x_ghost;
+                                x_search += 2*diag*normal;
+                                nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
+                            }
+                            
                             
                             // Compute direction to the closest boundary point
                             vec_t nv = 0.0;
                             nv += (nearest_boundary_point - x_ghost);
                             auto dist       = ctrs::array_norm(nv);
-                            const auto diag = ctrs::array_norm(dx);
                             
                             // Figure out this magic number
                             const auto tol = 5e-3;
@@ -394,7 +412,17 @@ namespace spade::ibm
                                     real_t lyr_search_radius = 1e-9;
                                     for (const auto& dx_v: dx) lyr_search_radius = utils::max(lyr_search_radius, (2+ilayer)*ng*dx_v);
                                     
-                                    const auto nearest_boundary_point_lyr = geom.find_closest_boundary_point(xc_comp_lyr, lyr_search_radius);
+                                    auto nearest_boundary_point_lyr = geom.find_closest_boundary_point(xc_comp_lyr, lyr_search_radius);
+                                    
+                                    vec_t tmp3 = 0.0;
+                                    tmp3 += (nearest_boundary_point_lyr - xc_comp_lyr);
+                                    tmp3 /= ctrs::array_norm(tmp3);
+                                    if ((ctrs::dot_prod(tmp3, tmp2) < dot_prod_tol))
+                                    {
+                                        pnt_t x_search = xc_comp_lyr;
+                                        x_search += 2*(1+ilayer)*diag*normal;
+                                        nearest_boundary_point_lyr = geom.find_closest_boundary_point(x_search, lyr_search_radius);
+                                    }
                                     
                                     vec_t nv_lyr_bndy = 0.0;
                                     nv_lyr_bndy += (nearest_boundary_point_lyr - xc_comp_lyr);
@@ -428,11 +456,27 @@ namespace spade::ibm
                     for (int ilayer = 0; ilayer < num_layers; ++ilayer)
                     {
                         const auto icell_loc = list.indices[id][ilayer];
+                        const auto dx        = grid.get_dx(utils::tag[partition::local](icell_loc.lb()));
+                        const auto diag      = ctrs::array_norm(dx);
                         const auto xg        = grid.get_comp_coords(icell_loc);
                         int i_idir = icell_loc.i(idir);
                         const auto domain_boundary = grid.is_domain_boundary(utils::tag[partition::local](icell_loc.lb()));
                         bool is_domain_bndy_cell = (domain_boundary.min(idir) && (i_idir < 0)) || (domain_boundary.max(idir) && (i_idir >= nx));
                         list.can_fill[id][ilayer]  = (geom.is_interior(xg) == is_external);// || is_domain_bndy_cell;
+                        if (!list.can_fill[id][ilayer])
+                        {
+                            //Need to recompute closest point as this is a thin geometry situation
+                            pnt_t x_search = xg;
+                            x_search += (ilayer + 1)*diag*list.boundary_normals[id];
+                            const auto radi = 2*(ilayer + 1)*diag;
+                            const auto new_pt = geom.find_closest_boundary_point(x_search, radi);
+                            list.closest_points[id][ilayer] = new_pt;
+                            vec_t nv_new = 0.0;
+                            nv_new += new_pt;
+                            nv_new -= xg;
+                            nv_new /= ctrs::array_norm(nv_new);
+                            list.closest_normals[id][ilayer] = nv_new;
+                        }
                     }
                 }
             }
