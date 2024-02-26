@@ -191,7 +191,7 @@ namespace spade::viscous_laws
             
             return result_type{
                 lam_all.mu    + mu_t,
-                lam_all.beta  - 0.66666666667*mu_t,
+                lam_all.beta  - value_type(0.66666666667)*mu_t,
                 lam_all.alpha + mu_t/pr_t};
         }
 

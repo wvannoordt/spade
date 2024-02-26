@@ -8,6 +8,7 @@
 #include "grid/grid_index_types.h"
 #include "core/linear_algebra.h"
 #include "core/point.h"
+#include "core/unit_vector.h"
 
 namespace spade::coords
 {
@@ -203,15 +204,16 @@ namespace spade::coords
     };
     
     template <typename dtype, typename idx_t>
-    _sp_hybrid ctrs::array<dtype, 3> calc_normal_vector(
+    _sp_hybrid auto calc_normal_vector(
         const identity<dtype>& coord,
         const point_t<dtype>& coords,
         const idx_t& i,
         const typename idx_t::value_type& idir)
     {
-        ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
-        output[idir]=1.0;
-        return output;
+        // ctrs::array<dtype, 3> output(0.0, 0.0, 0.0);
+        // output[idir]=1.0;
+        // return output;
+        return utils::unit(idir);
     }
     
     template <typename dtype, typename idx_t>
@@ -220,7 +222,7 @@ namespace spade::coords
         const point_t<dtype>& coords,
         idx_t& i)
     {
-        return 1.0;
+        return dtype(1.0);
     }
     
     template <diagonal_coordinate_system coord_t, typename idx_t>

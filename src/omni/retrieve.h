@@ -17,8 +17,8 @@ namespace spade::omni
         info_t::compute(grid, array, index, data);
     }
 
-    template <typename grid_view_t, typename index_t, typename array_t, typename direction_t, typename stencil_data_t>
-    _sp_inline _sp_hybrid void retrieve_impl(const grid_view_t& grid, const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data)
+    template <typename grid_view_t, typename index_t, typename array_t, typename direction_t, typename stencil_data_t, typename exclude_list_t>
+    _sp_inline _sp_hybrid void retrieve_impl(const grid_view_t& grid, const array_t& array, const index_t& idx_center, const direction_t& direction, stencil_data_t& data, const exclude_list_t&)
     {
         const int num_elem = stencil_data_t::stencil_type::num_elements();
         algs::static_for<0,num_elem>([&](const auto& ii)
@@ -27,6 +27,7 @@ namespace spade::omni
             
             //fetch the list of info that we need at the current stencil element
             auto& info_list = detail::get_info_list_at<i,0>(data);
+            using info_list_type = typename utils::remove_all<decltype(info_list)>::type;
             using offset_type = typename stencil_data_t::stencil_type::stencil_element<i>::position_type;
             const auto idx  = offset_type::compute_index(idx_center);
             algs::static_for<0,info_list.num_info_elems()>([&](const auto& jj)
@@ -34,23 +35,39 @@ namespace spade::omni
                 const int j = jj.value;
                 auto& info_list_data = detail::get_info_list_data_at<j,0>(info_list);
                 using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-                // constexpr bool use_dir = requires{info_type::compute(grid, array, idx, direction, info_list_data.data);};
-                invoke_compute<info_type>(grid, array, idx, direction, info_list_data.data);
+                if constexpr (!exclude_list_t::template contains<info_type>)
+                {
+                    // constexpr bool use_dir = requires{info_type::compute(grid, array, idx, direction, info_list_data.data);};
+                    invoke_compute<info_type>(grid, array, idx, direction, info_list_data.data);
+                }
             });
         });
     }
 
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
+    requires(requires{index_t().dir();})
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data, const exclude_list_t& excluded)
+    {
+        retrieve_impl(grid, array, idx_center, idx_center.dir(), data, excluded);
+    }
+
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data, const exclude_list_t& excluded)
+    {
+        retrieve_impl(grid, array, idx_center, info::undirected_tag_t(), data, excluded);
+    }
+    
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
+    {
+        retrieve(grid, array, idx_center, data, info_list_t<>());
+    }
+    
     template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
     requires(requires{index_t().dir();})
     _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
     {
-        retrieve_impl(grid, array, idx_center, idx_center.dir(), data);
-    }
-
-    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
-    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
-    {
-        retrieve_impl(grid, array, idx_center, info::undirected_tag_t(), data);
+        retrieve(grid, array, idx_center, data, info_list_t<>());
     }
     
     //Shared memory, buffered version
@@ -110,76 +127,5 @@ namespace spade::omni
             using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
             invoke_compute<info_type>(grid, array, idx_center, idx_center.dir(), info_list_data.data);
         });
-    }
-    
-    //Shared memory, buffered version
-    template <typename grid_view_t, typename array_t, typename stencil_data_t, typename shmem_t>
-    _sp_inline _sp_hybrid void retrieve_tiled(
-        const grid_view_t& grid,
-        const array_t& array,
-        const grid::cell_idx_t& i_cell,
-        const grid::face_idx_t& i_face,
-        stencil_data_t& data,
-        shmem_t& buffer,
-        const bool is_interior)
-    {
-        using stencil_type = typename stencil_data_t::stencil_type;
-        constexpr static int face_idx = index_of<stencil_type, offset_t< 0, 0, 0>>;
-        constexpr static int cell_idx = index_of<stencil_type, offset_t< 1, 0, 0>>;
-        const int face_buf_idx = data.get_face_buf_index(udci::idx_const_t<face_idx>());
-        const int cell_buf_idx = data.get_cell_buf_index(udci::idx_const_t<cell_idx>());
-        
-        using i_c = typename stencil_data_t::cell_data_location;
-        using i_f = typename stencil_data_t::face_data_location;
-        
-        auto& c_data = buffer[i_c()][cell_buf_idx];
-        auto& f_data = buffer[i_f()][face_buf_idx];
-        
-        using c_info_list_type = stencil_data_t::cell_data_type;
-        using f_info_list_type = stencil_data_t::face_data_type;
-        
-        auto cell_glob_idx = offset_t<1, 0, 0>::compute_index(i_face);
-        print("=================");
-        debug::print_type(f_info_list_type());
-        print(sizeof(f_info_list_type)/sizeof(double));
-        std::cin.get();
-        print("cell", cell_glob_idx, cell_buf_idx, data.cell_idx_base, data.cell_pitch);
-        print("face", cell_glob_idx, face_buf_idx);
-        algs::static_for<0, c_info_list_type::num_info_elems()>([&](const auto& jj)
-        {
-            const int j = jj.value;
-            auto& info_list_data = detail::get_info_list_data_at<j,0>(c_data);
-            using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-            invoke_compute<info_type>(grid, array, cell_glob_idx, i_face.dir(), info_list_data.data);
-        });
-        
-        constexpr int num_suppl_l = stencil_data_t::n_l_cells;
-        constexpr int num_suppl_r = stencil_data_t::n_r_cells;
-        static_assert((num_suppl_l==2) && (num_suppl_r == 2), "requires stencil data of width 4 at the moment");
-        
-        auto mirror_cell = cell_glob_idx;
-        int line_id = data.line_idx;
-        ctrs::array<int, 4> offst(-1, -2, 2, 1);
-        mirror_cell.i(i_face.dir()) += offst[line_id];
-        int mirror_buf_cell_idx = data.cell_idx_base + data.cell_pitch*offst[line_id];
-        auto& c_data_m = buffer[i_c()][mirror_buf_cell_idx];
-        
-        algs::static_for<0, c_info_list_type::num_info_elems()>([&](const auto& jj)
-        {
-            const int j = jj.value;
-            auto& info_list_data = detail::get_info_list_data_at<j,0>(c_data_m);
-            using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-            invoke_compute<info_type>(grid, array, cell_glob_idx, i_face.dir(), info_list_data.data);
-        });
-        
-        
-        algs::static_for<0, f_info_list_type::num_info_elems()>([&](const auto& jj)
-        {
-            const int j = jj.value;
-            auto& info_list_data = detail::get_info_list_data_at<j,0>(f_data);
-            using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-            invoke_compute<info_type>(grid, array, i_face, i_face.dir(), info_list_data.data);
-        });
-        print("=================");
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "omni/info.h"
+#include "core/unit_vector.h"
 
 namespace spade::omni
 {
@@ -12,7 +13,12 @@ namespace spade::omni
             constexpr static bool is_shmem_buffered  = false;
 
             template <typename array_t, const grid::array_centering center>
-            using array_data_type = ctrs::array<typename array_t::grid_type::coord_type,3>;
+            using array_data_type = typename std::conditional<
+                std::same_as<typename array_t::grid_type::coord_sys_type, coords::identity<typename array_t::grid_type::coord_type>>,
+                utils::unit_vector_t,
+                ctrs::array<typename array_t::grid_type::coord_type,3>>::type;
+            
+            // using array_data_type = ctrs::array<typename array_t::grid_type::coord_type,3>;
             
             template <typename grid_view_t, typename array_t, typename index_t>
             _sp_hybrid static void compute(

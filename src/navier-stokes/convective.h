@@ -274,6 +274,7 @@ namespace spade::convective
         _sp_hybrid output_type operator()(const auto& input) const
         {            
             fluid_state::flux_t<float_t> output;
+            
             auto fp0 = flux_func(input.cell(0_c));
             auto fp1 = flux_func(input.cell(1_c));
             auto fp2 = flux_func(input.cell(2_c));
@@ -303,11 +304,11 @@ namespace spade::convective
                 const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
                 const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
                 
-                const float_t eps = 1e-16;
-                const float_t a0  = (1.0/3.0)/((be0+eps)*(be0+eps));
-                const float_t a1  = (2.0/3.0)/((be1+eps)*(be1+eps));
-                const float_t a2  = (2.0/3.0)/((be2+eps)*(be2+eps));
-                const float_t a3  = (1.0/3.0)/((be3+eps)*(be3+eps));
+                const float_t eps = float_t(1e-16);
+                const float_t a0  = float_t(1.0/3.0)/((be0+eps)*(be0+eps));
+                const float_t a1  = float_t(2.0/3.0)/((be1+eps)*(be1+eps));
+                const float_t a2  = float_t(2.0/3.0)/((be2+eps)*(be2+eps));
+                const float_t a3  = float_t(1.0/3.0)/((be3+eps)*(be3+eps));
                 // const float_t a0  = (1.0/3.0)/((be0+eps));
                 // const float_t a1  = (2.0/3.0)/((be1+eps));
                 // const float_t a2  = (2.0/3.0)/((be2+eps));
@@ -316,14 +317,17 @@ namespace spade::convective
                 if constexpr (use_smooth == disable_smooth)
                 {
                     //use this for MMS!!
-                    output[k] = (1.0/3.0)*r0 + (2.0/3.0)*r1 + (2.0/3.0)*r2 + (1.0/3.0)*r3;
+                    output[k] = float_t(1.0/3.0)*r0 + float_t(2.0/3.0)*r1 + float_t(2.0/3.0)*r2 + float_t(1.0/3.0)*r3;
                 }
                 else
                 {
+                    // We can do some floptimizations here
                     const float_t w0 = a0/(a0+a1);
-                    const float_t w1 = a1/(a0+a1);
+                    // const float_t w1 = a1/(a0+a1);
+                    const float_t w1 = float_t(1.0) - w0;
                     const float_t w2 = a2/(a2+a3);
-                    const float_t w3 = a3/(a2+a3);
+                    // const float_t w3 = a3/(a2+a3);
+                    const float_t w3 = float_t(1.0) - w2;
                     output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
                 }
             }

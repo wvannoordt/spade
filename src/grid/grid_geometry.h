@@ -93,7 +93,7 @@ namespace spade::grid
             return inv_dx[lb][i];
         }
         
-        _sp_hybrid float_t get_inv_dx(const std::size_t& lb)  const
+        _sp_hybrid auto get_inv_dx(const std::size_t& lb)  const
         {
             return inv_dx[lb];
         }

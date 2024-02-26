@@ -5,7 +5,8 @@
 
 namespace spade::convective
 {
-    template <typename gas_t> struct rusanov_t
+    template <typename gas_t>
+    struct rusanov_t
     {
         const gas_t gas;
         using g_info_type   = typename gas_t::info_type;
@@ -32,7 +33,7 @@ namespace spade::convective
             f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + float_t(0.5)*q.p()*nv[1];
             f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + float_t(0.5)*q.p()*nv[2];
             f_d = f_u;
-            const real_t sigma = float_t(0.5)*(abs(u_norm) + sqrt(gas.get_gamma(info)*gas.get_R(info)*q.T()));
+            const float_t sigma = float_t(0.5)*(abs(u_norm) + sqrt(gas.get_gamma(info)*gas.get_R(info)*q.T()));
             
             f_d.continuity() -= sigma*rho;
             f_d.energy()     -= sigma*rho*engy;
