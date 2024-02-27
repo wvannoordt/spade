@@ -18,7 +18,9 @@ namespace spade::omni
         
         _sp_hybrid output_type operator() (const auto& input_data) const
         {
-            return kern(omni::interpret_stencil<typename kernel0_t::omni_type>(input_data)) + next(omni::interpret_stencil<typename next_type::omni_type>(input_data));
+            auto z0 = kern(omni::interpret_stencil<typename kernel0_t::omni_type>(input_data));
+            z0 += next(omni::interpret_stencil<typename next_type::omni_type>(input_data));
+            return z0;
         }
     };
     

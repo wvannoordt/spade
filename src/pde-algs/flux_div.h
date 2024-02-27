@@ -332,7 +332,12 @@ namespace spade::pde_algs
             total_tiles *= ntiles[d];
         }
         
-        using input_type = omni::stencil_data_t<omni_type, sol_arr_t>;        
+        using input_type_no_ptr = omni::stencil_data_t<omni_type, sol_arr_t>;
+        using input_type_ptr    = omni::stencil_data_t<omni_type, sol_arr_t>;
+        
+        constexpr bool vals_in_shmem = false;
+        
+        using input_type = typename utils::choose<vals_in_shmem, input_type_ptr, input_type_no_ptr>;
         
         for (int parity = 0; parity < 4; ++parity)
         {
@@ -453,7 +458,6 @@ namespace spade::pde_algs
                                 voldata.ptr  = faces_view.end();
                                 
                                 voldata(inner_raw[0], inner_raw[1], inner_raw[2]) = my_elem;
-                                threads.sync();
                                 threads.sync();
                                 
                                 for (int i_norm_pm = 0; i_norm_pm < 2; ++i_norm_pm)

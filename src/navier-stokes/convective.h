@@ -296,23 +296,7 @@ namespace spade::convective
                 
                 //downwind
                 const float_t r2  =  float_t(0.5)*f1_d[k]+float_t(0.5)*f2_d[k]; //sten2
-                const float_t r3  =  float_t(1.5)*f2_d[k]-float_t(0.5)*f3_d[k]; //sten3
-                
-                const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
-                const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
-                
-                const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
-                const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
-                
-                const float_t eps = float_t(1e-16);
-                const float_t a0  = float_t(1.0/3.0)/((be0+eps)*(be0+eps));
-                const float_t a1  = float_t(2.0/3.0)/((be1+eps)*(be1+eps));
-                const float_t a2  = float_t(2.0/3.0)/((be2+eps)*(be2+eps));
-                const float_t a3  = float_t(1.0/3.0)/((be3+eps)*(be3+eps));
-                // const float_t a0  = (1.0/3.0)/((be0+eps));
-                // const float_t a1  = (2.0/3.0)/((be1+eps));
-                // const float_t a2  = (2.0/3.0)/((be2+eps));
-                // const float_t a3  = (1.0/3.0)/((be3+eps));
+                const float_t r3  =  float_t(1.5)*f2_d[k]-float_t(0.5)*f3_d[k]; //sten3                
                 
                 if constexpr (use_smooth == disable_smooth)
                 {
@@ -321,6 +305,18 @@ namespace spade::convective
                 }
                 else
                 {
+                    const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
+                    const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
+                    
+                    const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
+                    const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
+                    
+                    const float_t eps = float_t(1e-16);
+                    const float_t a0  = float_t(1.0/3.0)/((be0+eps)*(be0+eps));
+                    const float_t a1  = float_t(2.0/3.0)/((be1+eps)*(be1+eps));
+                    const float_t a2  = float_t(2.0/3.0)/((be2+eps)*(be2+eps));
+                    const float_t a3  = float_t(1.0/3.0)/((be3+eps)*(be3+eps));
+                    
                     // We can do some floptimizations here
                     const float_t w0 = a0/(a0+a1);
                     // const float_t w1 = a1/(a0+a1);
@@ -330,6 +326,168 @@ namespace spade::convective
                     const float_t w3 = float_t(1.0) - w2;
                     output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
                 }
+            }
+            
+            return output;
+        }
+    };
+    
+    template <typename gas_t, const weno_smooth_indicator use_smooth = enable_smooth>
+    struct fweno_t
+    {
+        using float_t       = typename gas_t::value_type;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using m_info_type   = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using g_info_type   = typename gas_t::info_type;
+        using info_type     = omni::info_union<m_info_type, g_info_type>;
+        using omni_type     = omni::stencil_t<
+                grid::face_centered,
+                omni::elem_t<omni::offset_t<-3, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t<-1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 3, 0, 0>, info_type>
+            >;
+
+        const gas_t gas;
+        
+        fweno_t(const gas_t& gas_in) : gas{gas_in} {}
+        
+        _sp_hybrid output_type operator()(const auto& input) const
+        {            
+            fluid_state::flux_t<float_t> output;
+            ctrs::array<float_t, 4> fluxv, dissv;
+            ctrs::array<float_t, 4> rho, hlf_sig_rho;
+            algs::static_for<0, 4>([&](const auto& ii)
+            {
+                const int i         = ii.value;
+                const auto iii      = udci::idx_const_t<i>();
+                const auto& q       = omni::access<omni::info::value>(input.cell(iii));
+                const auto gam      = gas.get_gamma(input.cell(iii));
+                const auto rgas     = gas.get_R(input.cell(iii));
+                rho[i]              = rgas*q.T();
+                hlf_sig_rho[i]      = q.u()*q.u();
+                hlf_sig_rho[i]     += q.v()*q.v();
+                hlf_sig_rho[i]     += q.w()*q.w();
+                hlf_sig_rho[i]      = sqrt(hlf_sig_rho[i]);
+                hlf_sig_rho[i]     += sqrt(rho[i]*gam);
+                rho[i]              = q.p()/rho[i];
+                hlf_sig_rho[i]     *= rho[i];
+                hlf_sig_rho[i]     *= float_t(0.5);
+            });
+            
+            const auto apply_weno = [&](const int k)
+            {
+                const float_t f0uk = fluxv[0]+dissv[0];
+                const float_t f0dk = fluxv[0]-dissv[0];
+                const float_t f1uk = fluxv[1]+dissv[1];
+                const float_t f1dk = fluxv[1]-dissv[1];
+                const float_t f2uk = fluxv[2]+dissv[2];
+                const float_t f2dk = fluxv[2]-dissv[2];
+                const float_t f3uk = fluxv[3]+dissv[3];
+                const float_t f3dk = fluxv[3]-dissv[3];
+                
+                //upwind
+                const float_t r0  = float_t(-0.5)*(f0uk)+float_t(1.5)*(f1uk); //sten0
+                const float_t r1  = float_t( 0.5)*(f1uk)+float_t(0.5)*(f2uk); //sten1
+                
+                //downwind
+                const float_t r2  = float_t( 0.5)*(f1dk)+float_t(0.5)*(f2dk); //sten2
+                const float_t r3  = float_t( 1.5)*(f2dk)-float_t(0.5)*(f3dk); //sten3
+                
+                if constexpr (use_smooth == disable_smooth)
+                {
+                    //use this for MMS!!
+                    output[k] = float_t(1.0/3.0)*r0 + float_t(2.0/3.0)*r1 + float_t(2.0/3.0)*r2 + float_t(1.0/3.0)*r3;
+                }
+                else
+                {
+                    
+                    constexpr float_t eps = float_t(1e-16);
+                    ctrs::array<float_t, 4> as{(f0uk)-(f1uk), (f1uk)-(f2uk), (f1dk)-(f2dk), (f2dk)-(f3dk)};
+                    for (int ias = 0; ias < 4; ++ias)
+                    {
+                        as[ias] *= as[ias];
+                        as[ias] += eps;
+                        as[ias] *= as[ias];
+                    }
+                    as[0] += as[0];
+                    as[0] += as[1];
+                    as[0]  = as[1]/as[0];
+                    
+                    as[3] += as[3];
+                    as[3] += as[2];
+                    as[3]  = as[2]/as[3];
+                    
+                    as[1] = float_t(1.0) - as[0];
+                    as[2] = float_t(1.0) - as[3];
+                    
+                    output[k] = as[0]*r0 + as[1]*r1 + as[2]*r2 + as[3]*r3;
+                }
+            };
+            
+            const auto mutv = [&](const auto& tr_fnc)
+            {
+                algs::static_for<0, 4>([&](const auto& ii)
+                {
+                    const int i = ii.value;
+                    const auto iii = udci::idx_const_t<i>();
+                    const auto& q = omni::access<omni::info::value>(input.cell(iii));
+                    auto& arval = fluxv[i];
+                    auto& dsval = dissv[i];
+                    tr_fnc(arval, dsval, q, input.cell(iii), i);
+                });
+            };
+            
+            //Mass conservation
+            mutv([&](auto& flx, auto& disv_loc, const auto& q, const auto& info, const int i)
+            {
+                const auto& nv = omni::access<omni::info::metric>(info);
+                flx  = q.u()*nv[0];
+                flx += q.v()*nv[1];
+                flx += q.w()*nv[2];
+                flx *= float_t(0.5)*rho[i];
+                
+                disv_loc = hlf_sig_rho[i];
+            });
+            apply_weno(0);
+            
+            //Energy Conservation
+            mutv([&](auto& flx, auto& disv_loc, const auto& q, const auto& info, const int i)
+            {
+                float_t engy = q.u()*q.u();
+                engy        += q.v()*q.v();
+                engy        += q.w()*q.w();
+                engy        *= float_t(0.5);
+                
+                const auto gam  = gas.get_gamma(info);
+                const auto rgas = gas.get_R(info);
+                
+                float_t pdiff = rgas*q.T();
+                engy += pdiff/(gam-float_t(1.0));
+                
+                flx   *= (engy + pdiff);
+                disv_loc  *= engy;
+            });
+            apply_weno(1);
+            
+            //momentum conservation
+            for (int dr = 0; dr < 3; ++dr)
+            {
+                mutv([&](auto& flx, auto& disv_loc, const auto& q, const auto& info, const int i)
+                {
+                    const auto& nv = omni::access<omni::info::metric>(info);
+                    flx  = q.u()*nv[0];
+                    flx += q.v()*nv[1];
+                    flx += q.w()*nv[2];
+                    flx *= rho[i];
+                    flx *= q.u(dr);
+                    flx += q.p()*nv[dr];
+                    flx *= float_t(0.5);
+                    
+                    disv_loc  = hlf_sig_rho[i];
+                    disv_loc *= q.u(dr);
+                });
+                apply_weno(2+dr);
             }
             
             return output;

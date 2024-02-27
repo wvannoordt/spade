@@ -44,15 +44,6 @@ namespace spade::viscous
             const auto& face_grad   = omni::access<omni::info::gradient>(input.face(0_c));
             const auto& n           = omni::access<omni::info::metric>  (input.face(0_c));
             
-            // const auto& l_visc        = vlaw.get_visc(input.cell(0_c));
-            // const auto& l_visc2       = vlaw.get_beta(input.cell(0_c));
-            
-            // const auto& r_visc        = vlaw.get_visc(input.cell(1_c));
-            // const auto& r_visc2       = vlaw.get_beta(input.cell(1_c));
-            
-            // const auto visc  = float_t(0.5)*(l_visc  + r_visc);
-            // const auto visc2 = float_t(0.5)*(l_visc2 + r_visc2);
-            
             const auto all_visc = vlaw.get_all(input.face(0_c));
             const auto visc  = all_visc.mu;
             const auto visc2 = all_visc.beta;
@@ -64,9 +55,38 @@ namespace spade::viscous
             tau(0,0) = visc*(face_grad[0].u() + face_grad[0].u()) + visc2*div; //tau_xx
             tau(0,1) = visc*(face_grad[0].v() + face_grad[1].u()); //tau_xy
             tau(0,2) = visc*(face_grad[0].w() + face_grad[2].u()); //tau_xz
-            tau(1,0) = visc*(face_grad[1].u() + face_grad[0].v()); //tau_yx
-            tau(1,1) = visc*(face_grad[1].v() + face_grad[1].v()) + visc2*div; //tau_yy
             tau(1,2) = visc*(face_grad[1].w() + face_grad[2].v()); //tau_yz
+            tau(1,1) = visc*(face_grad[1].v() + face_grad[1].v()) + visc2*div; //tau_yy
+            tau(1,0) = tau(0,1);
+            tau(2,0) = tau(0,2);
+            tau(2,1) = tau(1,2);
+            tau(2,2) = visc*(face_grad[2].w() + face_grad[2].w()) + visc2*div; //tau_zz
+  
+            const auto gam       = gas.get_gamma(input.face(0_c));
+            const auto rgas      = gas.get_R(input.face(0_c));
+            const auto spec_heat = gam*rgas/(gam-float_t(1.0));
+            const auto dfs       = all_visc.alpha;
+            const auto cond      = spec_heat*dfs;
+
+
+            ht[0] = q_face.u()*tau(0,0)+q_face.v()*tau(0,1)+q_face.w()*tau(0,2) + cond*face_grad[0].T();
+            ht[1] = q_face.u()*tau(1,0)+q_face.v()*tau(1,1)+q_face.w()*tau(1,2) + cond*face_grad[1].T();
+            ht[2] = q_face.u()*tau(2,0)+q_face.v()*tau(2,1)+q_face.w()*tau(2,2) + cond*face_grad[2].T();
+            output.continuity() = 0.0;
+            output.energy()     = -(n[0]*ht[0]+n[1]*ht[1]+n[2]*ht[2]);
+            output.x_momentum() = -(n[0]*tau(0,0)+n[1]*tau(0,1)+n[2]*tau(0,2));
+            output.y_momentum() = -(n[0]*tau(1,0)+n[1]*tau(1,1)+n[2]*tau(1,2));
+            output.z_momentum() = -(n[0]*tau(2,0)+n[1]*tau(2,1)+n[2]*tau(2,2));
+            
+            
+            // Old version
+            /*            
+            tau(0,0) = visc*(face_grad[0].u() + face_grad[0].u()) + visc2*div; //tau_xx
+            tau(0,1) = visc*(face_grad[0].v() + face_grad[1].u()); //tau_xy
+            tau(0,2) = visc*(face_grad[0].w() + face_grad[2].u()); //tau_xz
+            tau(1,2) = visc*(face_grad[1].w() + face_grad[2].v()); //tau_yz
+            tau(1,1) = visc*(face_grad[1].v() + face_grad[1].v()) + visc2*div; //tau_yy
+            tau(1,0) = visc*(face_grad[1].u() + face_grad[0].v()); //tau_yx
             tau(2,0) = visc*(face_grad[2].u() + face_grad[0].w()); //tau_zx
             tau(2,1) = visc*(face_grad[2].v() + face_grad[1].w()); //tau_zy
             tau(2,2) = visc*(face_grad[2].w() + face_grad[2].w()) + visc2*div; //tau_zz
@@ -86,6 +106,8 @@ namespace spade::viscous
             output.x_momentum() = -(n[0]*tau(0,0)+n[1]*tau(0,1)+n[2]*tau(0,2));
             output.y_momentum() = -(n[0]*tau(1,0)+n[1]*tau(1,1)+n[2]*tau(1,2));
             output.z_momentum() = -(n[0]*tau(2,0)+n[1]*tau(2,1)+n[2]*tau(2,2));
+            */
+            
             return output;
         }
     };

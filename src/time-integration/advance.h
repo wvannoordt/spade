@@ -93,7 +93,7 @@ namespace spade::time_integration
                     auto& resid_j = data.residual(j); //"k_j"
                     resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
                     sol += resid_j;
-                    resid_j *= 1.0/(dt*coeff);
+                    resid_j *= numeric_type(1.0)/(dt*coeff);
                 }
             });
             trans.transform_inverse(sol);
@@ -129,7 +129,7 @@ namespace spade::time_integration
                     auto& resid_j = data.residual(j); //"k_j"
                     resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
                     sol -= resid_j;
-                    resid_j *= 1.0/(dt*coeff);
+                    resid_j *= numeric_type(1.0)/(dt*coeff);
                 }
             });
             trans.transform_inverse(sol);
@@ -154,7 +154,7 @@ namespace spade::time_integration
                 new_solution += resid;
                 trans.transform_inverse(new_solution);
                 //Divide to avoid modifying the residual unduly (may be unnecessary!)
-                resid *= 1.0/(coeff*dt);
+                resid *= numeric_type(1.0)/(coeff*dt);
             }
         });
         axis.time() += dt;
