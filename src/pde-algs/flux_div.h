@@ -304,7 +304,7 @@ namespace spade::pde_algs
         using real_type     = sol_arr_t::value_type;
         using alias_type    = sol_arr_t::alias_type;
         using omni_type     = typename flux_func_t::omni_type;
-        using flux_t        = rhs_arr_t::alias_type;
+        using flux_type     = rhs_arr_t::alias_type;
         using grid_type     = typename sol_arr_t::grid_type;
         
         static_assert(std::same_as<typename grid_type::coord_sys_type, coords::identity<typename grid_type::coord_type>>, "flux divergence does not yet account for the jacobian!");
@@ -610,7 +610,7 @@ namespace spade::pde_algs
                             const auto excluded = omni::info_list_t<omni::info::value, omni::info::gradient>();
                             if (is_interior) omni::retrieve(grid_img, q_img, i_face, input, excluded);
                             
-                            flux_t flux = flux_func(input);
+                            flux_type flux = flux_func(input);
                             flux *= inv_dx[idir];
                             auto i_cell_l = i_cell;
                             i_cell_l.i(idir)--;
@@ -657,7 +657,7 @@ namespace spade::pde_algs
                     
                     data_type input;
                     omni::retrieve(grid_img, q_img, uface, input);
-                    flux_t flux = flux_func(input);
+                    flux_type flux = flux_func(input);
                     const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
                     flux *= inv_dx;
                     bool valid = (upper.i(idir0) < nx[idir0]) && (upper.i(idir1) < nx[idir1]);
