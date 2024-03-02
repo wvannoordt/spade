@@ -118,7 +118,8 @@ namespace spade::algs
                         auto kern2 = kern;
                         auto ghost_val  = [&]()
                         {
-                          if constexpr (std::invocable<kernel_t, typename arr_t::alias_type, typename arr_t::alias_type, typename coords::point_t<real_t>,  int>) return kern2(domain_val, fill_val, x_g, idir);
+                          if constexpr (std::invocable<kernel_t, typename arr_t::alias_type, typename arr_t::alias_type, typename coords::point_t<real_t>,  int>)
+                            return kern2(domain_val, fill_val, x_g, idir);
                           else return kern2(domain_val, idir);
                         }();
                         arr_img.set_elem(fill_idx, ghost_val);

@@ -13,7 +13,7 @@ namespace spade::convective
         using blend_stencil_t = omni::prefab::face_mono_t<typename blender_t::info_type>;
         using omni_type       = omni::stencil_union<blend_stencil_t, typename scheme0_t::omni_type, typename scheme1_t::omni_type>;
         
-        hybrid_scheme_t(const scheme0_t& scheme0_in, const scheme1_t& scheme1_in, const blender_t& blender_in)
+        _sp_hybrid hybrid_scheme_t(const scheme0_t& scheme0_in, const scheme1_t& scheme1_in, const blender_t& blender_in)
         : scheme0{scheme0_in}, scheme1{scheme1_in}, blender{blender_in} {}
         
         _sp_hybrid output_type operator() (const auto& input_data) const

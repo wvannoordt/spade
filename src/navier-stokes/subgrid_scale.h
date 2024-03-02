@@ -87,17 +87,6 @@ namespace spade::subgrid_scale
             const auto sqrt1    = sqrt(sqrt0);
             const auto sqrt2    = sqrt(sum_sij);
             const auto mu_turb0 = rho*cw*cw*delta*delta*sum_sdij*sqrt0/(eps + sum_sij*sum_sij*sqrt2 + sum_sdij*sqrt1);
-            
-            // print(mu_turb0);
-            // print("rho",      rho);
-            // print("cw",       cw);
-            // print("delta",    delta);
-            // print("sum_sdij", sum_sdij);
-            // print("sum_sij",  sum_sij);
-            // print("grad",     grad);
-            // print("val",      val);
-            // std::cin.get();
-            
             return mu_turb0;
         }
     };

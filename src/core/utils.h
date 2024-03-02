@@ -401,4 +401,7 @@ namespace spade::utils
     
     template <typename check_t, typename variant_t>
     constexpr static bool variant_contains = detail::variant_contains_impl<check_t, variant_t>::value;
+    
+    template <const bool tf, typename true_t, typename false_t>
+    using choose = typename std::conditional<tf, true_t, false_t>::type;
 }

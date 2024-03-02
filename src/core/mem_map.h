@@ -414,4 +414,197 @@ namespace spade::mem_map
         for (const auto p:sizes) out *= p;
         return out;
     }
+    
+    template <typename T> concept integral_array           = ctrs::basic_array<T> && std::integral<typename T::value_type>;
+    template <typename T> concept integral_scalar_or_array = std::integral<T> || integral_array<T>;
+    
+    template <const int idx, typename i_t, integral_scalar_or_array... is_t>
+    _sp_hybrid _sp_inline static constexpr int get_val(const i_t& i)
+    {
+        if constexpr (ctrs::basic_array<i_t>)
+        {
+            return i[idx];
+        }
+        else
+        {
+            return i;
+        }
+    }
+    
+    template <const int idx, integral_scalar_or_array i_t, integral_scalar_or_array... is_t>
+    requires(sizeof...(is_t) > 0)
+    _sp_hybrid _sp_inline static constexpr int get_val(const i_t& i, const is_t&... is)
+    {
+        if constexpr (ctrs::basic_array<i_t>)
+        {
+            if constexpr (idx < i_t::size())
+            {
+                return i[idx];
+            }
+            else
+            {
+                return get_val<idx - i_t::size()>(is...);
+            }
+        }
+        else
+        {
+            if constexpr (idx == 0)
+            {
+                return i;
+            }
+            else
+            {
+                return get_val<idx - 1>(is...);
+            }
+        }
+    }
+    
+    // Re-implementing memory maps with a slightly less cumbersome syntax, etc
+    // Memory map tags
+    
+    inline struct tlinear_t {} linear;
+    template <const int rank>
+    struct linear_t
+    {
+        using tag_type = tlinear_t;
+        ctrs::array<int, rank> min, max;
+        _sp_hybrid constexpr int size(int i) const { return max[i] - min[i]; }
+        _sp_hybrid constexpr std::size_t volume() const
+        {
+            std::size_t output = 1;
+            algs::static_for<0, rank>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output *= size(i);
+            });
+            return output;
+        }
+        
+        template <integral_scalar_or_array... is_t>
+        _sp_hybrid _sp_inline constexpr std::size_t compute_offset(const is_t&... is) const noexcept
+        {
+            // off = v + i*nv + j*nv*ni + k*nv*ni*nj + l*nv*ni*nj*nk;
+            std::size_t output = 0;
+            algs::static_for<0, rank-1>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output += get_val<rank - i - 1>(is...) - min[rank - i - 1];
+                output *= size(rank - i - 2);
+                // print("==========");
+                // print("size:", size(rank - i - 2));
+                // print("idx:",  get_val<rank - i - 1>(is...));
+                // print("min:",  min[rank - i - 1]);
+                // print("max:",  max[rank - i - 1]);
+                // print("==========");
+            });
+            output += get_val<0>(is...) - min[0];
+            // std::cin.get();
+            return output;
+        }
+    };
+    
+    inline struct ttiled_t {} tiled;
+    //Todo: make this more generic
+    struct tiled_t
+    {
+        using tag_type = ttiled_t;
+        ctrs::array<int, 5> min, max;
+        _sp_hybrid int size(int i) const { return max[i] - min[i]; }
+        _sp_hybrid std::size_t volume() const
+        {
+            std::size_t output = 1;
+            algs::static_for<0, 5>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output *= size(i);
+            });
+            return output;
+        }
+        template <integral_scalar_or_array... is_t>
+        _sp_hybrid _sp_inline std::size_t compute_offset(const is_t&... is) const noexcept
+        {
+            constexpr int tpow = 2;
+            constexpr int tsz  = 1 << tpow;
+            constexpr int mask = tsz - 1;
+            
+            int ni  = size(1);
+            int nj  = size(2);
+            int nk  = size(3);
+            int nlb = size(4);
+            
+            ni = ni >> tpow;
+            nj = nj >> tpow;
+            nk = nk >> tpow;
+            
+            int v  = get_val<0>(is...) - min[0];
+            int i  = get_val<1>(is...) - min[1];
+            int j  = get_val<2>(is...) - min[2];
+            int k  = get_val<3>(is...) - min[3];
+            int lb = get_val<4>(is...) - min[4];
+            
+            int ii = i & mask;
+            i = i >> tpow;
+            
+            int jj = j & mask;
+            j = j >> tpow;
+            
+            int kk = k & mask;
+            k = k >> tpow;
+            
+            std::size_t output = v;
+            output *= nlb;
+            output += lb;
+            output *= nk;
+            output += k;
+            output *= nj;
+            output += j;
+            output *= ni;
+            output += i;
+            output *= tsz;
+            output += kk;
+            output *= tsz;
+            output += jj;
+            output *= tsz;
+            output += ii;
+            
+            return output;
+        }
+    };
+    
+    template <typename alias_t, typename device_t>
+    inline auto make_grid_map(const tlinear_t&, const alias_t&, const device_t&,
+        const ctrs::array<int, 2>& is,
+        const ctrs::array<int, 2>& js,
+        const ctrs::array<int, 2>& ks,
+        const ctrs::array<int, 2>& ls)
+    {
+        if constexpr (ctrs::basic_array<alias_t>)
+        {
+            if constexpr (device::is_gpu<device_t>)
+            {
+                // return linear_t<5>{{is[0], js[0], ks[0], ls[0], 0}, {is[1], js[1], ks[1], ls[1], alias_t::size()}};
+                return linear_t<5>{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+            }
+            else
+            {
+                return linear_t<5>{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+            }
+        }
+        else
+        {
+            return linear_t<4>{{is[0], js[0], ks[0], ls[0]}, {is[1], js[1], ks[1], ls[1]}};
+        }
+    }
+    
+    template <typename alias_t, typename device_t>
+    inline auto make_grid_map(const ttiled_t&, const alias_t&, const device_t&,
+        const ctrs::array<int, 2>& is,
+        const ctrs::array<int, 2>& js,
+        const ctrs::array<int, 2>& ks,
+        const ctrs::array<int, 2>& ls)
+    {
+        static_assert(ctrs::basic_array<alias_t>, "tiled memory map only available for array alias types");
+        
+        return tiled_t{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+    }
 }

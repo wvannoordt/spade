@@ -29,7 +29,7 @@ namespace spade::dispatch
         _sp_hybrid std::size_t shmem_size() const
         {
             std::size_t output = shmem.bytes();
-            if constexpr (!device::is_device<exec_space_t>) output += space.shmem_size();
+            // if constexpr (!device::is_device<exec_space_t>) output += space.shmem_size();
             return output;
         }
         

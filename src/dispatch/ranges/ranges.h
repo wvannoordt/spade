@@ -49,6 +49,15 @@ namespace spade::dispatch::ranges
     
     template <std::integral idx_t, typename index_type>
     _sp_hybrid index_type compute_index(
+        const basic_range_t<idx_t, std::size_t(2), index_type>& i_range,
+        const ranges::inner_config_t& b_dim,
+        const ranges::inner_config_t& t_idx)
+    {
+        return {t_idx.data.x-i_range.bounds.min(0), t_idx.data.y-i_range.bounds.min(1)};
+    }
+    
+    template <std::integral idx_t, typename index_type>
+    _sp_hybrid index_type compute_index(
         const basic_range_t<idx_t, std::size_t(1), index_type>& i_range,
         const ranges::outer_config_t& g_dim,
         const ranges::outer_config_t& b_idx,
@@ -65,5 +74,14 @@ namespace spade::dispatch::ranges
         const ranges::outer_config_t& b_idx)
     {
         return {b_idx.data.x-i_range.bounds.min(0), b_idx.data.y-i_range.bounds.min(1), b_idx.data.z-i_range.bounds.min(2)};
+    }
+    
+    template <std::integral idx_t, typename index_type>
+    _sp_hybrid index_type compute_index(
+        const basic_range_t<idx_t, std::size_t(2), index_type>& i_range,
+        const ranges::outer_config_t& g_dim,
+        const ranges::outer_config_t& b_idx)
+    {
+        return {b_idx.data.x-i_range.bounds.min(0), b_idx.data.y-i_range.bounds.min(1)};
     }
 }

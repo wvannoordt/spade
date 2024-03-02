@@ -9,6 +9,7 @@
 #include "core/utils.h"
 #include "core/range.h"
 #include "core/const_index.h"
+#include "core/unit_vector.h"
 
 namespace spade::ctrs
 {
@@ -131,7 +132,7 @@ namespace spade::ctrs
 
         _sp_hybrid constexpr static index_type size() {return ar_size;}
         
-        _sp_hybrid self_type& self() { return *(static_cast<self_type*>(this)); }
+        _sp_hybrid self_type& self() { return static_cast<self_type&>(*this); }
         
         template <typename ftype> _sp_hybrid void fill(const ftype& val, const index_type imin, const index_type imax)
         {
@@ -264,7 +265,7 @@ namespace spade::ctrs
         _sp_hybrid bool operator == (const arithmetic_array_t<dtype, ar_size, derived_t>& rhs) const
         {
             bool output = true;
-            for (index_type i = 0; i < this->size(); i++) output = (output&&(data[i]==rhs[i]));
+            for (index_type i = 0; i < this->size(); i++) output = (output && (data[i]==rhs[i]));
             return output;
         }
     };
@@ -378,5 +379,13 @@ namespace spade::ctrs
         target_t output;
         copy_array(arr, output);
         return output;
+    }
+    
+    template <typename... vals_t>
+    _sp_hybrid inline auto make_array(const vals_t&... vals)
+    {
+        using val_t    = typename std::common_type<vals_t...>::type;
+        using output_t = array<val_t, sizeof...(vals_t)>;
+        return output_t{vals...};
     }
 }

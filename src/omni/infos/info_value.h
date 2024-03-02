@@ -33,9 +33,10 @@ namespace spade::omni
                 const index_t& idx,
                 array_data_type<array_t, index_t::centering_type()>& out)
             {
+                using float_t = typename array_t::value_type;
                 out =  array.get_elem(grid::face_to_cell(idx,0));
                 out += array.get_elem(grid::face_to_cell(idx,1));
-                out *= 0.5;
+                out *= float_t(0.5);
             }
         };
     }
