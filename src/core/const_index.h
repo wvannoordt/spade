@@ -8,11 +8,11 @@ namespace spade::udci
     struct idx_const_t
     {
         constexpr static integral_t value = ii;
-        auto operator -() const {return idx_const_t<-ii>();}
+        _sp_hybrid auto operator -() const {return idx_const_t<-ii>();}
     };
     namespace detail
     {
-        constexpr integral_t c_to_i(char c) { return c - '0'; }
+        constexpr _sp_hybrid integral_t c_to_i(char c) { return c - '0'; }
         
         template <char v0, char... chars_v> struct compute_b10_val_t
         {
@@ -26,7 +26,7 @@ namespace spade::udci
 }
 
 template <char... chars_v>
-constexpr auto operator""_c()
+constexpr _sp_hybrid auto operator""_c()
 {
     const int ii = spade::udci::detail::compute_b10_val_t<chars_v...>::value;
     return spade::udci::idx_const_t<ii>();

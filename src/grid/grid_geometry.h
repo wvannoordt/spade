@@ -17,6 +17,7 @@ namespace spade::grid
     {
         using coord_type = typename coord_t::coord_type;
         using float_t    = typename coord_t::coord_type;
+        using vec_t      = ctrs::array<float_t, 3>;
         using point_type = coords::point_t<float_t>;
         using iarr_t     = ctrs::array<int, 3>;
         
@@ -25,6 +26,8 @@ namespace spade::grid
         ctrs::array<int, 3>                   num_cell;
         container_tt<bound_box_t<float_t, 3>> bounding_boxes; // Bounding box for each block, comp. coordinates
         container_tt<bound_box_t<bool, 3>>    domain_boundary;
+        container_tt<vec_t>                   dx;     // Grid spacing
+        container_tt<vec_t>                   inv_dx; // 1.0 / Grid spacing
         ctrs::array<container_tt<int>, 6>     boundary_blocks;
         
         constexpr static int dim() { return gdim; }
@@ -58,16 +61,17 @@ namespace spade::grid
             const auto  idx_r = get_index_coord(i);
             point_type output;
             if constexpr (dim() == 2) output[2] = 0.0;
-            const auto dx = this->get_dx(i.lb());
+            const auto dx_loc = this->get_dx(i.lb());
             for (int d = 0; d < dim(); ++d)
             {
-                output[d] = bbx.min(d)+idx_r[d]*dx[d];
+                output[d] = bbx.min(d)+idx_r[d]*dx_loc[d];
             }
             return output;
         }
         
         _sp_hybrid ctrs::array<float_t, 3> get_dx(const std::size_t& lb) const
         {
+            // return dx[lb]; //How is this slower??
             const auto& bbx = this->get_bounding_box(lb);
             ctrs::array<float_t, 3> output;
             if constexpr (dim() == 2) output[2] = 1.0;
@@ -80,7 +84,18 @@ namespace spade::grid
         
         _sp_hybrid float_t get_dx(const int i, const std::size_t& lb)  const
         {
+            // return dx[lb][i]; //How is this slower??
             return this->get_bounding_box(lb).size(i)/num_cell[i];
+        }
+        
+        _sp_hybrid float_t get_inv_dx(const int i, const std::size_t& lb)  const
+        {
+            return inv_dx[lb][i];
+        }
+        
+        _sp_hybrid auto get_inv_dx(const std::size_t& lb)  const
+        {
+            return inv_dx[lb];
         }
     };
 }

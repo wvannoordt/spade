@@ -56,13 +56,19 @@ namespace spade::dispatch::ranges
             //In this case, we are separating the kernel into an "outer" and "inner" range
             static_assert(
                 (kernel_t::exec_space_type::index_type::size() == 1) ||
+                (kernel_t::exec_space_type::index_type::size() == 2) ||
                 (kernel_t::exec_space_type::index_type::size() == 3),
-                "only 1-dimensional inner range currently supported!");
+                "only 1 or 2 or 3-dimensional inner range currently supported!");
             
             //This will need to be modified if we ever support multidimensional thread pools
             if constexpr (kernel_t::exec_space_type::index_type::size() == 1)
             {
                 blck_dim.x = thrds.size();
+            }
+            else if constexpr (kernel_t::exec_space_type::index_type::size() == 2)
+            {
+                blck_dim.x = thrds.irange.bounds.size(0);
+                blck_dim.y = thrds.irange.bounds.size(1);
             }
             else if constexpr (kernel_t::exec_space_type::index_type::size() == 3)
             {
@@ -74,6 +80,11 @@ namespace spade::dispatch::ranges
             if constexpr (kernel_t::index_type::size() == 1)
             {
                 grid_dim.x = kernel.o_range.bounds.volume();
+            }
+            else if constexpr (kernel_t::index_type::size() == 2)
+            {
+                grid_dim.x = kernel.o_range.bounds.size(0);
+                grid_dim.y = kernel.o_range.bounds.size(1);
             }
             else if constexpr (kernel_t::index_type::size() == 3)
             {

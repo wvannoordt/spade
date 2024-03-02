@@ -10,7 +10,7 @@ namespace spade::omni
         {
 
             constexpr static bool requires_direction = false;
-            constexpr static bool is_shmem_buffered  = true;
+            constexpr static bool is_shmem_buffered  = false;
             
             template <typename array_t, const grid::array_centering center>
             using array_data_type

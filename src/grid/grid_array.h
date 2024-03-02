@@ -173,7 +173,8 @@ namespace spade::grid
     template <
         multiblock_grid grid_t,
         typename        data_alias_t,
-        typename        device_t = device::cpu_t,
+        typename        device_t,
+        typename        mmap_t,
         const           array_centering centering = cell_centered
         >
     struct grid_array
@@ -198,18 +199,19 @@ namespace spade::grid
         
         using variable_map_type   = detail::get_variable_mem_map<data_alias_t>::type;
         using grid_map_type       = detail::get_ijklb_map_type<centering_type(), grid_type::dim()>::type;
-        using mem_map_type        = mem_map::mem_map_t<mem_map::recti_view_t<variable_map_type, grid_map_type>>;
         using device_type         = device_t;
+        using mem_map_type        = decltype(mem_map::make_grid_map(mmap_t(), alias_type(), device_type(), {0, 0}, {0, 0}, {0, 0}, {0, 0}));
         using var_idx_t           = ctrs::array<int, variable_map_type::rank()>;
         
         using image_type           = array_image_t<alias_type, mem_map_type,       value_type*, centering_type(), grid_type>;
         using const_image_type     = array_image_t<alias_type, mem_map_type, const value_type*, centering_type(), grid_type>;
-        using iarray_t             = typename grid_t::array_desig_type;
+        using iarray_t             = ctrs::array<int, 3>;
         
         iarray_t                         num_exch;
         const grid_t*                    grid;
         container_type<fundamental_type> data;
-        mem_map_type                     mem_view;
+        mem_map_type                     mmap;
+        std::size_t                      var_offset;
         
         constexpr static int dim() { return grid_t::dim(); }
         
@@ -224,29 +226,9 @@ namespace spade::grid
             data.clear();
         }
         
-        const auto& var_map() const
-        {
-            return std::get<0>(mem_view.mmap.views);
-        }
-        
-        const auto& block_map() const
-        {
-            return std::get<1>(mem_view.mmap.views);
-        }
-        
-        auto& var_map()
-        {
-            return std::get<0>(mem_view.mmap.views);
-        }
-        
-        auto& block_map()
-        {
-            return std::get<1>(mem_view.mmap.views);
-        }
-        
         std::size_t get_base_offset(const index_type& ii) const
         {
-            return mem_view.compute_offset(var_idx_t(0), ii);
+            return mmap.compute_offset(var_idx_t(0), ii);
         }
         
         int      get_num_exchange(int i) const { return num_exch[i]; }
@@ -254,25 +236,24 @@ namespace spade::grid
         
         auto get_device() const {return device_t();}
 
-        std::size_t cell_element_size() const {return mem_map::map_size(var_map());}
+        // std::size_t cell_element_size() const {return mem_map::map_size(var_map());}
 
         grid_array(){}
         grid_array(
             const grid_t& grid_in,
             const data_alias_t& fill_elem,
             const typename grid_t::array_desig_type& num_exch_in,
-            const device_t& dev_in = device::cpu_t()
+            const device_t& dev_in,
+            const mmap_t& mmap_tag
             ) : grid{&grid_in}, num_exch{num_exch_in}
         {
-            auto& grid_map = block_map();
-            detail::insert_grid_dims<centering_type()>(grid_map, grid_in, num_exch);
-            this->mem_view.compute_coeffs();
-            // this->mem_view.compute_coeffs({0,1,2,3,4});
-            // this->mem_view.compute_coeffs({1,2,3,4,0});
-            // this->mem_view.compute_coeffs({4, 3, 2, 1, 0});
-            // this->mem_view.compute_coeffs({0, 4, 3, 2, 1});
-            this->mem_view.compute_offset_base();
-            auto total_size = mem_map::map_size(var_map())*mem_map::map_size(block_map());
+            mmap = mem_map::make_grid_map(
+                mmap_tag, alias_type(), device_type(),
+                ctrs::make_array(-num_exch[0], grid->get_num_cells(0) + num_exch[0]),
+                ctrs::make_array(-num_exch[1], grid->get_num_cells(1) + num_exch[1]),
+                ctrs::make_array(-num_exch[2], grid->get_num_cells(2) + num_exch[2]),
+                ctrs::make_array(0, int(grid->get_num_local_blocks())));
+            auto total_size = mmap.volume();
             data.resize(total_size);
         }
         
@@ -283,7 +264,7 @@ namespace spade::grid
             grid     = rhs.grid;
             num_exch = rhs.num_exch;
             data     = std::move(rhs.data);
-            mem_view = rhs.mem_view;
+            mmap     = rhs.mmap;
         }
         
         grid_array& operator = (const grid_array& rhs) = default;
@@ -293,12 +274,12 @@ namespace spade::grid
             grid     = rhs.grid;
             num_exch = rhs.num_exch;
             data     = std::move(rhs.data);
-            mem_view = rhs.mem_view;
+            mmap     = rhs.mmap;
             return *this;
         }
         
-        const const_image_type image() const { return {&data[0], data.size(), mem_view}; }
-        image_type             image()       { return {&data[0], data.size(), mem_view}; }
+        const const_image_type image() const { return {&data[0], data.size(), mmap, var_offset}; }
+        image_type             image()       { return {&data[0], data.size(), mmap, var_offset}; }
 
         //TODO: clean this up a little bit with more lambdas!
         template <multiblock_array rhs_t>

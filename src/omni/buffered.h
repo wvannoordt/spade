@@ -8,7 +8,7 @@
 
 namespace spade::omni
 {
-        namespace detail
+    namespace detail
     {
         template <typename accum_t, typename... infos_t>
         struct lremove_buffered_impl;
@@ -75,6 +75,10 @@ namespace spade::omni
     {
         shmem_t& shmem;
         int line_idx;
+        int face_idx_base;
+        int face_pitch;
+        int cell_idx_base;
+        int cell_pitch;
         
         using empty0_t = stencil_t<grid::face_centered, elem_t<offset_t<0,0,0>, info_list_t<>>>;
         using empty1_t = stencil_t<grid::face_centered, elem_t<offset_t<1,0,0>, info_list_t<>>>;
@@ -106,14 +110,16 @@ namespace spade::omni
         {
             using offset_type = offset_at<stencil_type, grid::cell_centered, ii>;
             constexpr static int cell_offst = static_math::moddiv<offset_type::template elem<0>,2>::value;
-            return line_idx + cell_offst + n_l_cells;
+            int ordinary = line_idx;
+            return cell_idx_base + cell_pitch*ordinary;
         }
         
         template <const int ii>
         _sp_hybrid int get_face_buf_index(const udci::idx_const_t<ii>&) const
         {
             using offset_type = offset_at<stencil_type, grid::face_centered, ii>;
-            return line_idx + static_math::moddiv<offset_type::template elem<0>,2>::value;
+            int ordinary = line_idx;
+            return face_idx_base + face_pitch*ordinary;
         }
         
         //const qualified
@@ -122,7 +128,7 @@ namespace spade::omni
         _sp_hybrid constexpr const auto cell(const udci::idx_const_t<ii>& idx) const
         {
             int buf_index = get_cell_buf_index(idx);
-            const auto& shmem_data = shmem[cell_data_location()][buf_index];
+            const auto& shmem_data = shmem[cell_data_location()][cell_idx_base + cell_pitch*buf_index];
             const auto& local_data = supplemental.cell(idx);
             using shared_t = typename utils::remove_all<decltype(shmem_data)>::type;
             using local_t = typename utils::remove_all<decltype(local_data)>::type;
@@ -134,7 +140,7 @@ namespace spade::omni
         _sp_hybrid constexpr const auto face(const udci::idx_const_t<ii>& idx) const
         {
             int buf_index = get_face_buf_index(idx);
-            const auto& shmem_data = shmem[face_data_location()][buf_index];
+            const auto& shmem_data = shmem[face_data_location()][face_idx_base + face_pitch*buf_index];
             const auto& local_data = supplemental.face(idx);
             using shared_t = typename utils::remove_all<decltype(shmem_data)>::type;
             using local_t =  typename utils::remove_all<decltype(local_data)>::type;
@@ -180,8 +186,8 @@ namespace spade::omni
     };
     
     template <typename istencil_t, typename array_t, typename shmem_t>
-    _sp_hybrid auto make_buffered_data(shmem_t& shmem, int i_face_line)
+    _sp_hybrid auto make_buffered_data(shmem_t& shmem, int i_face_line, int face_base_idx, int face_pitch, int cell_base_idx, int cell_pitch)
     {
-        return buffered_t<istencil_t, array_t, shmem_t>{shmem, i_face_line};
+        return buffered_t<istencil_t, array_t, shmem_t>{shmem, i_face_line, face_base_idx, face_pitch, cell_base_idx, cell_pitch};
     }
 }

@@ -132,8 +132,7 @@ namespace spade::dispatch
             extern __shared__ char sh_mem_raw[];
             char* base        = (char*)sh_mem_raw;
             auto& thrds       = kern.space;
-            thrds.set_shmem_base(base);
-            char* shmem_start = base + thrds.shmem_size();
+            char* shmem_start = base;
             auto& function    = kern.function;
             thrds.set_idx(threadIdx);
             const auto index  = compute_index(kern.o_range, g_dim, b_idx);
@@ -143,7 +142,7 @@ namespace spade::dispatch
             {
                 kern.shmem.bind_ptr(shmem_start);
             }
-            if (thrds.valid() && kern.valid(index))
+            // if (thrds.valid() && kern.valid(index)) //We won't do any checking if calling with a kernel threads obj
             {
                 if constexpr (has_shmem)
                 {
@@ -217,7 +216,7 @@ namespace spade::dispatch
         
         if constexpr (is_gpu_impl)
         {
-            const auto config = ranges::compute_config(kernel);
+            const auto config     = ranges::compute_config(kernel);
             const auto gconf      = config.grid_dim.data;
             const auto bconf      = config.block_dim.data;
             const auto shmem_size = config.shmem_size;
@@ -240,15 +239,15 @@ namespace spade::dispatch
         else
         {
             std::size_t nbytes = shmem.bytes();
-            if constexpr (!device::is_device<comp_space_t>) nbytes += space.shmem_size();
+            // if constexpr (!device::is_device<comp_space_t>) nbytes += space.shmem_size();
             std::vector<char> shmem_buf(nbytes);
             char* shmem_base = &shmem_buf[0];
             auto shmem_kern = shmem;
             shmem_kern.bind_ptr(shmem_base);
-            if constexpr (!device::is_device<comp_space_t>)
-            {
-                space.set_shmem_base(shmem_base + shmem.bytes());
-            }
+            // if constexpr (!device::is_device<comp_space_t>)
+            // {
+            //     space.set_shmem_base(shmem_base + shmem.bytes());
+            // }
             
             using loop_index_type = idx_alias_t;
             loop_index_type i;
@@ -256,7 +255,14 @@ namespace spade::dispatch
             {
                 auto loop = [&](const auto& idx) mutable
                 {
-                    kernel_in(idx, space, shmem_kern);
+                    if constexpr (shmem_t::is_empty())
+                    {
+                        kernel_in(idx, space);
+                    }
+                    else
+                    {
+                        kernel_in(idx, space, shmem_kern);
+                    }
                 };
                 
                 using bound_type = decltype(range.bounds);

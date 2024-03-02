@@ -22,8 +22,9 @@ namespace spade::grid
     template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)
     {
         t;
-        t.var_map();
-        t.block_map();
+        t.get_grid();
+        // t.var_map();
+        // t.block_map();
     };
     
     template <typename T0, typename T1> concept elementwise_compatible = multiblock_array<T0> && multiblock_array<T1> &&
@@ -122,6 +123,18 @@ namespace spade::grid
                         geom.bounding_boxes.push_back(box);
                         geom.domain_boundary.push_back(ibdy);
                         
+                        using vec_t = typename utils::remove_all<decltype(geom.get_dx(0))>::type;
+                        
+                        vec_t dx_loc;
+                        vec_t inv_dx_loc;
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            dx_loc[i]     = box.size(i)/geom.num_cell[i];
+                            inv_dx_loc[i] = 1.0/dx_loc[i];
+                        }
+                        geom.dx.push_back(dx_loc);
+                        geom.inv_dx.push_back(inv_dx_loc);
+                        
                         for (int i = 0; i < 6; ++i)
                         {
                             if (ibdy.bnds[i])
@@ -139,10 +152,14 @@ namespace spade::grid
                 global_geometry.bounding_boxes.transfer();
                 global_geometry.domain_boundary.transfer();
                 for (int i = 0; i < 6; ++i) global_geometry.boundary_blocks[i].transfer();
+                global_geometry.inv_dx.transfer();
+                global_geometry.dx.transfer();
                 
                 local_geometry.bounding_boxes.transfer();
                 local_geometry.domain_boundary.transfer();
                 for (int i = 0; i < 6; ++i) local_geometry.boundary_blocks[i].transfer();
+                local_geometry.inv_dx.transfer();
+                local_geometry.dx.transfer();
             }
             
             template <typename loc_glob_t, typename device_t>
@@ -152,9 +169,11 @@ namespace spade::grid
                 geomety_image_type output(geom.coords, geom.num_cell);
                 output.bounding_boxes  = utils::make_vec_image(geom.bounding_boxes.data(dev));
                 output.domain_boundary = utils::make_vec_image(geom.domain_boundary.data(dev));
-                for (int i = 0; i < 6; ++i)
+                output.dx     = utils::make_vec_image(geom.dx.data(dev));
+                output.inv_dx = utils::make_vec_image(geom.inv_dx.data(dev));
+                for (int j = 0; j < 6; ++j)
                 {
-                    output.boundary_blocks[i] = utils::make_vec_image(geom.boundary_blocks[i].data(dev));
+                    output.boundary_blocks[j] = utils::make_vec_image(geom.boundary_blocks[j].data(dev));
                 }
                 return output;
             }
@@ -172,7 +191,8 @@ namespace spade::grid
             std::size_t  get_num_global_blocks()                        const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::global_tag_t&) const { return grid_partition.get_num_global_blocks(); }
             std::size_t  get_num_blocks(const partition::local_tag_t&)  const { return grid_partition.get_num_local_blocks(); }
-            int get_num_cells(const std::size_t& i)                     const { return global_geometry.num_cell[i]; }
+            int  get_num_cells(const std::size_t& i)                    const { return global_geometry.num_cell[i]; }
+            auto get_num_cells()                                        const { return global_geometry.num_cell; }
             bound_box_t<dtype,  3> get_bounds()                         const { return block_arrangement.get_bounds(); }
             const par_group_t& group()                                  const { return grid_group; }
             const coord_t& coord_sys()                                  const { return global_geometry.get_coords(); }
