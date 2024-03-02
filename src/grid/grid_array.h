@@ -174,7 +174,7 @@ namespace spade::grid
         multiblock_grid grid_t,
         typename        data_alias_t,
         typename        device_t,
-        typename        mmap_t,
+        typename        mmap_t = mem_map::tlinear_t,
         const           array_centering centering = cell_centered
         >
     struct grid_array
@@ -244,7 +244,7 @@ namespace spade::grid
             const data_alias_t& fill_elem,
             const typename grid_t::array_desig_type& num_exch_in,
             const device_t& dev_in,
-            const mmap_t& mmap_tag
+            const mmap_t& mmap_tag = mem_map::linear
             ) : grid{&grid_in}, num_exch{num_exch_in}
         {
             mmap = mem_map::make_grid_map(
