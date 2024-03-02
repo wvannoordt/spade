@@ -146,7 +146,7 @@ namespace spade::pde_algs
         typename flux_func_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
-    static void flux_div_OLD(
+    static void flux_div(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func)
@@ -205,7 +205,7 @@ namespace spade::pde_algs
         typename flux_func_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
-    static void flux_div(
+    static void flux_div_DEPRECATED(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func)
@@ -404,7 +404,7 @@ namespace spade::pde_algs
                         is_interior = is_interior && (i_cell.j() < nx[1]);
                         is_interior = is_interior && (i_cell.k() < nx[2]);
                         
-                        alias_type my_elem;
+                        alias_type my_elem;                        
                         if (is_interior) my_elem = q_img.get_elem(i_cell);
                         
                         for (int idir = 0; idir < dim; ++idir)

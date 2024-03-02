@@ -27,7 +27,7 @@ namespace spade::state_sensor
 
         float_t epsilon;
 
-        ducros_t(const float_t& epsilon_in) : epsilon{epsilon_in} {}
+        _sp_hybrid ducros_t(const float_t& epsilon_in) : epsilon{epsilon_in} {}
 
         _sp_hybrid float_t get_sensor(const auto& info) const
         {
@@ -51,7 +51,7 @@ namespace spade::state_sensor
 
         float_t alpha;
 
-        const_sensor_t(const float_t& alpha_in) : alpha{alpha_in} {}
+        _sp_hybrid const_sensor_t(const float_t& alpha_in) : alpha{alpha_in} {}
 
         _sp_hybrid float_t get_sensor(const auto& info) const
         {
