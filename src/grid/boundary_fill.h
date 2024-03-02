@@ -107,13 +107,20 @@ namespace spade::algs
                         // this is weird but necessary
                         grid::cell_idx_t fill_idx = ii;
                         fill_idx.lb() = g_img.boundary_blocks[ibndy][ii.lb()];
-                        
                         grid::cell_idx_t image_idx = fill_idx;
                         if (pm == 0) image_idx[idir] = -1 - fill_idx[idir];
                         if (pm == 1) image_idx[idir] = 2*g_img.num_cell[idir] - (fill_idx[idir] + 1);
-                        
+                        //auto domain_val = arr_img.get_elem(image_idx);
+                        //auto ghost_val  = kern(domain_val, idir);
                         auto domain_val = arr_img.get_elem(image_idx);
-                        auto ghost_val  = kern(domain_val, idir);
+                        auto fill_val   = arr_img.get_elem(fill_idx);
+                        auto x_g        = g_img.get_coords(fill_idx);
+                        auto kern2 = kern;
+                        auto ghost_val  = [&]()
+                        {
+                          if constexpr (std::invocable<kernel_t, typename arr_t::alias_type, typename arr_t::alias_type, typename coords::point_t<real_t>,  int>) return kern2(domain_val, fill_val, x_g, idir);
+                          else return kern2(domain_val, idir);
+                        }();
                         arr_img.set_elem(fill_idx, ghost_val);
                     };
                     dispatch::execute(bd_range, fill_bdy);

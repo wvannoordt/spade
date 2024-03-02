@@ -3,7 +3,7 @@
 namespace spade::convective
 {
     template <typename scheme0_t, typename scheme1_t, typename blender_t>
-    struct hybrid_scheme_t
+    _sp_hybrid struct hybrid_scheme_t
     {
         const scheme0_t scheme0; // centered
         const scheme1_t scheme1; // dissipative

@@ -53,8 +53,8 @@ namespace spade::sampling
         geom::bvh_t<dim, typename pnt_t::value_type> block_bvh;
         geom::bvh_params_t bvhparams{4, 1000};
         
-        // Perform in computational coordinates, node that we strictly
-        // need a 2D BVH ig the grid is 2D
+        // Perform in computational coordinates, note that we strictly
+        // need a 2D BVH if the grid is 2D
         const auto bbx = grid.get_bounds();
         using bnd_t = bound_box_t<typename pnt_t::value_type, dim>;
         bnd_t bnd;
@@ -123,6 +123,7 @@ namespace spade::sampling
                 if (lb.value < 0)
                 {
                     std::stringstream ss;
+                    ss << std::setprecision(20);
                     ss << "Cannot compute find suitable block for point:\n" << x_sample;
                     ss << "\nBounds:\n" << bbx;
                     ss << "\nNum. checks: " << num_checked;
@@ -204,12 +205,11 @@ namespace spade::sampling
             const auto& coeffs = coeff_img[i];
             const auto& idxs   = idx_img  [i];
             for (int j = 0; j < idxs.size(); ++j)
-            {
+              {
                 auto data = arr_img.get_elem(idxs[j]);
                 result = result + coeffs[j]*data;
-            }
+              }
         };
-        
         auto rg = dispatch::ranges::from_array(out_img, arr.device());
         dispatch::execute(rg, kern);
         

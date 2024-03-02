@@ -141,7 +141,27 @@ namespace spade::linear_algebra
     {
         return dense_mat<data_t, mat_size>().fill([&](int i, int j) { return rhs(j,i); });
     }
-    
+
+
+  template <typename data_t, const std::size_t mat_size>
+  std::ostream& operator << (std::ostream& os, const dense_mat<data_t, mat_size>& mat)
+  {
+    os<<"\n";
+    for (int i=0;i<mat_size;++i)
+      {
+        os<<"|";
+        for (int j=0;j<mat_size;++j)
+          {
+            os << mat(i,j)<<" ";
+          }
+        os<<"|\n";
+      }
+    return os;
+  };
+
+
+
+
     template <typename rhs_t, typename data_t, const std::size_t mat_size>
     _sp_hybrid  dense_mat<data_t, mat_size> operator * (const rhs_t& rhs, const dense_mat<data_t, mat_size>& mat)
     {
@@ -185,4 +205,109 @@ namespace spade::linear_algebra
             }
         }
     }
+
+    template <typename data_t, const std::size_t sys_size>
+    _sp_hybrid int brute_invert(dense_mat<data_t, sys_size>& a)
+    {
+      std::vector<std::vector<data_t> > augmatrix(sys_size, std::vector<data_t>(2*sys_size));
+      bool flag = true;
+      int errorflag = 0;
+      for (int i = 0; i < sys_size; ++i)
+        {
+          for (int j = 0; j < 2*sys_size; ++j)
+            {
+              if (j<sys_size)
+                {
+                  augmatrix[i][j] = a(i,j);
+                }
+              else if ((i+sys_size) == j)
+                {
+                  augmatrix[i][j] = 1.0;
+                }
+              else
+                {
+                  augmatrix[i][j] = 0.0;
+                }
+            }
+        }
+
+      //reduce augmented matric to upper triangular form
+
+      for (int k = 0; k < sys_size-1; ++k)
+        {
+          if (augmatrix[k][k] == 0.)
+            {
+              flag = false;
+              for (int i = k+1; i <sys_size; ++i)
+                {
+                  if (augmatrix[i][k]!=0.)
+                    {
+                      for (int j = 0; j<2*sys_size; ++j)
+                        {
+                          augmatrix[k][j] = augmatrix[k][j]+augmatrix[i][j];
+                        }
+                      flag = true;
+                      break;
+                    }
+                  if (!flag)
+                    {
+                      errorflag = -1;
+                      return errorflag;
+                    }
+                }
+            }
+          for (int j = k+1; j<sys_size;++j)
+            {
+              data_t m = augmatrix[j][k]/augmatrix[k][k];
+              for (int i = k; i<2*sys_size;++i)
+                {
+                  augmatrix[j][i] = augmatrix[j][i] - m*augmatrix[k][i];
+                }
+            }
+        }
+
+      // test for invertibility
+      for (int i=0; i<sys_size; ++i)
+        {
+          if (augmatrix[i][i] == 0.)
+            {
+              errorflag = -2;
+              return errorflag;
+            }
+        }
+
+      //make diagonal elements
+      for (int i = 0; i<sys_size; ++i)
+        {
+          data_t m = augmatrix[i][i];
+          for (int j=i; j<2*sys_size; ++j)
+            {
+              augmatrix[i][j] = (augmatrix[i][j]/m);
+            }
+        }
+
+      //reduced right side half of augented matrix to identify matrix
+      for (int k = sys_size-2; k>=0; --k)
+        {
+          for (int i = 0; i<=k; ++i)
+            {
+              data_t m = augmatrix[i][k+1];
+              for (int j = k;j<2*sys_size;++j)
+                {
+                  augmatrix[i][j] = augmatrix[i][j] - augmatrix[k+1][j]*m;
+                }
+            }
+        }
+
+      //store answer
+      for (int i=0;i<sys_size;++i)
+        {
+          for (int j=0;j<sys_size;++j)
+            {
+              a(i,j) = augmatrix[i][j+sys_size];
+            }
+        }
+      return errorflag;
+    }
+
 }
