@@ -414,4 +414,113 @@ namespace spade::mem_map
         for (const auto p:sizes) out *= p;
         return out;
     }
+    
+    template <typename T> concept integral_array           = ctrs::basic_array<T> && std::integral<typename T::value_type>;
+    template <typename T> concept integral_scalar_or_array = std::integral<T> || integral_array<T>;
+    
+    template <const int idx, typename i_t, integral_scalar_or_array... is_t>
+    _sp_hybrid _sp_inline static constexpr int get_val(const i_t& i)
+    {
+        if constexpr (ctrs::basic_array<i_t>)
+        {
+            return i[idx];
+        }
+        else
+        {
+            return i;
+        }
+    }
+    
+    template <const int idx, integral_scalar_or_array i_t, integral_scalar_or_array... is_t>
+    requires(sizeof...(is_t) > 0)
+    _sp_hybrid _sp_inline static constexpr int get_val(const i_t& i, const is_t&... is)
+    {
+        if constexpr (ctrs::basic_array<i_t>)
+        {
+            if constexpr (idx < i_t::size())
+            {
+                return i[idx];
+            }
+            else
+            {
+                return get_val<idx - i_t::size()>(is...);
+            }
+        }
+        else
+        {
+            if constexpr (idx == 0)
+            {
+                return i;
+            }
+            else
+            {
+                return get_val<idx - 1>(is...);
+            }
+        }
+    }
+    
+    // Re-implementing memory maps with a slightly less cumbersome syntax, etc
+    // Memory map tags
+    
+    inline struct tlinear_t {} linear;
+    template <const int rank>
+    struct linear_t
+    {
+        using tag_type = tlinear_t;
+        ctrs::array<int, rank> min, max;
+        _sp_hybrid constexpr int size(int i) const { return max[i] - min[i]; }
+        _sp_hybrid constexpr std::size_t volume() const
+        {
+            std::size_t output = 1;
+            algs::static_for<0, rank>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output *= size(i);
+            });
+            return output;
+        }
+        
+        template <integral_scalar_or_array... is_t>
+        _sp_hybrid _sp_inline constexpr std::size_t compute_offset(const is_t&... is) const noexcept
+        {
+            // off = v + i*nv + j*nv*ni + k*nv*ni*nj + l*nv*ni*nj*nk;
+            std::size_t output = 0;
+            algs::static_for<0, rank-1>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output += get_val<rank - i - 1>(is...) - min[rank - i - 1];
+                output *= size(rank - i - 2);
+                // print("==========");
+                // print("size:", size(rank - i - 2));
+                // print("idx:",  get_val<rank - i - 1>(is...));
+                // print("min:",  min[rank - i - 1]);
+                // print("max:",  max[rank - i - 1]);
+                // print("==========");
+            });
+            output += get_val<0>(is...) - min[0];
+            // std::cin.get();
+            return output;
+        }
+    };
+    
+    template <typename alias_t, typename device_t>
+    inline auto make_grid_map(const tlinear_t&, const alias_t&, const device_t&, const ctrs::array<int, 2>& is, const ctrs::array<int, 2>& js, const ctrs::array<int, 2>& ks, const ctrs::array<int, 2>& ls)
+    {
+        if constexpr (ctrs::basic_array<alias_t>)
+        {
+            if constexpr (device::is_gpu<device_t>)
+            {
+                // return linear_t<5>{{is[0], js[0], ks[0], ls[0], 0}, {is[1], js[1], ks[1], ls[1], alias_t::size()}};
+                return linear_t<5>{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+            }
+            else
+            {
+                return linear_t<5>{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+            }
+        }
+        else
+        {
+            return linear_t<4>{{is[0], js[0], ks[0], ls[0]}, {is[1], js[1], ks[1], ls[1]}};
+        }
+    }
 }

@@ -22,8 +22,9 @@ namespace spade::grid
     template <class T> concept multiblock_array = requires(T t, int a, int i, int j, int k, int lb, int b)
     {
         t;
-        t.var_map();
-        t.block_map();
+        t.get_grid();
+        // t.var_map();
+        // t.block_map();
     };
     
     template <typename T0, typename T1> concept elementwise_compatible = multiblock_array<T0> && multiblock_array<T1> &&
