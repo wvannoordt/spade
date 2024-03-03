@@ -3,6 +3,7 @@
 #include <iostream>
 #include <concepts>
 #include "core/range.h"
+#include "core/ctrs.h"
 
 namespace spade
 {
@@ -146,6 +147,24 @@ namespace spade
             using output_type = bound_box_t<oint_type, osz>;
             output_type output;
             detail::r_bbx_fl(0, output, low, high, idxs...);
+            return output;
+        }
+    }
+    
+    namespace utils
+    {
+        template <ctrs::basic_array arr_t, ctrs::basic_array dx_t>
+        requires(arr_t::size() == dx_t::size())
+        _sp_hybrid auto bbox_around(const arr_t& arr, const dx_t& dx)
+        {
+            using float_t  = decltype(typename arr_t::value_type() + typename dx_t::value_type());
+            using output_t = bound_box_t<float_t, dx_t::size()>;
+            output_t output;
+            for (int d = 0; d < dx_t::size(); ++d)
+            {
+                output.min(d) = arr[d] - dx[d];
+                output.max(d) = arr[d] + dx[d];
+            }
             return output;
         }
     }

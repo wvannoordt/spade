@@ -189,8 +189,7 @@ namespace spade::geom
             auto ibnd = get_index_range(bvh_bnd, bnd);
             const auto loop = [&](const auto& ii)
             {
-                idx_t idx = patch_idx+get_index(ii);
-                // print(idx, children.size());
+                idx_t idx = patch_idx + get_index(ii);
                 if (children[idx] == no_val)
                 {
                     //Terminal node: loop through all the elements in this region

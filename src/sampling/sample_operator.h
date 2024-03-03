@@ -51,29 +51,37 @@ namespace spade::sampling
         // We will use a BVH to check which block each point is in.
         // Might want to consider pre-computing this somewhere
         geom::bvh_t<dim, typename pnt_t::value_type> block_bvh;
-        geom::bvh_params_t bvhparams{4, 1000};
+        geom::bvh_params_t bvhparams{3, 1000};
         
         // Perform in computational coordinates, note that we strictly
         // need a 2D BVH if the grid is 2D
+        
+        const auto dx_max = grid.compute_dx_max();
+        const auto dx_min = grid.compute_dx_min();
+        
         const auto bbx = grid.get_bounds();
         using bnd_t = bound_box_t<typename pnt_t::value_type, dim>;
         bnd_t bnd;
         for (int d = 0; d < dim; ++d)
         {
-            bnd.min(d) = bbx.min(d);
-            bnd.max(d) = bbx.max(d);
+            bnd.min(d) = bbx.min(d) - arr.get_num_exchange(d)*dx_max[d];
+            bnd.max(d) = bbx.max(d) + arr.get_num_exchange(d)*dx_max[d];
         }
-        bnd = bnd.inflate(1.1);
         
         const auto el_check = [&](const std::size_t& lb_glob, const auto& bnd_in)
         {
             const auto lb = utils::tag[partition::global](lb_glob);
-            const auto block_box = grid.get_bounding_box(lb).inflate(1.1);
+            auto block_box = grid.get_bounding_box(lb);
+            const auto dx = grid.get_dx(lb);
+            for (int d = 0; d < dim; ++d)
+            {
+                block_box.min(d) = block_box.min(d) - arr.get_num_exchange(d)*dx[d];
+                block_box.max(d) = block_box.max(d) + arr.get_num_exchange(d)*dx[d];
+            }
             return block_box.intersects(bnd_in);
         };
         
         block_bvh.calculate(bnd, grid.get_num_global_blocks(), el_check, bvhparams);
-
         //We will now compute the indices of each point in the interpolation cloud using the BVH
         constexpr int num_coeffs = strategy_t::stencil_size();
         using output_t = interp_oper_t<grid_t, coeff_t, arr_t::centering_type(), num_coeffs>;
@@ -82,11 +90,13 @@ namespace spade::sampling
         output.idx.resize(points.size());
         output.coeff.resize(points.size());
         
-        std::vector<pnt_t> failed_points;
+        std::vector<pnt_t> failed_points_interp;
+        std::vector<pnt_t> failed_points_sampling;
         for (std::size_t i = 0; i < points.size(); ++i)
         {
             const auto& x_sample = points[i];
             auto lb = utils::tag[partition::global](-1);
+            
             const auto eval = [&](const std::size_t& lb_cand)
             {
                 auto lb_tagged = utils::tag[partition::global](lb_cand);
@@ -95,7 +105,8 @@ namespace spade::sampling
             };
             
             using vec_t = typename decltype(block_bvh)::pnt_t;
-            block_bvh.check_elements(eval, ctrs::to_array(x_sample));
+            const auto x_arr = ctrs::to_array(x_sample);
+            block_bvh.check_elements(eval, utils::bbox_around(x_arr, dx_min));
             if (lb.value < 0)
             {
                 // If we get here, one of two things happened:
@@ -122,13 +133,7 @@ namespace spade::sampling
                 
                 if (lb.value < 0)
                 {
-                    std::stringstream ss;
-                    ss << std::setprecision(20);
-                    ss << "Cannot compute find suitable block for point:\n" << x_sample;
-                    ss << "\nBounds:\n" << bbx;
-                    ss << "\nNum. checks: " << num_checked;
-                    std::vector<pnt_t> points{x_sample};
-                    throw except::points_exception<typename pnt_t::value_type>("Error attempting to build sampling operator:\n" + ss.str(), points);
+                    failed_points_sampling.push_back(x_sample);
                 }
             }
             
@@ -161,13 +166,17 @@ namespace spade::sampling
             
             if (!strategy.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclusion_crit))
             {
-                failed_points.push_back(x_sample);
+                failed_points_interp.push_back(x_sample);
             }
         }
         
-        if (failed_points.size() > 0)
+        if (failed_points_sampling.size() > 0)
         {
-            throw except::points_exception("Sampling operation failed for " + std::to_string(failed_points.size()) + " points", failed_points);
+            throw except::points_exception("Sampling operation failed for " + std::to_string(failed_points_sampling.size()) + " points (cannot find block for sampling)", failed_points_sampling);
+        }
+        if (failed_points_interp.size() > 0)
+        {
+            throw except::points_exception("Sampling operation failed for " + std::to_string(failed_points_interp.size()) + " points (cannot find interp. cloud)", failed_points_interp);
         }
         
         output.idx.transfer();

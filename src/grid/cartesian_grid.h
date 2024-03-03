@@ -263,6 +263,20 @@ namespace spade::grid
                 return output;
             }
             
+            auto compute_dx_max() const
+            {
+                ctrs::array<dtype,  3> output(-1e50, -1e50, -1e50);
+                for (std::size_t lb = 0; lb < this->get_num_global_blocks(); ++lb)
+                {
+                    auto dx = this->get_dx(utils::tag[partition::global](lb));
+                    for (int i = 0; i < output.size(); ++i)
+                    {
+                        output[i] = utils::max(output[i], dx[i]);
+                    }
+                }
+                return output;
+            }
+            
             const auto& get_coord_sys() const {return global_geometry.get_coords();}
             
             const auto& geometry(const partition::global_tag_t&) const { return global_geometry; }

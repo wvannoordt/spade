@@ -463,7 +463,11 @@ namespace spade::ibm
                         const auto domain_boundary = grid.is_domain_boundary(utils::tag[partition::local](icell_loc.lb()));
                         bool is_domain_bndy_cell = (domain_boundary.min(idir) && (i_idir < 0)) || (domain_boundary.max(idir) && (i_idir >= nx));
                         list.can_fill[id][ilayer]  = (geom.is_interior(xg) == is_external);// || is_domain_bndy_cell;
-                        if (!list.can_fill[id][ilayer])
+                        auto xb = list.closest_points[id][ilayer];
+                        const auto tol = 5e-3;
+                        const auto dist = ctrs::array_norm(xb - xg);
+                        bool very_close_to_boundary = dist < tol*diag;
+                        if (!list.can_fill[id][ilayer] && !very_close_to_boundary)
                         {
                             //Need to recompute closest point as this is a thin geometry situation
                             pnt_t x_search = xg;
@@ -571,8 +575,8 @@ namespace spade::ibm
                                 edge_ghost_idx.i(this_dir) += this_sign;
                                 if (!is_ghost(edge_ghost_idx))
                                 {
-                                    output.indices.push_back(edge_ghost_idx);
-                                    output.closest_normals.push_back(nvec);
+                                    // output.indices.push_back(edge_ghost_idx);
+                                    // output.closest_normals.push_back(nvec);
                                 }
                             }
                         }
@@ -652,7 +656,6 @@ namespace spade::ibm
                 bool can_fill_lc = (geom.is_interior(xg) == is_external);
                 output.can_fill.push_back(can_fill_lc);
             }
-            
             output.transfer();
             return output;
         }
