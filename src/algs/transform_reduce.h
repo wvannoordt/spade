@@ -65,8 +65,8 @@ namespace spade::algs
         
         const auto& grid = array.get_grid();
         
-        int pow_x = 3;
-        int pow_y = 3;
+        int pow_x = 2;
+        int pow_y = 2;
         int pow_z = 2;
         
         int total_pow = pow_x + pow_y + pow_z;
@@ -139,11 +139,12 @@ namespace spade::algs
             
             threads.exec([&](const inner_idx_t& blk_idx)
             {
-                grid::cell_idx_t i_cell(i_blk + blk_idx[0]*nthr_x, j_blk + blk_idx[1]*nthr_y, k_blk + blk_idx[2]*nthr_z, lb_loc);
+                // grid::cell_idx_t i_cell(i_blk + blk_idx[0]*nthr_x, j_blk + blk_idx[1]*nthr_y, k_blk + blk_idx[2]*nthr_z, lb_loc);
+                grid::cell_idx_t i_cell(blk_idx[0] + i_blk*nthr_x, blk_idx[1] + j_blk*nthr_y, blk_idx[2] + k_blk*nthr_z, lb_loc);
                 int shmem_idx = block_shmem_idx(blk_idx);
                 if (is_valid(i_cell))
                 {
-                    auto val       = invoke_at(grid_img, arr_img, i_cell, kernel);
+                    auto val = invoke_at(grid_img, arr_img, i_cell, kernel);
                     block_mask_vec[shmem_idx] = true;
                     block_result_vec[shmem_idx] = val;
                 }
@@ -184,7 +185,6 @@ namespace spade::algs
         
         //Compute result on this rank
         const auto local_result = destructive_reduce(reduc.buffer, reduc.binary_op);
-        
         const auto& group = grid.group();
         return group.reduce(local_result, reduc.binary_op);
     }
