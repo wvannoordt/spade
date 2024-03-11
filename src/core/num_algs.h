@@ -41,7 +41,7 @@ namespace spade::num_algs
         int     its = 0;
         while((eps > tol) && (its++ < max_its))
         {
-            x  -= rhs/dfdx(x);
+            x  -= rhs/dfdx(x)*0.5;
             rhs = fx(x);
             eps = err(rhs);
         }
