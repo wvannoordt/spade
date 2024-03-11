@@ -39,10 +39,6 @@ namespace spade::geom
         bvh_impl_t<2, float_t, std::vector> axis_bvh[3];
         std::size_t max_2d_bvh_elems;
         
-        mutable std::vector<pnt_t>  xray_buf;
-        mutable std::vector<uint_t> tri_buf;
-        mutable std::vector<uint_t> permute_buf;
-        
         pnt_t centroid(const uint_t& idx) const
         {
             pnt_t output;
@@ -108,12 +104,6 @@ namespace spade::geom
                 bvh.calculate(bbox_2d, faces.size(), box_check);
                 max_2d_bvh_elems = utils::max(max_2d_bvh_elems, bvh.get_max_elems());
             }
-            xray_buf.clear();
-            xray_buf.reserve(max_2d_bvh_elems);
-            tri_buf.clear();
-            tri_buf.reserve(max_2d_bvh_elems);
-            permute_buf.clear();
-            permute_buf.reserve(max_2d_bvh_elems);
             
         }
         
@@ -171,8 +161,8 @@ namespace spade::geom
             return output;
         }
         
-        template <typename pfloat_t, typename on_isect_t>
-        void trace_aligned_ray(const int dir, const int sign, const coords::point_t<pfloat_t>& x, const on_isect_t& on_isect) const
+        template <const int ar_size, const int rec_size, typename pfloat_t, typename on_isect_t>
+        void trace_aligned_ray_rec_impl(const int dir, const int sign, const coords::point_t<pfloat_t>& x, const on_isect_t& on_isect) const
         {
             using vec_t = ctrs::array<pfloat_t, 3>;
             using p2d_t = ctrs::array<pfloat_t, 2>;
@@ -191,11 +181,26 @@ namespace spade::geom
             point_2d[0] = x[t0];
             point_2d[1] = x[t1];
             
-            xray_buf.clear();
-            tri_buf.clear();
-            permute_buf.clear();
+            ctrs::array<pnt_t,  ar_size> xray_buf;
+            ctrs::array<uint_t, ar_size> tri_buf;
+            ctrs::array<uint_t, ar_size> permute_buf;
+            
+            uint_t buf_idx = 0;
+            bool overflow = false;
+            const auto push_back = [&](const pnt_t& xx, const uint_t trii, const uint_t perm)
+            {
+                xray_buf[buf_idx]    = xx;
+                tri_buf[buf_idx]     = trii;
+                permute_buf[buf_idx] = perm;
+                ++buf_idx;
+                overflow = (buf_idx == ar_size);
+                buf_idx = utils::min(buf_idx, ar_size - 1);
+            };
+            
+            int isct = 0;
             const auto isect_check = [&](const auto& i)
             {
+                ++isct;
                 const auto& face = faces  [i];
                 const auto& norm = normals[i];
                 
@@ -212,29 +217,39 @@ namespace spade::geom
                     const auto t = sign*ctrs::dot_prod(x-p0, norm)/norm[dir];
                     pnt_t xb = x;
                     xb -= t*nvec;
-                    xray_buf.push_back(xb);
-                    tri_buf.push_back(i);
-                    permute_buf.push_back(permute_buf.size());
+                    push_back(xb, i, buf_idx);
                 }
             };
-            
             table.check_elements(isect_check, point_2d);
-            
-            if (xray_buf.size() == 0) return;
-            
-            // Sorting this appears to remove most of the points!!!!!! Start debugging here...
-            std::sort(permute_buf.begin(), permute_buf.end(), [&](const auto& a, const auto& b){ return sign*xray_buf[a][dir] < sign*xray_buf[b][dir]; });
-            
-            int tsgn = utils::sign(normals[tri_buf[permute_buf[0]]][dir]);
-            on_isect(xray_buf[permute_buf[0]], normals[tri_buf[permute_buf[0]]]);
-            for (int j = 1; j < xray_buf.size(); ++j)
+            if (overflow)
             {
-                if (tsgn*utils::sign(normals[tri_buf[permute_buf[j]]][dir]) < 0.0)
+                if constexpr (rec_size > 0) trace_aligned_ray_rec_impl<2*ar_size, rec_size-1>(dir, sign, x, on_isect);
+                else
                 {
-                    tsgn = -tsgn;
-                    on_isect(xray_buf[permute_buf[j]], normals[tri_buf[permute_buf[j]]]);
+                    throw except::sp_exception("Too many xray points traced! Found more than " + std::to_string(ar_size) + " intersections");
                 }
             }
+            else
+            {
+                if (buf_idx == 0) return;
+                std::sort(permute_buf.begin(), permute_buf.begin() + buf_idx, [&](const auto& a, const auto& b){ return sign*xray_buf[a][dir] < sign*xray_buf[b][dir]; });
+                int tsgn = utils::sign(normals[tri_buf[permute_buf[0]]][dir]);
+                on_isect(xray_buf[permute_buf[0]], normals[tri_buf[permute_buf[0]]]);
+                for (int j = 1; j < buf_idx; ++j)
+                {
+                    if (tsgn*utils::sign(normals[tri_buf[permute_buf[j]]][dir]) < 0.0)
+                    {
+                        tsgn = -tsgn;
+                        on_isect(xray_buf[permute_buf[j]], normals[tri_buf[permute_buf[j]]]);
+                    }
+                }
+            }
+        }
+        
+        template <typename pfloat_t, typename on_isect_t>
+        void trace_aligned_ray(const int dir, const int sign, const coords::point_t<pfloat_t>& x, const on_isect_t& on_isect) const
+        {
+            trace_aligned_ray_rec_impl<128, 6>(dir, sign, x, on_isect);
         }
         
         bool is_interior(const pnt_t& x) const

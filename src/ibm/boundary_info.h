@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+#include <execution>
 #include <algorithm>
 #include <map>
 #include <unordered_set>
@@ -266,8 +268,7 @@ namespace spade::ibm
                 
                 const auto ng = sampled_array.get_num_exchange(idir);
                 const auto nx = grid.get_num_cells(idir);
-                
-                for (const auto& lb: lbs)
+                auto outer_loop = [&](const auto& lb) mutable
                 {
                     // We will not consider xray intersection points outside of the domain
                     const auto domain_boundary = grid.is_domain_boundary(lb);
@@ -326,61 +327,60 @@ namespace spade::ibm
                             
                             bnd_extd.min(idir1) -= dx[idir1];
                             bnd_extd.max(idir1) += dx[idir1];
-                                
-                            auto icell = icell_orig;
-                            // Note that only the index value in the traced direction is wrong
-                            icell[idir]  = (b_point[idir]-bbox.min(idir) + (ng+1)*dx[idir])/dx[idir];
-                            icell[idir] -= (ng+1);
-                            
-                            const auto xc_comp = grid.get_comp_coords(icell);
-                            const auto xdiff   = b_point[idir] - xc_comp[idir];
-                            if (xdiff*gp_sign < 0.0) icell[idir] -= gp_sign;
-                            
-                            const auto diag = ctrs::array_norm(dx);
-                            
-                            // At this point, icell contains the correct location of the ghost cell.
-                            // We proceed to find the nearest point on the geometry
-                            const auto x_ghost = grid.get_comp_coords(icell);
-                            real_t search_radius = 1e-9;
-                            for (const auto& dx_v: dx) search_radius = utils::max(search_radius, 2*ng*dx_v);
-                            auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
-                            
-                            
-                            
-                            const auto dot_prod_tol = -0.5;
-                            vec_t tmp1 = 0.0;
-                            tmp1 += (nearest_boundary_point - x_ghost);
-                            tmp1 /= ctrs::array_norm(tmp1);
-                            vec_t tmp2 = 0.0;
-                            tmp2 += (point - x_ghost);
-                            tmp2 /= ctrs::array_norm(tmp2);
-                            if ((ctrs::dot_prod(tmp1, tmp2) < dot_prod_tol))
-                            {
-                                pnt_t x_search = x_ghost;
-                                x_search += 2*diag*normal;
-                                nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
-                            }
-                            
-                            
-                            // Compute direction to the closest boundary point
-                            vec_t nv = 0.0;
-                            nv += (nearest_boundary_point - x_ghost);
-                            auto dist       = ctrs::array_norm(nv);
-                            
-                            // Figure out this magic number
-                            const auto tol = 5e-3;
-                            
-                            // If the ghost point is too close to the boundary, then
-                            // the normal vector is just chosen as the surface normal vector
-                            if (dist < tol*diag)
-                            {
-                                nv  = real_t(0.0)*nv;
-                                nv += normal;
-                            }
-                            nv /= ctrs::array_norm(nv);
                             
                             if (bnd_extd.contains(point))
                             {
+                                auto icell = icell_orig;
+                                // Note that only the index value in the traced direction is wrong
+                                icell[idir]  = (b_point[idir]-bbox.min(idir) + (ng+1)*dx[idir])/dx[idir];
+                                icell[idir] -= (ng+1);
+                                
+                                const auto xc_comp = grid.get_comp_coords(icell);
+                                const auto xdiff   = b_point[idir] - xc_comp[idir];
+                                if (xdiff*gp_sign < 0.0) icell[idir] -= gp_sign;
+                                
+                                const auto diag = ctrs::array_norm(dx);
+                                
+                                // At this point, icell contains the correct location of the ghost cell.
+                                // We proceed to find the nearest point on the geometry
+                                const auto x_ghost = grid.get_comp_coords(icell);
+                                real_t search_radius = 1e-9;
+                                for (const auto& dx_v: dx) search_radius = utils::max(search_radius, 2*ng*dx_v);
+                                auto nearest_boundary_point = geom.find_closest_boundary_point(x_ghost, search_radius);
+                                
+                                
+                                
+                                const auto dot_prod_tol = -0.5;
+                                vec_t tmp1 = 0.0;
+                                tmp1 += (nearest_boundary_point - x_ghost);
+                                tmp1 /= ctrs::array_norm(tmp1);
+                                vec_t tmp2 = 0.0;
+                                tmp2 += (point - x_ghost);
+                                tmp2 /= ctrs::array_norm(tmp2);
+                                if ((ctrs::dot_prod(tmp1, tmp2) < dot_prod_tol))
+                                {
+                                    pnt_t x_search = x_ghost;
+                                    x_search += 2*diag*normal;
+                                    nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
+                                }
+                                
+                                
+                                // Compute direction to the closest boundary point
+                                vec_t nv = 0.0;
+                                nv += (nearest_boundary_point - x_ghost);
+                                auto dist       = ctrs::array_norm(nv);
+                                
+                                // Figure out this magic number
+                                const auto tol = 5e-3;
+                                
+                                // If the ghost point is too close to the boundary, then
+                                // the normal vector is just chosen as the surface normal vector
+                                if (dist < tol*diag)
+                                {
+                                    nv  = real_t(0.0)*nv;
+                                    nv += normal;
+                                }
+                                nv /= ctrs::array_norm(nv);
                                 
                                 list.signs.push_back(gp_sign);
                                 list.indices.push_back(icell);
@@ -448,7 +448,9 @@ namespace spade::ibm
                     };
                     // Port to GPU later -_-
                     dispatch::execute(ibound, loop_load, device::cpu);
-                }
+                };
+                
+                std::for_each(std::execution::seq, lbs.begin(), lbs.end(), outer_loop);
                 
                 std::size_t num_in_this_dir = list.indices.size();
                 for (std::size_t id = 0; id < num_in_this_dir; ++id)
@@ -575,8 +577,8 @@ namespace spade::ibm
                                 edge_ghost_idx.i(this_dir) += this_sign;
                                 if (!is_ghost(edge_ghost_idx))
                                 {
-                                    // output.indices.push_back(edge_ghost_idx);
-                                    // output.closest_normals.push_back(nvec);
+                                    output.indices.push_back(edge_ghost_idx);
+                                    output.closest_normals.push_back(nvec);
                                 }
                             }
                         }
