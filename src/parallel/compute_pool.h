@@ -333,11 +333,11 @@ namespace spade::parallel
             std::vector<proc_id_t>(),
             false}
         {
-            std::sort(devices.begin(), devices.end());
-            if (std::unique(devices.begin(), devices.end()) != devices.end())
-            {
-                throw except::sp_exception("Duplicate device in launch configuration!");
-            }
+            // std::sort(devices.begin(), devices.end());
+            // if (std::unique(devices.begin(), devices.end()) != devices.end())
+            // {
+            //     throw except::sp_exception("Duplicate device in launch configuration!");
+            // }
             int num_threads = devices_in.size();
             context = std::make_shared<mpi_context_t>(argc, argv);
             mpi_check(MPI_Comm_rank(context->default_comm, &root.node));

@@ -638,12 +638,12 @@ namespace spade::ibm
             // Now we need to compute the fillability, nearest boundary points, etc.
             for (std::size_t id = 0; id < output.indices.size(); ++id)
             {
-                const auto icell  = output.indices[id];
-                const auto xg     = grid.get_comp_coords(icell);
-                const auto dxs    = grid.get_dx(utils::tag[partition::local](icell.lb()));
-                const auto dx_max = utils::max(dxs[0], dxs[1], dxs[2]);
-                const auto radius = (num_layers+0.5)*dx_max;
-                const auto x_bndy = geom.find_closest_boundary_point(xg, radius);
+                const auto    icell  = output.indices[id];
+                const auto    xg     = grid.get_comp_coords(icell);
+                const auto    dxs    = grid.get_dx(utils::tag[partition::local](icell.lb()));
+                const auto    dx_max = utils::max(dxs[0], dxs[1], dxs[2]);
+                const float_t radius = (num_layers+0.5)*dx_max;
+                const auto    x_bndy = geom.find_closest_boundary_point(xg, radius);
                 
                 const auto tol  = 5e-3;
                 const auto dist = ctrs::array_norm(x_bndy-xg);
