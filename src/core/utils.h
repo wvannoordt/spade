@@ -11,9 +11,15 @@
 #include <type_traits>
 
 #include "core/sbool.h"
+#include "core/source_marker.h"
 
 namespace spade::utils
 {
+    inline auto where(source_marker_t loc = source_marker_t())
+    {
+        return loc.short_str();
+    }
+    
     template<class T, class U=
         typename std::remove_cv<
         typename std::remove_pointer<

@@ -11,10 +11,13 @@ namespace spade::grid
         std::vector<device::shared_vector<data_t, device::pinned_allocator_t<data_t>, device::device_allocator_t<data_t>>> recv_buffers;
         
         template <typename group_t>
-        void send_all(group_t& group)
+        void send_all(const group_t& group)
         {
             //Horribly inefficient implementation!
-            for (auto& s:send_buffers) s.itransfer();
+            if constexpr (device::is_gpu<device_t>)
+            {
+                for (auto& s:send_buffers) s.itransfer();
+            }
             
             //Let's forget about optimizations for now!
             using message_type = utils::vec_image_t<data_t>;
@@ -28,7 +31,40 @@ namespace spade::grid
             
             group.template send_all<message_type>();
             
-            for (auto& r:recv_buffers) r.transfer();
+            if constexpr (device::is_gpu<device_t>)
+            {
+                for (auto& r:recv_buffers) r.transfer();
+            }
+        }
+        
+        // Used to resize receive buffers to the correct size 
+        template <typename group_t>
+        void assure_recv_buf_size(const group_t& group)
+        {
+            group.sync();
+            using tmp_dev_t = device::cpu_t;
+            exchange_message_t<std::size_t, tmp_dev_t> size_msg;
+            size_msg.set_size(group.size());
+            for (int i = 0; i < group.size(); ++i)
+            {
+                size_msg.send_buffers[i].resize(1);
+                size_msg.send_buffers[i][0] = send_buffers[i].size();
+                size_msg.recv_buffers[i].resize(1);
+            }
+            size_msg.send_all(group);
+            group.sync();
+            for (int i = 0; i < group.size(); ++i)
+            {
+                std::size_t req_size = size_msg.recv_buffers[i][0];
+                recv_buffers[i].resize(req_size);
+            }
+            group.sync();
+        }
+        
+        void set_size(const std::size_t& pool_size)
+        {
+            send_buffers.resize(pool_size);
+            recv_buffers.resize(pool_size);
         }
     };
     
@@ -40,9 +76,7 @@ namespace spade::grid
         constexpr int num_vars = array_t::alias_type::size();
         using output_t = exchange_message_t<typename array_t::value_type, typename array_t::device_type>;
         output_t output;
-        
-        output.send_buffers.resize(group.size());
-        output.recv_buffers.resize(group.size());
+        output.set_size(group.size());
         
         for (int prc = 0; prc < group.size(); ++prc)
         {

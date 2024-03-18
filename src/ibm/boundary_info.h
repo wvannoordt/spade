@@ -185,7 +185,7 @@ namespace spade::ibm
         {
             // Select the blocks that intersect the boundary
             const auto is_intersect = [&](const auto& lb_loc)
-            {
+            {                
                 auto bnd_with_exch = grid.get_bounding_box(lb_loc);
                 const auto dx = grid.get_dx(lb_loc);
                 for (int d = 0; d < grid.dim(); ++d)
@@ -194,7 +194,8 @@ namespace spade::ibm
                     bnd_with_exch.min(d) -= array.get_num_exchange(d)*dx[d];
                     bnd_with_exch.max(d) += array.get_num_exchange(d)*dx[d];
                 }
-                return geom.box_contains_boundary(bnd_with_exch);
+                bool output = geom.box_contains_boundary(bnd_with_exch);
+                return output;
             };
             const auto lbs = grid.select_blocks(is_intersect, partition::local);
             return lbs;
@@ -230,7 +231,8 @@ namespace spade::ibm
             
             static_assert(std::same_as<typename grid_t::coord_sys_type, coords::identity<typename grid_t::coord_type>>, "ghosts currently only working for identity coordinates");
             
-            const auto& grid = sampled_array.get_grid();
+            const auto& grid  = sampled_array.get_grid();
+            const auto& group = grid.group();
             
             for (int d = 0; d < grid_t::dim(); ++d)
             {
@@ -307,13 +309,12 @@ namespace spade::ibm
                         {
                             ++isect_count;
                             
-                            
                             const auto  gp_sign  = -utils::sign(normal[idir]*sign);
                             const auto  lb       = utils::tag[partition::local](icell_orig.lb());
                             const auto& b_point  = point;
                             const auto& bbox     = grid.get_bounding_box(lb);
                             const auto  dx       = grid.get_dx(lb);
-                                
+                            
                             // Note that we include xray points inside the exchange cells in the tracing direction
                             auto bnd_extd = grid.get_bounding_box(lb);
                             
@@ -487,6 +488,7 @@ namespace spade::ibm
                 }
             }
             for (auto& arr: output) arr.transfer();
+            
             return output;
         }
         

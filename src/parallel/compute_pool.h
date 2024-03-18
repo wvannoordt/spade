@@ -90,21 +90,21 @@ namespace spade::parallel
         const common_thread_data_t& env;
         
         template <typename buffer_type>
-        void post_send(const buffer_type& buf, int recv)
+        void post_send(const buffer_type& buf, int recv) const
         {
             message_buf_t bf = buf;
             env.outbox[this->rank()][recv].push_back(bf);
         }
         
         template <typename buffer_type>
-        void post_recv(const buffer_type& buf, int send)
+        void post_recv(const buffer_type& buf, int send) const
         {
             message_buf_t bf = buf;
             env.inbox[this->rank()][send].push_back(bf);
         }
         
         template <typename buf_t>
-        void send_all()
+        void send_all() const
         {
             // Need to clear messages after we finish
             this->sync();
@@ -144,6 +144,8 @@ namespace spade::parallel
             
             for (auto& list:  inbox) list.clear();
             for (auto& list: outbox) list.clear();
+            
+            this->sync();
         }
         
         bool p2p_enabled() const { return env.p2p_enabled; }
