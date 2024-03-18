@@ -357,7 +357,7 @@ namespace spade::convective
             
             const auto& q0        = omni::access<omni::info::value >(input.cell(0_c));
             const auto& q1        = omni::access<omni::info::value >(input.cell(1_c));
-	    //	    const auto& face_info = omni::access<omni::info::metric>(input.face(0_c));
+			//	    const auto& face_info = omni::access<omni::info::metric>(input.face(0_c));
             const auto& q2        = omni::access<omni::info::value >(input.cell(2_c));
             const auto& q3        = omni::access<omni::info::value >(input.cell(3_c));
 
@@ -369,26 +369,30 @@ namespace spade::convective
             const auto qr0  =  float_t(0.5)*q1+float_t(0.5)*q2; //candidate 0
             const auto qr1  =  float_t(1.5)*q2-float_t(0.5)*q3; //candidate 1          
 
-	    auto ql = ql1;
-	    auto qr = qr0;
-	    
+			auto ql = ql1;
+			auto qr = qr0;
             if constexpr (use_smooth == disable_smooth)
-	    {
-	      //use this for MMS!!
-	      ql *= float_t(2.0/3.0);
-	      qr *= float_t(2.0/3.0);
+						 {
+							 //use this for MMS!!
+							 ql *= float_t(2.0/3.0);
+							 qr *= float_t(2.0/3.0);
 	      
-	      ql += float_t(1.0/3.0)*ql0;
-	      qr += float_t(1.0/3.0)*qr1;
-	    }
-	    else
-	      {
-		//nothing for now
+							 ql += float_t(1.0/3.0)*ql0;
+							 qr += float_t(1.0/3.0)*qr1;
+						 }
+			else
+			{
+				//nothing for now
 		
-	      }
-             // call flux function
-	    output = flux_func(input.face(0_c),ql,qr);
-            
+			}
+			// call flux function
+			output = flux_func(input.face(0_c),ql,qr);
+
+//			print("flux = ",output);
+//			print("ql = ",ql);
+//			print("qr = ",qr);
+//			std::cin.get();
+
             return output;
         }
     };

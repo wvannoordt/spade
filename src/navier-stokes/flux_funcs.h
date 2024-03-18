@@ -63,7 +63,7 @@ namespace spade::convective
         rusanov_fds_t(const gas_t& gas_in) : gas{gas_in} {}
       _sp_hybrid flux_t operator() (const auto& infoF, const auto& qL,const auto& qR) const
         {
-            flux_t out;
+            flux_t out{};
             auto& flx = out;
 	    const auto& qAve           = omni::access<omni::info::value >(infoF);
             const auto& nv             = omni::access<omni::info::metric>(infoF);
@@ -72,21 +72,31 @@ namespace spade::convective
             const float_t engyL        = float_t(0.5)*(qL.u()*qL.u()+qL.v()*qL.v()+qL.w()*qL.w()) + qL.p()/(rhoL*(gas.get_gamma(infoF)-float_t(1.0)));
             const float_t rhoR         = qR.p()/(gas.get_R(infoF)*qR.T());
             const float_t engyR        = float_t(0.5)*(qR.u()*qR.u()+qR.v()*qR.v()+qR.w()*qR.w()) + qR.p()/(rhoR*(gas.get_gamma(infoF)-float_t(1.0)));
-	    
-            const float_t sigma = float_t(0.5)*(u_n + sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qAve.T()));
-            
+
+
+            const float_t sigma = (u_n + sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qAve.T()));
+
+			//print("sigma = ",sigma);
+			//print("rhoR  = ",rhoR);
+			//print("qR    = ",qR);
+			//print("engyR = ",engyR);
+			//
+			//print("rhoL  = ",rhoL);
+			//print("qL    = ",qL);
+			//print("engyL = ",engyL);
+
+            flx.continuity() = sigma*rhoL;
+            flx.energy()     = sigma*rhoL*engyL;
+            flx.x_momentum() = sigma*rhoL*qL.u();
+            flx.y_momentum() = sigma*rhoL*qL.v();
+            flx.z_momentum() = sigma*rhoL*qL.w();
+
             flx.continuity() -= sigma*rhoR;
             flx.energy()     -= sigma*rhoR*engyR;
             flx.x_momentum() -= sigma*rhoR*qR.u();
             flx.y_momentum() -= sigma*rhoR*qR.v();
             flx.z_momentum() -= sigma*rhoR*qR.w();
-            
-            flx.continuity() += sigma*rhoL;
-            flx.energy()     += sigma*rhoL*engyL;
-            flx.x_momentum() += sigma*rhoL*qL.u();
-            flx.y_momentum() += sigma*rhoL*qL.v();
-            flx.z_momentum() += sigma*rhoL*qL.w();
-            
+
             return out;
         }
     };
