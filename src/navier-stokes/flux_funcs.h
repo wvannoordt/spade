@@ -51,6 +51,46 @@ namespace spade::convective
         }
     };
 
+    template <typename gas_t>
+    struct rusanov_fds_t
+    {
+        const gas_t gas;
+        using g_info_type   = typename gas_t::info_type;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using info_type     = omni::info_union<own_info_type, g_info_type>;
+        using float_t       = typename gas_t::value_type;
+        using flux_t        = fluid_state::flux_t<float_t>;
+        rusanov_fds_t(const gas_t& gas_in) : gas{gas_in} {}
+      _sp_hybrid flux_t operator() (const auto& infoF, const auto& qL,const auto& qR) const
+        {
+            flux_t out;
+            auto& flx = out;
+	    const auto& qAve           = omni::access<omni::info::value >(infoF);
+            const auto& nv             = omni::access<omni::info::metric>(infoF);
+            const float_t u_n          = nv[0]*qAve.u() + nv[1]*qAve.v() + nv[2]*qAve.w();
+            const float_t rhoL         = qL.p()/(gas.get_R(infoF)*qL.T());
+            const float_t engyL        = float_t(0.5)*(qL.u()*qL.u()+qL.v()*qL.v()+qL.w()*qL.w()) + qL.p()/(rhoL*(gas.get_gamma(infoF)-float_t(1.0)));
+            const float_t rhoR         = qR.p()/(gas.get_R(infoF)*qR.T());
+            const float_t engyR        = float_t(0.5)*(qR.u()*qR.u()+qR.v()*qR.v()+qR.w()*qR.w()) + qR.p()/(rhoR*(gas.get_gamma(infoF)-float_t(1.0)));
+	    
+            const float_t sigma = float_t(0.5)*(u_n + sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qAve.T()));
+            
+            flx.continuity() -= sigma*rhoR;
+            flx.energy()     -= sigma*rhoR*engyR;
+            flx.x_momentum() -= sigma*rhoR*qR.u();
+            flx.y_momentum() -= sigma*rhoR*qR.v();
+            flx.z_momentum() -= sigma*rhoR*qR.w();
+            
+            flx.continuity() += sigma*rhoL;
+            flx.energy()     += sigma*rhoL*engyL;
+            flx.x_momentum() += sigma*rhoL*qL.u();
+            flx.y_momentum() += sigma*rhoL*qL.v();
+            flx.z_momentum() += sigma*rhoL*qL.w();
+            
+            return out;
+        }
+    };
+  
     template <typename gas_t> struct phys_flux_t
     {
         const gas_t gas;
