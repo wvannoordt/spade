@@ -222,7 +222,7 @@ namespace spade::sampling
                         reduced_idx[d]  = (x_sample[d] - block_bbx.min(d)) / dx[d];
                         landed_cell[d]  = floor(reduced_idx[d]);
                         reduced_idx[d] -= 0.5;
-                        deltai[d] = utils::sign(reduced_idx[d] - landed_cell[d]);
+                        deltai[d]       = utils::sign(reduced_idx[d] - landed_cell[d]);
                     }
                     if (!strategy.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclusion_crit))
                     {
@@ -245,76 +245,83 @@ namespace spade::sampling
             output.scatter_offsets.push_back(l.gidx);
         }        
 
-        point_msg.assure_recv_buf_size(group);
-        point_msg.send_all(group);
+        constexpr bool supports_par_interp = requires { group.template send_all<int>(); };
         
-        std::vector<pnt_t> other_points;
-        for (int ii = 0; ii < group.size(); ++ii)
+        if constexpr (supports_par_interp)
         {
-            for (std::size_t jj = 0; jj < point_msg.recv_buffers[ii].size(); jj += pnt_t::size())
-            {
-                pnt_t newpt;
-                for (int kk = 0; kk < pnt_t::size(); ++kk)
-                {
-                    newpt[kk] = point_msg.recv_buffers[ii][jj + kk];
-                }
-                other_points.push_back(newpt);
-                output.send_sizes[ii]++;
-            }
-        }
-        
-        output.others.idx.resize(other_points.size());
-        output.others.coeff.resize(other_points.size());
-        
-        for (std::size_t i = 0; i < other_points.size(); ++i)
-        {
-            bool failed = false;
-            const auto& x_sample = other_points[i];
-            const auto lb = get_glob_block(x_sample, failed);
-            if (failed) failed_points_sampling.push_back(x_sample);
-            int landed_rank = failed?0:part.get_rank(utils::tag[partition::global](lb));
-            auto& indices = output.others.idx[i];
-            auto& coeffs  = output.others.coeff[i];
-            indices = 0;
-            coeffs  = 0.0;
+            point_msg.assure_recv_buf_size(group);
+            point_msg.send_all(group);
             
-            if (!failed)
+            std::vector<pnt_t> other_points;
+            for (int ii = 0; ii < group.size(); ++ii)
             {
-                if (group.rank() == landed_rank)
+                for (std::size_t jj = 0; jj < point_msg.recv_buffers[ii].size(); jj += pnt_t::size())
                 {
-                    const auto block_bbx = grid.get_bounding_box(lb);
-                    const auto dx = grid.get_dx(lb);
-                    index_t landed_cell(0, 0, 0, part.to_local(lb));
-                    ctrs::array<int, 3>     deltai      = 0;
-                    ctrs::array<coeff_t, 3> reduced_idx = 0;
-                    for (int d = 0; d < dim; ++d)
+                    pnt_t newpt;
+                    for (int kk = 0; kk < pnt_t::size(); ++kk)
                     {
-                        reduced_idx[d]  = (x_sample[d] - block_bbx.min(d)) / dx[d];
-                        landed_cell[d]  = floor(reduced_idx[d]);
-                        reduced_idx[d] -= 0.5;
-                        deltai[d] = utils::sign(reduced_idx[d] - landed_cell[d]);
+                        newpt[kk] = point_msg.recv_buffers[ii][jj + kk];
                     }
-                    if (!strategy.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclusion_crit))
-                    {
-                        failed_points_interp.push_back(x_sample);
-                    }
-                }
-                else
-                {
-                    // Never get here!
-                    throw except::sp_exception("A thread was sent a point for sampling that it does not contain, this is impossible!");
+                    other_points.push_back(newpt);
+                    output.send_sizes[ii]++;
                 }
             }
+            
+            output.others.idx.resize(other_points.size());
+            output.others.coeff.resize(other_points.size());
+            
+            for (std::size_t i = 0; i < other_points.size(); ++i)
+            {
+                bool failed = false;
+                const auto& x_sample = other_points[i];
+                const auto lb = get_glob_block(x_sample, failed);
+                if (failed) failed_points_sampling.push_back(x_sample);
+                int landed_rank = failed?0:part.get_rank(utils::tag[partition::global](lb));
+                auto& indices = output.others.idx[i];
+                auto& coeffs  = output.others.coeff[i];
+                indices = 0;
+                coeffs  = 0.0;
+                
+                if (!failed)
+                {
+                    if (group.rank() == landed_rank)
+                    {
+                        const auto block_bbx = grid.get_bounding_box(lb);
+                        const auto dx = grid.get_dx(lb);
+                        index_t landed_cell(0, 0, 0, part.to_local(lb));
+                        ctrs::array<int, 3>     deltai      = 0;
+                        ctrs::array<coeff_t, 3> reduced_idx = 0;
+                        for (int d = 0; d < dim; ++d)
+                        {
+                            reduced_idx[d]  = (x_sample[d] - block_bbx.min(d)) / dx[d];
+                            landed_cell[d]  = floor(reduced_idx[d]);
+                            reduced_idx[d] -= 0.5;
+                            deltai[d]       = utils::sign(reduced_idx[d] - landed_cell[d]);
+                        }
+                        if (!strategy.try_make_cloud(indices, coeffs, grid, landed_cell, x_sample, reduced_idx, deltai, exclusion_crit))
+                        {
+                            failed_points_interp.push_back(x_sample);
+                        }
+                    }
+                    else
+                    {
+                        // Never get here!
+                        throw except::sp_exception("A thread was sent a point for sampling that it does not contain, this is impossible!");
+                    }
+                }
+            }
+            
+            constexpr int num_vars = arr_t::alias_type::size();
+            for (int ii = 0; ii < group.size(); ++ii)
+            {
+                output.result_message.send_buffers[ii].resize(num_vars*output.send_sizes[ii]);
+            }
+            
+            output.result_message.assure_recv_buf_size(group);
+            
+            //Better to fail here than later
+            output.result_message.send_all(group);
         }
-        
-        constexpr int num_vars = arr_t::alias_type::size();
-        for (int ii = 0; ii < group.size(); ++ii)
-        {
-            output.result_message.send_buffers[ii].resize(num_vars*output.send_sizes[ii]);
-        }
-        
-        output.result_message.assure_recv_buf_size(group);
-        output.result_message.send_all(group);
         
         if (failed_points_sampling.size() > 0)
         {
@@ -325,6 +332,7 @@ namespace spade::sampling
         {
             throw except::points_exception("Sampling operation failed for " + std::to_string(failed_points_interp.size()) + " points (cannot find interp. cloud)", failed_points_interp);
         }
+        
         
         output.transfer();
         
@@ -345,6 +353,8 @@ namespace spade::sampling
         const auto coeff_img = utils::make_vec_image(oper.mine.coeff.data(arr.device()));
         
         const auto& group = arr.get_grid().group();
+        
+        constexpr bool supports_par_interp = requires { group.template send_all<int>(); };
         
         constexpr static bool is_shared_vec = requires { output.transfer(); };
         auto out_img = [&]()
@@ -371,67 +381,71 @@ namespace spade::sampling
         auto rg = dispatch::ranges::from_array(out_img, arr.device());
         dispatch::execute(rg, kern);
         
-        using alias_type = typename arr_t::alias_type;
-        std::size_t offset = 0;
-        for (int p = 0; p < group.size(); ++p)
+        if constexpr (supports_par_interp)
         {
-            if (p != group.rank())
+        
+            using alias_type = typename arr_t::alias_type;
+            std::size_t offset = 0;
+            for (int p = 0; p < group.size(); ++p)
             {
-                std::size_t send_size = oper.send_sizes[p];
-                
-                const auto o_idx_img   = utils::make_vec_image(oper.others.idx.data(arr.device()));
-                const auto o_coeff_img = utils::make_vec_image(oper.others.coeff.data(arr.device()));
-                auto dest_img = utils::make_vec_image(oper.result_message.send_buffers[p].data(arr.device()));
-                
-                auto comm_sampl_kern = [=] _sp_hybrid (const std::size_t& i) mutable
+                if (p != group.rank())
                 {
-                    alias_type sampled = real_t(0.0);
-                    const auto& coeffs = o_coeff_img[offset + i];
-                    const auto& idxs   = o_idx_img[offset + i];
-                    for (int j = 0; j < idxs.size(); ++j)
+                    std::size_t send_size = oper.send_sizes[p];
+                    
+                    const auto o_idx_img   = utils::make_vec_image(oper.others.idx.data(arr.device()));
+                    const auto o_coeff_img = utils::make_vec_image(oper.others.coeff.data(arr.device()));
+                    auto dest_img = utils::make_vec_image(oper.result_message.send_buffers[p].data(arr.device()));
+                    
+                    auto comm_sampl_kern = [=] _sp_hybrid (const std::size_t& i) mutable
                     {
-                        auto data = arr_img.get_elem(idxs[j]);
-                        sampled = sampled + coeffs[j]*data;
-                    }
-                    std::size_t base = i*alias_type::size();
-                    for (int v = 0; v < alias_type::size(); ++v)
-                    {
-                        dest_img[base+v] = sampled[v];
-                    }
-                };
-                
-                auto smallrg  = dispatch::ranges::make_range(0UL, send_size);
-                
-                dispatch::execute(smallrg, comm_sampl_kern, arr.device());
-                
-                offset += send_size;
+                        alias_type sampled = real_t(0.0);
+                        const auto& coeffs = o_coeff_img[offset + i];
+                        const auto& idxs   = o_idx_img[offset + i];
+                        for (int j = 0; j < idxs.size(); ++j)
+                        {
+                            auto data = arr_img.get_elem(idxs[j]);
+                            sampled = sampled + coeffs[j]*data;
+                        }
+                        std::size_t base = i*alias_type::size();
+                        for (int v = 0; v < alias_type::size(); ++v)
+                        {
+                            dest_img[base+v] = sampled[v];
+                        }
+                    };
+                    
+                    auto smallrg  = dispatch::ranges::make_range(0UL, send_size);
+                    
+                    dispatch::execute(smallrg, comm_sampl_kern, arr.device());
+                    
+                    offset += send_size;
+                }
             }
-        }
-        
-        oper.result_message.send_all(group);
-        
-        std::size_t scatter_offst = 0;
-        for (int p = 0; p < group.size(); ++p)
-        {
-            if (p != group.rank())
+            
+            oper.result_message.send_all(group);
+            
+            std::size_t scatter_offst = 0;
+            for (int p = 0; p < group.size(); ++p)
             {
-                auto buf_img     = utils::make_vec_image(oper.result_message.recv_buffers[p].data(arr.device()));
-                auto scatter_img = utils::make_vec_image(oper.scatter_offsets.data(arr.device()));
-                auto scatter_kern = [=] _sp_hybrid (const std::size_t& i) mutable
+                if (p != group.rank())
                 {
-                    alias_type result;
-                    std::size_t base = i*alias_type::size();
-                    for (int v = 0; v < alias_type::size(); ++v)
+                    auto buf_img     = utils::make_vec_image(oper.result_message.recv_buffers[p].data(arr.device()));
+                    auto scatter_img = utils::make_vec_image(oper.scatter_offsets.data(arr.device()));
+                    auto scatter_kern = [=] _sp_hybrid (const std::size_t& i) mutable
                     {
-                        result[v] = buf_img[base + v];
-                    }
-                    std::size_t scatter_idx = scatter_img[scatter_offst + i];
-                    out_img[scatter_idx] = result;
-                };
-                std::size_t num_elems = oper.result_message.recv_buffers[p].size() / alias_type::size();
-                scatter_offst += num_elems;
-                auto smallrg  = dispatch::ranges::make_range(0UL, num_elems);
-                dispatch::execute(smallrg, scatter_kern, arr.device());
+                        alias_type result;
+                        std::size_t base = i*alias_type::size();
+                        for (int v = 0; v < alias_type::size(); ++v)
+                        {
+                            result[v] = buf_img[base + v];
+                        }
+                        std::size_t scatter_idx = scatter_img[scatter_offst + i];
+                        out_img[scatter_idx] = result;
+                    };
+                    std::size_t num_elems = oper.result_message.recv_buffers[p].size() / alias_type::size();
+                    scatter_offst += num_elems;
+                    auto smallrg  = dispatch::ranges::make_range(0UL, num_elems);
+                    dispatch::execute(smallrg, scatter_kern, arr.device());
+                }
             }
         }
         

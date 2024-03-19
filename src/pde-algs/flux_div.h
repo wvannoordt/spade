@@ -704,6 +704,8 @@ namespace spade::pde_algs
         constexpr int ng           =  2;
         static_assert((left_extent <= ng) && (right_extent <= ng), "flux_div doesn't yet work for stencils wider than 2");
         constexpr int tile_size    =  4;
+        constexpr int half_tile    = tile_size/2;
+        static_assert(2*half_tile == tile_size, "Tile size must be an even number");
         
         int total_tiles = 1;
         for (int d = 0; d < nx.size(); ++d)
@@ -730,14 +732,10 @@ namespace spade::pde_algs
             
             // NOTE: at some point we ought to add in the ability to buffer
             // RHS data to shmem for the increment operation.
+            std::size_t total_sh_vals    = tile_size*tile_size*tile_size;
             
-            // View for the other fluxes
-            auto view0 = ctrs::make_array(tile_size, tile_size, tile_size);
-            
-            std::size_t num_sh_vals_flx  = view0[0]*view0[1]*view0[2];
-            std::size_t total_sh_vals    = num_sh_vals_flx;
-            
-            auto k_shmem     = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
+            auto k_shmem     = dispatch::shmem::make_shmem(
+                dispatch::shmem::vec<alias_type>(total_sh_vals), dispatch::shmem::vec<real_type>(3*total_sh_vals));
             using shmem_type = decltype(k_shmem);
             
             const auto outer_range = dispatch::ranges::make_range(0, ntiles[0]*ntiles[1]*ntiles[2], 0, int(grid.get_num_local_blocks()));
@@ -745,6 +743,7 @@ namespace spade::pde_algs
             {
                 int tile_id_1d = outer_raw[0];
                 auto& shmem_vec = shmem[0_c];
+                auto& scalr_vec = shmem[1_c];
                 // This is potentially slow!
                 // ix + nx*iy + nx*ny*iz
                 ctrs::array<int, 3> tile_id;
@@ -771,9 +770,53 @@ namespace spade::pde_algs
                     constexpr bool has_gradient = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::gradient>;
                     constexpr bool has_face_val = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::value>;
                     
+                    auto tile_data = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
+                    auto scal_data = utils::make_vec_image(scalr_vec, tile_size, tile_size, tile_size, 3);
+                    
+                    if constexpr (has_gradient)
+                    {
+                        for (int idir = 0; idir < input.size(); ++idir)
+                        {
+                            //Initialize gradient to zero
+                            auto& grad = omni::access<omni::info::gradient>(input[idir].root());
+                            grad = real_type(0.0);
+                        }
+                    }
+                    
                     threads.exec([&](const ctrs::array<int, 3>& inner_raw)
                     {
+                        grid::cell_idx_t i_cell(tile_id[0]*tile_size + inner_raw[0], tile_id[1]*tile_size + inner_raw[1], tile_id[2]*tile_size + inner_raw[2], lb);
                         
+                        for (int quad = 0; quad < 8; ++quad)
+                        {
+                            ctrs::array<int, 3> quad_offst{((quad & 1) > 0)?1:-1, ((quad & 2) > 0)?1:-1, ((quad & 4) > 0)?1:-1};
+                            auto i_buff = i_cell;
+                            for (int d = 0; d < 3; ++d) i_buff.i(d) += quad_offst[d]*half_tile;
+                            
+                            // Load the data from the current adjacent quadrant
+                            tile_data(inner_raw[0], inner_raw[1], inner_raw[2]) = q_img.get_elem(i_buff);
+                            threads.sync();
+                            
+                            for (int idir_flux = 0; idir_flux < dim; ++idir_flux)
+                            {
+                                if constexpr (has_gradient)
+                                {
+                                    auto& grad = omni::access<omni::info::gradient>(input[idir_flux].root());
+                                    
+                                    // Compute all three direction components of the flux
+                                    for (int idir = 0; idir < dim; ++idir)
+                                    {
+                                        int idir0 = idir + 1;
+                                        int idir1 = idir + 2;
+                                        if (idir0 >= dim) idir0 -= dim;
+                                        if (idir1 >= dim) idir1 -= dim;
+                                        
+                                        
+                                    }
+                                }
+                                
+                            }
+                        }
                     });
                 }
             };

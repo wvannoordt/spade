@@ -423,13 +423,16 @@ namespace spade::grid
         return array_exchange_t(output0, output1);
     }
     
-    template <typename grid_t, typename group_t>
-    auto create_interface(const grid_t& src_grid, const grid_t& dst_grid, const group_t& group)
+    template <typename arr_t, typename group_t>
+    auto create_interface(const arr_t& src_arr, const arr_t& dst_arr, const group_t& group)
     {
+        using grid_t = typename arr_t::grid_type;
         static_assert(grid_t::dim() == 3, "can only perform interface generation on 3d grids");
         using required_blocks_type = amr::amr_blocks_t<typename grid_t::coord_type, typename grid_t::array_desig_type>;
         static_assert(std::same_as<typename grid_t::blocks_type, required_blocks_type>, "can only perform interface generation grids with AMR block configs");
         
+        const auto& src_grid = src_arr.get_grid();
+        const auto& dst_grid = dst_arr.get_grid();
         
         grid_exchange_config_t output0(src_grid, dst_grid);
         exchange_handle_t      output1(group);
@@ -454,19 +457,19 @@ namespace spade::grid
                 
                 throw except::sp_exception(ss.str());
             }
-            if (src_grid.get_num_exchange(i) != dst_grid.get_num_exchange(i))
+            if (src_arr.get_num_exchange(i) != dst_arr.get_num_exchange(i))
             {
                 std::stringstream ss;
                 ss << "attempted to create interface between incompatible grids:";
                 ss << "number of exchange cells does not match\n";
                 ss << "Num. exchange, donor: [";
-                ss << src_grid.get_num_exchange(0) << ", ";
-                ss << src_grid.get_num_exchange(1) << ", ";
-                ss << src_grid.get_num_exchange(2) << "]\n";
+                ss << src_arr.get_num_exchange(0) << ", ";
+                ss << src_arr.get_num_exchange(1) << ", ";
+                ss << src_arr.get_num_exchange(2) << "]\n";
                 ss << "Num. exchange, recvr: [";
-                ss << dst_grid.get_num_exchange(0) << ", ";
-                ss << dst_grid.get_num_exchange(1) << ", ";
-                ss << dst_grid.get_num_exchange(2) << "]\n";
+                ss << dst_arr.get_num_exchange(0) << ", ";
+                ss << dst_arr.get_num_exchange(1) << ", ";
+                ss << dst_arr.get_num_exchange(2) << "]\n";
                 throw except::sp_exception(ss.str());
             }
         }
@@ -520,14 +523,15 @@ namespace spade::grid
         const auto src_lbs = src_grid.select_blocks(src_check, partition::global);
         const auto dst_lbs = dst_grid.select_blocks(dst_check, partition::global);
         
-        const auto extended_bbx = [&](const auto& grd, const auto& lb)
+        const auto extended_bbx = [&](const auto& arr, const auto& lb)
         {
+            const auto& grd = arr.get_grid();
             auto bbx      = grd.get_bounding_box(lb);
             const auto dx = grd.get_dx(lb);
             for (int d = 0; d < grd.dim(); ++d)
             {
-                bbx.min(d) -= grd.get_num_exchange(d)*dx[d];
-                bbx.max(d) += grd.get_num_exchange(d)*dx[d];
+                bbx.min(d) -= arr.get_num_exchange(d)*dx[d];
+                bbx.max(d) += arr.get_num_exchange(d)*dx[d];
             }
             return bbx;
         };
@@ -537,7 +541,7 @@ namespace spade::grid
             const auto src_bbx = src_grid.get_bounding_box(src_lb);
             for (const auto& dst_lb: dst_lbs)
             {
-                const auto dst_bbx_ext = extended_bbx(dst_grid, dst_lb);
+                const auto dst_bbx_ext = extended_bbx(dst_arr, dst_lb);
                 if (src_bbx.intersects(dst_bbx_ext))
                 {
                     // src_lb donates to dst_lb
@@ -595,7 +599,7 @@ namespace spade::grid
                     fake_dst_node.create_neighbor(handle, periodic_neighs);
                     for (const auto& e:fake_dst_node.neighbors)
                     {
-                        const auto transaction = get_transaction(src_grid, dst_grid, dst_lb.value, e);
+                        const auto transaction = get_transaction(src_arr.get_num_exchange(), src_grid, dst_grid, dst_lb.value, e);
                         if (transaction.reducible())
                         {
                             output0.add_send(transaction.reduce());
