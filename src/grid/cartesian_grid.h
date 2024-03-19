@@ -203,12 +203,12 @@ namespace spade::grid
             
             template <typename idx_t> _finline_ coord_point_type get_coords(const idx_t& i) const
             {
-                return global_geometry.get_coords(i);
+                return local_geometry.get_coords(i);
             }
                 
             template <typename idx_t> _finline_ coord_point_type get_comp_coords(const idx_t& i) const
             {
-                return global_geometry.get_comp_coords(i);
+                return local_geometry.get_comp_coords(i);
             }
             
             const auto is_domain_boundary(const partition::partition_tagged auto& lb) const
@@ -241,7 +241,8 @@ namespace spade::grid
             template <partition::partition_tagged idx_t>
             bound_box_t<dtype, 3> get_bounding_box(const idx_t& lb) const
             {
-                return this->geometry(typename idx_t::tag_type()).get_bounding_box(grid_partition.to_global(lb).value);
+                // return this->geometry(typename idx_t::tag_type()).get_bounding_box(grid_partition.to_global(lb).value);
+                return this->geometry(typename idx_t::tag_type()).get_bounding_box(lb.value);
             }
             
             bound_box_t<dtype, 3> get_bounding_box(const std::size_t& lb) const

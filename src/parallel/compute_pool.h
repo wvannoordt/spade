@@ -90,21 +90,21 @@ namespace spade::parallel
         const common_thread_data_t& env;
         
         template <typename buffer_type>
-        void post_send(const buffer_type& buf, int recv)
+        void post_send(const buffer_type& buf, int recv) const
         {
             message_buf_t bf = buf;
             env.outbox[this->rank()][recv].push_back(bf);
         }
         
         template <typename buffer_type>
-        void post_recv(const buffer_type& buf, int send)
+        void post_recv(const buffer_type& buf, int send) const
         {
             message_buf_t bf = buf;
             env.inbox[this->rank()][send].push_back(bf);
         }
         
         template <typename buf_t>
-        void send_all()
+        void send_all() const
         {
             // Need to clear messages after we finish
             this->sync();
@@ -144,6 +144,8 @@ namespace spade::parallel
             
             for (auto& list:  inbox) list.clear();
             for (auto& list: outbox) list.clear();
+            
+            this->sync();
         }
         
         bool p2p_enabled() const { return env.p2p_enabled; }
@@ -333,11 +335,11 @@ namespace spade::parallel
             std::vector<proc_id_t>(),
             false}
         {
-            std::sort(devices.begin(), devices.end());
-            if (std::unique(devices.begin(), devices.end()) != devices.end())
-            {
-                throw except::sp_exception("Duplicate device in launch configuration!");
-            }
+            // std::sort(devices.begin(), devices.end());
+            // if (std::unique(devices.begin(), devices.end()) != devices.end())
+            // {
+            //     throw except::sp_exception("Duplicate device in launch configuration!");
+            // }
             int num_threads = devices_in.size();
             context = std::make_shared<mpi_context_t>(argc, argv);
             mpi_check(MPI_Comm_rank(context->default_comm, &root.node));

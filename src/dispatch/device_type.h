@@ -44,11 +44,11 @@ namespace spade::device
     
     inline bool enable_p2p(int thread_id, std::vector<int> devices)
     {
-        std::sort(devices.begin(), devices.end());
-        if (std::unique(devices.begin(), devices.end()) != devices.end())
-        {
-            throw except::sp_exception("Duplicate device in launch configuration!");
-        }
+        // std::sort(devices.begin(), devices.end());
+        // if (std::unique(devices.begin(), devices.end()) != devices.end())
+        // {
+        //     throw except::sp_exception("Duplicate device in launch configuration!");
+        // }
 #if (_sp_cuda)
         for (auto d: devices)
         {
