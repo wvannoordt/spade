@@ -699,12 +699,13 @@ namespace spade::pde_algs
         auto ntiles = nx;
         
         
-        constexpr int left_extent  = -static_math::moddiv<omni_type::template min_extent<0>, 2>::value;
-        constexpr int right_extent =  static_math::moddiv<omni_type::template max_extent<0>, 2>::value + 1;
-        constexpr int ng           =  2;
+        constexpr int left_extent   = -static_math::moddiv<omni_type::template min_extent<0>, 2>::value;
+        constexpr int right_extent  =  static_math::moddiv<omni_type::template max_extent<0>, 2>::value + 1;
+        constexpr int num_sten_vals = left_extent + right_extent;
+        constexpr int ng            =  2;
         static_assert((left_extent <= ng) && (right_extent <= ng), "flux_div doesn't yet work for stencils wider than 2");
-        constexpr int tile_size    =  4;
-        constexpr int half_tile    = tile_size/2;
+        constexpr int tile_size     =  4;
+        constexpr int half_tile     = tile_size/2;
         static_assert(2*half_tile == tile_size, "Tile size must be an even number");
         
         int total_tiles = 1;
@@ -734,8 +735,7 @@ namespace spade::pde_algs
             // RHS data to shmem for the increment operation.
             std::size_t total_sh_vals    = tile_size*tile_size*tile_size;
             
-            auto k_shmem     = dispatch::shmem::make_shmem(
-                dispatch::shmem::vec<alias_type>(total_sh_vals), dispatch::shmem::vec<real_type>(3*total_sh_vals));
+            auto k_shmem     = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
             using shmem_type = decltype(k_shmem);
             
             const auto outer_range = dispatch::ranges::make_range(0, ntiles[0]*ntiles[1]*ntiles[2], 0, int(grid.get_num_local_blocks()));
@@ -743,7 +743,6 @@ namespace spade::pde_algs
             {
                 int tile_id_1d = outer_raw[0];
                 auto& shmem_vec = shmem[0_c];
-                auto& scalr_vec = shmem[1_c];
                 // This is potentially slow!
                 // ix + nx*iy + nx*ny*iz
                 ctrs::array<int, 3> tile_id;
@@ -771,20 +770,19 @@ namespace spade::pde_algs
                     constexpr bool has_face_val = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::value>;
                     
                     auto tile_data = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
-                    auto scal_data = utils::make_vec_image(scalr_vec, tile_size, tile_size, tile_size, 3);
-                    
-                    if constexpr (has_gradient)
-                    {
-                        for (int idir = 0; idir < input.size(); ++idir)
-                        {
-                            //Initialize gradient to zero
-                            auto& grad = omni::access<omni::info::gradient>(input[idir].root());
-                            grad = real_type(0.0);
-                        }
-                    }
                     
                     threads.exec([&](const ctrs::array<int, 3>& inner_raw)
                     {
+                        if constexpr (has_gradient)
+                        {
+                            for (int idir = 0; idir < input.size(); ++idir)
+                            {
+                                //Initialize gradient to zero
+                                auto& grad = omni::access<omni::info::gradient>(input[idir].root());
+                                grad = real_type(0.0);
+                            }
+                        }
+                        
                         grid::cell_idx_t i_cell(tile_id[0]*tile_size + inner_raw[0], tile_id[1]*tile_size + inner_raw[1], tile_id[2]*tile_size + inner_raw[2], lb);
                         
                         for (int quad = 0; quad < 8; ++quad)
@@ -797,26 +795,195 @@ namespace spade::pde_algs
                             tile_data(inner_raw[0], inner_raw[1], inner_raw[2]) = q_img.get_elem(i_buff);
                             threads.sync();
                             
-                            for (int idir_flux = 0; idir_flux < dim; ++idir_flux)
+                            for (int idir = 0; idir < dim; ++idir)
                             {
+                                
+                                //Calculate partial contribution to the gradient from this quadrant
                                 if constexpr (has_gradient)
                                 {
-                                    auto& grad = omni::access<omni::info::gradient>(input[idir_flux].root());
+                                    auto& grad = omni::access<omni::info::gradient>(input[idir].root());
                                     
                                     // Compute all three direction components of the flux
-                                    for (int idir = 0; idir < dim; ++idir)
+                                    int idir0 = idir + 1;
+                                    int idir1 = idir + 2;
+                                    if (idir0 >= dim) idir0 -= dim;
+                                    if (idir1 >= dim) idir1 -= dim;
+                                    
+                                    const auto& cond_apply = [&](int d_idir, int d_idir0, int d_idir1, const real_type coeff, int comp)
                                     {
-                                        int idir0 = idir + 1;
-                                        int idir1 = idir + 2;
-                                        if (idir0 >= dim) idir0 -= dim;
-                                        if (idir1 >= dim) idir1 -= dim;
+                                        ctrs::array<int, 3> app_idx = inner_raw;
+                                        app_idx[idir]  += d_idir;
+                                        app_idx[idir0] += d_idir0;
+                                        app_idx[idir1] += d_idir1;
                                         
+                                        app_idx[0] -= quad_offst[0]*half_tile;
+                                        app_idx[1] -= quad_offst[1]*half_tile;
+                                        app_idx[2] -= quad_offst[2]*half_tile;
                                         
+                                        alias_type val = real_type(0.0);
+                                        bool loaded    = true;
+                                        loaded = loaded && (app_idx[0] >= 0);
+                                        loaded = loaded && (app_idx[0] < tile_size);
+                                        loaded = loaded && (app_idx[1] >= 0);
+                                        loaded = loaded && (app_idx[1] < tile_size);
+                                        loaded = loaded && (app_idx[2] >= 0);
+                                        loaded = loaded && (app_idx[2] < tile_size);
+                                        if (loaded)
+                                        {
+                                            val = tile_data(app_idx[0], app_idx[1], app_idx[2]);
+                                        }
+                                        
+                                        grad[comp] += coeff*val;
+                                    };
+                                    
+                                    for (int pm = 0; pm < 2; ++pm)
+                                    {
+                                        // pm = 0 --> lower
+                                        // pm = 1 --> upper
+                                        int sig    = 2*pm - 1;
+                                        int d_idir = pm - 1;
+                                        cond_apply(d_idir,  0,  0, sig*real_type( 1.0),  idir);
+                                        cond_apply(d_idir, -1,  0,     real_type(-0.25), idir0);
+                                        cond_apply(d_idir,  1,  0,     real_type( 0.25), idir0);
+                                        cond_apply(d_idir,  0, -1,     real_type(-0.25), idir1);
+                                        cond_apply(d_idir,  0,  1,     real_type( 0.25), idir1);
                                     }
                                 }
                                 
+                                // Move the stencil values onto the stencil data from those that are loaded currently
+                                auto& input_loc = input[idir];
+                                ctrs::array<int, 3> ld_idx = inner_raw;
+                                ld_idx[idir] -= left_extent;
+                                
+                                ld_idx[0] -= quad_offst[0]*half_tile;
+                                ld_idx[1] -= quad_offst[1]*half_tile;
+                                ld_idx[2] -= quad_offst[2]*half_tile;
+                                
+                                algs::static_for<0, num_sten_vals>([&](const auto& jj)
+                                {
+                                    constexpr int j            = jj.value;
+                                    constexpr int offset_num   = 2*(j - left_extent) + 1;
+                                    using offst_t              = omni::offset_t<offset_num, 0, 0>;
+                                    constexpr int cell_idx     = omni::index_of<omni_type, offst_t>;
+                                    auto& cell_val             = omni::access<omni::info::value>(input_loc.cell(udci::idx_const_t<cell_idx>()));
+                                    
+                                    bool loaded    = true;
+                                    loaded = loaded && (ld_idx[0] >= 0);
+                                    loaded = loaded && (ld_idx[0] < tile_size);
+                                    loaded = loaded && (ld_idx[1] >= 0);
+                                    loaded = loaded && (ld_idx[1] < tile_size);
+                                    loaded = loaded && (ld_idx[2] >= 0);
+                                    loaded = loaded && (ld_idx[2] < tile_size);
+                                    if (loaded)
+                                    {
+                                        cell_val = tile_data(ld_idx[0], ld_idx[1], ld_idx[2]);
+                                    }
+                                    ld_idx[idir]++;
+                                });
+                            }
+                            threads.sync();
+                        }
+                        
+                        if constexpr (has_gradient)
+                        {
+                            for (int idir = 0; idir < dim; ++idir)
+                            {
+                                auto& grad = omni::access<omni::info::gradient>(input[idir].root());
+                                for (int dd = 0; dd < dim; ++dd) grad[dd] *= inv_dx[dd];
                             }
                         }
+                        
+                        ctrs::array<flux_type, dim> all3;
+                        for (int idir = 0; idir < dim; ++idir)
+                        {
+                            auto& input_loc = input[idir];
+                            if constexpr (has_face_val)
+                            {
+                                auto& qface = omni::access<omni::info::value>(input_loc.root());
+                                qface = real_type(0.0);
+                                using offst0_t              = omni::offset_t<-1, 0, 0>;
+                                constexpr int cell_idx0     = omni::index_of<omni_type, offst0_t>;
+                                
+                                using offst1_t              = omni::offset_t<1, 0, 0>;
+                                constexpr int cell_idx1     = omni::index_of<omni_type, offst1_t>;
+                                
+                                const auto& q0 = omni::access<omni::info::value>(input_loc.cell(udci::idx_const_t<cell_idx0>()));
+                                const auto& q1 = omni::access<omni::info::value>(input_loc.cell(udci::idx_const_t<cell_idx1>()));
+                                qface += q0;
+                                qface += q1;
+                                qface *= real_type(0.5);
+                            }
+                            
+                            const auto excluded = omni::info_list_t<omni::info::value, omni::info::gradient>();
+                            const auto i_face = grid::cell_to_face(i_cell, idir, 0);
+                            omni::retrieve(grid_img, q_img, i_face, input_loc, excluded);
+                            
+                            all3[idir] = flux_func(input_loc);
+                            all3[idir] *= inv_dx[idir];
+                        }
+                        
+                        // Old "strategy"
+                        // for (int idir = 0; idir < dim; ++idir)
+                        // {
+                        //     auto i_cellL = i_cell;
+                        //     i_cellL.i(idir)--;
+                        //     if (i_cellL.i(idir) >= 0)
+                        //     {
+                        //         rhs_img.decr_elem(i_cellL, all3[idir]);
+                        //     }
+                        //     threads.sync();
+                        //     rhs_img.incr_elem(i_cell, all3[idir]);
+                        //     threads.sync();
+                        // }
+                        
+                        //New strategy: shmem
+                        auto rhs_data = utils::vec_img_cast<flux_type>(tile_data);
+                        
+                        threads.sync();
+                        auto& self_flx = rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]);
+                        self_flx = rhs_img.get_elem(i_cell);
+                        
+                        threads.sync();
+                        for (int idir = 0; idir < dim; ++idir)
+                        {
+                            bool valid  = !(inner_raw[idir] == 0);
+                            auto idd   = inner_raw;
+                            idd[idir] -= int(valid);
+                            auto& left_flx = rhs_data(idd[0], idd[1], idd[2]);
+                            if (valid) left_flx -= all3[idir];
+                            threads.sync();
+                        }
+                        
+                        for (int idir = 0; idir < dim; ++idir)
+                        {
+                            self_flx += all3[idir];
+                        }
+                        
+                        rhs_img.set_elem(i_cell, rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]));
+                        threads.sync();
+                        
+                        for (int idir = 0; idir < dim; ++idir)
+                        {
+                            if (tile_id[idir] > 0)
+                            {
+                                auto icell_BL = i_cell;
+                                icell_BL.i(idir) -= tile_size;
+                                rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]) = rhs_img.get_elem(icell_BL);
+                                threads.sync();
+                                auto itarg = inner_raw;
+                                itarg[idir] += (tile_size - 1);
+                                if (inner_raw[idir] == 0)
+                                {
+                                    rhs_data(itarg[0], itarg[1], itarg[2]) -= all3[idir];
+                                }
+                                threads.sync();
+                                rhs_img.set_elem(icell_BL, rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]));
+                                threads.sync();
+                            }
+                        }
+                        
+                        threads.sync();
+                        
                     });
                 }
             };

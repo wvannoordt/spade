@@ -28,7 +28,7 @@
 
 
 namespace spade::grid
-{    
+{
     namespace detail
     {        
         template <class T> concept is_static_1D_array = ctrs::basic_array<T> && requires (T t)
