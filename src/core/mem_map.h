@@ -531,6 +531,7 @@ namespace spade::mem_map
             int nj  = size(2);
             int nk  = size(3);
             int nlb = size(4);
+            int nv  = size(0);
             
             ni = ni >> tpow;
             nj = nj >> tpow;
@@ -551,15 +552,31 @@ namespace spade::mem_map
             int kk = k & mask;
             k = k >> tpow;
             
-            std::size_t output = v;
-            output *= nlb;
-            output += lb;
+            // std::size_t output = v;
+            // output *= nlb;
+            // output += lb;
+            // output *= nk;
+            // output += k;
+            // output *= nj;
+            // output += j;
+            // output *= ni;
+            // output += i;
+            // output *= tsz;
+            // output += kk;
+            // output *= tsz;
+            // output += jj;
+            // output *= tsz;
+            // output += ii;
+            
+            std::size_t output = lb;
             output *= nk;
             output += k;
             output *= nj;
             output += j;
             output *= ni;
             output += i;
+            output *= nv;
+            output += v;
             output *= tsz;
             output += kk;
             output *= tsz;
