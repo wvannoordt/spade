@@ -198,13 +198,16 @@ namespace spade::io
             
             using device_t = typename arr_t::device_type;
             constexpr bool is_gpu_device = device::is_gpu<device_t>;
-            using vec_t = std::conditional<is_gpu_device, device::shared_vector<data_float_t, device::pinned_allocator_t<data_float_t>, device::device_allocator_t<data_float_t>>, std::vector<data_float_t>>::type;
+            using vec_t = std::conditional<
+                is_gpu_device,
+                device::shared_vector<data_float_t, device::pinned_allocator_t<data_float_t>,
+                device::device_allocator_t<data_float_t>>, std::vector<data_float_t>>::type;
             vec_t data_raw;
             
             coord_raw.reserve(3*(grid.get_num_cells(0)+1)*(grid.get_num_cells(1)+1)*(grid.get_num_cells(2)+1));
+            const auto names = get_var_names(typename arr_t::alias_type());
             data_raw.resize(grid.get_num_cells(0)*grid.get_num_cells(1)*grid.get_num_cells(2));
             const std::string format_str = "binary";
-            const auto names = get_var_names(typename arr_t::alias_type());
             for (std::size_t lb = 0; lb < grid.get_num_local_blocks(); ++lb)
             {
                 auto lb_glob = grid.get_partition().to_global(utils::tag[partition::local](lb));
@@ -300,6 +303,27 @@ namespace spade::io
         mf << "POINT_DATA " << data.size() << "\nSCALARS Data double\nLOOKUP_TABLE default\n";
         std::size_t ct = 0;
         for (const auto& x: data) mf << ct++ << "\n";
+    }
+    
+    template <ctrs::basic_array ctr_t, ctrs::basic_array data_ctr_t>
+    requires(std::same_as<typename ctr_t::value_type, coords::point_t<typename ctr_t::value_type::value_type>>)
+    static void output_vtk(const std::string& fname, const ctr_t& data, const data_ctr_t& scalars_in)
+    {
+        using val_t = typename data_ctr_t::value_type;
+        std::vector<val_t> scalars = scalars_in;
+        std::ofstream mf(fname);
+        mf << "# vtk DataFile Version 3.0\nvtk output\nASCII\nDATASET POLYDATA\nPOINTS " << data.size() << " double\n";
+        for (const auto& x: data) mf << x[0] << " " << x[1] << " " << x[2] << "\n";
+        mf << "POINT_DATA " << scalars.size() << "\n";
+        for (int v = 0; v < val_t::size(); ++v)
+        {
+            mf << "SCALARS " << val_t::name(v) << " double\nLOOKUP_TABLE default\n";
+            for (std::size_t j = 0; j < scalars.size(); ++j)
+            {
+                const auto& xxx = scalars[j];
+                mf << xxx[v] << "\n";
+            }
+        }
     }
     
     namespace detail

@@ -50,7 +50,7 @@ namespace spade::algs
     }
 
     template <class array_t, class kernel_t>
-    void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy=grid::include_exchanges)
+    void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy = grid::include_exchanges)
     {
         transform_inplace(arr, kernel, exchange_policy);
     }
