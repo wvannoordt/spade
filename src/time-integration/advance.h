@@ -53,6 +53,8 @@ namespace spade::time_integration
     {
         //Note that we assume that the boundary has been set before we begin integration.
         //Note also that the boundary pertains to the untransformed state
+        
+        constexpr bool has_second_variable_copy = data.solution_data.size() > 1;
 
         //Number of RHS evaluations
         const int num_stages = scheme_t::table_type::rows();
@@ -70,12 +72,17 @@ namespace spade::time_integration
             // const auto& sol_base = data.solution(0);
             
             //The solution used when we evaluate the RHS
-            auto& sol = data.solution(0);
+            constexpr int sol_idx = has_second_variable_copy ? 1 : 0;
+            auto& sol = data.solution(sol_idx);
+            if constexpr (has_second_variable_copy)
+            {
+                sol = data.solution(0);
+            }
             // sol = sol_base;//expensive!
             
             //solution augmentation loop
             //Begin by applying the forward transform
-            trans.transform_forward(sol);
+            if constexpr (i != 0) trans.transform_forward(sol);
             algs::static_for<0, i>([&](const auto& jj) -> void
             {
                 const int j = jj.value;
@@ -96,7 +103,7 @@ namespace spade::time_integration
                     resid_j *= numeric_type(1.0)/(dt*coeff);
                 }
             });
-            trans.transform_inverse(sol);
+            if constexpr (i != 0) trans.transform_inverse(sol);
             //By now, the solution has been augmented to accommodate the
             //evaluation of the ith residual
             auto& cur_resid = data.residual(i);
@@ -111,32 +118,37 @@ namespace spade::time_integration
             
             //solution augmentation loop
             //Begin by applying the forward transform
-            trans.transform_forward(sol);
-            algs::static_for<0, i>([&](const auto& jj) -> void
+            if constexpr (!has_second_variable_copy)
             {
-                const int j = jj.value;
-                using table_t = scheme_t::table_type;
-                //Note that this is a temporary workaround owing to a bug in GCC 10.2
-                using coeff_value_t_1 = typename table_t::elem_t<detail::idx_val<decltype(ii)>>;
-                using coeff_value_t = typename coeff_value_t_1::elem_t<detail::idx_val<decltype(jj)>>;
-                
-                //Using GCC 11+, below is valid
-                //using coeff_value_t = typename table_t::elem_t<i>::elem_t<j>;
-                
-                if constexpr (detail::nonzero_t<coeff_value_t>::value)
+                trans.transform_forward(sol);
+                algs::static_for<0, i>([&](const auto& jj) -> void
                 {
-                    constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
-                    auto& resid_j = data.residual(j); //"k_j"
-                    resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
-                    sol -= resid_j;
-                    resid_j *= numeric_type(1.0)/(dt*coeff);
-                }
-            });
-            trans.transform_inverse(sol);
+                    const int j = jj.value;
+                    using table_t = scheme_t::table_type;
+                    //Note that this is a temporary workaround owing to a bug in GCC 10.2
+                    using coeff_value_t_1 = typename table_t::elem_t<detail::idx_val<decltype(ii)>>;
+                    using coeff_value_t = typename coeff_value_t_1::elem_t<detail::idx_val<decltype(jj)>>;
+                    
+                    //Using GCC 11+, below is valid
+                    //using coeff_value_t = typename table_t::elem_t<i>::elem_t<j>;
+                    
+                    if constexpr (detail::nonzero_t<coeff_value_t>::value)
+                    {
+                        constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
+                        auto& resid_j = data.residual(j); //"k_j"
+                        resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
+                        sol -= resid_j;
+                        resid_j *= numeric_type(1.0)/(dt*coeff);
+                    }
+                });
+                trans.transform_inverse(sol);
+            }
         });
         auto& new_solution = data.solution(0); //solution is updated in place
         
         //Residual accumulation loop
+        //Update the transformed solution
+        trans.transform_forward(new_solution);
         algs::static_for<0, num_stages>([&](const auto& ii) -> void
         {
             const int i = ii.value;
@@ -149,14 +161,13 @@ namespace spade::time_integration
                 auto& resid = data.residual(i);
                 //Multiply the residual by the accumulation coefficient
                 resid *= (coeff*dt);
-                //Update the transformed solution
-                trans.transform_forward(new_solution);
+                
                 new_solution += resid;
-                trans.transform_inverse(new_solution);
                 //Divide to avoid modifying the residual unduly (may be unnecessary!)
                 resid *= numeric_type(1.0)/(coeff*dt);
             }
         });
+        trans.transform_inverse(new_solution);
         axis.time() += dt;
         boundary(new_solution, axis.time());
     }

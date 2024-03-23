@@ -725,7 +725,7 @@ namespace spade::pde_algs
         
         using input_type = omni::stencil_data_t<omni_type, sol_arr_t>;
         
-        for (int parity = 0; parity < 4; ++parity)
+        // for (int parity = 0; parity < 4; ++parity)
         {
             const auto tile_range = dispatch::ranges::make_range(0, tile_size, 0, tile_size, 0, tile_size);
             dispatch::kernel_threads_t kpool(tile_range, prims.device());
@@ -761,7 +761,7 @@ namespace spade::pde_algs
                 
                 int tpar = utils::min(p0, p1);
                 
-                if (tpar == parity)
+                // if (tpar == parity)
                 {
                     ctrs::array<input_type, dim> input;
                     int lb = outer_raw[1];
@@ -961,71 +961,56 @@ namespace spade::pde_algs
                         
                         rhs_img.set_elem(i_cell, rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]));
                         threads.sync();
-                        
-                        for (int idir = 0; idir < dim; ++idir)
-                        {
-                            if (tile_id[idir] > 0)
-                            {
-                                auto icell_BL = i_cell;
-                                icell_BL.i(idir) -= tile_size;
-                                rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]) = rhs_img.get_elem(icell_BL);
-                                threads.sync();
-                                auto itarg = inner_raw;
-                                itarg[idir] += (tile_size - 1);
-                                if (inner_raw[idir] == 0)
-                                {
-                                    rhs_data(itarg[0], itarg[1], itarg[2]) -= all3[idir];
-                                }
-                                threads.sync();
-                                rhs_img.set_elem(icell_BL, rhs_data(inner_raw[0], inner_raw[1], inner_raw[2]));
-                                threads.sync();
-                            }
-                        }
-                        
-                        threads.sync();
-                        
                     });
                 }
             };
+            
             dispatch::execute(outer_range, loop, kpool, k_shmem);
         }
         
         // block boundary cleanup
         for (int idir = 0; idir < dim; ++idir)
-        {
-            constexpr int correc_tile_size = 4;
+        {            
             int idir0 = idir + 1;
             int idir1 = idir + 2;
             if (idir0 >= dim) idir0 -= dim;
             if (idir1 >= dim) idir1 -= dim;
-            const auto i_range = dispatch::ranges::make_range(0, correc_tile_size, 0, correc_tile_size);
-            const int nt_0 = utils::i_div_up(nx[idir0], correc_tile_size);
-            const int nt_1 = utils::i_div_up(nx[idir1], correc_tile_size);
+            
+            int nx0_ovr_2 = nx[idir0]/2;
+            int nx1_ovr_2 = nx[idir1]/2;
+            const auto i_range   = dispatch::ranges::make_range(0, nx0_ovr_2, 0, nx1_ovr_2);
+            constexpr int eff_tile_size = tile_size;
+            const int ntile_idir = utils::i_div_up(nx[idir],  eff_tile_size);
             dispatch::kernel_threads_t kpool(i_range, prims.device());
-            const auto outer_range = dispatch::ranges::make_range(0, nt_0, 0, nt_1, 0, int(grid.get_num_local_blocks()));
+            const auto outer_range = dispatch::ranges::make_range(0, ntile_idir, 0, int(grid.get_num_local_blocks()));
             using threads_type     = decltype(kpool);
             
             using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
             
-            auto loop = [=] _sp_hybrid (const ctrs::array<int, 3>& is_o, const threads_type& threads) mutable
+            auto loop = [=] _sp_hybrid (const ctrs::array<int, 2>& is_o, const threads_type& threads) mutable
             {
                 threads.exec([&](const ctrs::array<int, 2>& is_i)
                 {
-                    grid::cell_idx_t upper;
-                    upper.lb()     = is_o[2];
-                    upper.i(idir)  = nx[idir]-1;
-                    upper.i(idir0) = is_o[0]*correc_tile_size + is_i[0];
-                    upper.i(idir1) = is_o[1]*correc_tile_size + is_i[1];
-                    
-                    const auto uface = grid::cell_to_face(upper, idir, 1);
-                    
-                    data_type input;
-                    omni::retrieve(grid_img, q_img, uface, input);
-                    flux_type flux = flux_func(input);
-                    const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
-                    flux *= inv_dx;
-                    bool valid = (upper.i(idir0) < nx[idir0]) && (upper.i(idir1) < nx[idir1]);
-                    if (valid) rhs_img.decr_elem(upper, flux);
+                    for (int par = 0; par < 4; ++par)
+                    {
+                        int par0 = int((par&1) > 0);
+                        int par1 = int((par&2) > 0);
+                        grid::cell_idx_t upper;
+                        upper.lb()     = is_o[1];
+                        upper.i(idir)  = is_o[0]*eff_tile_size + eff_tile_size - 1;
+                        upper.i(idir0) = is_i[0] + nx0_ovr_2*par0;
+                        upper.i(idir1) = is_i[1] + nx1_ovr_2*par1;
+                        
+                        const auto uface = grid::cell_to_face(upper, idir, 1);
+                        
+                        data_type input;
+                        omni::retrieve(grid_img, q_img, uface, input);
+                        flux_type flux = flux_func(input);
+                        const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
+                        flux *= inv_dx;
+                        bool valid = (upper.i(idir0) < nx[idir0]) && (upper.i(idir1) < nx[idir1]);
+                        if (valid) rhs_img.decr_elem(upper, flux);
+                    }
                 });
             };
             dispatch::execute(outer_range, loop, kpool);
