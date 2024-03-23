@@ -185,7 +185,7 @@ namespace spade::ibm
         {
             // Select the blocks that intersect the boundary
             const auto is_intersect = [&](const auto& lb_loc)
-            {
+            {                
                 auto bnd_with_exch = grid.get_bounding_box(lb_loc);
                 const auto dx = grid.get_dx(lb_loc);
                 for (int d = 0; d < grid.dim(); ++d)
@@ -194,35 +194,23 @@ namespace spade::ibm
                     bnd_with_exch.min(d) -= array.get_num_exchange(d)*dx[d];
                     bnd_with_exch.max(d) += array.get_num_exchange(d)*dx[d];
                 }
-                return geom.box_contains_boundary(bnd_with_exch);
+                bool output = geom.box_contains_boundary(bnd_with_exch);
+                return output;
             };
             const auto lbs = grid.select_blocks(is_intersect, partition::local);
             return lbs;
         }
         
-        template <typename array_t, typename geom_t, typename kernel_t>
+        template <typename array_t, typename geom_t, const int nlayers_in>
         inline auto
-        compute_aligned_ghosts(const array_t& sampled_array, const geom_t& geom, const kernel_t&, const bool is_external)
+        compute_aligned_ghosts(const array_t& sampled_array, const geom_t& geom, const udci::idx_const_t<nlayers_in>&, const bool is_external)
         {
-            
-            using omni_type = typename kernel_t::omni_type;
-            static_assert(omni_type::template max_extent<0> == -omni_type::template min_extent<0>,
-                "Stencil for boundary info must be symmetric");
-            static_assert(omni_type::template min_extent<1> == 0,
-                "Stencil for boundary info must be face-aligned (no tangential offsets)");
-            static_assert(omni_type::template max_extent<1> == 0,
-                "Stencil for boundary info must be face-aligned (no tangential offsets)");
-            static_assert(omni_type::template min_extent<2> == 0,
-                "Stencil for boundary info must be face-aligned (no tangential offsets)");
-            static_assert(omni_type::template max_extent<2> == 0,
-                "Stencil for boundary info must be face-aligned (no tangential offsets)");
-            
-            constexpr int num_layers = static_math::moddiv<omni_type::template max_extent<0>,2>::value + 1;
-            
             using grid_t   = typename array_t::grid_type;
             using real_t   = typename grid_t::coord_type;
             using pnt_t    = typename grid_t::coord_point_type;
-            using ginfo_t  = ghost_info_t<num_layers, real_t>;
+            using ginfo_t  = ghost_info_t<nlayers_in, real_t>;
+            
+            constexpr int num_layers = nlayers_in;
             
             constexpr int grid_dim = grid_t::dim();
             using output_t = ctrs::array<ginfo_t, grid_dim>;
@@ -230,7 +218,8 @@ namespace spade::ibm
             
             static_assert(std::same_as<typename grid_t::coord_sys_type, coords::identity<typename grid_t::coord_type>>, "ghosts currently only working for identity coordinates");
             
-            const auto& grid = sampled_array.get_grid();
+            const auto& grid  = sampled_array.get_grid();
+            const auto& group = grid.group();
             
             for (int d = 0; d < grid_t::dim(); ++d)
             {
@@ -307,13 +296,12 @@ namespace spade::ibm
                         {
                             ++isect_count;
                             
-                            
                             const auto  gp_sign  = -utils::sign(normal[idir]*sign);
                             const auto  lb       = utils::tag[partition::local](icell_orig.lb());
                             const auto& b_point  = point;
                             const auto& bbox     = grid.get_bounding_box(lb);
                             const auto  dx       = grid.get_dx(lb);
-                                
+                            
                             // Note that we include xray points inside the exchange cells in the tracing direction
                             auto bnd_extd = grid.get_bounding_box(lb);
                             
@@ -487,6 +475,7 @@ namespace spade::ibm
                 }
             }
             for (auto& arr: output) arr.transfer();
+            
             return output;
         }
         
@@ -666,11 +655,11 @@ namespace spade::ibm
     constexpr static bool external = true;
     constexpr static bool internal = false;
     
-    template <typename array_t, typename geom_t, typename kernel_t>
+    template <typename array_t, typename geom_t, const int nlayers_in>
     inline auto
-    compute_boundary_info(const array_t& sampled_array, const geom_t& geom, const kernel_t& kern, const bool is_external = true)
+    compute_boundary_info(const array_t& sampled_array, const geom_t& geom, const udci::idx_const_t<nlayers_in>& nl, const bool is_external = true)
     {
-        auto aligneds        = detail::compute_aligned_ghosts (sampled_array, geom, kern,     is_external);
+        auto aligneds        = detail::compute_aligned_ghosts (sampled_array, geom, nl,       is_external);
         auto diagonals       = detail::compute_diagonal_ghosts(sampled_array, geom, aligneds, is_external);
         using aligned_t      = decltype(aligneds)::value_type;
         using real_t         = typename geom_t::value_type;
@@ -678,5 +667,26 @@ namespace spade::ibm
         constexpr int nlayer = aligned_t::num_layer();
         using output_t       = boundary_info_t<grid_t::dim(), nlayer, real_t>;
         return output_t{std::move(aligneds), std::move(diagonals)};
+    }
+    
+    template <typename array_t, typename geom_t, typename kernel_t>
+    inline auto
+    compute_boundary_info(const array_t& sampled_array, const geom_t& geom, const kernel_t& kern, const bool is_external = true)
+    {
+        using omni_type = typename kernel_t::omni_type;
+            static_assert(omni_type::template max_extent<0> == -omni_type::template min_extent<0>,
+                "Stencil for boundary info must be symmetric");
+            static_assert(omni_type::template min_extent<1> == 0,
+                "Stencil for boundary info must be face-aligned (no tangential offsets)");
+            static_assert(omni_type::template max_extent<1> == 0,
+                "Stencil for boundary info must be face-aligned (no tangential offsets)");
+            static_assert(omni_type::template min_extent<2> == 0,
+                "Stencil for boundary info must be face-aligned (no tangential offsets)");
+            static_assert(omni_type::template max_extent<2> == 0,
+                "Stencil for boundary info must be face-aligned (no tangential offsets)");
+            
+        constexpr int num_layers = static_math::moddiv<omni_type::template max_extent<0>,2>::value + 1;
+        udci::idx_const_t<num_layers> nlayer_cst;
+        return compute_boundary_info(sampled_array, geom, nlayer_cst, is_external);
     }
 }

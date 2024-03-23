@@ -22,7 +22,7 @@ namespace spade::time_integration
         };
     }
     
-    template <typename table_t, typename accum_t, typename dt_t>
+    template <typename table_t, typename accum_t, typename dt_t, bool high_storage = false>
     requires(table_t::rows() == dt_t::length()) // need other constraints here
     struct rk_t
     {
@@ -30,7 +30,7 @@ namespace spade::time_integration
         using accum_type = accum_t; //How do we combine the substep residuals?
         using dt_type    = dt_t;    //At what points in time do we evaluate t?
         
-        static constexpr std::size_t var_size() {return 1;}
+        static constexpr std::size_t var_size() {return high_storage ? 2 : 1;}
         static constexpr std::size_t rhs_size() {return table_t::cols();}
 
         static constexpr bool is_rk_specialization = true;
@@ -75,6 +75,17 @@ namespace spade::time_integration
         >,
         detail::sr_vec_t<std::ratio<1,6>, std::ratio<1,6>, std::ratio<2,3>>,
         detail::sr_vec_t<std::ratio<0>,   std::ratio<1>, std::ratio<1,2>>
+    >;
+    
+    using ssprk3hs_t = rk_t<
+        detail::sr_mat_t<
+            detail::sr_vec_t<std::ratio<0>,   std::ratio<0>,   std::ratio<0>>,
+            detail::sr_vec_t<std::ratio<1>,   std::ratio<0>,   std::ratio<0>>,
+            detail::sr_vec_t<std::ratio<1,4>, std::ratio<1,4>, std::ratio<0>>
+        >,
+        detail::sr_vec_t<std::ratio<1,6>, std::ratio<1,6>, std::ratio<2,3>>,
+        detail::sr_vec_t<std::ratio<0>,   std::ratio<1>, std::ratio<1,2>>,
+        true
     >;
     
     using rk38r_t = rk_t<

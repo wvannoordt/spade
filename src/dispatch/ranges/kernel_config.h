@@ -42,6 +42,7 @@ namespace spade::dispatch::ranges
                 // 
                 //  | + | + | + | + | + | + | + | + | + | + | + | + |
                 using intgr_t = decltype(kernel.o_range.bounds.volume());
+                constexpr intgr_t bsize = 32;
                 grid_dim.x = utils::i_div_up(kernel.o_range.bounds.volume(), intgr_t(32));
                 blck_dim.x = 32;
             }
