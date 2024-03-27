@@ -469,6 +469,7 @@ namespace spade::ibm
                         const auto tol = 5e-3;
                         const auto dist = ctrs::array_norm(xb - xg);
                         bool very_close_to_boundary = dist < tol*diag;
+                        if (very_close_to_boundary) list.can_fill[id][ilayer] = true;
                         if (!list.can_fill[id][ilayer] && !very_close_to_boundary)
                         {
                             //Need to recompute closest point as this is a thin geometry situation

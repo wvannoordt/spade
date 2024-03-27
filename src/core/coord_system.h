@@ -220,10 +220,32 @@ namespace spade::coords
     _sp_hybrid dtype calc_jacobian(
         const identity<dtype>& coord,
         const point_t<dtype>& coords,
-        idx_t& i)
+        idx_t&)
     {
         return dtype(1.0);
     }
+    
+    // Future curvilinear coordinate systems
+    /*
+    template <typename dtype, typename idx_t>
+    _sp_hybrid auto calc_normal_vector(
+        const curvilinear_t<dtype>& coord,
+        const point_t<dtype>& coords,
+        const idx_t& i,
+        const typename idx_t::value_type& idir)
+    {
+        return utils::unit(idir);
+    }
+    
+    template <typename dtype, typename idx_t>
+    _sp_hybrid dtype calc_jacobian(
+        const curvilinear_t<dtype>& coord,
+        const point_t<dtype>& coords,
+        idx_t&)
+    {
+        return dtype(1.0);
+    }
+    */
     
     template <diagonal_coordinate_system coord_t, typename idx_t>
     _sp_hybrid ctrs::array<typename coord_t::coord_type, 3> calc_normal_vector(

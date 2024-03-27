@@ -409,6 +409,7 @@ namespace spade::parallel
             const auto wrapper = [&](spade::parallel::pool_t pool)
             {
                 device::set_device(devices[pool.thread()]);
+                
                 data.p2p_enabled = device::enable_p2p(pool.thread(), devices);
                 
                 data.inbox [pool.rank()].resize(pool.size());
