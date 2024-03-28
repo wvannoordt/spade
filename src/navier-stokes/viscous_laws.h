@@ -75,7 +75,7 @@ namespace spade::viscous_laws
         dtype beta;
         
         constant_viscosity_t(const dtype& visc_in, const dtype& prandtl_in)
-        : visc{visc_in}, beta{-2.0*visc_in/3.0}, prandtl_inv{dtype(1.0)/prandtl_in}
+        : visc{visc_in}, beta{dtype(-2.0*visc_in/3.0)}, prandtl_inv{dtype(1.0)/prandtl_in}
         { }
         
         _sp_hybrid result_type get_all(const auto&) const

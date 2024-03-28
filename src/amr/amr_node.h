@@ -82,11 +82,11 @@ namespace spade::amr
                 //First add neighbor relationships for siblings of current child
                 for (int j = 0; j < subnodes.size(); ++j)
                 {
-                    if (i != j)
-                    {
+                    // if (i != j)
+                    // {
                         handle_type sibling(subnodes, j);
                         child.create_neighbor(sibling);
-                    }
+                    // }
                 }
                 
                 //Now add parent neighbors
@@ -165,7 +165,8 @@ namespace spade::amr
                         ctrs::array<int, 3> edge(i-1, j-1, k-1);
                         if constexpr (dim() == 2) edge[2] = 0;
                         bool valid = table[0][i] && table[1][j] && table[2][k];
-                        if (valid)
+                        bool allzero = edge == 0;
+                        if (valid && !allzero)
                         {
                             amr_neighbor_t<dim()> neighbor{candidate, 0};
                             ctrs::copy_array(edge, neighbor.edge);

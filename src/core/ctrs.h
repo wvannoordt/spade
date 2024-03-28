@@ -64,7 +64,9 @@ namespace spade::ctrs
     requires (arr1_t::size() == arr2_t::size())
     _sp_hybrid constexpr static auto dot_prod(const arr1_t& arr1, const arr2_t& arr2)
     {
-        using data_t = typename arr1_t::value_type;
+        using f1_t = typename arr1_t::value_type;
+        using f2_t = typename arr2_t::value_type;
+        using data_t = decltype(f1_t()*f2_t());
         data_t output = arr1[0]*arr2[0];
         for (int i = 1; i < arr1.size(); ++i) output += arr1[i]*arr2[i];
         return output;
@@ -167,11 +169,6 @@ namespace spade::ctrs
         }
         
        _sp_hybrid arithmetic_array_t(const dtype& val) {fill(val);}
-        // arithmetic_array_t(dtype&& val)
-        // {
-        //     data[0] = std::move(val);
-        //     if constexpr (this->size() > 1) this->fill(data[0], 1, this->size());
-        // }
         
         _sp_hybrid arithmetic_array_t() {}
         _sp_hybrid constexpr arithmetic_array_t(const arithmetic_array_t& rhs) = default;
@@ -203,6 +200,7 @@ namespace spade::ctrs
         template <basic_array arr_t>
         _sp_hybrid self_type& operator += (const arr_t& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] += rhs[i];
             return self();
         }
@@ -211,6 +209,7 @@ namespace spade::ctrs
         _sp_hybrid auto operator + (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] + rhs[i];
             return output.self();
         }
@@ -219,6 +218,7 @@ namespace spade::ctrs
         _sp_hybrid auto operator - (const arithmetic_array_t<rhs_t, ar_size, derived_t>& rhs) const
         {
             arithmetic_array_t<decltype(dtype()+rhs_t()), ar_size, derived_t> output;
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) output[i] = data[i] - rhs[i];
             return output.self();
         }
@@ -226,6 +226,7 @@ namespace spade::ctrs
         template <basic_array arr_t>
         _sp_hybrid self_type& operator -= (const arr_t& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] -= rhs[i];
             return self();
         }
@@ -233,6 +234,7 @@ namespace spade::ctrs
         template <typename data_t>
         _sp_hybrid self_type& operator *= (const data_t& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] *= rhs;
             return self();
         }
@@ -240,24 +242,28 @@ namespace spade::ctrs
         template <typename data_t>
         _sp_hybrid self_type& operator /= (const data_t& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] /= rhs;
             return self();
         }
         
         _sp_hybrid auto& operator += (const dtype& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] += rhs;
             return self();
         }
         
         _sp_hybrid auto& operator -= (const dtype& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] -= rhs;
             return self();
         }
         
         template <basic_array arr_t> auto& operator %= (const arr_t& rhs)
         {
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) data[i] %= rhs[i];
             return self();
         }
@@ -265,24 +271,29 @@ namespace spade::ctrs
         _sp_hybrid bool operator == (const arithmetic_array_t<dtype, ar_size, derived_t>& rhs) const
         {
             bool output = true;
+            #pragma unroll
             for (index_type i = 0; i < this->size(); i++) output = (output && (data[i]==rhs[i]));
             return output;
         }
     };
     
-    template<typename dtype, const std::size_t ar_size, typename derived_t>
-    _sp_hybrid auto operator*(const dtype& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
+    template<typename scal_type, typename dtype, const std::size_t ar_size, typename derived_t>
+    _sp_hybrid auto operator*(const scal_type& lhs, const arithmetic_array_t<dtype, ar_size, derived_t>& rhs)
     {
-        arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
-        for (int i = 0; i < rhs.size(); ++i) output[i] *= lhs;
+        using out_t = dtype;
+        arithmetic_array_t<out_t, ar_size, derived_t> output;
+        #pragma unroll
+        for (int i = 0; i < rhs.size(); ++i) output[i] = (rhs[i] * lhs);
         return output.self();
     }
     
-    template<typename dtype, const std::size_t ar_size, typename derived_t>
-    _sp_hybrid auto operator/(const arithmetic_array_t<dtype, ar_size, derived_t>& rhs, const dtype& lhs)
+    template<typename div_t, typename dtype, const std::size_t ar_size, typename derived_t>
+    _sp_hybrid auto operator/(const arithmetic_array_t<dtype, ar_size, derived_t>& rhs, const div_t& lhs)
     {
-        arithmetic_array_t<dtype, ar_size, derived_t> output = rhs;
-        for (int i = 0; i < rhs.size(); ++i) output[i] /= lhs;
+        using out_t = dtype;
+        arithmetic_array_t<out_t, ar_size, derived_t> output;
+        #pragma unroll
+        for (int i = 0; i < rhs.size(); ++i) output[i] = (rhs[i] / lhs);
         return output.self();
     }
     
@@ -377,6 +388,15 @@ namespace spade::ctrs
     {
         //Kind of stupid but quite useful.
         target_t output;
+        copy_array(arr, output);
+        return output;
+    }
+    
+    template <typename val_t, typename data_t, const std::size_t ar_size, typename derived_t>
+    _sp_hybrid inline auto array_val_cast(const arithmetic_array_t<data_t, ar_size, derived_t>& arr)
+    {
+        //Kind of stupid but quite useful.
+        arithmetic_array_t<val_t, ar_size, derived_t> output;
         copy_array(arr, output);
         return output;
     }

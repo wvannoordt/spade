@@ -238,6 +238,11 @@ namespace spade::utils
         return str;
     }
     
+    static std::string to_string(const char* str)
+    {
+        return std::string(str);
+    }
+    
     template <typename str_t>
     static std::string to_string(const str_t& str)
     {
