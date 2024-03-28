@@ -286,16 +286,16 @@ namespace spade::sampling
               sum_check += coeffs[c];
             }
           //
-          if (!((errorflag==0)&&(std::abs(1.-sum_check)<1e-4)))
-            {
-              print("check     = ",errorflag);
-              print("sum_check = ",(1.-sum_check));
-              print("xsample   = ",x_sample);
-              print("indices   = ",indices);
-              print("coeffs    = ",coeffs);
-              //              std::cin.get();
-            }
-          //
+          // if (!((errorflag==0)&&(std::abs(1.-sum_check)<1e-4)))
+          //   {
+          //     print("check     = ",errorflag);
+          //     print("sum_check = ",(1.-sum_check));
+          //     print("xsample   = ",x_sample);
+          //     print("indices   = ",indices);
+          //     print("coeffs    = ",coeffs);
+          //     //              std::cin.get();
+          //   }
+          // //
           return ((errorflag==0)&&(std::abs(1.-sum_check)<1e-4));
         }
     } wlsqr;

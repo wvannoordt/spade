@@ -470,6 +470,7 @@ namespace spade::convective
                     
                     constexpr float_t eps = float_t(1e-16);
                     ctrs::array<float_t, 4> as{(f0uk)-(f1uk), (f1uk)-(f2uk), (f1dk)-(f2dk), (f2dk)-(f3dk)};
+                    #pragma unroll
                     for (int ias = 0; ias < 4; ++ias)
                     {
                         as[ias] *= as[ias];
@@ -537,6 +538,7 @@ namespace spade::convective
             apply_weno(1);
             
             //momentum conservation
+            #pragma unroll
             for (int dr = 0; dr < 3; ++dr)
             {
                 mutv([&](auto& flx, auto& disv_loc, const auto& q, const auto& info, const int i)

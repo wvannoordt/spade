@@ -26,6 +26,8 @@
 #include "dispatch/ranges/linear_range.h"
 #include "dispatch/support_of.h"
 
+#include "algs/transform_inplace.h"
+
 
 namespace spade::grid
 {

@@ -52,6 +52,7 @@ namespace spade::grid
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int i = 0; i < alias.size(); ++i) (*this)(i, idx) = alias[i];
             }
             if constexpr (!ctrs::basic_array<alias_type>)
@@ -65,6 +66,7 @@ namespace spade::grid
             if constexpr (ctrs::basic_array<alias_type>)
             {
                 alias_type output;
+                #pragma unroll
                 for (int i = 0; i < output.size(); ++i) output[i] = (*this)(i, idx);
                 return output;
             }
@@ -79,6 +81,7 @@ namespace spade::grid
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) += rhs[i];
             }
             else
@@ -92,6 +95,7 @@ namespace spade::grid
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) -= rhs[i];
             }
             else
@@ -105,6 +109,7 @@ namespace spade::grid
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) *= rhs[i];
             }
             else
@@ -118,6 +123,7 @@ namespace spade::grid
         {
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int i = 0; i < alias_type::size(); ++i) (*this)(i, idx) /= rhs[i];
             }
             else
