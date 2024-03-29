@@ -363,7 +363,7 @@ namespace spade::ibm
                                 if ((ctrs::dot_prod(tmp1, tmp2) < dot_prod_tol))
                                 {
                                     pnt_t x_search = x_ghost;
-                                    x_search += 2*diag*normal;
+                                    x_search += real_t(2*diag)*normal;
                                     nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
                                 }
                                 
@@ -420,7 +420,7 @@ namespace spade::ibm
                                     if ((ctrs::dot_prod(tmp3, tmp2) < dot_prod_tol))
                                     {
                                         pnt_t x_search = xc_comp_lyr;
-                                        x_search += 2*(1+ilayer)*diag*normal;
+                                        x_search += real_t(2*(1+ilayer)*diag)*normal;
                                         nearest_boundary_point_lyr = geom.find_closest_boundary_point(x_search, lyr_search_radius);
                                     }
                                     
@@ -469,12 +469,13 @@ namespace spade::ibm
                         const auto tol = 5e-3;
                         const auto dist = ctrs::array_norm(xb - xg);
                         bool very_close_to_boundary = dist < tol*diag;
+                        if (very_close_to_boundary) list.can_fill[id][ilayer] = true;
                         if (!list.can_fill[id][ilayer] && !very_close_to_boundary)
                         {
                             //Need to recompute closest point as this is a thin geometry situation
                             pnt_t x_search = xg;
-                            x_search += (ilayer + 1)*diag*list.boundary_normals[id];
-                            const auto radi = 2*(ilayer + 1)*diag;
+                            x_search += real_t((ilayer + 1)*diag)*list.boundary_normals[id];
+                            const auto radi = real_t(2*(ilayer + 1)*diag);
                             const auto new_pt = geom.find_closest_boundary_point(x_search, radi);
                             list.closest_points[id][ilayer] = new_pt;
                             vec_t nv_new = 0.0;

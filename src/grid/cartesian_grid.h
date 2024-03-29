@@ -113,6 +113,8 @@ namespace spade::grid
                 
                 const auto create_geom = [&](const std::size_t& lim, const auto& loc_glob, auto& geom)
                 {
+                    geom.dx.clear();
+                    geom.inv_dx.clear();
                     for (std::size_t lb = 0; lb < lim; ++lb)
                     {
                         const auto bidx           = utils::tag[loc_glob](lb);

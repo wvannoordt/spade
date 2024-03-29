@@ -31,14 +31,16 @@ namespace spade::algs
     template <typename arr_t, typename kernel_t>
     static void boundary_fill(arr_t& arr, const boundary::identifier_t& boundaries, const kernel_t kern)
     {
+        using arr_val_t = typename arr_t::value_type;
+        using crd_val_t = typename arr_t::grid_type::coord_type;
         static_assert(arr_t::centering_type() == grid::cell_centered, "boundary filling only implemented for cell-centered arrays");
         const auto& grid   = arr.get_grid();
         const auto g_img   = grid.image(arr.device());
         auto arr_img = arr.image();
         for (int ibndy = 0; ibndy < 6; ++ibndy)
         {
-            int idir = ibndy/2;
-            int pm   = ibndy%2;
+            int idir = ibndy / 2;
+            int pm   = ibndy % 2;
             if (boundaries(idir, pm))
             {
                 grid::cell_idx_t ll, ur;
@@ -118,7 +120,7 @@ namespace spade::algs
                         auto kern2 = kern;
                         auto ghost_val  = [&]()
                         {
-                          if constexpr (std::invocable<kernel_t, typename arr_t::alias_type, typename arr_t::alias_type, typename coords::point_t<real_t>,  int>)
+                          if constexpr (std::invocable<kernel_t, typename arr_t::alias_type, typename arr_t::alias_type, typename coords::point_t<crd_val_t>,  int>)
                             return kern2(domain_val, fill_val, x_g, idir);
                           else return kern2(domain_val, idir);
                         }();
