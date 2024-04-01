@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bitset>
 #include <vector>
 
 #include "core/ctrs.h"
@@ -195,8 +196,13 @@ namespace spade::amr
                     comp_bbox.max(d) = amr_bbox.max(d).convert_to_coordinate(bounds.min(d), dx[d]);
                 }
             }
-            for (auto& p: all_nodes) p.get().tag = -1;
-            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb].get().tag = lb;
+            
+            for (auto& p: all_nodes)
+            {
+                p->tag = -1;
+            }
+            
+            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb]->tag = lb;
         }
         
         void enumerate()

@@ -363,7 +363,7 @@ namespace spade::grid
             std::size_t i1 = this->data.size();
             const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
             auto vimg         = utils::make_vec_image(this->data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] *= rhs; };
+            auto fnc = [=] _sp_hybrid (const std::size_t& i) mutable { vimg[i] *= rhs; };
             dispatch::execute(lrange, fnc);
             return *this;
         }
@@ -375,7 +375,7 @@ namespace spade::grid
             std::size_t i1 = this->data.size();
             const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
             auto vimg         = utils::make_vec_image(this->data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] /= rhs; };
+            auto fnc = [=] _sp_hybrid (const std::size_t& i) mutable { vimg[i] /= rhs; };
             dispatch::execute(lrange, fnc);
             return *this;
         }
@@ -386,7 +386,7 @@ namespace spade::grid
             std::size_t i1 = this->data.size();
             const dispatch::ranges::linear_range_t lrange(i0, i1, this->device());
             auto vimg         = utils::make_vec_image(this->data);
-            auto fnc = _sp_lambda(const std::size_t& i) mutable { vimg[i] = rhs; };
+            auto fnc = [=] _sp_hybrid (const std::size_t& i) mutable { vimg[i] = rhs; };
             dispatch::execute(lrange, fnc);
             return *this;
         }
