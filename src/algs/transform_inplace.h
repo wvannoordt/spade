@@ -29,7 +29,6 @@ namespace spade::algs
         dispatch::execute(var_range, loop_load);
     }
     */
-    
     // This seems to be marginally better than the simple one above
     template <grid::multiblock_array array_t, class callable_t>
     void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)

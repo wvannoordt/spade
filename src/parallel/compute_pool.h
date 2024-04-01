@@ -278,6 +278,14 @@ namespace spade::parallel
             }
             return *this;
         }
+        
+        template <typename func_t>
+        const pool_t& exclusive(const func_t& func) const
+        {
+            std::lock_guard<std::mutex> guard(env.mut);
+            func();
+            return *this;
+        }
     };
     
     struct mpi_context_t

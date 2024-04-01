@@ -78,6 +78,12 @@ namespace spade::grid
         transaction_tag_t tag = null_transaction;
         bound_box_t<int, 4> source, dest;
         int rank_recv, rank_send;
+        
+        std::size_t glob_source_blk, glob_dest_blk;
+        
+        std::size_t glob_source_block() const { return glob_source_blk; }
+        std::size_t glob_dest_block()   const { return glob_dest_blk; }
+        
         std::size_t send_volume() const { return source.volume(); }
         std::size_t recv_volume() const { return dest.volume(); }
         
@@ -135,6 +141,9 @@ namespace spade::grid
         constexpr static int max_size = static_math::pow<2, gdim>::value;
         
         grid_rect_copy_t patches;
+        std::size_t glob_source_block() const { return patches.glob_source_blk; }
+        std::size_t glob_dest_block()   const { return patches.glob_dest_blk; }
+        
         ctrs::array<int, 3> i_coeff, i_incr;
         
         //NOTE: this type of exchange will "pack" the sending patch

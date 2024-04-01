@@ -113,6 +113,23 @@ namespace spade::grid
             //First we need to pack all of the messages into the buffers in the message.
             auto array_img = array.image();
             const int rank = group.rank();
+            
+            // const auto& thing = config.send_data[0_c];
+            // for (const auto& t:thing)
+            // {
+            //     auto lbloc  = utils::tag[partition::local](t.dest.min(3));
+            //     auto lbglob = array.get_grid().get_partition().to_global(lbloc);
+            //     if (lbglob.value == 6859 && t.dest.min(2) < 0)// && t.dest.min(0) == 0 && t.dest.min(1) == 0)
+            //     {
+            //         print(t.sender(), t.receiver());
+            //         print(group.rank());
+            //         print(t.dest);
+            //         print(t.source);
+            //     }
+            // }
+            // print("pause", utils::where());
+            // std::cin.get();
+            
             for (int dest = 0; dest < group.size(); ++dest)
             {
                 bool can_short_circuit = (rank == dest);
@@ -128,7 +145,7 @@ namespace spade::grid
                 
                 
                 //The first section of the buffer is only for the direct injections
-                dest_buffer.csize -= alias_type::size()*num_injec_cells;
+                dest_buffer.csize -= alias_type::size()*num_intrp_cells;
                 auto injec_range   = dispatch::ranges::make_range(0UL, num_injec_cells);
                 auto injec_load    = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
@@ -315,6 +332,7 @@ namespace spade::grid
             
             // send message
             message.send_all(group);
+            
             // Now, we have to deserialize the received data. This largely looks like the serialization procedure.
             // Ideally, this can be done in its own function
             for (int dest = 0; dest < group.size(); ++dest)
@@ -331,7 +349,7 @@ namespace spade::grid
                 auto src_buffer = utils::make_vec_image(message.recv_buffers[dest].data(array.device()));
                 
                 //The first section of the buffer is only for the direct injections
-                src_buffer.csize  -= alias_type::size()*num_injec_cells;
+                src_buffer.csize  -= alias_type::size()*num_intrp_cells;
                 auto injec_range   = dispatch::ranges::make_range(0UL, num_injec_cells);
                 auto injec_load    = [=] _sp_hybrid (const std::size_t& idx) mutable
                 {
