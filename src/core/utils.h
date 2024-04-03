@@ -86,7 +86,7 @@ namespace spade::utils
     
     template <typename tp1_t, typename tp2_t> _sp_hybrid [[nodiscard]] constexpr static auto max(const tp1_t& t1, const tp2_t& t2)
     {
-        return t1<t2?t2:t1;
+        return t1>t2?t1:t2;
     }
     
     template <typename tp_t, typename... tps_t> _sp_hybrid [[nodiscard]] constexpr static auto max(const tp_t& t, const tps_t&... ts)

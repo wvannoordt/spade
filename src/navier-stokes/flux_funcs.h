@@ -50,6 +50,7 @@ namespace spade::convective
             return out;
         }
     };
+    
 
     template <typename gas_t>
     struct rusanov_fds_t
