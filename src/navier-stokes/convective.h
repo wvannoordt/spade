@@ -388,11 +388,6 @@ namespace spade::convective
 			// call flux function
 			output = flux_func(input.face(0_c),ql,qr);
 
-//			print("flux = ",output);
-//			print("ql = ",ql);
-//			print("qr = ",qr);
-//			std::cin.get();
-
             return output;
         }
     };
