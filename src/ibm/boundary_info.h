@@ -291,12 +291,12 @@ namespace spade::ibm
                         
                         // We will do this at every intersection point
                         int isect_count = 0;
-                        const int sign = is_external?(-1):(1);
+                        const int sign = is_external?(1):(-1);
                         const auto on_intersection = [&](const auto& point, const auto& normal)
                         {
                             ++isect_count;
                             
-                            const auto  gp_sign  = -utils::sign(normal[idir]*sign);
+                            const auto  gp_sign  = utils::sign(normal[idir]);
                             const auto  lb       = utils::tag[partition::local](icell_orig.lb());
                             const auto& b_point  = point;
                             const auto& bbox     = grid.get_bounding_box(lb);
