@@ -483,6 +483,13 @@ namespace spade::ibm
                             nv_new -= xg;
                             nv_new /= ctrs::array_norm(nv_new);
                             list.closest_normals[id][ilayer] = nv_new;
+                            
+                            //Something to do with the dot product
+                            // if (true)
+                            // {
+                            //     list.closest_points[id][ilayer] = list.boundary_points[id];
+                            //     list.closest_normals[id][ilayer] = list.boundary_normals[id];
+                            // }
                         }
                     }
                 }
@@ -650,14 +657,15 @@ namespace spade::ibm
                 const auto tol  = 5e-3;
                 const auto dist = ctrs::array_norm(x_bndy-xg);
                 const auto diag = ctrs::array_norm(dxs);
+                bool can_fill_lc = (geom.is_interior(xg) == is_external);
                 if (dist > tol*diag)
                 {
                     vec_t nvec = ctrs::array_cast<vec_t>(x_bndy - xg);
+                    if (!can_fill_lc) nvec = ctrs::array_cast<vec_t>(xg - x_bndy);
                     nvec /= ctrs::array_norm(nvec);
                     output.closest_normals[id] = nvec;
                 }
                 output.closest_points.push_back(x_bndy);
-                bool can_fill_lc = (geom.is_interior(xg) == is_external);
                 output.can_fill.push_back(can_fill_lc);
             }
             output.transfer();

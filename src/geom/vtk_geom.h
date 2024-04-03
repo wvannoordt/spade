@@ -31,8 +31,9 @@ namespace spade::geom
         
         static constexpr int num_edges() { return n_edge; }
         
+        bool                       is_external; //true -> points at infinity are on the exterior
         std::vector<pnt_t>         points;
-        std::vector<vec_t>         normals;
+        std::vector<vec_t>         normals; // These will ALWAYS point from the boundary towards the computational/interior domain
         std::vector<face_t>        faces;
         bound_box_t<float_t,dim>   bbox, bbox_inflated;
         bvh_impl_t<3, float_t, std::vector> vol_bvh;
@@ -47,6 +48,7 @@ namespace spade::geom
             const auto& p1   = points[face[1]];
             const auto& p2   = points[face[2]];
             
+            #pragma unroll
             for (int d = 0; d < output.size(); ++d)
             {
                 output[d] = (p0[d] + p1[d] + p2[d])/3.0;
@@ -265,12 +267,14 @@ namespace spade::geom
     };
     
     template <const int dim, const int n_edge, typename float_t>
-    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf)
+    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf, const bool is_external)
     {
         using uint_t = typename vtk_geom_t<dim, n_edge, float_t>::uint_t;
         using face_t = typename vtk_geom_t<dim, n_edge, float_t>::face_t;
         using pnt_t  = typename vtk_geom_t<dim, n_edge, float_t>::pnt_t;
         using vec_t  = typename vtk_geom_t<dim, n_edge, float_t>::vec_t;
+        
+        surf.is_external = is_external;
         
         utils::ascii_file_t fh(fname);
         fh.next_line();
