@@ -5,6 +5,7 @@
 #include "grid/grid.h"
 #include "omni/omni.h"
 
+#include "pde-algs/pde_traits.h"
 #include "pde-algs/flux-div/tags.h"
 
 namespace spade::pde_algs
@@ -13,14 +14,16 @@ namespace spade::pde_algs
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
         typename flux_func_t,
-        const bool use_parity>
+        const bool use_parity,
+        typename traits_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
     inline void flux_div_ldbal(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func,
-        const tldbal_t<use_parity>&)
+        const tldbal_t<use_parity>&,
+        const traits_t& traits)
     {
         using real_type     = sol_arr_t::value_type;
         using alias_type    = sol_arr_t::alias_type;
@@ -29,6 +32,12 @@ namespace spade::pde_algs
         using grid_type     = typename sol_arr_t::grid_type;
         
         static_assert(std::same_as<typename grid_type::coord_sys_type, coords::identity<typename grid_type::coord_type>>, "flux divergence does not yet account for the jacobian!");
+        
+        using namespace sym::literals;
+        
+        const auto& incr = algs::get_trait(traits, "pde_increment"_sym, increment);
+        using incr_mode_t = typename utils::remove_all<decltype(incr)>::type;
+        constexpr bool is_incr_mode = incr_mode_t::increment_mode;
         
         const auto& grid    = prims.get_grid();
         const auto grid_img = grid.image(partition::local, prims.device());
@@ -130,6 +139,12 @@ namespace spade::pde_algs
                         alias_type my_elem;                        
                         if (is_interior) my_elem = q_img.get_elem(i_cell);
                         
+                        flux_type my_rhs;
+                        if (is_interior) my_rhs = rhs_img.get_elem(i_cell);
+                        
+                        constexpr bool is_incr_modetmp = is_incr_mode;
+                        if constexpr (!is_incr_modetmp) my_rhs = real_type(0.0);
+                        
                         #pragma unroll
                         for (int idir = 0; idir < dim; ++idir)
                         {
@@ -137,7 +152,6 @@ namespace spade::pde_algs
                             int idir1 = idir + 2;
                             if (idir0 >= dim) idir0 -= dim;
                             if (idir1 >= dim) idir1 -= dim;
-                            
                             
                             auto other_dirs = ctrs::make_array(idir0, idir1);
                             
@@ -342,11 +356,24 @@ namespace spade::pde_algs
                             
                             bool do_lft = i_cell_l.i(idir) >= 0;
                             if constexpr (!use_parity_loop) do_lft = do_lft && (inner_raw[idir] > 0);
-                            if (is_interior)           rhs_img.incr_elem(i_cell,   flux);
                             threads.sync();
-                            if (do_lft && is_interior) rhs_img.decr_elem(i_cell_l, flux);
+                            
+                            //Residual modification
+                            auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
+                            auto rawdata = utils::vec_img_cast<flux_type>(tmp);
+                            auto i_rhs_mod = inner_raw;
+                            my_rhs += flux;
+                            rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
+                            threads.sync();
+                            i_rhs_mod[idir]--;                            
+                            if (do_lft && is_interior) rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) -= flux;
+                            threads.sync();
+                            my_rhs = rawdata(inner_raw[0], inner_raw[1], inner_raw[2]);
                             threads.sync();
                         }
+                        
+                        if (is_interior) rhs_img.set_elem(i_cell, my_rhs);
+                        
                     });
                 }
             };
