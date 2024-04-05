@@ -45,6 +45,16 @@ namespace spade::time_integration
         detail::sr_vec_t<std::ratio<0>, std::ratio<1,2>>
     >;
     
+    using rk2hs_t = rk_t<
+        detail::sr_mat_t<
+            detail::sr_vec_t<std::ratio<0>,   std::ratio<0>>,
+            detail::sr_vec_t<std::ratio<1,2>, std::ratio<0>>
+        >,
+        detail::sr_vec_t<std::ratio<0>, std::ratio<1>>,
+        detail::sr_vec_t<std::ratio<0>, std::ratio<1,2>>,
+        true
+    >;
+    
     using rk4_t = rk_t<
         detail::sr_mat_t<
             detail::sr_vec_t<std::ratio<0>,   std::ratio<0>,   std::ratio<0>,   std::ratio<0>>,

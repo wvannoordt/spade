@@ -137,6 +137,19 @@ namespace spade::omni
     {
         return info_list_t<info::value, info::coord, info::index>();
     }
+    
+    template <
+        typename array_t,
+        typename index_t,
+        std::invocable<
+            info::index::array_data_type<array_t, index_t::centering_type()>,
+            info::value::array_data_type<array_t, index_t::centering_type()>
+            > kernel_t
+        >
+    auto lamda_info_list(const array_t&, const index_t&, const kernel_t& k)
+    {
+        return info_list_t<info::index, info::value>();
+    }
 
     //converts a lambda to an omni object
     template <typename kernel_t, typename array_t, typename index_t>

@@ -10,13 +10,15 @@ namespace spade::pde_algs
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
-        typename flux_func_t>
+        typename flux_func_t,
+        typename traits_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
     static void flux_div_basic(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
-        const flux_func_t& flux_func)
+        const flux_func_t& flux_func,
+        const traits_t&)
     {
         
         // Note: this is a naive implementation for the gpu

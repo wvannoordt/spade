@@ -69,6 +69,7 @@ namespace spade::grid
             const std::size_t var_pitch    = 1;
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int v = 0; v < alias_type::size(); ++v) buf[thread_pitch*idx + var_pitch*v] = value[v];
             }
             else
@@ -84,6 +85,7 @@ namespace spade::grid
             const std::size_t var_pitch    = 1;
             if constexpr (ctrs::basic_array<alias_type>)
             {
+                #pragma unroll
                 for (int v = 0; v < alias_type::size(); ++v) value[v] = buf[thread_pitch*idx + var_pitch*v];
             }
             else
@@ -113,22 +115,6 @@ namespace spade::grid
             //First we need to pack all of the messages into the buffers in the message.
             auto array_img = array.image();
             const int rank = group.rank();
-            
-            // const auto& thing = config.send_data[0_c];
-            // for (const auto& t:thing)
-            // {
-            //     auto lbloc  = utils::tag[partition::local](t.dest.min(3));
-            //     auto lbglob = array.get_grid().get_partition().to_global(lbloc);
-            //     if (lbglob.value == 6859 && t.dest.min(2) < 0)// && t.dest.min(0) == 0 && t.dest.min(1) == 0)
-            //     {
-            //         print(t.sender(), t.receiver());
-            //         print(group.rank());
-            //         print(t.dest);
-            //         print(t.source);
-            //     }
-            // }
-            // print("pause", utils::where());
-            // std::cin.get();
             
             for (int dest = 0; dest < group.size(); ++dest)
             {
