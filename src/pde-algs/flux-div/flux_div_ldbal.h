@@ -452,6 +452,7 @@ namespace spade::pde_algs
             
             using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
             
+            int nblocks = grid.get_num_local_blocks();
             auto loop_cor = [=] _sp_hybrid (const ctrs::array<int, 2>& outer_raw, const threads_type_cor& threads) mutable
             {
                 int tile_id_1d = outer_raw[0];
@@ -467,7 +468,8 @@ namespace spade::pde_algs
                 tile_id_1d /= ntiles_loc[1];
                 // tile_id_1d  = i1; //Does not work
                 btile_id[2]  = tile_id_1d;
-                int lb = outer_raw[1];
+                // int lb = outer_raw[1];
+                int lb = nblocks - 1 - outer_raw[1];
                 threads.exec([&](const ctrs::array<int, 3>& is_i)
                 {
                     auto tile_id = btile_id;
