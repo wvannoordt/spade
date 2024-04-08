@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bitset>
 #include <vector>
 
 #include "core/ctrs.h"
@@ -86,6 +87,30 @@ namespace spade::amr
                 }
                 root_nodes[i].level = 0;
             }
+            
+            // Add self-neighbors
+            // for (auto i: range(0, root_nodes.size()))
+            // {
+            //     // for (int d = 0; d < dim(); ++d)
+            //     // {
+            //     //     if (num_blocks_in[d] == 1)
+            //     //     {
+            //     //         ctrs::array<int, dim()> dijk_0 = 0;
+            //     //         ctrs::array<int, dim()> dijk_1 = 0;
+            //     //         dijk_0[d] = -1;
+            //     //         dijk_1[d] =  1;
+                        
+            //     //         amr::amr_neighbor_t<dim()> neighbor_relationship0{node_handle_t<dim()>(root_nodes, i), dijk_0};
+            //     //         amr::amr_neighbor_t<dim()> neighbor_relationship1{node_handle_t<dim()>(root_nodes, i), dijk_1};
+                        
+            //     //         root_nodes[i].neighbors.push_back(neighbor_relationship0);
+            //     //         root_nodes[i].neighbors.push_back(neighbor_relationship1);
+            //     //     }
+            //     // }
+                
+            //     // node_handle_t handle(root_nodes, i);
+            //     // root_nodes[i].create_neighbor(handle, true);
+            // }
             this->enumerate();
         }
         
@@ -171,8 +196,13 @@ namespace spade::amr
                     comp_bbox.max(d) = amr_bbox.max(d).convert_to_coordinate(bounds.min(d), dx[d]);
                 }
             }
-            for (auto& p: all_nodes) p.get().tag = -1;
-            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb].get().tag = lb;
+            
+            for (auto& p: all_nodes)
+            {
+                p->tag = -1;
+            }
+            
+            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb]->tag = lb;
         }
         
         void enumerate()

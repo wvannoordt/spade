@@ -31,8 +31,11 @@ namespace spade::geom
         
         static constexpr int num_edges() { return n_edge; }
         
+        bool                       is_external; //true -> points at infinity are on the exterior
+        bool                       reverted_normals = false;
+        float                      reverted_normals_confidence = 1.0f;
         std::vector<pnt_t>         points;
-        std::vector<vec_t>         normals;
+        std::vector<vec_t>         normals; // These will ALWAYS point from the boundary towards the computational/interior domain
         std::vector<face_t>        faces;
         bound_box_t<float_t,dim>   bbox, bbox_inflated;
         bvh_impl_t<3, float_t, std::vector> vol_bvh;
@@ -47,6 +50,7 @@ namespace spade::geom
             const auto& p1   = points[face[1]];
             const auto& p2   = points[face[2]];
             
+            #pragma unroll
             for (int d = 0; d < output.size(); ++d)
             {
                 output[d] = (p0[d] + p1[d] + p2[d])/3.0;
@@ -260,17 +264,19 @@ namespace spade::geom
             {
                 if (xxx[dir] > x[dir]) ++rcount;
             });
-            return (rcount % 2) != 0;
+            return is_external == ((rcount % 2) != 0);
         }
     };
     
     template <const int dim, const int n_edge, typename float_t>
-    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf)
+    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf, const bool is_external)
     {
         using uint_t = typename vtk_geom_t<dim, n_edge, float_t>::uint_t;
         using face_t = typename vtk_geom_t<dim, n_edge, float_t>::face_t;
         using pnt_t  = typename vtk_geom_t<dim, n_edge, float_t>::pnt_t;
         using vec_t  = typename vtk_geom_t<dim, n_edge, float_t>::vec_t;
+        
+        surf.is_external = is_external;
         
         utils::ascii_file_t fh(fname);
         fh.next_line();
@@ -350,6 +356,52 @@ namespace spade::geom
         }
         
         surf.calc_bvhs();
+        
+        //We might need to revert the normals for external flows!
+        constexpr double sample_frac = 0.03;
+        const std::size_t n_faces = sample_frac * surf.faces.size();
+        std::size_t hits   = 0;
+        std::size_t misses = 0;
+        for (std::size_t j = 0; j < n_faces; ++j)
+        {
+            double rand_num = utils::unitary_random();
+            std::size_t tri = rand_num*n_faces;
+            tri = utils::min(tri, n_faces-1);
+            tri = utils::max(tri, 0);
+            int trace_dir = 0;
+            const auto& nrm = surf.normals[tri];
+            if (nrm[1] > nrm[0]) trace_dir = 1;
+            if (nrm[2] > nrm[trace_dir]) trace_dir = 2;
+            
+            bool first = true;
+            int sign = 1;
+            const auto on_isect = [&](const auto& point, const auto& normal)
+            {
+                if (first)
+                {
+                    if ((normal[trace_dir]*sign < 0) == surf.is_external)
+                    {
+                        hits++;
+                    }
+                    else
+                    {
+                        misses++;
+                    }
+                    first = false;
+                }
+            };
+            
+            auto xx = surf.centroid(tri);
+            xx[trace_dir] = -1e10;
+            surf.trace_aligned_ray(trace_dir, sign, xx, on_isect);
+        }
+        
+        if (misses > 0.8*hits)
+        {
+            surf.reverted_normals = true;
+            surf.reverted_normals_confidence = float(double(misses)/(misses+hits));
+            for (auto& n: surf.normals) n *= -1;
+        }
         
         return header;
     }

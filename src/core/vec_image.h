@@ -170,4 +170,12 @@ namespace spade::utils
         ctrs::array<coeff_t, sizeof...(is_t)> arr{sizes...};
         return output_t{&v[0], arr, v.size()};
     }
+    
+    template <typename new_t, typename old_t, const std::size_t rank, std::integral coeff_t>
+    requires(sizeof(new_t) == sizeof(old_t))
+    _sp_hybrid inline auto vec_img_cast(md_vec_image_t<old_t, rank, coeff_t>& old_data)
+    {
+        using output_t = md_vec_image_t<new_t, rank, coeff_t>;
+        return output_t{(new_t*)(old_data.ptr), old_data.sizes, old_data.csize};
+    }
 }

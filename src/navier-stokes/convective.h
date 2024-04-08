@@ -404,6 +404,7 @@ namespace spade::convective
                     
                     constexpr float_t eps = float_t(1e-16);
                     ctrs::array<float_t, 4> as{(f0uk)-(f1uk), (f1uk)-(f2uk), (f1dk)-(f2dk), (f2dk)-(f3dk)};
+                    #pragma unroll
                     for (int ias = 0; ias < 4; ++ias)
                     {
                         as[ias] *= as[ias];
@@ -471,6 +472,7 @@ namespace spade::convective
             apply_weno(1);
             
             //momentum conservation
+            #pragma unroll
             for (int dr = 0; dr < 3; ++dr)
             {
                 mutv([&](auto& flx, auto& disv_loc, const auto& q, const auto& info, const int i)
@@ -490,6 +492,65 @@ namespace spade::convective
                 apply_weno(2+dr);
             }
             
+            return output;
+        }
+    };
+    
+    template <typename flux_func_t, const weno_smooth_indicator use_smooth = enable_smooth>
+    struct weno_fds_t
+    {
+        using float_t       = typename flux_func_t::float_t;
+        using output_type   = fluid_state::flux_t<float_t>;
+        using info_type     = typename flux_func_t::info_type;
+        using omni_type     = omni::stencil_t<
+                grid::face_centered,
+                omni::elem_t<omni::offset_t<-3, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t<-1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 0, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 3, 0, 0>, info_type>
+            >;
+
+        const flux_func_t flux_func;
+        
+        weno_fds_t(const flux_func_t& flux_func_in)
+        : flux_func{flux_func_in} {}
+        
+        _sp_hybrid output_type operator()(const auto& input) const
+        {            
+            fluid_state::flux_t<float_t> output;
+            
+            const auto& q0        = omni::access<omni::info::value >(input.cell(0_c));
+            const auto& q1        = omni::access<omni::info::value >(input.cell(1_c));
+            //      const auto& face_info = omni::access<omni::info::metric>(input.face(0_c));                                                                                                              
+            const auto& q2        = omni::access<omni::info::value >(input.cell(2_c));
+            const auto& q3        = omni::access<omni::info::value >(input.cell(3_c));
+
+            //upwind                                                                                                                                                                                        
+            const auto ql0  = float_t(-0.5)*q0+float_t(1.5)*q1; //candidate 0                                                                                                                               
+            const auto ql1  = float_t( 0.5)*q1+float_t(0.5)*q2; //candidate 1                                                                                                                               
+                
+            //downwind                                                                                                                                                                                      
+            const auto qr0  =  float_t(0.5)*q1+float_t(0.5)*q2; //candidate 0                                                                                                                               
+            const auto qr1  =  float_t(1.5)*q2-float_t(0.5)*q3; //candidate 1                                                                                                                               
+
+            auto ql = ql1;
+            auto qr = qr0;
+            if constexpr (use_smooth == disable_smooth)
+            {
+                //use this for MMS!!                                                                                                                                                           
+                ql *= float_t(2.0/3.0);
+                qr *= float_t(2.0/3.0);
+          
+                ql += float_t(1.0/3.0)*ql0;
+                qr += float_t(1.0/3.0)*qr1;
+            }
+            else
+            {
+                //nothing for now
+            }
+            // call flux function                                                                                                                                                                           
+            output = flux_func(input.face(0_c),ql,qr);
             return output;
         }
     };

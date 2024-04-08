@@ -38,7 +38,11 @@ namespace spade::device
     inline void set_device(const int dev_id)
     {
 #if (_sp_cuda)
-        cudaSetDevice(dev_id);
+        auto ercode = cudaSetDevice(dev_id);
+        if (ercode != cudaSuccess)
+        {
+            throw except::sp_exception("Attempted to set an invalid device");
+        }
 #endif
     }
     

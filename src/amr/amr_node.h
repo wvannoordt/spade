@@ -32,6 +32,8 @@ namespace spade::amr
         handle_type                           parent = handle_type::null();
         tag_t                                 tag; //this holds the blocks value!!!!!!!
         
+        amr_node_t(const amr_node_t&) = default;
+        
         static constexpr std::size_t dim() { return grid_dim; }
         
         bool terminal() const { return subnodes.size()==0; }
@@ -82,11 +84,11 @@ namespace spade::amr
                 //First add neighbor relationships for siblings of current child
                 for (int j = 0; j < subnodes.size(); ++j)
                 {
-                    if (i != j)
-                    {
+                    // if (i != j)
+                    // {
                         handle_type sibling(subnodes, j);
                         child.create_neighbor(sibling);
-                    }
+                    // }
                 }
                 
                 //Now add parent neighbors
@@ -165,7 +167,8 @@ namespace spade::amr
                         ctrs::array<int, 3> edge(i-1, j-1, k-1);
                         if constexpr (dim() == 2) edge[2] = 0;
                         bool valid = table[0][i] && table[1][j] && table[2][k];
-                        if (valid)
+                        bool allzero = edge == 0;
+                        if (valid && !allzero)
                         {
                             amr_neighbor_t<dim()> neighbor{candidate, 0};
                             ctrs::copy_array(edge, neighbor.edge);
@@ -195,27 +198,51 @@ namespace spade::amr
         
         void remove_duplicate_neighbors()
         {
+            //If you are making changes to this function, then BE VERY CAREFUL!!
+            
             //defines a quasi-lexicographical ordering among set of neighbor objects
             const auto sort_comp = [](const auto& n0, const auto& n1)
             {
-                if (&n0.endpoint.get() == &n1.endpoint.get())
+                // if (&n0.endpoint.get() == &n1.endpoint.get())
+                // {
+                //     auto lexi = 0*n0.edge;
+                //     lexi[0] = 1;
+                //     for (int i = 1; i < lexi.size(); ++i) lexi[i] = 3*lexi[i-1];
+                //     return ctrs::dot_prod(lexi, 1+n0.edge) < ctrs::dot_prod(lexi, 1+n1.edge);
+                // }
+                // return &n0.endpoint.get() < &n1.endpoint.get();
+                const auto& node0 = *n0.endpoint;
+                const auto& node1 = *n1.endpoint;
+                
+                const auto& edge0 = n0.edge;
+                const auto& edge1 = n1.edge;
+                
+                for (int d = 0; d < edge0.size(); ++d)
                 {
-                    auto lexi = 0*n0.edge;
-                    lexi[0] = 1;
-                    for (int i = 1; i < lexi.size(); ++i) lexi[i] = 3*lexi[i-1];
-                    return ctrs::dot_prod(lexi, 1+n0.edge) < ctrs::dot_prod(lexi, 1+n1.edge);
+                    if (edge0[d] != edge1[d]) return edge0[d] < edge1[d];
                 }
-                return &n0.endpoint.get() < &n1.endpoint.get();
+                
+                // Edge vectors are equal here
+                const auto& amrbbx0 = node0.amr_position;
+                const auto& amrbbx1 = node1.amr_position;
+                for (int d = 0; d < amrbbx0.size(); ++d)
+                {
+                    if (amrbbx0.min(d) != amrbbx1.min(d)) return amrbbx0.min(d) < amrbbx1.min(d);
+                    if (amrbbx0.max(d) != amrbbx1.max(d)) return amrbbx0.max(d) < amrbbx1.max(d);
+                }
+                
+                //Everything is equal here...
+                return amrbbx0.max(0) < amrbbx1.max(0);
             };
             
             
             //defines an equivalence relation between two neighbor relationships
-            const auto uniq_predicate = [](const auto& n0, const auto& n1)
+            const auto uniq_predicate = [&](const auto& n0, const auto& n1)
             {
-                return (&n0.endpoint.get() == &n1.endpoint.get()) && (n0.edge == n1.edge);
+                return !sort_comp(n0, n1) && !sort_comp(n1, n0);
             };
 
-            std::sort(neighbors.begin(), neighbors.end(), sort_comp);
+            std::stable_sort(neighbors.begin(), neighbors.end(), sort_comp);
             auto it = std::unique(neighbors.begin(), neighbors.end(), uniq_predicate);
             neighbors.erase(it, neighbors.end());
         }

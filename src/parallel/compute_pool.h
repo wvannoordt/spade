@@ -278,6 +278,14 @@ namespace spade::parallel
             }
             return *this;
         }
+        
+        template <typename func_t>
+        const pool_t& exclusive(const func_t& func) const
+        {
+            std::lock_guard<std::mutex> guard(env.mut);
+            func();
+            return *this;
+        }
     };
     
     struct mpi_context_t
@@ -409,6 +417,7 @@ namespace spade::parallel
             const auto wrapper = [&](spade::parallel::pool_t pool)
             {
                 device::set_device(devices[pool.thread()]);
+                
                 data.p2p_enabled = device::enable_p2p(pool.thread(), devices);
                 
                 data.inbox [pool.rank()].resize(pool.size());

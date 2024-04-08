@@ -350,8 +350,18 @@ namespace spade::io
         }
     }
     
+    template <typename T> concept is_bbx = requires (T t)
+    {
+        t.size();
+        t.data();
+        t.size(0);
+        t.min(0);
+        t.max(0);
+        t.volume();
+    };
+    
     template <typename bbx_ctr_t, typename... others_t>
-    requires (requires { bbx_ctr_t()[0].min(0); bbx_ctr_t()[0].max(0); bbx_ctr_t()[0].size(0); }) // good lord
+    requires is_bbx<typename bbx_ctr_t::value_type>
     static void output_vtk(const std::string& fname, const bbx_ctr_t& blist, const others_t&... others)
     {
         constexpr static int bdim = bbx_ctr_t::value_type::size();

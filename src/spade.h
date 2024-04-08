@@ -47,9 +47,6 @@
 
 #include "pde-algs/pde_algs.h"
 
-#include "time-integration/explicit.h"
-#include "time-integration/integrator.h"
-
 #include "navier-stokes/gas.h"
 #include "navier-stokes/fluid_state.h"
 #include "navier-stokes/state_transformation.h"
@@ -61,5 +58,8 @@
 #include "navier-stokes/navier_stokes_mms.h"
 #include "navier-stokes/subgrid_scale.h"
 #include "navier-stokes/state_sensor.h"
+
+#include "time-integration/explicit.h"
+#include "time-integration/integrator.h"
 
 #include "core/sdf_binding.h"
