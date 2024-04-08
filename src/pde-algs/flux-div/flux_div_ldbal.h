@@ -116,7 +116,9 @@ namespace spade::pde_algs
                 {
                     input_type input;
                     int lb = outer_raw[1];
-                    const auto inv_dx = grid_img.get_inv_dx(lb);
+                    const auto inv_dx_native = grid_img.get_inv_dx(lb);
+                    ctrs::array<real_type, dim> inv_dx;
+                    for (int d = 0; d < dim; ++d) inv_dx[d] = inv_dx_native[d];
                     constexpr bool has_gradient = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::gradient>;
                     constexpr bool has_face_val = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::value>;
                     
@@ -414,7 +416,7 @@ namespace spade::pde_algs
                         data_type input;
                         omni::retrieve(grid_img, q_img, uface, input);
                         flux_type flux = flux_func(input);
-                        const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
+                        const auto inv_dx = real_type(grid_img.get_inv_dx(idir, upper.lb()));
                         flux *= inv_dx;
                         bool valid = (upper.i(idir0) < nx[idir0]) && (upper.i(idir1) < nx[idir1]);
                         if (valid) rhs_img.decr_elem(upper, flux);
@@ -493,7 +495,7 @@ namespace spade::pde_algs
                         data_type input;
                         omni::retrieve(grid_img, q_img, uface, input);
                         flux_type flux = flux_func(input);
-                        const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
+                        const auto inv_dx = real_type(grid_img.get_inv_dx(idir, upper.lb()));
                         flux *= inv_dx;
                         rhs_img.decr_elem(upper, flux);
                         threads.sync();
