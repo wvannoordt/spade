@@ -52,6 +52,7 @@
 
 #include "navier-stokes/gas.h"
 #include "navier-stokes/fluid_state.h"
+#include "navier-stokes/chem_source.h"
 #include "navier-stokes/state_transformation.h"
 #include "navier-stokes/viscous_laws.h"
 #include "navier-stokes/flux_funcs.h"
