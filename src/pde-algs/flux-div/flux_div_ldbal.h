@@ -116,7 +116,10 @@ namespace spade::pde_algs
                 {
                     input_type input;
                     int lb = outer_raw[1];
-                    const auto inv_dx = grid_img.get_inv_dx(lb);
+                    const auto inv_dx_native = grid_img.get_inv_dx(lb);
+                    ctrs::array<real_type, dim> inv_dx;
+                    #pragma unroll
+                    for (int d = 0; d < dim; ++d) inv_dx[d] = inv_dx_native[d];
                     constexpr bool has_gradient = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::gradient>;
                     constexpr bool has_face_val = omni_type::template info_at<omni::offset_t<0,0,0>>::template contains<omni::info::value>;
                     
@@ -414,7 +417,7 @@ namespace spade::pde_algs
                         data_type input;
                         omni::retrieve(grid_img, q_img, uface, input);
                         flux_type flux = flux_func(input);
-                        const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
+                        const auto inv_dx = real_type(grid_img.get_inv_dx(idir, upper.lb()));
                         flux *= inv_dx;
                         bool valid = (upper.i(idir0) < nx[idir0]) && (upper.i(idir1) < nx[idir1]);
                         if (valid) rhs_img.decr_elem(upper, flux);
@@ -449,6 +452,7 @@ namespace spade::pde_algs
             
             using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
             
+            int nblocks = grid.get_num_local_blocks();
             auto loop_cor = [=] _sp_hybrid (const ctrs::array<int, 2>& outer_raw, const threads_type_cor& threads) mutable
             {
                 int tile_id_1d = outer_raw[0];
@@ -464,7 +468,8 @@ namespace spade::pde_algs
                 tile_id_1d /= ntiles_loc[1];
                 // tile_id_1d  = i1; //Does not work
                 btile_id[2]  = tile_id_1d;
-                int lb = outer_raw[1];
+                // int lb = outer_raw[1];
+                int lb = nblocks - 1 - outer_raw[1];
                 threads.exec([&](const ctrs::array<int, 3>& is_i)
                 {
                     auto tile_id = btile_id;
@@ -493,7 +498,7 @@ namespace spade::pde_algs
                         data_type input;
                         omni::retrieve(grid_img, q_img, uface, input);
                         flux_type flux = flux_func(input);
-                        const auto inv_dx = grid_img.get_inv_dx(idir, upper.lb());
+                        const auto inv_dx = real_type(grid_img.get_inv_dx(idir, upper.lb()));
                         flux *= inv_dx;
                         rhs_img.decr_elem(upper, flux);
                         threads.sync();
