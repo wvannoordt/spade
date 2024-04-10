@@ -158,6 +158,7 @@ namespace spade::linear_algebra
     }
 
     template <typename rhs_t, typename data_t, const std::size_t n_rows, const std::size_t n_cols>
+    requires (std::integral<rhs_t> || std::floating_point<rhs_t>)
     _sp_hybrid  dense_mat<data_t, n_rows, n_cols> operator * (const rhs_t& rhs, const dense_mat<data_t, n_rows, n_cols>& mat)
     {
         dense_mat<data_t, n_rows, n_cols> output;
@@ -172,7 +173,7 @@ namespace spade::linear_algebra
         {
             auto diag = a(k,k);
             for (int r = 0; r < sys_size; ++r) a(k,r)/=diag;
-            y[k]/=diag;
+            y[k] /= diag;
             for (int r = k+1; r < sys_size; ++r)
             {
                 auto root_elem = a(r, k);

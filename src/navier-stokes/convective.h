@@ -256,7 +256,7 @@ namespace spade::convective
     struct weno_t
     {
         using float_t       = typename flux_func_t::float_t;
-        using output_type   = fluid_state::flux_t<float_t>;
+        using output_type   = typename flux_func_t::flux_type;
         using info_type     = typename flux_func_t::info_type;
         using omni_type     = omni::stencil_t<
                 grid::face_centered,
