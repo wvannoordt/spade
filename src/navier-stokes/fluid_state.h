@@ -243,6 +243,31 @@ namespace spade::fluid_state
 	//
 	// Some reacting flow wizardry
 	//
+
+	// Function -- molar fraction
+	template<typename ptype>
+	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas)
+	{
+		// Initialize
+		spade::ctrs::array<ptype, 5> Xr;
+
+		// Get density
+		ptype rho = get_rho(prim, gas);
+		
+		// Compute molar fraction
+		ptype sumXr = float_t(0.0);
+		for (int s = 0; s<prim.ns; ++s)
+		{
+			sumXr += rho * prim.Ys(s) * gas.mw_si[s];
+		}
+		for (int s = 0; s<prim.ns; ++s)
+		{
+			Xr[s] = rho * prim.Ys(s) * gas.mw_si[s] / sumXr;
+		}
+		
+		// Return output
+		return Xr;
+	}
 	
 	// Function -- compute mixture density (from primitive vector)
 	template<typename ptype, class gas_t>

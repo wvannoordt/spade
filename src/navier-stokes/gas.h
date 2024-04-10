@@ -127,7 +127,7 @@ namespace spade::fluid_state
 						gas.isMol[s]   = isMol;
 						gas.hf_s[s]    = hf;
 						gas.theta_v[s] = theta_v;
-						print(species);
+
 						// Count species
 						count += 1;
 					}
@@ -142,7 +142,7 @@ namespace spade::fluid_state
 		}
 		catch (...)
 		{
-			std::cerr << "Can not open provides species data file!" << std::endl;
+			std::cerr << "Can not open provided species data file!" << std::endl;
 		}
 
 		return;

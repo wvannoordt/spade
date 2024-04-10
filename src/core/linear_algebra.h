@@ -23,10 +23,10 @@ namespace spade::linear_algebra
         typedef ctrs::array<data_t, n_rows> col_type;
         typedef data_t value_type;
         
-        constexpr static std::size_t num_rows() { return n_rows; }
-        constexpr static std::size_t num_cols() { return n_cols; }
-        constexpr static std::size_t total_size() { return num_rows()*num_cols(); }
-        constexpr static std::size_t size()
+        _sp_hybrid constexpr static std::size_t num_rows() { return n_rows; }
+        _sp_hybrid constexpr static std::size_t num_cols() { return n_cols; }
+        _sp_hybrid constexpr static std::size_t total_size() { return num_rows()*num_cols(); }
+        _sp_hybrid constexpr static std::size_t size()
         {
             static_assert(n_rows == n_cols, "matrix size() only available for square matrices, use num_rows() and num_cols() otherwise");
             return num_rows();
