@@ -248,6 +248,8 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas)
 	{
+		using float_t = ptype;
+		
 		// Initialize
 		spade::ctrs::array<ptype, 5> Xr;
 
@@ -305,6 +307,7 @@ namespace spade::fluid_state
 	template<typename dtype, class gas_t>
 	_sp_hybrid static spade::ctrs::array<dtype, 5> get_evs(const dtype& T, const gas_t& gas)
 	{
+		using float_t = dtype;
 		// Initialize to 0
 		spade::ctrs::array<dtype, 5> ev_s = 0.0;
 		for (int s=0; s<5; ++s)
@@ -319,6 +322,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_Ev(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Initialize to 0
         ptype vibenergy = 0.0;
 		ptype rho = get_rho(prim, gas);
@@ -334,6 +338,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_E(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Compute kinetic energy first so we don't need to initialize to 0
 		ptype rho = get_rho(prim, gas);
 		ptype E   = float_t(0.5) * rho * (prim.u()*prim.u() + prim.v()*prim.v() + prim.w()*prim.w());
@@ -350,6 +355,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_sos(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Initialize
 		ptype Cvtr = 0.0;
 
@@ -380,6 +386,7 @@ namespace spade::fluid_state
     template<typename ctype, typename ptype, class gas_t>
     _sp_inline _sp_hybrid static void convert_state(const cons_chem_t<ctype>& cons, prim_chem_t<ptype>& prim, const gas_t& gas)
     {
+    	using float_t = ptype;
 		ptype irho = float_t(1.0) / get_rho(cons);
 		for (int s=0; s<prim.ns; ++s) prim.Ys(s)  = cons.rhos(s) * irho;
 		for (int i=0; i<3; ++i) prim.u(i) = irho * cons.rho_u(i);

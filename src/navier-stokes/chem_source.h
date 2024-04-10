@@ -20,6 +20,7 @@ namespace spade::fluid_state
 	// Stores anything related to the employed reaction mechanism and/or vibrational relaxation model
 	template<typename rtype> struct reactionMechanism_t
 	{
+		using float_t = rtype;
 		// Constructor
 		_sp_hybrid reactionMechanism_t(){}
 
@@ -136,7 +137,7 @@ namespace spade::fluid_state
 			rtype logT = log(T);
 
 			// Function evaluation
-			return - float_t(0.5) * coefs[0] / T2 - coefs[1] / T + coefs[2] * logT + coefs[3] * T + coefs[4] * T2 * float_t(0.5) + coefs[5] * T3 * float_t(1.0) / float_t(3.0) + coefs[6] * T4 * float_t(0.25) + coefs[8];
+			return -float_t(0.5) * coefs[0] / T2 - coefs[1] / T + coefs[2] * logT + coefs[3] * T + coefs[4] * T2 * float_t(0.5) + coefs[5] * T3 * float_t(1.0) / float_t(3.0) + coefs[6] * T4 * float_t(0.25) + coefs[8];
 		}
 
 		// Evaluate Landau-Teller inter-species relaxation time
@@ -439,6 +440,8 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static void compute_backwardRates(const prim_chem_t<ptype>& prim, const reactionMechanism_t<ptype>& react, const spade::ctrs::array<ptype, 5>& kfb, spade::ctrs::array<ptype, 5>& kb)
 	{
+		using float_t = ptype;
+		
 		// Initialize
 		ptype Tb,hi,si,gibbs,Kc,vr;
 		spade::ctrs::array<ptype, 9> coefs;
@@ -459,23 +462,20 @@ namespace spade::fluid_state
 			for (int s = 0; s<prim.ns; ++s)
 			{
 				// Do we need this species
-				if ((react.vprod(r,s) - react.vreact(r,s)) != float_t(0.0))
-				{
-					// Get curve fitting coefficients
-					react.get_NASA9_coefficients(s, Tb, coefs);
+				// Get curve fitting coefficients
+				react.get_NASA9_coefficients(s, Tb, coefs);
 					
-					// Enthalpy norm
-					hi = react.evaluate_enthalpyNorm(s, Tb, coefs);
+				// Enthalpy norm
+				hi = react.evaluate_enthalpyNorm(s, Tb, coefs);
 
-					// Entropy norm
-					si = react.evaluate_entropyNorm(s, Tb, coefs);
+				// Entropy norm
+				si = react.evaluate_entropyNorm(s, Tb, coefs);
 
-					// Gibbs energy summation
-					gibbs += (react.vprod(r,s) - react.vreact(r,s)) * (hi - si);
+				// Gibbs energy summation
+				gibbs += (react.vprod(r,s) - react.vreact(r,s)) * (hi - si);
 
-					// Stoichiometric summation
-					vr += react.vprod(r,s) - react.vreact(r,s);
-				}
+				// Stoichiometric summation
+				vr += react.vprod(r,s) - react.vreact(r,s);
 			}
 
 			// Compute equilibrium constant
@@ -493,6 +493,7 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static void compute_reactionProduct(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react, const spade::ctrs::array<ptype, 5>& kf, const spade::ctrs::array<ptype, 5>& kb, chem_t<ptype>& source)
 	{
+		using float_t = ptype;
 		// Initialize some variables
 		spade::ctrs::array<ptype, react.nr> con   = float_t(0.0);
 		spade::ctrs::array<ptype, react.nr> Rf_kf = float_t(1000.0);
@@ -574,6 +575,7 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static void compute_parkRelaxTime(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react, spade::ctrs::array<ptype, 5>& tau)
 	{
+		using float_t = ptype;
 		// Initialize relaxation time
 		tau = float_t(0.0);
 		
@@ -581,7 +583,8 @@ namespace spade::fluid_state
 		ptype sigma = react.sigma_coef * float_t(2.5E9) / (prim.T() * prim.T());
 
 		// Loop molecules
-		ptype cs, Num_den, rho=fluid_state::get_rho(prim, gas);
+		ptype cs, Num_den;
+		ptype rho = fluid_state::get_rho(prim, gas);
 		for (int s = 0; s<prim.ns; ++s)
 		{
 			if (gas.isMol[s]>0)
@@ -604,6 +607,7 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static void compute_molarRelaxTime(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react, spade::ctrs::array<ptype, 5>& tau)
 	{
+		using float_t = ptype;
 		// Initialize relaxation time
 		tau = float_t(0.0);
 
