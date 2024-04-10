@@ -248,6 +248,7 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas)
 	{
+		using float_t = ptype;
 		// Initialize
 		spade::ctrs::array<ptype, 5> Xr;
 
@@ -300,11 +301,32 @@ namespace spade::fluid_state
 		// Return density
 		return rho;
 	}
+
+	// Function -- compute pressure for cons2prim (use cons species density and prim T/Tv)
+	template<typename rtype>
+	_sp_hybrid static rtype get_pressure(const cons_chem_t<rtype>& cons, const rtype& T, const rtype& Tv, const multicomponent_gas_t<rtype>& gas)
+	{
+		rtype pressure=0.0;
+		for (int s = 0; s<cons.ns; ++s)
+		{
+			if (gas.mw_s[s]>1)
+			{
+				pressure += cons.rhos(s) * gas.get_Rs(s) * T;
+			}
+			else
+			{
+				pressure += cons.rhos(s) * gas.get_Rs(s) * Tv;
+			}
+		}
+
+		return pressure;
+	}
 	
 	// Function -- compute vibrational energy
 	template<typename dtype, class gas_t>
 	_sp_hybrid static spade::ctrs::array<dtype, 5> get_evs(const dtype& T, const gas_t& gas)
 	{
+		using float_t = dtype;
 		// Initialize to 0
 		spade::ctrs::array<dtype, 5> ev_s = 0.0;
 		for (int s=0; s<5; ++s)
@@ -319,6 +341,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_Ev(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Initialize to 0
         ptype vibenergy = 0.0;
 		ptype rho = get_rho(prim, gas);
@@ -334,6 +357,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_E(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Compute kinetic energy first so we don't need to initialize to 0
 		ptype rho = get_rho(prim, gas);
 		ptype E   = float_t(0.5) * rho * (prim.u()*prim.u() + prim.v()*prim.v() + prim.w()*prim.w());
@@ -350,6 +374,7 @@ namespace spade::fluid_state
 	template<typename ptype, class gas_t>
 	_sp_hybrid static ptype get_sos(const prim_chem_t<ptype>& prim, const gas_t& gas)
 	{
+		using float_t = ptype;
 		// Initialize
 		ptype Cvtr = 0.0;
 
@@ -366,8 +391,8 @@ namespace spade::fluid_state
 	};
 
 	// Lets overload some functions. prim2cons transformation
-    template<typename ptype, typename ctype, class gas_t>
-    _sp_inline _sp_hybrid static void convert_state(const prim_chem_t<ptype>& prim, cons_chem_t<ctype>& cons, const gas_t& gas)
+    template<typename ptype, typename ctype, typename gtype>
+    _sp_inline _sp_hybrid static void convert_state(const prim_chem_t<ptype>& prim, cons_chem_t<ctype>& cons, const multicomponent_gas_t<gtype>& gas)
     {
 		ptype rho     = get_rho(prim, gas);
 		for (int s=0; s<prim.ns; ++s) cons.rhos(s)   = rho * prim.Ys(s);
@@ -377,13 +402,14 @@ namespace spade::fluid_state
     }
 
 	// Lets overload some functions. cons2prim transformation
-    template<typename ctype, typename ptype, class gas_t>
-    _sp_inline _sp_hybrid static void convert_state(const cons_chem_t<ctype>& cons, prim_chem_t<ptype>& prim, const gas_t& gas)
+    template<typename ctype, typename ptype, typename gtype>
+    _sp_inline _sp_hybrid static void convert_state(const cons_chem_t<ctype>& cons, prim_chem_t<ptype>& prim, const multicomponent_gas_t<gtype>& gas)
     {
+		using float_t = ptype;
 		ptype irho = float_t(1.0) / get_rho(cons);
 		for (int s=0; s<prim.ns; ++s) prim.Ys(s)  = cons.rhos(s) * irho;
 		for (int i=0; i<3; ++i) prim.u(i) = irho * cons.rho_u(i);
-
+		
 		// Some intermediate quantities (formation energy & translational/rotational energy)
 		ptype hof = 0.0, rhoCv = 0.0;
 		for (int s = 0; s<prim.ns; ++s)
@@ -394,10 +420,13 @@ namespace spade::fluid_state
 		
 		// Back out temperature
 		prim.T()   = (cons.E() - float_t(0.5) * (cons.rho_u() * prim.u() + cons.rho_v() * prim.v() + cons.rho_w() * prim.w()) - cons.Ev() - hof) / rhoCv;
-
+		
 		// Get vibrational temeprature from non-linear Newton solve
 		ptype Tv   = nonlinear_solve_Tv(prim, cons, gas);
 		prim.Tv()  = Tv;
+
+		// Back out pressure
+		prim.p() = get_pressure(cons, prim.T(), prim.Tv(), gas);
     }
 
 	// Non-linear solver to get Tv from provided Ev
@@ -423,8 +452,11 @@ namespace spade::fluid_state
 			
 			// Newton solver
 			prim_loc.Tv() += (cons.Ev() - Ev) / dEv_dTv;
-		}
 
+			// Tolerance check
+			if (utils::abs(cons.Ev() - Ev) < TOL) break;
+		}
+		
 		// Return computed vibrational temperature
 		return prim_loc.Tv();
 	}

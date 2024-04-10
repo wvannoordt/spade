@@ -104,13 +104,13 @@ namespace spade::convective
 			f_u.energyVib()  += sigma * Ev;
 
 			// Add spectral radius X conservative state vector (downwind)
-			for (int s = 0; s<q.ns; ++s) f_u.continuity(s) -= sigma * rho * q.Ys(s);
-            f_u.x_momentum() -= sigma * rho * q.u();
-            f_u.y_momentum() -= sigma * rho * q.v();
-            f_u.z_momentum() -= sigma * rho * q.w();
-			f_u.energy()     -= sigma * Etot;
-			f_u.energyVib()  -= sigma * Ev;
-            
+			for (int s = 0; s<q.ns; ++s) f_d.continuity(s) -= sigma * rho * q.Ys(s);
+            f_d.x_momentum() -= sigma * rho * q.u();
+            f_d.y_momentum() -= sigma * rho * q.v();
+            f_d.z_momentum() -= sigma * rho * q.w();
+			f_d.energy()     -= sigma * Etot;
+			f_d.energyVib()  -= sigma * Ev;
+			
             // Memory address of "out" mapped to f_u and f_d
             return out;
         }
