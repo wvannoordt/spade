@@ -137,7 +137,7 @@ namespace spade::fluid_state
 			rtype logT = log(T);
 
 			// Function evaluation
-			return - float_t(0.5) * coefs[0] / T2 - coefs[1] / T + coefs[2] * logT + coefs[3] * T + coefs[4] * T2 * float_t(0.5) + coefs[5] * T3 * float_t(1.0) / float_t(3.0) + coefs[6] * T4 * float_t(0.25) + coefs[8];
+			return -float_t(0.5) * coefs[0] / T2 - coefs[1] / T + coefs[2] * logT + coefs[3] * T + coefs[4] * T2 * float_t(0.5) + coefs[5] * T3 * float_t(1.0) / float_t(3.0) + coefs[6] * T4 * float_t(0.25) + coefs[8];
 		}
 
 		// Evaluate Landau-Teller inter-species relaxation time
@@ -442,6 +442,7 @@ namespace spade::fluid_state
 	_sp_hybrid static void compute_backwardRates(const prim_chem_t<ptype>& prim, const reactionMechanism_t<ptype>& react, const spade::ctrs::array<ptype, 5>& kfb, spade::ctrs::array<ptype, 5>& kb)
 	{
 		using float_t = ptype;
+
 		// Initialize
 		ptype Tb,hi,si,gibbs,Kc,vr;
 		spade::ctrs::array<ptype, 9> coefs;
@@ -582,7 +583,8 @@ namespace spade::fluid_state
 		ptype sigma = react.sigma_coef * float_t(2.5E9) / (prim.T() * prim.T());
 
 		// Loop molecules
-		ptype cs, Num_den, rho=fluid_state::get_rho(prim, gas);
+		ptype cs, Num_den;
+		ptype rho = fluid_state::get_rho(prim, gas);
 		for (int s = 0; s<prim.ns; ++s)
 		{
 			if (gas.isMol[s]>0)

@@ -249,6 +249,7 @@ namespace spade::fluid_state
 	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas)
 	{
 		using float_t = ptype;
+
 		// Initialize
 		spade::ctrs::array<ptype, 5> Xr;
 
