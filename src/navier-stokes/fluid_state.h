@@ -77,41 +77,39 @@ namespace spade::fluid_state
         }
     };
 
-    template <typename rtype> struct prim_chem_t : public ctrs::arithmetic_array_t<rtype, 11, prim_chem_t<rtype>>
+    template <typename rtype> struct prim_chem_t : public ctrs::arithmetic_array_t<rtype, 10, prim_chem_t<rtype>>
     {
-        using base_t = ctrs::arithmetic_array_t<rtype, 11, prim_chem_t<rtype>>;
+        using base_t = ctrs::arithmetic_array_t<rtype, 10, prim_chem_t<rtype>>;
         using base_t::base_t;
         static const int ns=5;
         _sp_hybrid prim_chem_t(){}
-		_sp_hybrid rtype& YN2() {return (*this)[0];}
-		_sp_hybrid rtype& YO2() {return (*this)[1];}
-		_sp_hybrid rtype& YNO() {return (*this)[2];}
-		_sp_hybrid rtype& YN() {return (*this)[3];}
-		_sp_hybrid rtype& YO() {return (*this)[4];}
-        _sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
-		_sp_hybrid rtype& p() {return (*this)[5];}
-        _sp_hybrid rtype& T() {return (*this)[6];}
-        _sp_hybrid rtype& Tv() {return (*this)[7];}
-        _sp_hybrid rtype& u() {return (*this)[8];}
-        _sp_hybrid rtype& u(const int i) {return (*this)[8+i];}
-        _sp_hybrid rtype& v() {return (*this)[9];}
-        _sp_hybrid rtype& w() {return (*this)[10];}
-		_sp_hybrid const rtype& YN2() const {return (*this)[0];}
-		_sp_hybrid const rtype& YO2() const {return (*this)[1];}
-		_sp_hybrid const rtype& YNO() const {return (*this)[2];}
-		_sp_hybrid const rtype& YN() const {return (*this)[3];}
-		_sp_hybrid const rtype& YO() const {return (*this)[4];}
-        _sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
-		_sp_hybrid const rtype& p() const {return (*this)[5];}
-        _sp_hybrid const rtype& T() const {return (*this)[6];}
-        _sp_hybrid const rtype& Tv() const {return (*this)[7];}
-        _sp_hybrid const rtype& u() const {return (*this)[8];}
-        _sp_hybrid const rtype& u(const int i) const {return (*this)[8+i];}
-        _sp_hybrid const rtype& v() const {return (*this)[9];}
-        _sp_hybrid const rtype& w() const {return (*this)[10];}
+		_sp_hybrid rtype& rhoN2() {return (*this)[0];}
+		_sp_hybrid rtype& rhoO2() {return (*this)[1];}
+		_sp_hybrid rtype& rhoNO() {return (*this)[2];}
+		_sp_hybrid rtype& rhoN() {return (*this)[3];}
+		_sp_hybrid rtype& rhoO() {return (*this)[4];}
+        _sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
+        _sp_hybrid rtype& T() {return (*this)[5];}
+        _sp_hybrid rtype& Tv() {return (*this)[6];}
+        _sp_hybrid rtype& u() {return (*this)[7];}
+        _sp_hybrid rtype& u(const int i) {return (*this)[7+i];}
+        _sp_hybrid rtype& v() {return (*this)[8];}
+        _sp_hybrid rtype& w() {return (*this)[9];}
+		_sp_hybrid const rtype& rhoN2() const {return (*this)[0];}
+		_sp_hybrid const rtype& rhoO2() const {return (*this)[1];}
+		_sp_hybrid const rtype& rhoNO() const {return (*this)[2];}
+		_sp_hybrid const rtype& rhoN() const {return (*this)[3];}
+		_sp_hybrid const rtype& rhoO() const {return (*this)[4];}
+        _sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
+        _sp_hybrid const rtype& T() const {return (*this)[5];}
+        _sp_hybrid const rtype& Tv() const {return (*this)[6];}
+        _sp_hybrid const rtype& u() const {return (*this)[7];}
+        _sp_hybrid const rtype& u(const int i) const {return (*this)[7+i];}
+        _sp_hybrid const rtype& v() const {return (*this)[8];}
+        _sp_hybrid const rtype& w() const {return (*this)[9];}
         static std::string name(uint idx)
         {
-			ctrs::array<std::string, 11> names("YN2", "YO2", "YNO", "YN", "YO", "P", "T", "Tv", "U", "V", "W");
+			ctrs::array<std::string, 10> names("rhoN2", "rhoO2", "rhoNO", "rhoN", "rhoO", "T", "Tv", "U", "V", "W");
             return names[idx];
         }
 
@@ -139,7 +137,7 @@ namespace spade::fluid_state
 		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[7+i];}
         static std::string name(uint idx)
         {
-  	    ctrs::array<std::string, 10> names("rhoN2", "rhoO2", "rhoNO", "rhoN", "rhoO", "E", "Ev", "rhoU", "rhoV", "rhoW");
+			ctrs::array<std::string, 10> names("rhoN2", "rhoO2", "rhoNO", "rhoN", "rhoO", "E", "Ev", "rhoU", "rhoV", "rhoW");
             return names[idx];
         }
       
@@ -245,26 +243,23 @@ namespace spade::fluid_state
 	//
 
 	// Function -- molar fraction
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas)
+	template<typename ptype, typename gtype>
+	_sp_hybrid static spade::ctrs::array<ptype, 5> get_Xr(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<gtype>& gas)
 	{
 		using float_t = ptype;
 
 		// Initialize
 		spade::ctrs::array<ptype, 5> Xr;
-
-		// Get density
-		ptype rho = get_rho(prim, gas);
 		
 		// Compute molar fraction
 		ptype sumXr = float_t(0.0);
 		for (int s = 0; s<prim.ns; ++s)
 		{
-			sumXr += rho * prim.Ys(s) * gas.mw_si[s];
+			sumXr += prim.rhos(s) * gas.mw_si[s];
 		}
 		for (int s = 0; s<prim.ns; ++s)
 		{
-			Xr[s] = rho * prim.Ys(s) * gas.mw_si[s] / sumXr;
+			Xr[s] = prim.rhos(s) * gas.mw_si[s] / sumXr;
 		}
 		
 		// Return output
@@ -272,24 +267,14 @@ namespace spade::fluid_state
 	}
 	
 	// Function -- compute mixture density (from primitive vector)
-	template<typename ptype, class gas_t>
-	_sp_hybrid static ptype get_rho(const prim_chem_t<ptype>& prim, const gas_t& gas)
+	template<typename ptype>
+	_sp_hybrid static ptype get_rho(const prim_chem_t<ptype>& prim)
 	{
-		ptype aux = 0.0;
-		for (int s = 0; s<prim.ns; ++s)
-		{
-			if (gas.mw_s[s]>1)
-			{
-				aux += prim.Ys(s) * gas.get_Rs(s) * prim.T();
-			}
-			else
-			{
-				aux += prim.Ys(s) * gas.get_Rs(s) * prim.Tv();
-			}
-		}
+		ptype rho = 0.0;
+		for (int s = 0; s<prim.ns; ++s) rho += prim.rhos(s);
 
 		// Return density
-		return prim.p() / aux;
+		return rho;
 	}
 
 	// Function -- compute mixture density (from conservative vector)
@@ -303,20 +288,20 @@ namespace spade::fluid_state
 		return rho;
 	}
 
-	// Function -- compute pressure for cons2prim (use cons species density and prim T/Tv)
-	template<typename rtype>
-	_sp_hybrid static rtype get_pressure(const cons_chem_t<rtype>& cons, const rtype& T, const rtype& Tv, const multicomponent_gas_t<rtype>& gas)
+	// Function -- compute pressure
+	template<typename rtype, typename gtype>
+	_sp_hybrid static rtype get_pressure(const prim_chem_t<rtype>& prim, const multicomponent_gas_t<gtype>& gas)
 	{
 		rtype pressure=0.0;
-		for (int s = 0; s<cons.ns; ++s)
+		for (int s = 0; s<prim.ns; ++s)
 		{
 			if (gas.mw_s[s]>1)
 			{
-				pressure += cons.rhos(s) * gas.get_Rs(s) * T;
+				pressure += prim.rhos(s) * gas.get_Rs(s) * prim.T();
 			}
 			else
 			{
-				pressure += cons.rhos(s) * gas.get_Rs(s) * Tv;
+				pressure += prim.rhos(s) * gas.get_Rs(s) * prim.Tv();
 			}
 		}
 
@@ -324,8 +309,8 @@ namespace spade::fluid_state
 	}
 	
 	// Function -- compute vibrational energy
-	template<typename dtype, class gas_t>
-	_sp_hybrid static spade::ctrs::array<dtype, 5> get_evs(const dtype& T, const gas_t& gas)
+	template<typename dtype, typename gtype>
+	_sp_hybrid static spade::ctrs::array<dtype, 5> get_evs(const dtype& T, const multicomponent_gas_t<gtype>& gas)
 	{
 		using float_t = dtype;
 		// Initialize to 0
@@ -339,64 +324,66 @@ namespace spade::fluid_state
 	}
 
 	// Function -- compute vibrational energy
-	template<typename ptype, class gas_t>
-	_sp_hybrid static ptype get_Ev(const prim_chem_t<ptype>& prim, const gas_t& gas)
+	template<typename ptype, typename gtype>
+	_sp_hybrid static ptype get_Ev(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<gtype>& gas)
 	{
 		using float_t = ptype;
+		
 		// Initialize to 0
         ptype vibenergy = 0.0;
-		ptype rho = get_rho(prim, gas);
 		for (int s=0; s<prim.ns; ++s)
 		{
 			// Check for molecules
-			if (gas.isMol[s]>0) vibenergy += rho * prim.Ys(s) * gas.get_Rs(s) * gas.theta_v[s] / (exp(gas.theta_v[s]/prim.Tv()) - float_t(1.0));
+			if (gas.isMol[s]>0) vibenergy += prim.rhos(s) * gas.get_Rs(s) * gas.theta_v[s] / (exp(gas.theta_v[s]/prim.Tv()) - float_t(1.0));
 		}
 		return vibenergy;
 	}
 	
 	// Function -- compute total energy
-	template<typename ptype, class gas_t>
-	_sp_hybrid static ptype get_E(const prim_chem_t<ptype>& prim, const gas_t& gas)
+	template<typename ptype, typename gtype>
+	_sp_hybrid static ptype get_E(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<gtype>& gas)
 	{
 		using float_t = ptype;
+		
 		// Compute kinetic energy first so we don't need to initialize to 0
-		ptype rho = get_rho(prim, gas);
+		ptype rho = get_rho(prim);
 		ptype E   = float_t(0.5) * rho * (prim.u()*prim.u() + prim.v()*prim.v() + prim.w()*prim.w());
-		spade::ctrs::array<ptype, prim.ns> ev_s=get_evs(prim.Tv(), gas);
+		spade::ctrs::array<ptype, prim.ns> ev_s = get_evs(prim.Tv(), gas);
 		
 		// Add internal energy contribution from each species
-		for (int s=0; s<prim.ns; ++s) E += rho * prim.Ys(s) * (gas.get_cvtr(s) * prim.T() + gas.hf_s[s] + ev_s[s]);
+		for (int s=0; s<prim.ns; ++s) E += prim.rhos(s) * (gas.get_cvtr(s) * prim.T() + gas.hf_s[s] + ev_s[s]);
 
 		// Return value
 		return E;
 	}
 
 	// Function -- compute multi-component speed of sound
-	template<typename ptype, class gas_t>
-	_sp_hybrid static ptype get_sos(const prim_chem_t<ptype>& prim, const gas_t& gas)
+	template<typename ptype, typename gtype>
+	_sp_hybrid static ptype get_sos(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<gtype>& gas)
 	{
 		using float_t = ptype;
+		
 		// Initialize
-		ptype Cvtr = 0.0;
+		ptype rho_Cvtr = 0.0;
 
-		// Compute sum(Y_s * Cvtr) = Cvtr
-		for (int s = 0; s<prim.ns; ++s) Cvtr += prim.Ys(s) * gas.get_cvtr(s);
+		// Compute sum(rho_s * Cvtr_s) = rho_Cvtr
+		for (int s = 0; s<prim.ns; ++s) rho_Cvtr += prim.rhos(s) * gas.get_cvtr(s);
 
 		// Compute beta
 		ptype beta = 0.0;
-		for (int s = 0; s<prim.ns; ++s) beta += prim.Ys(s) * gas.mw_si[s];
-		beta *= spade::consts::Rgas_uni / Cvtr;
+		for (int s = 0; s<prim.ns; ++s) beta += prim.rhos(s) * gas.mw_si[s];
+		beta *= spade::consts::Rgas_uni / rho_Cvtr;
 
 		// Compute speed of sound
-		return sqrt((float_t(1.0) + beta) * prim.p() / spade::fluid_state::get_rho(prim, gas));
+		return sqrt((float_t(1.0) + beta) * get_pressure(prim, gas) / get_rho(prim));
 	};
 
 	// Lets overload some functions. prim2cons transformation
     template<typename ptype, typename ctype, typename gtype>
     _sp_inline _sp_hybrid static void convert_state(const prim_chem_t<ptype>& prim, cons_chem_t<ctype>& cons, const multicomponent_gas_t<gtype>& gas)
     {
-		ptype rho     = get_rho(prim, gas);
-		for (int s=0; s<prim.ns; ++s) cons.rhos(s)   = rho * prim.Ys(s);
+		ptype rho     = get_rho(prim);
+		for (int s=0; s<prim.ns; ++s) cons.rhos(s)   = prim.rhos(s);
 		for (int i=0; i<3; ++i) cons.rho_u(i) = rho * prim.u(i);
 		cons.E()      = get_E(prim, gas);
 		cons.Ev()     = get_Ev(prim, gas);
@@ -408,7 +395,7 @@ namespace spade::fluid_state
     {
 		using float_t = ptype;
 		ptype irho = float_t(1.0) / get_rho(cons);
-		for (int s=0; s<prim.ns; ++s) prim.Ys(s)  = cons.rhos(s) * irho;
+		for (int s=0; s<prim.ns; ++s) prim.rhos(s)  = cons.rhos(s);
 		for (int i=0; i<3; ++i) prim.u(i) = irho * cons.rho_u(i);
 		
 		// Some intermediate quantities (formation energy & translational/rotational energy)
@@ -425,14 +412,11 @@ namespace spade::fluid_state
 		// Get vibrational temeprature from non-linear Newton solve
 		ptype Tv   = nonlinear_solve_Tv(prim, cons, gas);
 		prim.Tv()  = Tv;
-
-		// Back out pressure
-		prim.p() = get_pressure(cons, prim.T(), prim.Tv(), gas);
     }
 
 	// Non-linear solver to get Tv from provided Ev
-	template<typename ptype, typename ctype, class gas_t>
-	_sp_hybrid static ptype nonlinear_solve_Tv(const prim_chem_t<ptype>& prim, const cons_chem_t<ctype>& cons, const gas_t& gas)
+	template<typename ptype, typename ctype, typename gtype>
+	_sp_hybrid static ptype nonlinear_solve_Tv(const prim_chem_t<ptype>& prim, const cons_chem_t<ctype>& cons, const multicomponent_gas_t<gtype>& gas)
 	{
 		// Error tolerance on convergence
 		ptype TOL=1E-5;

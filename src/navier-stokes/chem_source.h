@@ -71,27 +71,27 @@ namespace spade::fluid_state
 
 		// Get necessary curve fitting coefficients for equilibrium constant
 		_sp_hybrid void get_NASA9_coefficients(const int& s, const rtype& T, spade::ctrs::array<rtype, 9>& coefs) const
-		{	
+		{
 			// Sweep temperature intervals
 			for (int i = 0; i<nIntervals[s]; ++i)
 			{
 				// Check intervals
-				if (T>= Tlower(s,i) && T<= Tupper(s,i))
+				if (T >= Tlower(s,i) && T < Tupper(s,i))
 				{
 					// Select interval
-					if (i == 1)
+					if (i == 0)
 					{
 						// Interval 1
 						for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT1(s,n);
 						return;
 					}
-					else if (i == 2)
+					else if (i == 1)
 					{
 						// Interval 2
 						for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT2(s,n);
 						return;
 					}
-					else if (i == 3)
+					else if (i == 2)
 					{
 						// Interval 3
 						for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT3(s,n);
@@ -101,17 +101,22 @@ namespace spade::fluid_state
 			}
 
 			// Handle extremities
-			if (T < Tlower(s,1))
+			if (T < Tlower(s,0))
 			{
 				// Interval 1
-				for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT3(s,n);
+				for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT1(s,n);
+				return;
 			}
-			else
+			else if (T > Tupper(s,2))
 			{
 				// Interval 3
 				for (int n = 0; n<coefs.size(); ++n) coefs[n] = gibbsCoefT3(s,n);
+				return;
 			}
-			return;
+			else
+			{
+				std::cerr<<"How did you get here?? Invalid NASA9 coefficient access!"<<std::endl;
+			}
 		}
 
 		// Evaluate enthalpy norm
@@ -141,7 +146,8 @@ namespace spade::fluid_state
 		}
 
 		// Evaluate Landau-Teller inter-species relaxation time
-		_sp_hybrid rtype evaluate_tausr(const int& s, const int& r, const rtype& p, const rtype& T, const multicomponent_gas_t<rtype>& gas) const
+		template<typename gtype>
+		_sp_hybrid rtype evaluate_tausr(const int& s, const int& r, const rtype& p, const rtype& T, const multicomponent_gas_t<gtype>& gas) const
 		{
 			// Parameters
 			rtype mu_sr = gas.mw_s[s] * gas.mw_s[r] / (gas.mw_s[s] + gas.mw_s[r]);
@@ -253,18 +259,21 @@ namespace spade::fluid_state
 			// Close file
 			infile.close();
 			
+			// Copy intervals to reaction structure
+			for (int s = 0; s<ns; ++s) react.nIntervals[s] = nIntervals[s];
+			
 		}
 		catch (...)
 		{
 			std::cerr << "Can not open provided gibbs energy data file!" << std::endl;
 		}
-
+		
 		return;
 	}
 
 	// Import gibbs energy data
-	template<typename ptype>
-	static void import_reaction_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, const multicomponent_gas_t<ptype>& gas, reactionMechanism_t<ptype>& react)
+	template<typename ptype, typename gtype>
+	static void import_reaction_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, const multicomponent_gas_t<gtype>& gas, reactionMechanism_t<ptype>& react)
 	{
 		using float_t = ptype;
 		std::ifstream infile;
@@ -446,6 +455,7 @@ namespace spade::fluid_state
 		// Initialize
 		ptype Tb,hi,si,gibbs,Kc,vr;
 		spade::ctrs::array<ptype, 9> coefs;
+		ptype T,T2,T3,T4,logT;
 		
 		// Sweep reactions
 		for (int r = 0; r<react.nr; ++r)
@@ -458,6 +468,13 @@ namespace spade::fluid_state
 
 			// Backward controlling temperature
 			Tb = react.compute_Tb(r, prim.T(), prim.Tv());
+
+			// Pre-compute some values
+			T    = Tb;
+			T2   = Tb*Tb;
+			T3   = T2*Tb;
+			T4   = T3*Tb;
+			logT = log(Tb);
 			
 			// Sweep species
 			for (int s = 0; s<prim.ns; ++s)
@@ -502,9 +519,6 @@ namespace spade::fluid_state
 		// Initialize source term
 		for (int s = 0; s<prim.ns; ++s) source.omega(s) = float_t(0.0);
 
-		// Compute mixture density
-		ptype rho = fluid_state::get_rho(prim, gas);
-
 		// Sweep reactions
 		for (int r = 0; r<react.nr; ++r)
 		{
@@ -515,7 +529,7 @@ namespace spade::fluid_state
 				for (int s = 0; s<prim.ns; ++s)
 				{
 					// Block out electrons
-					if (gas.mw_s[s]>1) con[r] += rho * prim.Ys(s) * react.phi_diss(r,s) * gas.mw_si[s] * 1E-3;
+					if (gas.mw_s[s]>1) con[r] += prim.rhos(s) * react.phi_diss(r,s) * gas.mw_si[s] * 1E-3;
 				}
 			}
 			else
@@ -532,10 +546,10 @@ namespace spade::fluid_state
 			for (int s = 0; s<prim.ns; ++s)
 			{
 				// Forward reaction rate
-				if (react.vreact(r,s) != float_t(0.0)) Rf_kf[r] *= pow(1E-3 * rho * prim.Ys(s) * gas.mw_si[s], react.vreact(r,s));
+				if (react.vreact(r,s) != float_t(0.0)) Rf_kf[r] *= pow(1E-3 * prim.rhos(s) * gas.mw_si[s], react.vreact(r,s));
 
 				// Backward reaction rate
-				if (react.vprod(r,s) != float_t(0.0)) Rb_kb[r] *= pow(1E-3 * rho * prim.Ys(s) * gas.mw_si[s], react.vprod(r,s));
+				if (react.vprod(r,s) != float_t(0.0)) Rb_kb[r] *= pow(1E-3 * prim.rhos(s) * gas.mw_si[s], react.vprod(r,s));
 			}
 		}
 
@@ -584,7 +598,6 @@ namespace spade::fluid_state
 
 		// Loop molecules
 		ptype cs, Num_den;
-		ptype rho = fluid_state::get_rho(prim, gas);
 		for (int s = 0; s<prim.ns; ++s)
 		{
 			if (gas.isMol[s]>0)
@@ -593,7 +606,7 @@ namespace spade::fluid_state
 				cs = sqrt(float_t(8.0) * spade::consts::Rgas_uni * prim.T() * gas.mw_si[s] / spade::consts::pi);
 
 				// Number density
-				Num_den = spade::consts::Na_kmol * rho * prim.Ys(s) * gas.mw_si[s];
+				Num_den = spade::consts::Na_kmol * prim.rhos(s) * gas.mw_si[s];
 
 				// Relaxation time
 				tau[s] = float_t(1.0) / (Num_den * cs * sigma);
@@ -614,6 +627,9 @@ namespace spade::fluid_state
 		// Get molar concentrations
 		spade::ctrs::array<ptype, prim.ns> Xr = fluid_state::get_Xr(prim, gas);
 
+		// Compute pressure
+		ptype pressure = fluid_state::get_pressure(prim, gas);
+
 		// Landau-teller interspecies relaxation time
 		ptype sumXr, tau_sr, tau_sum;
 		for (int s = 0; s<prim.ns; ++s)
@@ -630,7 +646,7 @@ namespace spade::fluid_state
 					if (gas.mw_s[s]>1)
 					{
 						// Landau-teller relaxation time
-						tau_sr = react.evaluate_tausr(s, r, prim.p(), prim.T(), gas);
+						tau_sr = react.evaluate_tausr(s, r, pressure, prim.T(), gas);
 
 						// Summation over r
 						sumXr   += Xr[r];
@@ -670,9 +686,6 @@ namespace spade::fluid_state
 	template<typename ptype>
 	_sp_hybrid static void compute_St2v(vib_t<ptype>& sourceVib, const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
 	{
-		// Compute density
-		ptype rho = get_rho(prim, gas);
-
 		// Vibrational energy
 		spade::ctrs::array<ptype, prim.ns> ev_st = get_evs(prim.T(), gas);
 		spade::ctrs::array<ptype, prim.ns> ev_s  = get_evs(prim.Tv(), gas);
@@ -685,7 +698,7 @@ namespace spade::fluid_state
 		sourceVib.St2v() = 0.0;
 		for (int s = 0; s<prim.ns; ++s)
 		{
-			if (gas.isMol[s]>0) sourceVib.St2v() += rho * prim.Ys(s) * (ev_st[s] - ev_s[s]) / tau_s[s];
+			if (gas.isMol[s]>0) sourceVib.St2v() += prim.rhos(s) * (ev_st[s] - ev_s[s]) / tau_s[s];
 		}
 		return;
 	}
