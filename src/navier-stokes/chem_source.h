@@ -115,7 +115,7 @@ namespace spade::fluid_state
 			}
 			else
 			{
-				std::cerr<<"How did you get here?? Invalid NASA9 coefficient access!"<<std::endl;
+				//std::cerr<<"How did you get here?? Invalid NASA9 coefficient access!"<<std::endl;
 			}
 		}
 
@@ -127,7 +127,7 @@ namespace spade::fluid_state
 			rtype T3   = T2*T;
 			rtype T4   = T3*T;
 			rtype logT = log(T);
-
+			
 			// Function evaluation
 			return - coefs[0]/T2 + coefs[1] * logT/T + coefs[2] + coefs[3] * T * float_t(0.5) + coefs[4] * T2 * float_t(1.0)/float_t(3.0) + coefs[5] * T3 * float_t(0.25) + coefs[6] * T4 * float_t(0.2) + coefs[7]/T;
 		}
@@ -468,6 +468,7 @@ namespace spade::fluid_state
 
 			// Backward controlling temperature
 			Tb = react.compute_Tb(r, prim.T(), prim.Tv());
+			Tb = react.limiting(Tb);
 
 			// Pre-compute some values
 			T    = Tb;
@@ -780,7 +781,7 @@ namespace spade::fluid_state
 			// Assign to out-going vector
 			for (int s = 0; s<q.ns; ++s) output.continuity(s) = chemSource.omega(s);
 			output.energyVib() = vibSource.St2v() + vibSource.Sc2v() + vibSource.Sh2e() - vibSource.Se2i();
-
+			
 			// Return vector for assignment onto the RHS
 			return output;
 		}

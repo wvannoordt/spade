@@ -395,15 +395,15 @@ namespace spade::fluid_state
     {
 		using float_t = ptype;
 		ptype irho = float_t(1.0) / get_rho(cons);
-		for (int s=0; s<prim.ns; ++s) prim.rhos(s)  = cons.rhos(s);
+		for (int s=0; s<prim.ns; ++s) prim.rhos(s)  = utils::max(cons.rhos(s),1E-30);
 		for (int i=0; i<3; ++i) prim.u(i) = irho * cons.rho_u(i);
 		
 		// Some intermediate quantities (formation energy & translational/rotational energy)
 		ptype hof = 0.0, rhoCv = 0.0;
 		for (int s = 0; s<prim.ns; ++s)
 		{
-			hof   += cons.rhos(s) * gas.hf_s[s];
-			rhoCv += cons.rhos(s) * gas.get_cvtr(s);
+			hof   += utils::max(cons.rhos(s),1E-30) * gas.hf_s[s];
+			rhoCv += utils::max(cons.rhos(s),1E-30) * gas.get_cvtr(s);
 		}
 		
 		// Back out temperature
@@ -433,7 +433,7 @@ namespace spade::fluid_state
 			// Compute vibrational energy
 			Ev      = get_Ev(prim_loc, gas);
 			dEv_dTv = 0.0;
-			for (int s = 0; s<prim.ns; ++s) dEv_dTv += cons.rhos(s) * gas.get_cvv(s,prim_loc.Tv());
+			for (int s = 0; s<prim.ns; ++s) dEv_dTv += prim_loc.rhos(s) * gas.get_cvv(s,prim_loc.Tv());
 			
 			// Newton solver
 			prim_loc.Tv() += (cons.Ev() - Ev) / dEv_dTv;
