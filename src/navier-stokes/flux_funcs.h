@@ -14,6 +14,7 @@ namespace spade::convective
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
         using flux_t        = fluid_state::flux_t<float_t>;
+        using flux_type     = flux_t;
         rusanov_t(const gas_t& gas_in) : gas{gas_in} {}
         _sp_hybrid ctrs::array<flux_t, 2> operator() (const auto& info) const
         {
@@ -128,6 +129,7 @@ namespace spade::convective
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
         using flux_t        = fluid_state::flux_t<float_t>;
+        using flux_type     = flux_t;
         rusanov_fds_t(const gas_t& gas_in) : gas{gas_in} {}
         _sp_hybrid flux_t operator() (const auto& infoF, const auto& qL,const auto& qR) const
         {
@@ -168,6 +170,7 @@ namespace spade::convective
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
         using flux_t        = fluid_state::flux_t<float_t>;
+        using flux_type     = flux_t;
         phys_flux_t(const gas_t& gas_in) : gas{gas_in} {}
         _sp_hybrid ctrs::array<flux_t, 2> operator() (const auto& info) const
         {
