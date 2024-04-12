@@ -5,7 +5,7 @@
 namespace spade::consts
 {
     constexpr static real_t pi = 3.1415926535;
-    constexpr static real_t Rgas_uni = 8314.462;
+    constexpr static real_t Rgas_uni = 8314.462; // Universal gas constant
 	constexpr static real_t Na_kmol = 6.022045E26; // Avogadro's number in kilo moles
 	constexpr static real_t Na = 6.022045E23; // Avogadro's number
 	constexpr static real_t sigma = 5.6703744192E-8; // Stefan-Boltzmann constant for radiation
