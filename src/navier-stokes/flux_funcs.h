@@ -135,9 +135,9 @@ namespace spade::convective
                 {
                     const float_t rho_star = rhoL*(sL-uL_n)/(sL-s_star);
                     flx.continuity() += sL*(rho_star - rhoL);
-                    flx.x_momentum() += sL*(rho_star*(s_star*nv[0] + qL.u()*(1-nv[0])) - rhoL*qL.u());
-                    flx.y_momentum() += sL*(rho_star*(s_star*nv[1] + qL.v()*(1-nv[1])) - rhoL*qL.v());
-                    flx.z_momentum() += sL*(rho_star*(s_star*nv[2] + qL.w()*(1-nv[2])) - rhoL*qL.w());
+                    flx.x_momentum() += sL*(rho_star*(s_star*nv[0] + qL.u()*(float_t(1)-nv[0])) - rhoL*qL.u());
+                    flx.y_momentum() += sL*(rho_star*(s_star*nv[1] + qL.v()*(float_t(1)-nv[1])) - rhoL*qL.v());
+                    flx.z_momentum() += sL*(rho_star*(s_star*nv[2] + qL.w()*(float_t(1)-nv[2])) - rhoL*qL.w());
                     flx.energy()     += sL*(rho_star*(engyL/rhoL+(s_star-uL_n)*(s_star+qL.p()/(rhoL*(sL-uL_n)))) - engyL);
                 }
             }
@@ -153,9 +153,9 @@ namespace spade::convective
                 {
                     const float_t rho_star = rhoR*(sR-uR_n)/(sR-s_star);
                     flx.continuity() += sR*(rho_star - rhoR);
-                    flx.x_momentum() += sR*(rho_star*(s_star*nv[0] + qR.u()*(1-nv[0])) - rhoR*qR.u());
-                    flx.y_momentum() += sR*(rho_star*(s_star*nv[1] + qR.v()*(1-nv[1])) - rhoR*qR.v());
-                    flx.z_momentum() += sR*(rho_star*(s_star*nv[2] + qR.w()*(1-nv[2])) - rhoR*qR.w());
+                    flx.x_momentum() += sR*(rho_star*(s_star*nv[0] + qR.u()*(float_t(1)-nv[0])) - rhoR*qR.u());
+                    flx.y_momentum() += sR*(rho_star*(s_star*nv[1] + qR.v()*(float_t(1)-nv[1])) - rhoR*qR.v());
+                    flx.z_momentum() += sR*(rho_star*(s_star*nv[2] + qR.w()*(float_t(1)-nv[2])) - rhoR*qR.w());
                     flx.energy()     += sR*(rho_star*(engyR/rhoR+(s_star-uR_n)*(s_star+qR.p()/(rhoR*(sR-uR_n)))) - engyR);
                 }
             }
