@@ -47,6 +47,7 @@ namespace spade::fluid_state
         _sp_hybrid const rtype& rho_u() const {return (*this)[2];}
         _sp_hybrid const rtype& rho_v() const {return (*this)[3];}
         _sp_hybrid const rtype& rho_w() const {return (*this)[4];}
+        
         static std::string name(uint idx)
         {
             ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
