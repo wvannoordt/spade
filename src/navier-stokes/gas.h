@@ -56,7 +56,8 @@ namespace spade::fluid_state
 
     template <typename dtype> struct multicomponent_gas_t
     {
-	
+		using float_t = dtype;
+		
 		// Some member variables
 		spade::ctrs::array<dtype, 5> mw_s,mw_si,hf_s,theta_v;
 		spade::ctrs::array<int, 5>   isMol;
@@ -97,10 +98,20 @@ namespace spade::fluid_state
 	static void import_species_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, multicomponent_gas_t<ptype>& gas)
 	{
 		std::ifstream infile;
-		try
-		{
-			infile.open(fname);
 
+		// Get spade environment path
+		const auto env_p = std::getenv("SPADE");
+
+		// Set full filename
+		std::string full_fname = "";
+		full_fname += env_p;
+		full_fname += "/src/navier-stokes/reactionMechanisms/" + fname;
+		
+		// Open file
+		infile.open(full_fname);
+		
+		if (infile)
+		{
 			// String to read species name
 			std::string species;
 
@@ -140,7 +151,7 @@ namespace spade::fluid_state
 			infile.close();
 			
 		}
-		catch (...)
+		else
 		{
 			std::cerr << "Can not open provided species data file!" << std::endl;
 		}
