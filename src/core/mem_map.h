@@ -588,6 +588,91 @@ namespace spade::mem_map
         }
     };
     
+    inline struct ttiled_small_t {} tiled_small;
+    //Todo: make this more generic
+    struct tiled_small_t
+    {
+        using tag_type = ttiled_small_t;
+        ctrs::array<int, 5> min, max;
+        _sp_hybrid int size(int i) const { return max[i] - min[i]; }
+        _sp_hybrid std::size_t volume() const
+        {
+            std::size_t output = 1;
+            algs::static_for<0, 5>([&](const auto& ii)
+            {
+                constexpr int i = ii.value;
+                output *= size(i);
+            });
+            return output;
+        }
+        template <integral_scalar_or_array... is_t>
+        _sp_hybrid _sp_inline std::size_t compute_offset(const is_t&... is) const noexcept
+        {
+            constexpr int tpow = 1;
+            constexpr int tsz  = 1 << tpow;
+            constexpr int mask = tsz - 1;
+            
+            int ni  = size(1);
+            int nj  = size(2);
+            int nk  = size(3);
+            int nlb = size(4);
+            int nv  = size(0);
+            
+            ni = ni >> tpow;
+            nj = nj >> tpow;
+            nk = nk >> tpow;
+            
+            int v  = get_val<0>(is...) - min[0];
+            int i  = get_val<1>(is...) - min[1];
+            int j  = get_val<2>(is...) - min[2];
+            int k  = get_val<3>(is...) - min[3];
+            int lb = get_val<4>(is...) - min[4];
+            
+            int ii = i & mask;
+            i = i >> tpow;
+            
+            int jj = j & mask;
+            j = j >> tpow;
+            
+            int kk = k & mask;
+            k = k >> tpow;
+            
+            // std::size_t output = v;
+            // output *= nlb;
+            // output += lb;
+            // output *= nk;
+            // output += k;
+            // output *= nj;
+            // output += j;
+            // output *= ni;
+            // output += i;
+            // output *= tsz;
+            // output += kk;
+            // output *= tsz;
+            // output += jj;
+            // output *= tsz;
+            // output += ii;
+            
+            std::size_t  output = lb;
+            output *= nk;
+            output += k;
+            output *= nj;
+            output += j;
+            output *= ni;
+            output += i;
+            output *= nv;
+            output += v;
+            output *= tsz;
+            output += kk;
+            output *= tsz;
+            output += jj;
+            output *= tsz;
+            output += ii;
+            
+            return output;
+        }
+    };
+    
     template <typename alias_t, typename device_t>
     inline auto make_grid_map(const tlinear_t&, const alias_t&, const device_t&,
         const ctrs::array<int, 2>& is,
@@ -623,5 +708,17 @@ namespace spade::mem_map
         static_assert(ctrs::basic_array<alias_t>, "tiled memory map only available for array alias types");
         
         return tiled_t{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
+    }
+    
+    template <typename alias_t, typename device_t>
+    inline auto make_grid_map(const ttiled_small_t&, const alias_t&, const device_t&,
+        const ctrs::array<int, 2>& is,
+        const ctrs::array<int, 2>& js,
+        const ctrs::array<int, 2>& ks,
+        const ctrs::array<int, 2>& ls)
+    {
+        static_assert(ctrs::basic_array<alias_t>, "tiled memory map only available for array alias types");
+        
+        return tiled_small_t{{0, is[0], js[0], ks[0], ls[0]}, {alias_t::size(), is[1], js[1], ks[1], ls[1]}};
     }
 }
