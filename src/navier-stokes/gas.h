@@ -54,16 +54,19 @@ namespace spade::fluid_state
         _sp_hybrid dtype get_gamma() const {return this->gamma;}
     };
 
-    template <typename dtype> struct multicomponent_gas_t
+    template <typename dtype, const std::size_t num_species> struct multicomponent_gas_t
     {
 		using float_t = dtype;
 		
 		// Some member variables
-		spade::ctrs::array<dtype, 5> mw_s,mw_si,hf_s,theta_v;
-		spade::ctrs::array<int, 5>   isMol;
+		spade::ctrs::array<dtype, num_species> mw_s, mw_si, hf_s, theta_v;
+		spade::ctrs::array<int, num_species>   isMol;
       
 		// Constructors
 		_sp_hybrid multicomponent_gas_t(){}
+
+		// Get species count
+		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
 
 		// Function -- compute species gas constant
 		_sp_hybrid dtype get_Rs(const int& s) const {return spade::consts::Rgas_uni * mw_si[s];}
@@ -94,8 +97,8 @@ namespace spade::fluid_state
     };
 
 	// Initialization function for incoming species data
-	template<typename ptype>
-	static void import_species_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, multicomponent_gas_t<ptype>& gas)
+	template<typename ptype, const std::size_t ns>
+	static void import_species_data(const std::string& fname, const std::vector<std::string>& speciesNames, multicomponent_gas_t<ptype, ns>& gas)
 	{
 		std::ifstream infile;
 
@@ -105,7 +108,7 @@ namespace spade::fluid_state
 		// Set full filename
 		std::string full_fname = "";
 		full_fname += env_p;
-		full_fname += "/src/navier-stokes/reactionMechanisms/" + fname;
+		full_fname += "/src/navier-stokes/speciesInputs/" + fname;
 		
 		// Open file
 		infile.open(full_fname);
@@ -127,7 +130,7 @@ namespace spade::fluid_state
 				infile >> species >> mw >> isMol >> hf >> theta_v;
 				
 				// Sweep species
-				for (int s = 0; s<ns; ++s)
+				for (int s = 0; s<gas.nspecies(); ++s)
 				{
 					// Do we need this species?
 					if (species == speciesNames[s])

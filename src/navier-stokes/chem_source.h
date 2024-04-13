@@ -9,36 +9,40 @@
 #include "core/consts.h"
 #include "navier-stokes/fluid_state.h"
 
-// Reaction types
-#define DISS_REACTION 1
-#define EXCH_REACTION 2
-#define EI_ION_REACTION 3
-
 namespace spade::fluid_state
 {
 	
+	// Reaction type enumeration
+	enum reaction_type
+	{
+	 DISS_REACTION=1,
+	 EXCH_REACTION=2,
+	 EI_ION_REACTION=3
+	};
+	
 	// Stores anything related to the employed reaction mechanism and/or vibrational relaxation model
-	template<typename rtype> struct reactionMechanism_t
+	template<typename rtype, const std::size_t num_species, const std::size_t num_react> struct reactionMechanism_t
 	{
 		using float_t = rtype;
 		// Constructor
 		_sp_hybrid reactionMechanism_t(){}
 
 		// Number of reactions in mechanism
-		static const int nr=5; // Hard-coded for 5-species air model for now
+		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
+		_sp_hybrid constexpr static std::size_t nreact(){return num_react;}
 
 		// Reaction parameters
 		constexpr static rtype Tmin=800; // Minimum reaction evaluation temperature
 		constexpr static rtype eps_chem2=6400; // 80^2 --> Used in reaction temperature limiting
 		constexpr static rtype sigma_coef=1E-20; // Collisional cross-section for Park relaxation time
 		constexpr static rtype kb_max=1E26; // Maximum reaction rate
-		spade::ctrs::array<int, 5> nIntervals; // Over species
-		spade::linear_algebra::dense_mat<rtype, 5, 3> Tlower,Tupper; // Dynamic vectors storing temp intervals for gibbs curve fit
-		spade::ctrs::array<int, 5> reactType; // Over reactions
-		spade::ctrs::array<rtype, 5> Af,Ta,eta; // Over reactions
-		spade::linear_algebra::dense_mat<rtype, 5, 9> gibbsCoefT1,gibbsCoefT2,gibbsCoefT3; // Over species (9 coef per species)
-		spade::linear_algebra::dense_mat<rtype, 5, 5> phi_diss=float_t(1.0); // Dissociation enhancement parameter
-		spade::linear_algebra::dense_mat<rtype, 5, 5> vprod=float_t(0.0),vreact=float_t(0.0); // Stoichiometric coefficients (ns by nr)
+		spade::ctrs::array<int, num_species> nIntervals; // Over species
+		spade::linear_algebra::dense_mat<rtype, num_species, 3> Tlower,Tupper; // Dynamic vectors storing temp intervals for gibbs curve fit
+		spade::ctrs::array<int, num_react> reactType; // Over reactions
+		spade::ctrs::array<rtype, num_react> Af,Ta,eta; // Over reactions
+		spade::linear_algebra::dense_mat<rtype, num_species, 9> gibbsCoefT1,gibbsCoefT2,gibbsCoefT3; // Over species (9 coef per species)
+		spade::linear_algebra::dense_mat<rtype, num_react, num_species> phi_diss=float_t(1.0); // Dissociation enhancement parameter
+		spade::linear_algebra::dense_mat<rtype, num_react, num_species> vprod=float_t(0.0),vreact=float_t(0.0); // Stoichiometric coefficients
 		
 		// Vibrational relaxation parameters
 		constexpr static rtype p0=101325.0;
@@ -146,8 +150,8 @@ namespace spade::fluid_state
 		}
 
 		// Evaluate Landau-Teller inter-species relaxation time
-		template<typename gtype>
-		_sp_hybrid rtype evaluate_tausr(const int& s, const int& r, const rtype& p, const rtype& T, const multicomponent_gas_t<gtype>& gas) const
+		template<const std::size_t ns>
+		_sp_hybrid rtype evaluate_tausr(const int& s, const int& r, const rtype& p, const rtype& T, const multicomponent_gas_t<rtype, ns>& gas) const
 		{
 			// Parameters
 			rtype mu_sr = gas.mw_s[s] * gas.mw_s[r] / (gas.mw_s[s] + gas.mw_s[r]);
@@ -159,8 +163,8 @@ namespace spade::fluid_state
 	};
 
 	// Import gibbs energy data
-	template<typename ptype>
-	static void import_gibbsEnergy_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	static void import_gibbsEnergy_data(const std::string& fname, const std::vector<std::string>& speciesNames, reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		std::ifstream infile;
 
@@ -193,7 +197,7 @@ namespace spade::fluid_state
 				infile >> species >> Tlower >> Tupper >> gibbsCoef[0] >> gibbsCoef[1] >> gibbsCoef[2] >> gibbsCoef[3] >> gibbsCoef[4] >> gibbsCoef[5] >> gibbsCoef[6] >> gibbsCoef[7] >> gibbsCoef[8];
 				
 				// Sweep species
-				for (int s = 0; s<ns; ++s)
+				for (int s = 0; s<react.nspecies(); ++s)
 				{
 					// Do we need this species?
 					if (species == speciesNames[s])
@@ -233,7 +237,7 @@ namespace spade::fluid_state
 			infile.close();
 			
 			// Copy intervals to reaction structure
-			for (int s = 0; s<ns; ++s) react.nIntervals[s] = nIntervals[s];
+			for (int s = 0; s<react.nspecies(); ++s) react.nIntervals[s] = nIntervals[s];
 			
 		}
 		else
@@ -245,8 +249,8 @@ namespace spade::fluid_state
 	}
 
 	// Import gibbs energy data
-	template<typename ptype, typename gtype>
-	static void import_reaction_data(const std::string& fname, const int& ns, const std::vector<std::string>& speciesNames, const multicomponent_gas_t<gtype>& gas, reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	static void import_reaction_data(const std::string& fname, const std::vector<std::string>& speciesNames, const multicomponent_gas_t<ptype, ns>& gas, reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		using float_t = ptype;
 		std::ifstream infile;
@@ -294,7 +298,7 @@ namespace spade::fluid_state
 					}
 					else
 					{
-						for (int s = 0; s<ns; ++s)
+						for (int s = 0; s<react.nspecies(); ++s)
 						{
 							if (participants[p] == speciesNames[s]) count += 1;
 						}
@@ -330,7 +334,7 @@ namespace spade::fluid_state
 					// Set stoichiometric coefficients (reactants)
 					for (int p = 0; p<participants.size()/2; ++p)
 					{
-						for (int s = 0; s<ns; ++s)
+						for (int s = 0; s<react.nspecies(); ++s)
 						{
 							if (participants[p] == speciesNames[s]) react.vreact(numReact, s) += float_t(1.0);
 						}
@@ -339,7 +343,7 @@ namespace spade::fluid_state
 					// Set stoichiometric coefficients (products)
 					for (int p = participants.size()/2; p<participants.size(); ++p)
 					{
-						for (int s = 0; s<ns; ++s)
+						for (int s = 0; s<react.nspecies(); ++s)
 						{
 							if (participants[p] == speciesNames[s]) react.vprod(numReact, s) += float_t(1.0);
 						}
@@ -354,7 +358,7 @@ namespace spade::fluid_state
 						if (species == "mol")
 						{
 							// Enhance dissociation rates for molecular collisions
-							for (int s = 0; s<ns; ++s)
+							for (int s = 0; s<react.nspecies(); ++s)
 							{
 								if (gas.isMol[s]>0) react.phi_diss(numReact,s) = phi;
 							}
@@ -362,7 +366,7 @@ namespace spade::fluid_state
 						else if (species == "atoms")
 						{
 							// Enhance dissociation rates for atomic collisions
-							for (int s = 0; s<ns; ++s)
+							for (int s = 0; s<react.nspecies(); ++s)
 							{
 								if (!gas.isMol[s]>0) react.phi_diss(numReact,s) = phi;
 							}
@@ -370,7 +374,7 @@ namespace spade::fluid_state
 						else
 						{
 							// Enhance dissociation rates for specific collisions
-							for (int s = 0; s<ns; ++s)
+							for (int s = 0; s<react.nspecies(); ++s)
 							{
 								if (species == speciesNames[s]) react.phi_diss(numReact,s) = phi;
 							}
@@ -406,12 +410,12 @@ namespace spade::fluid_state
 	}
 
 	// Compute forward reaction rates
-	template<typename ptype>
-	_sp_hybrid static void compute_forwardRates(const prim_chem_t<ptype>& prim, const reactionMechanism_t<ptype>& react, spade::ctrs::array<ptype, 5>& kf, spade::ctrs::array<ptype, 5>& kfb)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static void compute_forwardRates(const prim_chem_t<ptype, ns>& prim, const reactionMechanism_t<ptype, ns, nr>& react, spade::ctrs::array<ptype, nr>& kf, spade::ctrs::array<ptype, nr>& kfb)
 	{
 		// Loop reactions
 		ptype Tf, Tb;
-		for (int r = 0; r<react.nr; ++r)
+		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Forward controlling temperature
 			Tf = react.compute_Tf(r, prim.T(), prim.Tv());
@@ -432,19 +436,19 @@ namespace spade::fluid_state
 	}
 
 	// Compute forward reaction rates
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_backwardRates(const prim_chem_t<ptype>& prim, const reactionMechanism_t<ptype>& react, const spade::ctrs::array<ptype, 5>& kfb)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, nr> compute_backwardRates(const prim_chem_t<ptype, ns>& prim, const reactionMechanism_t<ptype, ns, nr>& react, const spade::ctrs::array<ptype, nr>& kfb)
 	{
 		using float_t = ptype;
 
 		// Initialize
-		spade::ctrs::array<ptype, prim.ns> kb = 0.0;
+		spade::ctrs::array<ptype, prim.nspecies()> kb = 0.0;
 		ptype Tb,hi,si,gibbs,Kc,vr;
 		spade::ctrs::array<ptype, 9> coefs;
 		ptype T,T2,T3,T4,logT;
 		
 		// Sweep reactions
-		for (int r = 0; r<react.nr; ++r)
+		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Initialize gibbs energy
 			gibbs = float_t(0.0);
@@ -464,7 +468,7 @@ namespace spade::fluid_state
 			logT = log(Tb);
 			
 			// Sweep species
-			for (int s = 0; s<prim.ns; ++s)
+			for (int s = 0; s<prim.nspecies(); ++s)
 			{
 				// Get curve fitting coefficients
 				react.get_NASA9_coefficients(s, Tb, coefs);
@@ -494,29 +498,29 @@ namespace spade::fluid_state
 	}
 
 	// Compute reaction product
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_reactionProduct(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react, const spade::ctrs::array<ptype, 5>& kf, const spade::ctrs::array<ptype, 5>& kb)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_reactionProduct(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react, const spade::ctrs::array<ptype, nr>& kf, const spade::ctrs::array<ptype, nr>& kb)
 	{
 		using float_t = ptype;
 		// Initialize some variables
-		spade::ctrs::array<ptype, react.nr> con   = float_t(0.0);
-		spade::ctrs::array<ptype, react.nr> Rf_kf = float_t(1000.0);
-		spade::ctrs::array<ptype, react.nr> Rb_kb = float_t(1000.0);
+		spade::ctrs::array<ptype, react.nreact()> con   = float_t(0.0);
+		spade::ctrs::array<ptype, react.nreact()> Rf_kf = float_t(1000.0);
+		spade::ctrs::array<ptype, react.nreact()> Rb_kb = float_t(1000.0);
 
 		// Initialize source term
-		spade::ctrs::array<ptype, prim.ns> source = float_t(0.0);
+		spade::ctrs::array<ptype, prim.nspecies()> source = float_t(0.0);
 
 		// Compute species density
-		spade::ctrs::array<ptype, prim.ns> rhos = fluid_state::get_rhos(prim, gas);
+		spade::ctrs::array<ptype, prim.nspecies()> rhos = fluid_state::get_rhos(prim, gas);
 
 		// Sweep reactions
-		for (int r = 0; r<react.nr; ++r)
+		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Check for dissociation reactions
 			if (react.reactType[r] == DISS_REACTION)
 			{
 				// Sweep species
-				for (int s = 0; s<prim.ns; ++s)
+				for (int s = 0; s<prim.nspecies(); ++s)
 				{
 					// Block out electrons
 					if (gas.mw_s[s]>1) con[r] += rhos[s] * react.phi_diss(r,s) * gas.mw_si[s] * 1E-3;
@@ -530,10 +534,10 @@ namespace spade::fluid_state
 		}
 
 		// Form reaction product
-		for (int r = 0; r<react.nr; ++r)
+		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Sweep species
-			for (int s = 0; s<prim.ns; ++s)
+			for (int s = 0; s<prim.nspecies(); ++s)
 			{
 				// Forward reaction rate
 				if (react.vreact(r,s) != float_t(0.0)) Rf_kf[r] *= pow(1E-3 * rhos[s] * gas.mw_si[s], react.vreact(r,s));
@@ -544,10 +548,10 @@ namespace spade::fluid_state
 		}
 
 		// Final computation for source term
-		for (int r = 0; r<react.nr; ++r)
+		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Sweep species in reaction
-			for (int s = 0; s<prim.ns; ++s)
+			for (int s = 0; s<prim.nspecies(); ++s)
 			{
 				source[s] += (react.vprod(r,s) - react.vreact(r,s)) * (kf[r] * Rf_kf[r] - kb[r] * Rb_kb[r]) * gas.mw_s[s] * con[r];
 			}
@@ -557,12 +561,12 @@ namespace spade::fluid_state
 	}
 
 	// Compute chemical source term
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_chemSource(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_chemSource(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Allocate vectors for reactions
-		spade::ctrs::array<ptype, react.nr> kf,kfb,kb;
-		spade::ctrs::array<ptype, prim.ns> source;
+		spade::ctrs::array<ptype, react.nreact()> kf,kfb,kb;
+		spade::ctrs::array<ptype, prim.nspecies()> source;
 		
 		// Compute forward reaction rates
 		compute_forwardRates(prim, react, kf, kfb);
@@ -577,23 +581,23 @@ namespace spade::fluid_state
 	}
 
 	// Computation for Park vibrational relaxation time for high temperature corrections
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_parkRelaxTime(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_parkRelaxTime(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		using float_t = ptype;
 		
 		// Initialize relaxation time
-		spade::ctrs::array<ptype, prim.ns> tau = float_t(0.0);
+		spade::ctrs::array<ptype, prim.nspecies()> tau = float_t(0.0);
 		
 		// Compute collision cross-section
 		ptype sigma = react.sigma_coef * float_t(2.5E9) / (prim.T() * prim.T());
 
 		// Get species densities
-		spade::ctrs::array<ptype, prim.ns> rhos = fluid_state::get_rhos(prim, gas);
+		spade::ctrs::array<ptype, prim.nspecies()> rhos = fluid_state::get_rhos(prim, gas);
 
 		// Loop molecules
 		ptype cs, Num_den;
-		for (int s = 0; s<prim.ns; ++s)
+		for (int s = 0; s<prim.nspecies(); ++s)
 		{
 			if (gas.isMol[s]>0)
 			{
@@ -612,20 +616,20 @@ namespace spade::fluid_state
 	}
 
 	// Computation for molar-averaged relaxation time
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_molarRelaxTime(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_molarRelaxTime(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		using float_t = ptype;
 		
 		// Initialize relaxation time
-		spade::ctrs::array<ptype, prim.ns> tau = float_t(0.0);
+		spade::ctrs::array<ptype, prim.nspecies()> tau = float_t(0.0);
 
 		// Get molar concentrations
-		spade::ctrs::array<ptype, prim.ns> Xr = fluid_state::get_Xr(prim, gas);
+		spade::ctrs::array<ptype, prim.nspecies()> Xr = fluid_state::get_Xr(prim, gas);
 
 		// Landau-teller interspecies relaxation time
 		ptype sumXr, tau_sr, tau_sum;
-		for (int s = 0; s<prim.ns; ++s)
+		for (int s = 0; s<prim.nspecies(); ++s)
 		{
 			// Check for molecules
 			if (gas.isMol[s]>0)
@@ -633,7 +637,7 @@ namespace spade::fluid_state
 				sumXr   = float_t(0.0);
 				tau_sum = float_t(0.0);
 				// Sweep collision partners
-				for (int r = 0; r<prim.ns; ++r)
+				for (int r = 0; r<prim.nspecies(); ++r)
 				{
 					// Exclude electrons
 					if (gas.mw_s[s]>1)
@@ -657,11 +661,11 @@ namespace spade::fluid_state
 	}
 	
 	// Computation for vibration energy exchange relaxation time
-	template<typename ptype>
-	_sp_hybrid static spade::ctrs::array<ptype, 5> compute_relaxationTime(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_relaxationTime(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Initialize relaxation time components
-		spade::ctrs::array<ptype, prim.ns> tau_molar,tau_park;
+		spade::ctrs::array<ptype, prim.nspecies()> tau_molar,tau_park;
 
 		// Compute molar-averaged relaxation time
 		tau_molar = compute_molarRelaxTime(prim, gas, react);
@@ -674,22 +678,22 @@ namespace spade::fluid_state
 	}
 	
 	// Compute translational to vibrational source term
-	template<typename ptype>
-	_sp_hybrid static ptype compute_St2v(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static ptype compute_St2v(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Vibrational energy
-		spade::ctrs::array<ptype, prim.ns> ev_st = get_evs(prim.T(), gas);
-		spade::ctrs::array<ptype, prim.ns> ev_s  = get_evs(prim.Tv(), gas);
+		spade::ctrs::array<ptype, prim.nspecies()> ev_st = get_evs(prim.T(), gas);
+		spade::ctrs::array<ptype, prim.nspecies()> ev_s  = get_evs(prim.Tv(), gas);
 			
 		// Compute relaxation time
-		spade::ctrs::array<ptype, prim.ns> tau_s = compute_relaxationTime(prim, gas, react);
+		spade::ctrs::array<ptype, prim.nspecies()> tau_s = compute_relaxationTime(prim, gas, react);
 
 		// Compute species densities
-		spade::ctrs::array<ptype, prim.ns> rhos = fluid_state::get_rhos(prim, gas);
+		spade::ctrs::array<ptype, prim.nspecies()> rhos = fluid_state::get_rhos(prim, gas);
 
 		// Compute source term component
 		ptype St2v = 0.0;
-		for (int s = 0; s<prim.ns; ++s)
+		for (int s = 0; s<prim.nspecies(); ++s)
 		{
 			if (gas.isMol[s]>0) St2v += rhos[s] * (ev_st[s] - ev_s[s]) / tau_s[s];
 		}
@@ -697,15 +701,15 @@ namespace spade::fluid_state
 	}
 
 	// Compute chemical to vibrational source term
-	template<typename ptype>
-    _sp_hybrid static ptype compute_Sc2v(const prim_chem_t<ptype>& prim, const spade::ctrs::array<ptype, 5>& source, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+    _sp_hybrid static ptype compute_Sc2v(const prim_chem_t<ptype, ns>& prim, const spade::ctrs::array<ptype, ns>& source, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Vibrational energy
-		spade::ctrs::array<ptype, prim.ns> ev_s  = get_evs(prim.Tv(), gas);
+		spade::ctrs::array<ptype, prim.nspecies()> ev_s  = get_evs(prim.Tv(), gas);
 			
 		// Compute source term component
 		ptype Sc2v = 0.0;
-		for (int s = 0; s<prim.ns; ++s)
+		for (int s = 0; s<prim.nspecies(); ++s)
 		{
 			if (gas.isMol[s]>0) Sc2v += source[s] * ev_s[s];
 		}
@@ -713,29 +717,29 @@ namespace spade::fluid_state
 	}
 
 	// Compute heavy particle to electron source term
-	template<typename ptype>
-    _sp_hybrid static ptype compute_Sh2e(const prim_chem_t<ptype>& prim, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+    _sp_hybrid static ptype compute_Sh2e(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Compute source term component
 		return 0.0;
 	}
 
 	// Compute electron impact ionization source term
-	template<typename ptype>
-	_sp_hybrid static ptype compute_Se2i(const prim_chem_t<ptype>& prim, const spade::ctrs::array<ptype, 5>& source, const multicomponent_gas_t<ptype>& gas, const reactionMechanism_t<ptype>& react)
+	template<typename ptype, const std::size_t ns, const std::size_t nr>
+	_sp_hybrid static ptype compute_Se2i(const prim_chem_t<ptype, ns>& prim, const spade::ctrs::array<ptype, ns>& source, const multicomponent_gas_t<ptype, ns>& gas, const reactionMechanism_t<ptype, ns, nr>& react)
 	{
 		// Compute source term component
 		return 0.0;
 	}
 
 	// Chemical source term structure. Primary driver
-	template<typename ptype> struct chem_source_t
+	template<typename ptype, const std::size_t ns, const std::size_t nr> struct chem_source_t
 	{
 		using info_type   = omni::info_list_t<omni::info::value>;
 		using omni_type   = omni::prefab::cell_mono_t<info_type>;
-		using output_type = fluid_state::flux_chem_t<ptype>;
-		using gas_t       = multicomponent_gas_t<ptype>;
-		using react_t     = reactionMechanism_t<ptype>;
+		using output_type = fluid_state::flux_chem_t<ptype, ns>;
+		using gas_t       = multicomponent_gas_t<ptype, ns>;
+		using react_t     = reactionMechanism_t<ptype, ns, nr>;
 
 		// Stores multi-component gas model
 		gas_t gas;
@@ -754,7 +758,7 @@ namespace spade::fluid_state
 			output_type output = 0.0;
 
 			// Initialize source term
-			spade::ctrs::array<ptype, q.ns> source;
+			spade::ctrs::array<ptype, q.nspecies()> source;
 			ptype St2v, Sc2v, Sh2e, Se2i;
 
 			// Compute chemical source term
@@ -769,7 +773,7 @@ namespace spade::fluid_state
 			Se2i = compute_Se2i(q, source, gas, reactions);
 
 			// Assign to out-going vector
-			for (int s = 0; s<q.ns; ++s) output.continuity(s) = source[s];
+			for (int s = 0; s<q.nspecies(); ++s) output.continuity(s) = source[s];
 			output.energyVib() = St2v + Sc2v + Sh2e - Se2i;
 			
 			// Return vector for assignment onto the RHS

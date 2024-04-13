@@ -7,6 +7,7 @@
 #include "core/finite_diff.h"
 
 #include "navier-stokes/fluid_state.h"
+#include "navier-stokes/gas.h"
 #include "navier-stokes/flux_funcs.h"
 
 namespace spade::convective
@@ -251,7 +252,7 @@ namespace spade::convective
         enable_smooth,
         disable_smooth
     };
-
+	
     template <typename flux_func_t, const weno_smooth_indicator use_smooth = enable_smooth>
     struct weno_t
     {
@@ -269,16 +270,17 @@ namespace spade::convective
         const flux_func_t flux_func;
         
         weno_t(const flux_func_t& flux_func_in)
-        : flux_func{flux_func_in} {}
+			: flux_func{flux_func_in} {}
         
         _sp_hybrid output_type operator()(const auto& input) const
         {            
             output_type output;
-            
-            auto fp0 = flux_func(input.cell(0_c));
-            auto fp1 = flux_func(input.cell(1_c));
-            auto fp2 = flux_func(input.cell(2_c));
-            auto fp3 = flux_func(input.cell(3_c));
+
+			// Compute fluxes
+			auto fp0 = flux_func(input.cell(0_c));
+			auto fp1 = flux_func(input.cell(1_c));
+			auto fp2 = flux_func(input.cell(2_c));
+			auto fp3 = flux_func(input.cell(3_c));
             
             const auto& f0_u = fp0[0];
             const auto& f0_d = fp0[1];
@@ -551,6 +553,301 @@ namespace spade::convective
             }
             // call flux function                                                                                                                                                                           
             output = flux_func(input.face(0_c),ql,qr);
+            return output;
+        }
+    };
+
+	template<typename vec_t, typename rtype, typename mat_t, const std::size_t ns>
+	_sp_hybrid static void compute_eigenvector_matrices(const fluid_state::prim_chem_t<rtype, ns>& qL, const fluid_state::prim_chem_t<rtype, ns>& qR, const vec_t& nv, const fluid_state::multicomponent_gas_t<rtype, ns>& gas, mat_t& eigenLeft, mat_t& eigenRight)
+	{
+		// Face normal vector
+		int idir = 0*nv[0] + 1*nv[2] + 2*nv[2];
+		spade::ctrs::array<rtype, 3> nvec = 0.0;
+		nvec[idir] = 1.0;
+		
+		// Get tangential direction 1
+		int tandir1 = idir + 1;
+		if (tandir1 >= 3) tandir1 -= 3;
+		spade::ctrs::array<rtype, 3> tvec = 0.0;
+		tvec[tandir1] = 1.0;
+
+		// Get tangential direction 2
+		int tandir2 = idir + 2;
+		if (tandir2 >= 3) tandir2 -= 3;
+		spade::ctrs::array<rtype, 3> mvec = 0.0;
+		mvec[tandir2] = 1.0;
+
+		// Roe-averaged face state
+		rtype rhoL   = fluid_state::get_rho(qL, gas);
+		rtype rhoR   = fluid_state::get_rho(qR, gas);
+		rtype srhoL  = sqrt(rhoL);
+		rtype srhoR  = sqrt(rhoR);
+		rtype irhoLR = rtype(1.0) / (srhoL + srhoR);
+
+		// Face state
+		fluid_state::prim_chem_t<rtype, qL.nspecies()> qface;
+		for (int n = 0; n<qL.size(); ++n) qface[n] = irhoLR * (srhoL * qL[n] + srhoR * qR[n]);
+		
+		// Face normal velocities
+		rtype Un = 0.0, Vn = 0.0, Wn = 0.0;
+		for (int n = 0; n<3; ++n)
+		{
+			Un += qface.u(n) * nvec[n];
+			Vn += qface.u(n) * tvec[n];
+			Wn += qface.u(n) * mvec[n];
+		}
+
+		// Get mass fractions
+		spade::ctrs::array<rtype, qface.nspecies()> Ys = fluid_state::get_Ys(qface);
+
+		// Compute mixture Cvtr
+		rtype Cvtr = 0.0;
+		for (int s = 0; s<qface.nspecies(); ++s) Cvtr += Ys[s] * gas.get_cvtr(s);
+
+		// Mixture density
+		rtype rho  = fluid_state::get_rho(qface, gas);
+		rtype irho = rtype(1.0) / rho;
+
+		// Compute species vibrational energy
+		spade::ctrs::array<rtype, qface.nspecies()> ev_s = fluid_state::get_evs(qface.Tv(), gas);
+
+		// Compute total energy
+		rtype KE = qface.u()*qface.u() + qface.v()*qface.v() + qface.w()*qface.w();
+		rtype Etot = rtype(0.5) * rho * KE;
+		for (int s = 0; s<qface.nspecies(); ++s) Etot += rho * Ys[s] * (gas.get_cvtr(s) * qface.T() + ev_s[s] + gas.hf_s[s]);
+
+		// Compute vibrational energy
+		rtype Ev = 0.0;
+		for (int s = 0; s<qface.nspecies(); ++s) Ev += Ys[s] * ev_s[s];
+
+		// Compute enthalpy
+		rtype Htot = (Etot + qface.p()) * irho;
+
+		// Compute beta
+		rtype beta = 0.0;
+		for (int s = 0; s<qface.nspecies(); ++s) beta += Ys[s] * gas.mw_si[s];
+		beta *= spade::consts::Rgas_uni / Cvtr;
+
+		// Phi parameter --> will need to change if we do ionization or 1-temp solvers
+		rtype phi = - rtype(1.0) * beta;
+
+		// Speed of sound
+		rtype a2 = (rtype(1.0) + beta) * qface.p() * irho;
+		rtype ia2 = rtype(1.0) / a2;
+		rtype a  = sqrt(a2);
+		
+		// Gammar && kappar
+		spade::ctrs::array<rtype, qface.nspecies()> gammar, kappar;
+		for (int s = 0; s<qface.nspecies(); ++s)
+		{
+			// Gammar
+			if (gas.mw_s[s]>1)
+			{
+				gammar[s] = gas.get_Rs(s) * qface.T()  + rtype(0.5) * beta * KE - beta * (gas.get_cvtr(s) * qface.T() + ev_s[s] + gas.hf_s[s]) - phi * ev_s[s];
+			}
+			else
+			{
+				gammar[s] = gas.get_Rs(s) * qface.Tv() + rtype(0.5) * beta * KE - (beta + phi) * ev_s[s];
+			}
+			// kappar
+			kappar[s] = (beta * KE - gammar[s]) / (beta * a2);
+		}
+		
+		// Left eigenvector matrix
+		eigenLeft = 0.0;
+		for (int r = 0; r<qface.nspecies(); ++r)
+		{
+			// Diagonal entries
+			eigenLeft(r,r) = a2;
+			// Off-diagonal entries
+			for (int s = 0; s<qface.nspecies(); ++s) eigenLeft(s,r) -= Ys[s] * gammar[r];
+
+			eigenLeft(r,qface.nspecies()  ) = beta * qface.u() * Ys[r];
+			eigenLeft(r,qface.nspecies()+1) = beta * qface.v() * Ys[r];
+			eigenLeft(r,qface.nspecies()+2) = beta * qface.w() * Ys[r];
+			eigenLeft(r,qface.nspecies()+3)-= beta * Ys[r];
+			eigenLeft(r,qface.nspecies()+4)-= phi * Ys[r];
+
+			eigenLeft(qface.nspecies()  ,r)-= Vn;
+			eigenLeft(qface.nspecies()+1,r)-= Wn;
+			eigenLeft(qface.nspecies()+2,r) = gammar[r] - Un * a;
+			eigenLeft(qface.nspecies()+3,r) = gammar[r] + Un * a;
+			eigenLeft(qface.nspecies()+4,r)-= Ev * gammar[r];
+		}
+
+		eigenLeft(qface.nspecies()  ,qface.nspecies()  ) = tvec[0];
+		eigenLeft(qface.nspecies()  ,qface.nspecies()+1) = tvec[1];
+		eigenLeft(qface.nspecies()  ,qface.nspecies()+2) = tvec[2];
+		eigenLeft(qface.nspecies()+1,qface.nspecies()  ) = mvec[0];
+		eigenLeft(qface.nspecies()+1,qface.nspecies()+1) = mvec[1];
+		eigenLeft(qface.nspecies()+1,qface.nspecies()+2) = mvec[2];
+
+		eigenLeft(qface.nspecies()+2,qface.nspecies()  ) = a * nvec[0] - beta * qface.u();
+		eigenLeft(qface.nspecies()+2,qface.nspecies()+1) = a * nvec[1] - beta * qface.v();
+		eigenLeft(qface.nspecies()+2,qface.nspecies()+2) = a * nvec[2] - beta * qface.w();
+		eigenLeft(qface.nspecies()+2,qface.nspecies()+3) = beta;
+		eigenLeft(qface.nspecies()+2,qface.nspecies()+4) = phi;
+		
+		eigenLeft(qface.nspecies()+3,qface.nspecies()  ) =-a * nvec[0] - beta * qface.u();
+		eigenLeft(qface.nspecies()+3,qface.nspecies()+1) =-a * nvec[1] - beta * qface.v();
+		eigenLeft(qface.nspecies()+3,qface.nspecies()+2) =-a * nvec[2] - beta * qface.w();
+		eigenLeft(qface.nspecies()+3,qface.nspecies()+3) = beta;
+		eigenLeft(qface.nspecies()+3,qface.nspecies()+4) = phi;
+
+		eigenLeft(qface.nspecies()+4,qface.nspecies()  ) = beta * qface.u() * Ev;
+		eigenLeft(qface.nspecies()+4,qface.nspecies()+1) = beta * qface.v() * Ev;
+		eigenLeft(qface.nspecies()+4,qface.nspecies()+2) = beta * qface.w() * Ev;
+		eigenLeft(qface.nspecies()+4,qface.nspecies()+3) = - beta * Ev;
+		eigenLeft(qface.nspecies()+4,qface.nspecies()+4) = a2 - phi * Ev;
+
+		// Right eigenvector matrix
+		eigenRight = 0.0;
+		for (int r = 0; r<qface.nspecies(); ++r)
+		{
+			eigenRight(r,r) = ia2;
+			eigenRight(r,qface.nspecies()+2) = rtype(0.5) * Ys[r] * ia2;
+			eigenRight(r,qface.nspecies()+3) = rtype(0.5) * Ys[r] * ia2;
+
+			eigenRight(qface.nspecies()  ,r) = qface.u() * ia2;
+			eigenRight(qface.nspecies()+1,r) = qface.v() * ia2;
+			eigenRight(qface.nspecies()+2,r) = qface.w() * ia2;
+			eigenRight(qface.nspecies()+3,r) = kappar[r];
+		}
+
+		for (int n = 0; n<3; ++n)
+		{
+			eigenRight(qface.nspecies()+n,qface.nspecies()  ) = tvec[n];
+			eigenRight(qface.nspecies()+n,qface.nspecies()+1) = mvec[n];
+			eigenRight(qface.nspecies()+n,qface.nspecies()+2) = rtype(0.5) * (qface.u(n) + a * nvec[n]) * ia2;
+			eigenRight(qface.nspecies()+n,qface.nspecies()+3) = rtype(0.5) * (qface.u(n) - a * nvec[n]) * ia2;
+		}
+
+		eigenRight(qface.nspecies()+3,qface.nspecies()  ) = Vn;
+		eigenRight(qface.nspecies()+3,qface.nspecies()+1) = Wn;
+		eigenRight(qface.nspecies()+3,qface.nspecies()+2) = rtype(0.5) * (Htot + a * Un) * ia2;
+		eigenRight(qface.nspecies()+3,qface.nspecies()+3) = rtype(0.5) * (Htot - a * Un) * ia2;
+		eigenRight(qface.nspecies()+3,qface.nspecies()+4) = - phi * ia2 / beta;
+
+		eigenRight(qface.nspecies()+4,qface.nspecies()+2) = rtype(0.5) * Ev * ia2;
+		eigenRight(qface.nspecies()+4,qface.nspecies()+3) = rtype(0.5) * Ev * ia2;
+		eigenRight(qface.nspecies()+4,qface.nspecies()+4) = ia2;
+		
+		return;
+	}
+
+	template<typename output_type, typename mat_t>
+	_sp_hybrid output_type transform_flux(const mat_t& eigenMat, const output_type& flux)
+	{
+		output_type output;
+		// Matrix vector product of eigenvector matrix with flux class
+		for (int n = 0; n<output.size(); ++n)
+		{
+			output[n] = 0.0;
+			for (int m = 0; m<output.size(); ++m)
+			{
+				output[n] += eigenMat(n,m) * flux[m];
+			}
+		}
+
+		return output;
+	};
+	
+	template <typename flux_func_t, class gas_t, const weno_smooth_indicator use_smooth = enable_smooth>
+    struct charweno_t
+    {
+        using float_t       = typename flux_func_t::float_t;
+        using output_type   = typename flux_func_t::flux_t;
+        using info_type     = typename flux_func_t::info_type;
+        using omni_type     = omni::stencil_t<
+                grid::face_centered,
+                omni::elem_t<omni::offset_t<-3, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t<-1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 1, 0, 0>, info_type>,
+                omni::elem_t<omni::offset_t< 3, 0, 0>, info_type>
+            >;
+
+        const flux_func_t flux_func;
+		const gas_t gas;
+        
+        charweno_t(const flux_func_t& flux_func_in, const gas_t& gas_in)
+			: flux_func{flux_func_in}, gas{gas_in} {}
+        
+        _sp_hybrid output_type operator()(const auto& input) const
+        {            
+            output_type output;
+
+			// Compute fluxes
+			auto fp0 = flux_func(input.cell(0_c));
+			auto fp1 = flux_func(input.cell(1_c));
+			auto fp2 = flux_func(input.cell(2_c));
+			auto fp3 = flux_func(input.cell(3_c));
+
+			// Eigenvector matrices
+			spade::linear_algebra::dense_mat<float_t, output.size(), output.size()> eigenLeft, eigenRight;
+
+			// Get normal vector
+			const auto& nv = omni::access<omni::info::metric>(input.cell(1_c));
+			
+			// Geft left/right state
+			const auto& qL        = omni::access<omni::info::value >(input.cell(1_c));
+			const auto& qR        = omni::access<omni::info::value >(input.cell(2_c));
+			
+			// Compute eigenvector matrices
+			compute_eigenvector_matrices(qL, qR, nv, gas, eigenLeft, eigenRight);
+
+			// Convert fluxes into characteristic space			
+			const auto& f0_u = transform_flux(eigenLeft, fp0[0]);
+			const auto& f0_d = transform_flux(eigenLeft, fp0[1]);
+			const auto& f1_u = transform_flux(eigenLeft, fp1[0]);
+			const auto& f1_d = transform_flux(eigenLeft, fp1[1]);
+			const auto& f2_u = transform_flux(eigenLeft, fp2[0]);
+			const auto& f2_d = transform_flux(eigenLeft, fp2[1]);
+			const auto& f3_u = transform_flux(eigenLeft, fp3[0]);
+			const auto& f3_d = transform_flux(eigenLeft, fp3[1]);
+			
+            for (std::size_t k = 0; k < output.size(); ++k)
+            {
+                //upwind
+                const float_t r0  = float_t(-0.5)*f0_u[k]+float_t(1.5)*f1_u[k]; //sten0
+                const float_t r1  = float_t( 0.5)*f1_u[k]+float_t(0.5)*f2_u[k]; //sten1
+                
+                //downwind
+                const float_t r2  =  float_t(0.5)*f1_d[k]+float_t(0.5)*f2_d[k]; //sten2
+                const float_t r3  =  float_t(1.5)*f2_d[k]-float_t(0.5)*f3_d[k]; //sten3                
+                
+                if constexpr (use_smooth == disable_smooth)
+                {
+                    //use this for MMS!!
+                    output[k] = float_t(1.0/3.0)*r0 + float_t(2.0/3.0)*r1 + float_t(2.0/3.0)*r2 + float_t(1.0/3.0)*r3;
+                }
+                else
+                {
+                    const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
+                    const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
+                    
+                    const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
+                    const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
+                    
+                    const float_t eps = float_t(1e-16);
+                    const float_t a0  = float_t(1.0/3.0)/((be0+eps)*(be0+eps));
+                    const float_t a1  = float_t(2.0/3.0)/((be1+eps)*(be1+eps));
+                    const float_t a2  = float_t(2.0/3.0)/((be2+eps)*(be2+eps));
+                    const float_t a3  = float_t(1.0/3.0)/((be3+eps)*(be3+eps));
+                    
+                    // We can do some floptimizations here
+                    const float_t w0 = a0/(a0+a1);
+                    // const float_t w1 = a1/(a0+a1);
+                    const float_t w1 = float_t(1.0) - w0;
+                    const float_t w2 = a2/(a2+a3);
+                    // const float_t w3 = a3/(a2+a3);
+                    const float_t w3 = float_t(1.0) - w2;
+                    output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
+                }
+            }
+
+			// Map to component space
+			output = transform_flux(eigenRight, output);
+			
             return output;
         }
     };
