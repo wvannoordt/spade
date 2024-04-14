@@ -17,6 +17,8 @@ namespace spade::pde_algs
     
     static struct tbasic_t : public fdiv_alg_base_t {} basic;
     static struct tbfoct_t : public fdiv_alg_base_t {} bfoct;
-    static tldbal_t<false>    ldbalnp;
-    static tldbal_t<true>     ldbal;
+    static tldbal_t<false>                             ldbalnp;
+    static tldbal_t<true>                              ldbal;
+    static struct tfldbc_t : public fdiv_alg_base_t {} fldbc;
+    
 }

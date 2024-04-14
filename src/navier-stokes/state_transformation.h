@@ -24,6 +24,7 @@ namespace spade::fluid_state
                 // This is the worst thing in the whole universe,
                 // if you're an employer and you are seeing this then please realize that
                 // I was young and hopelessly naive when I wrote this
+                static_assert(from_t::size() == to_t::size(), "forward and inverse transforms must map to equal-size vectors");
                 auto state = omni::access<omni::info::value>(input.template seek_element<centr>(0_c));
                 from_t& q = algs::unsafe_cast<from_t>(state);
                 to_t w;

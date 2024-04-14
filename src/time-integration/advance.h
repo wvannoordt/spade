@@ -63,7 +63,6 @@ namespace spade::time_integration
             const ctrs::array<rhs_t, nstage>& resids)
         {
             using numeric_type = dt_t;
-            // timing::scoped_tmr_t tmr("trfm_adv");
             using rhs_img_type = typename rhs_t::const_image_type;
             ctrs::array<rhs_img_type, nstage> rhs_images;
             for (int j = 0; j < nstage; ++j) rhs_images[j] = resids[j].image();
