@@ -41,11 +41,13 @@ namespace spade::fluid_state
         _sp_hybrid rtype& rho  () {return (*this)[0];}
         _sp_hybrid rtype& rho_H() {return (*this)[1];}
         _sp_hybrid rtype& rho_u() {return (*this)[2];}
+        _sp_hybrid rtype& rho_u(const int i) {return (*this)[2+i];}
         _sp_hybrid rtype& rho_v() {return (*this)[3];}
         _sp_hybrid rtype& rho_w() {return (*this)[4];}
         _sp_hybrid const rtype& rho  () const {return (*this)[0];}
         _sp_hybrid const rtype& rho_H() const {return (*this)[1];}
         _sp_hybrid const rtype& rho_u() const {return (*this)[2];}
+        _sp_hybrid const rtype& rho_u(const int i) const {return (*this)[2+i];}
         _sp_hybrid const rtype& rho_v() const {return (*this)[3];}
         _sp_hybrid const rtype& rho_w() const {return (*this)[4];}
         
@@ -85,21 +87,21 @@ namespace spade::fluid_state
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
         _sp_hybrid prim_chem_t(){}
         _sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
-		_sp_hybrid rtype& p() {return (*this)[num_species-1];}
-        _sp_hybrid rtype& T() {return (*this)[num_species];}
+		_sp_hybrid rtype& p()  {return (*this)[num_species-1];}
+        _sp_hybrid rtype& T()  {return (*this)[num_species];}
         _sp_hybrid rtype& Tv() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& u() {return (*this)[num_species+2];}
-        _sp_hybrid rtype& u(const int i) {return (*this)[num_species+2+i];}
-        _sp_hybrid rtype& v() {return (*this)[num_species+3];}
-        _sp_hybrid rtype& w() {return (*this)[num_species+4];}
+        _sp_hybrid rtype& u()  {return (*this)[num_species+2];}
+        _sp_hybrid rtype& u(const int i)  {return (*this)[num_species+2+i];}
+        _sp_hybrid rtype& v()  {return (*this)[num_species+3];}
+        _sp_hybrid rtype& w()  {return (*this)[num_species+4];}
         _sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
-		_sp_hybrid const rtype& p() const {return (*this)[num_species-1];}
-        _sp_hybrid const rtype& T() const {return (*this)[num_species];}
+		_sp_hybrid const rtype& p() const  {return (*this)[num_species-1];}
+        _sp_hybrid const rtype& T() const  {return (*this)[num_species];}
         _sp_hybrid const rtype& Tv() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& u() const {return (*this)[num_species+2];}
+        _sp_hybrid const rtype& u() const  {return (*this)[num_species+2];}
         _sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+2+i];}
-        _sp_hybrid const rtype& v() const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& w() const {return (*this)[num_species+4];}
+        _sp_hybrid const rtype& v() const  {return (*this)[num_species+3];}
+        _sp_hybrid const rtype& w() const  {return (*this)[num_species+4];}
         static std::string name(uint idx)
         {
 			ctrs::array<std::string, 5+num_species> names;
@@ -179,7 +181,6 @@ namespace spade::fluid_state
             return names[idx];
         }
     };
-  
     
     template <class T> concept state_dependent_gas = std::floating_point<typename T::value_type> && requires(T t, prim_t<typename T::value_type> s)
     {
@@ -191,7 +192,27 @@ namespace spade::fluid_state
         t.get_R();
         t.get_gamma();
     };
-    
+
+    // Added to allow for generalization of different flux schemes and viscous models <JRB | Implemented 4-14-24>
+	template <class T> concept is_prim_state_type = is_state_type<T> and requires(T t, size_t idx)
+	{
+        // ensures that we have access to following primitive variables
+        t.p();
+        t.T();
+        t.u();
+        t.v();
+        t.w();
+	};
+	template <class T> concept is_cons_state_type = is_state_type<T> and requires(T t, size_t idx)
+	{
+        // ensures that we have access to following conservative variables
+        t.rho();
+        t.rho_H();
+        t.rho_u();
+        t.rho_v();
+        t.rho_w();
+	};
+
     template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
     {
        os << "{";
