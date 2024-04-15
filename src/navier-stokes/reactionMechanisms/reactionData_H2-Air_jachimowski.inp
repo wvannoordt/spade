@@ -1,0 +1,40 @@
+exch   H2   O2   --   OH   OH   --   1.70E13         0.00   2.4154E4      0
+exch   H    O2   --   OH   O    --   2.60E14         0.00   8.4541E3      0
+exch   O    H2   --   OH   H    --   1.80E10         1.00   4.4787E3      0
+exch   OH   H2   --   H2O  H    --   2.20E13         0.00   2.5916E3      0
+exch   OH   OH   --   H2O  O    --   6.30E12         0.00   5.4851E2      0
+diss   H    OH   M    H2O  M    --   2.20E22        -2.00   0.0000E0      1
+H2O    6.0
+diss   H    H    M    H2   M    --   6.40E17        -1.00   0.0000E0      2
+H2     2.0
+H2O    6.0
+diss   H    O    M    OH   M    --   6.00E16        -0.60   0.0000E0      1
+H2O    5.0
+diss   H    O2   M    HO2  M    --   2.10E15         0.00  -5.0322E2      2
+H2     2.0
+H2O    16.0
+exch   HO2  H    --   H2   O2   --   1.30E13         0.00   0.0000E0      0
+exch   HO2  H    --   OH   OH   --   1.40E14         0.00   5.4348E2      0
+exch   HO2  H    --   H2O  O    --   1.00E13         0.00   5.4348E2      0
+exch   HO2  O    --   O2   OH   --   1.50E13         0.00   4.7806E2      0
+exch   HO2  OH   --   H2O  O2   --   8.00E12         0.00   0.0000E0      0
+exch   HO2  HO2  --   H2O2 O2   --   2.00E12         0.00   0.0000E0      0
+exch   H    H2O2 --   H2   HO2  --   1.40E12         0.00   1.8116E3      0
+exch   O    H2O2 --   OH   HO2  --   1.40E13         0.00   3.2206E3      0
+exch   OH   H2O2 --   H2O  HO2  --   6.10E12         0.00   7.1960E2      0
+diss   H2O2 M    --   OH   OH   M    1.20E17         0.00   2.2896E4      1
+H2O    15.0
+diss   O    O    M    O2   M    --   6.00E17         0.00  -9.0580E2      0
+diss   N    N    M    N2   M    --   2.80E17        -0.75   0.0000E0      0
+exch   N    O2   --   NO   O    --   6.40E9          1.00   3.1703E3      0
+exch   N    NO   --   N2   O    --   1.60E13         0.00   0.0000E0      0
+exch   N    OH   --   NO   H    --   6.30E11         0.50   0.0000E0      0
+diss   H    NO   M    HNO  M    --   5.40E15         0.00  -3.0193E2      0
+exch   H    HNO  --   NO   H2   --   4.80E12         0.00   0.0000E0      0
+exch   O    HNO  --   NO   OH   --   5.00E11         0.50   0.0000E0      0
+exch   OH   HNO  --   NO   H2O  --   3.60E13         0.00   0.0000E0      0
+exch   HO2  HNO  --   NO   H2O2 --   2.00E12         0.00   0.0000E0      0
+exch   HO2  NO   --   NO2  OH   --   3.40E12         0.00  -1.3084E2      0
+exch   H    NO2  --   NO   OH   --   3.50E14         0.00   7.5483E2      0
+exch   O    NO2  --   NO   O2   --   1.00E13         0.00   3.0193E2      0
+diss   M    NO2  --   NO   O    M    1.16E16         0.00   3.3212E4      0

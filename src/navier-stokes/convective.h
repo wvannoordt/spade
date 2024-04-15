@@ -12,23 +12,23 @@
 
 namespace spade::convective
 {
-    template <typename gas_t> struct first_order_t
+    template <typename flux_func_t> struct first_order_t
     {
-        using float_t        = typename gas_t::value_type;
-        using output_type    = fluid_state::flux_t<float_t>;
-        using flux_func_type = rusanov_t<gas_t>;
+        using float_t        = typename flux_func_t::float_t;
+        using output_type    = typename flux_func_t::flux_t;
+        using flux_func_type = flux_func_t;
         using info_type      = typename flux_func_type::info_type;
         using omni_type      = omni::prefab::lr_t<info_type>;
         
-        flux_func_type flx_fnc;
+        const flux_func_t flux_func;
         
-        first_order_t(const gas_t& gas_in) : flx_fnc{gas_in} {}
+        first_order_t(const flux_func_t& flux_func_in) : flux_func{flux_func_in} {}
         
         
-        _sp_hybrid output_type operator() (const auto& input_data) const
+        _sp_hybrid output_type operator() (const auto& input_data, const auto& icell, const auto& idir) const
         {
-            auto flxL = flx_fnc(input_data.cell(0_c));
-            auto flxR = flx_fnc(input_data.cell(1_c));
+            auto flxL = flux_func(input_data.cell(0_c));
+            auto flxR = flux_func(input_data.cell(1_c));
             return flxL[0] + flxR[1];
         }
     };
@@ -557,11 +557,11 @@ namespace spade::convective
         }
     };
 
-	template<typename vec_t, typename rtype, typename mat_t, const std::size_t ns>
-	_sp_hybrid static void compute_eigenvector_matrices(const fluid_state::prim_chem_t<rtype, ns>& qL, const fluid_state::prim_chem_t<rtype, ns>& qR, const vec_t& nv, const fluid_state::multicomponent_gas_t<rtype, ns>& gas, mat_t& eigenLeft, mat_t& eigenRight)
+	template<typename vec_t, typename rtype, typename mat_t, const std::size_t ns, const std::size_t nvib>
+	_sp_hybrid static void compute_eigenvector_matrices(const fluid_state::prim_chem_t<rtype, ns>& qL, const fluid_state::prim_chem_t<rtype, ns>& qR, const vec_t& nv, const fluid_state::multicomponent_gas_t<rtype, ns, nvib>& gas, mat_t& eigenLeft, mat_t& eigenRight)
 	{
 		// Face normal vector
-		int idir = 0*nv[0] + 1*nv[2] + 2*nv[2];
+		int idir = 0*nv[0] + 1*nv[1] + 2*nv[2];
 		spade::ctrs::array<rtype, 3> nvec = 0.0;
 		nvec[idir] = 1.0;
 		
@@ -586,7 +586,7 @@ namespace spade::convective
 
 		// Face state
 		fluid_state::prim_chem_t<rtype, qL.nspecies()> qface;
-		for (int n = 0; n<qL.size(); ++n) qface[n] = irhoLR * (srhoL * qL[n] + srhoR * qR[n]);
+		for (int n = 0; n<qL.size(); ++n) qface[n] = irhoLR * (srhoL * qL[n] + srhoR * qR[n]);		
 		
 		// Face normal velocities
 		rtype Un = 0.0, Vn = 0.0, Wn = 0.0;
@@ -595,7 +595,7 @@ namespace spade::convective
 			Un += qface.u(n) * nvec[n];
 			Vn += qface.u(n) * tvec[n];
 			Wn += qface.u(n) * mvec[n];
-		}
+		}		
 
 		// Get mass fractions
 		spade::ctrs::array<rtype, qface.nspecies()> Ys = fluid_state::get_Ys(qface);
@@ -795,7 +795,7 @@ namespace spade::convective
 			// Compute eigenvector matrices
 			compute_eigenvector_matrices(qL, qR, nv, gas, eigenLeft, eigenRight);
 
-			// Convert fluxes into characteristic space			
+			// Convert fluxes into characteristic space
 			const auto& f0_u = transform_flux(eigenLeft, fp0[0]);
 			const auto& f0_d = transform_flux(eigenLeft, fp0[1]);
 			const auto& f1_u = transform_flux(eigenLeft, fp1[0]);
