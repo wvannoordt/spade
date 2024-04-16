@@ -215,13 +215,13 @@ namespace spade::viscous_laws
     };
 
     // Gupta Viscous Model (Multicomponent Gas) <JRB | Implemented: 4-14-24 | Validated: TODO>
-    template <typename dtype, const std::size_t ns  /*, const multicomponent_gas_t<dtype, const std::size_t ns>*/> struct gupta_visc_t
-    : public visc_law_interface_t<gupta_visc_t<dtype>, omni::info_list_t<omni::info::value>>
+    template <typename dtype, const std::size_t ns, const std::size_t max_vib> struct gupta_visc_t
+    : public visc_law_interface_t<gupta_visc_t<dtype, ns, max_vib>, omni::info_list_t<omni::info::value>>
     {
         typedef dtype value_type;
-        typedef multicomponent_gas_t<dtype, const std::size_t ns>> gas_type;
+        typedef fluid_state::multicomponent_gas_t<dtype, ns, max_vib> gas_type;
 
-        using base_t = visc_law_interface_t<gupta_visc_t<dtype>, omni::info_list_t<omni::info::value>>;
+        using base_t = visc_law_interface_t<gupta_visc_t<dtype, ns, max_vib>, omni::info_list_t<omni::info::value>>;
         using base_t::get_visc;
         using base_t::get_beta;
         using base_t::get_diffuse;
@@ -243,18 +243,19 @@ namespace spade::viscous_laws
         // the fit parameter arrays, with n(n+1)/2 elements, corresponding to each unique combination of species
         spade::ctrs::array<dtype, std::size_t((ns*(ns+1))/2)> A0, A1, A2, A3;
 
-        const multicomponent_gas_t<dtype, ns>& gas;
+        const fluid_state::multicomponent_gas_t<dtype, ns, max_vib>& gas;
 
         // store the species molecular weight and charge
         gupta_visc_t(const gas_type& gas_in) : gas{gas_in} { }
         
-        _sp_hybrid dtype get_visc(const fluid_state::prim_chem_t& q) const
+        _sp_hybrid dtype get_visc(const fluid_state::prim_chem_t<dtype, ns>& q) const
         {
             // the output variable
             dtype mu_out = 0;
 
-            // get the molar concentrations
+            // get the molar concentrations and density
             const spade::ctrs::array<dtype, ns> Xr = fluid_state::get_Xr(q, gas);
+            const spade::ctrs::array<dtype, ns> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
             dtype n_e = 0;
@@ -262,7 +263,7 @@ namespace spade::viscous_laws
             {
                 if (gas.mw_s[s1] < 1)
                 {
-                    n_e = std::pow(10, 6)*Na_kmol*rho_s/gas.mw_s[s1];
+                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
                     break;
                 }
             }
@@ -270,7 +271,7 @@ namespace spade::viscous_laws
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 // species molecular mass in (kg)
-                const dtype mass_s  = gas.mw_s[s1]/Na_kmol;         
+                const dtype mass_s  = gas.mw_s[s1]/consts::Na_kmol;         
 
                 // the denominator term
                 dtype denominator = 0;
@@ -288,22 +289,22 @@ namespace spade::viscous_laws
                         {
                             // neutral-electron (vibrational/electronic controlling temperature)
                             omega2 = A3[map_indices(s1, s2)]*std::pow(q.Tv(), A0[map_indices(s1, s2)]*std::log(q.Tv())*std::log(q.Tv()) + A1[map_indices(s1, s2)]*std::log(q.Tv()) + A2[map_indices(s1, s2)]);
-                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(pi*Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
+                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
                         }
                         else
                         {
                             // ion-electron or electron-electron (vibrational/electronic controlling temperature)
-                            const dtype lambda_D = sqrt(kCGS*q.Tv()/(4*pi*n_e*eCGS*eCGS));
-                            const dtype T_star = lambda_D/(eCGS*eCGS/(kCGS*q.Tv()));
+                            const dtype lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                            const dtype T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
 
                             dtype c2, C2, D2;
-                            if (std::sign(gas.charge_s[s1]) != std::sign(gas.charge_s[s2])) 
+                            if (spade::utils::sign(gas.charge_s[s1]) != spade::utils::sign(gas.charge_s[s2])) 
                             { c2 = c2_att; C2 = C2_att; D2 = D2_att; }
                             else 
                             { c2 = c2_rep; C2 = C2_rep; D2 = D2_rep; }
 
-                            omega2 = dtype(5)*std::pow(10, 15)*pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
-                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(pi*Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
+                            omega2 = dtype(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
+                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
                         }
                     }
                     else 
@@ -313,37 +314,37 @@ namespace spade::viscous_laws
                         {
                             // neutral
                             omega2 = A3[map_indices(s1, s2)]*std::pow(q.T(), A0[map_indices(s1, s2)]*std::log(q.T())*std::log(q.T()) + A1[map_indices(s1, s2)]*std::log(q.T()) + A2[map_indices(s1, s2)]);
-                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(pi*Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
+                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
                         }
                         else if (gas.mw_s[s2] < 1)
                         {
                             // ion-electron (vibrational/electronic controlling temperature)
-                            const dtype lambda_D = sqrt(kCGS*q.Tv()/(4*pi*n_e*eCGS*eCGS));
-                            const dtype T_star = lambda_D/(eCGS*eCGS/(kCGS*q.Tv()));
+                            const dtype lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                            const dtype T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
 
                             dtype c2, C2, D2;
-                            if (std::sign(gas.charge_s[s1]) != std::sign(gas.charge_s[s2])) 
+                            if (spade::utils::sign(gas.charge_s[s1]) != spade::utils::sign(gas.charge_s[s2])) 
                             { c2 = c2_att; C2 = C2_att; D2 = D2_att; }
                             else 
                             { c2 = c2_rep; C2 = C2_rep; D2 = D2_rep; }
 
-                            omega2 = dtype(5)*std::pow(10, 15)*pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
-                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(pi*Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
+                            omega2 = dtype(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
+                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
                         }
                         else
                         {
                             // ion-ion (translational controlling temperature)
-                            const dtype lambda_D = sqrt(kCGS*q.T()/(4*pi*n_e*eCGS*eCGS));
-                            const dtype T_star = lambda_D/(eCGS*eCGS/(kCGS*q.T()));
+                            const dtype lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                            const dtype T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
 
                             dtype c2, C2, D2;
-                            if (std::sign(gas.charge_s[s1]) != std::sign(gas.charge_s[s2])) 
+                            if (spade::utils::sign(gas.charge_s[s1]) != spade::utils::sign(gas.charge_s[s2])) 
                             { c2 = c2_att; C2 = C2_att; D2 = D2_att; }
                             else 
                             { c2 = c2_rep; C2 = C2_rep; D2 = D2_rep; }
                             
-                            omega2 = dtype(5)*std::pow(10, 15)*pi*(lambda_D*lambda_D/(q.T()*q.T()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
-                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(pi*Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
+                            omega2 = dtype(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(q.T()*q.T()))*std::log(D2*T_star*(dtype(1)-C2*std::exp(-1*c2*T_star))+dtype(1));
+                            delta2 = dtype(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega2;
                         }
                     }
 
@@ -358,23 +359,35 @@ namespace spade::viscous_laws
             return mu_out;
         }
         
-        _sp_hybrid dtype get_beta(const fluid_state::prim_chem_t& q) const
+        _sp_hybrid dtype get_beta(const fluid_state::prim_chem_t<dtype, ns>& q) const
         {
             return -0.66666666667*this->get_visc(q);
         }
         
-        _sp_hybrid spade::ctrs::array<dtype, ns> get_diffuse(const fluid_state::prim_chem_t& q) const
+        _sp_hybrid spade::ctrs::array<dtype, ns> get_diffuse(const fluid_state::prim_chem_t<dtype, ns>& q) const
         {
             spade::ctrs::array<dtype, ns> diffuse_out;
 
-            // get the molar concentrations
+            // get the molar concentrations and density
             const spade::ctrs::array<dtype, ns> Xr = fluid_state::get_Xr(q, gas);
+            const spade::ctrs::array<dtype, ns> rhos = fluid_state::get_rhos(q, gas);
 
             // compute the sum of molar concentrations
             dtype Xr_sum = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 Xr_sum += Xr[s1];
+            }
+
+            // get the electron number density in (#/cm^3)
+            dtype n_e = 0;
+            for (int s1 = 0; s1 < num_species(); s1++)
+            {
+                if (gas.mw_s[s1] < 1)
+                {
+                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
+                    break;
+                }
             }
 
             for (int s1 = 0; s1 < num_species(); s1++)
@@ -403,19 +416,19 @@ namespace spade::viscous_laws
                             else
                             {
                                 // electron+ion (use colomb params)
-                                const dtype lambda_D = sqrt(kCGS*q.Tv()/(4*pi*n_e*eCGS*eCGS));
-                                const dtype T_star = lambda_D/(eCGS*eCGS/(kCGS*q.Tv()));
+                                const dtype lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                                const dtype T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
                                 
                                 dtype c1, C1, D1;
-                                if (std::sign(gas.charge_s[s1]) != std::sign(gas.charge_s[s2])) 
+                                if (spade::utils::sign(gas.charge_s[s1]) != spade::utils::sign(gas.charge_s[s2])) 
                                 { c1 = c1_att; C1 = C1_att; D1 = D1_att; }
                                 else 
                                 { c1 = c1_rep; C1 = C1_rep; D1 = D1_rep; }
                             
-                                omega1 = dtype(5)*std::pow(10, 15)*pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D1*T_star*(dtype(1)-C1*std::exp(-1*c1*T_star))+dtype(1));
+                                omega1 = dtype(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(q.Tv()*q.Tv()))*std::log(D1*T_star*(dtype(1)-C1*std::exp(-1*c1*T_star))+dtype(1));
                             }
-                            delta1 = dtype(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/ (pi*Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10, -20)*omega1;
-                            binary_diff = kSI*q.Tv()/(q.p()*delta1);
+                            delta1 = dtype(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/ (consts::pi*consts::Rgas_uni*q.Tv()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10, -20)*omega1;
+                            binary_diff = consts::kSI*q.Tv()/(q.p()*delta1);
                         }
                         // otherwise (use trans/rot temperature)
                         else 
@@ -428,19 +441,19 @@ namespace spade::viscous_laws
                             else
                             {
                                 // ion+ion (use colomb params)
-                                const dtype lambda_D = sqrt(kCGS*q.T()/(4*pi*n_e*eCGS*eCGS));
-                                const dtype T_star = lambda_D/(eCGS*eCGS/(kCGS*q.T()));
+                                const dtype lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                                const dtype T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
 
                                 dtype c1, C1, D1;
-                                if (std::sign(gas.charge_s[s1]) != std::sign(gas.charge_s[s2])) 
+                                if (spade::utils::sign(gas.charge_s[s1]) != spade::utils::sign(gas.charge_s[s2])) 
                                 { c1 = c1_att; C1 = C1_att; D1 = D1_att; }
                                 else 
                                 { c1 = c1_rep; C1 = C1_rep; D1 = D1_rep; }
                             
-                                omega1 = dtype(5)*std::pow(10, 15)*pi*(lambda_D*lambda_D/(q.T()*q.T()))*std::log(D1*T_star*(dtype(1)-C1*std::exp(-1*c1*T_star))+dtype(1));
+                                omega1 = dtype(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(q.T()*q.T()))*std::log(D1*T_star*(dtype(1)-C1*std::exp(-1*c1*T_star))+dtype(1));
                             }
-                            delta1 = dtype(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/ (pi*Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10, -20)*omega1;
-                            binary_diff = kSI*q.T()/(q.p()*delta1);
+                            delta1 = dtype(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/ (consts::pi*consts::Rgas_uni*q.T()*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10, -20)*omega1;
+                            binary_diff = consts::kSI*q.T()/(q.p()*delta1);
                         }
 
                         // add the term to the denominator
@@ -457,12 +470,12 @@ namespace spade::viscous_laws
     };
 
     // Initialization Function for the Collision Integral Fit Parameters <JRB | Implemented: 4-14-24 | Validated: TODO>
-	template<typename dtype, const std::size_t ns>
-	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, fluid_state::multicomponent_gas_t<dtype, ns>& gas, gupta_visc_t<dtype, ns>& gupta_visc)
+	template<typename dtype, const std::size_t ns, const std::size_t max_vib>
+	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, fluid_state::multicomponent_gas_t<dtype, ns, max_vib>& gas, gupta_visc_t<dtype, ns>& gupta_visc)
 	{
 		// Open the input file
         std::ifstream infile;
-		std::string full_fname = std::getenv("SPADE") + "/src/navier-stokes/speciesCollision/" + fname;
+		std::string full_fname = std::getenv("SPADE") + std::string("/src/navier-stokes/speciesCollision/") + fname;
         infile.open(full_fname);
 		
 		if (infile)
@@ -470,7 +483,7 @@ namespace spade::viscous_laws
 			// variables to temporarily store data
 			std::string species1, species2;
             dtype A0, A1, A2, A3;
-            spade::ctrs::array<std::size_t, ns*ns> unique_indices = unique_indices_check;
+            spade::ctrs::array<std::size_t, ns*ns> unique_indices, unique_indices_check;
 
 			// sweep entire file
 			while (true)

@@ -242,12 +242,12 @@ namespace spade::convective
             }
 
             // if the flow has multiple species, compute the species fluxes also
-            if constexpr(std::is_same<state_t, fluid_state::prim_chem_t>::value) 
+            /*if constexpr(std::is_same<state_t, fluid_state::prim_chem_t<dtype, ns>>::value) 
             {
-                flx.
+                // not sure how to approach this best.
 
 
-            }
+            }*/
 
             return out;
         }
