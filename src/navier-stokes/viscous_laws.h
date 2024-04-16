@@ -214,12 +214,6 @@ namespace spade::viscous_laws
         }
     };
 
-
-
-    // TODO
-    //
-    //
-
     // Gupta Viscous Model (Multicomponent Gas) <JRB | Implemented: 4-14-24 | Validated: TODO>
     template <typename dtype, const std::size_t ns  /*, const multicomponent_gas_t<dtype, const std::size_t ns>*/> struct gupta_visc_t
     : public visc_law_interface_t<gupta_visc_t<dtype>, omni::info_list_t<omni::info::value>>
@@ -237,7 +231,7 @@ namespace spade::viscous_laws
         _sp_hybrid constexpr static std::size_t num_collisions(){return std::size_t((ns*(ns+1))/2);}
         _sp_hybrid constexpr static std::size_t map_indices(const std::size_t s1, const std::size_t s2)
         {
-            return std::size_t(ns*s1 + s2 – (s1*(s1+1))/2);
+            return std::size_t(ns*s1 + s2 - (s1*(s1+1))/2);
         }
 
         // the coulomb collision fit parameters (can't think of a cleaner way to store these)
@@ -464,7 +458,7 @@ namespace spade::viscous_laws
 
     // Initialization Function for the Collision Integral Fit Parameters <JRB | Implemented: 4-14-24 | Validated: TODO>
 	template<typename dtype, const std::size_t ns>
-	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, multicomponent_gas_t<dtype, ns>& gas, gupta_visc_t<dtype, ns>& gupta_visc)
+	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, fluid_state::multicomponent_gas_t<dtype, ns>& gas, gupta_visc_t<dtype, ns>& gupta_visc)
 	{
 		// Open the input file
         std::ifstream infile;

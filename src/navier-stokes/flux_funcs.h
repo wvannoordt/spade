@@ -21,6 +21,7 @@ namespace spade::convective
             ctrs::array<flux_t, 2> out;
             auto& f_u = out[0];
             auto& f_d = out[1];
+
             const auto& q              = omni::access<omni::info::value >(info);
             const auto& nv             = omni::access<omni::info::metric>(info);
             const float_t u_n          = nv[0]*q.u() + nv[1]*q.v() + nv[2]*q.w();
@@ -172,27 +173,31 @@ namespace spade::convective
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
         using info_type     = omni::info_union<own_info_type, g_info_type>;
         using float_t       = typename gas_t::value_type;
-        using flux_t        = fluid_state::flux_t<float_t>;
+        //using flux_t        = fluid_state::flux_t<float_t>;
+
+        // constructor
         hllc_fds_t(const gas_t& gas_in) : gas{gas_in} {}
-        _sp_hybrid flux_t operator() (const auto& infoF, const auto& qL, const auto& qR) const
+
+        // overloading parentheses operator
+        template <fluid_state::is_prim_state_type state_t, fluid_state::is_flux_type flux_t> _sp_hybrid flux_t operator() (const auto& infoF, const state_t& qL, const state_t& qR) const
         {
             flux_t out{};
             auto& flx = out;
-            const auto& nv             = omni::access<omni::info::metric>(infoF);
-            const float_t uL_n         = nv[0]*qL.u() + nv[1]*qL.v() + nv[2]*qL.w();
-            const float_t uR_n         = nv[0]*qR.u() + nv[1]*qR.v() + nv[2]*qR.w();
-            const float_t rhoL         = qL.p()/(gas.get_R(infoF)*qL.T());
-            const float_t engyL        = float_t(0.5)*(qL.u()*qL.u()+qL.v()*qL.v()+qL.w()*qL.w()) + qL.p()/(rhoL*(gas.get_gamma(infoF)-float_t(1.0)));
-            const float_t rhoR         = qR.p()/(gas.get_R(infoF)*qR.T());
-            const float_t engyR        = float_t(0.5)*(qR.u()*qR.u()+qR.v()*qR.v()+qR.w()*qR.w()) + qR.p()/(rhoR*(gas.get_gamma(infoF)-float_t(1.0)));
+            const auto& nv          = omni::access<omni::info::metric>(infoF);
+            const float_t uL_n      = nv[0]*qL.u() + nv[1]*qL.v() + nv[2]*qL.w();
+            const float_t uR_n      = nv[0]*qR.u() + nv[1]*qR.v() + nv[2]*qR.w();
+            const float_t rhoL      = qL.p()/(gas.get_R(infoF)*qL.T());
+            const float_t engyL     = float_t(0.5)*(qL.u()*qL.u()+qL.v()*qL.v()+qL.w()*qL.w()) + qL.p()/(rhoL*(gas.get_gamma(infoF)-float_t(1.0)));
+            const float_t rhoR      = qR.p()/(gas.get_R(infoF)*qR.T());
+            const float_t engyR     = float_t(0.5)*(qR.u()*qR.u()+qR.v()*qR.v()+qR.w()*qR.w()) + qR.p()/(rhoR*(gas.get_gamma(infoF)-float_t(1.0)));
 
-            const float_t aL            = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qL.T());
-            const float_t aR            = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qR.T());
-            const float_t z             = (gas.get_gamma(infoF)-1)/(2*gas.get_gamma(infoF));
-            const float_t p_star        = std::pow((aL+aR-(gas.get_gamma(infoF)-1)/2*(uR_n-uL_n))/(aL/std::pow(qL.p(), z)+aR/std::pow(qR.p(), z)), 1/z);
-            const float_t sL            = uL_n - (p_star <= qL.p())? aL : aL*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qL.p()-1));
-            const float_t sR            = uR_n + (p_star <= qR.p())? aR : aR*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qR.p()-1));
-            const float_t s_star        = (qR.p()-qL.p()+rhoL*uL_n*(sL-uL_n)-rhoR*uR_n*(sR-uR_n))/(rhoL*(sL-uL_n)-rhoR*(sR-uR_n));
+            const float_t aL        = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qL.T());
+            const float_t aR        = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qR.T());
+            const float_t z         = (gas.get_gamma(infoF)-1)/(2*gas.get_gamma(infoF));
+            const float_t p_star    = std::pow((aL+aR-(gas.get_gamma(infoF)-1)/2*(uR_n-uL_n))/(aL/std::pow(qL.p(), z)+aR/std::pow(qR.p(), z)), 1/z);
+            const float_t sL        = uL_n - (p_star <= qL.p())? aL : aL*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qL.p()-1));
+            const float_t sR        = uR_n + (p_star <= qR.p())? aR : aR*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qR.p()-1));
+            const float_t s_star    = (qR.p()-qL.p()+rhoL*uL_n*(sL-uL_n)-rhoR*uR_n*(sR-uR_n))/(rhoL*(sL-uL_n)-rhoR*(sR-uR_n));
 
             if (sL >= 0 || (sL < 0 && s_star >= 0)) 
             {
@@ -229,6 +234,14 @@ namespace spade::convective
                     flx.z_momentum() += sR*(rho_star*(s_star*nv[2] + qR.w()*(float_t(1)-nv[2])) - rhoR*qR.w());
                     flx.energy()     += sR*(rho_star*(engyR/rhoR+(s_star-uR_n)*(s_star+qR.p()/(rhoR*(sR-uR_n)))) - engyR);
                 }
+            }
+
+            // if the flow has multiple species, compute the species fluxes also
+            if constexpr(std::is_same<state_t, fluid_state::prim_chem_t>::value) 
+            {
+                flx.
+
+
             }
 
             return out;

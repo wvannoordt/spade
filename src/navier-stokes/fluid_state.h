@@ -9,189 +9,196 @@
 
 namespace spade::fluid_state
 {   
-    template <typename rtype> struct prim_t : public ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>;        
-        using base_t::base_t;
-        _sp_hybrid prim_t(){}
-        _sp_hybrid rtype& p() {return (*this)[0];}
-        _sp_hybrid rtype& T() {return (*this)[1];}
-        _sp_hybrid rtype& u() {return (*this)[2];}
-        _sp_hybrid rtype& u(const int i) {return (*this)[2+i];}
-        _sp_hybrid rtype& v() {return (*this)[3];}
-        _sp_hybrid rtype& w() {return (*this)[4];}
-        _sp_hybrid const rtype& p() const {return (*this)[0];}
-        _sp_hybrid const rtype& T() const {return (*this)[1];}
-        _sp_hybrid const rtype& u() const {return (*this)[2];}
-        _sp_hybrid const rtype& u(const int i) const {return (*this)[2+i];}
-        _sp_hybrid const rtype& v() const {return (*this)[3];}
-        _sp_hybrid const rtype& w() const {return (*this)[4];}
-        static std::string name(uint idx)
-        {
-            ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
-            return names[idx];
-        }
-    };
+	template <typename rtype> struct prim_t : public ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5, prim_t<rtype>>;        
+		using base_t::base_t;
+		_sp_hybrid prim_t(){}
+		_sp_hybrid rtype& p() {return (*this)[0];}
+		_sp_hybrid rtype& T() {return (*this)[1];}
+		_sp_hybrid rtype& u() {return (*this)[2];}
+		_sp_hybrid rtype& u(const int i) {return (*this)[2+i];}
+		_sp_hybrid rtype& v() {return (*this)[3];}
+		_sp_hybrid rtype& w() {return (*this)[4];}
+		_sp_hybrid const rtype& p() const {return (*this)[0];}
+		_sp_hybrid const rtype& T() const {return (*this)[1];}
+		_sp_hybrid const rtype& u() const {return (*this)[2];}
+		_sp_hybrid const rtype& u(const int i) const {return (*this)[2+i];}
+		_sp_hybrid const rtype& v() const {return (*this)[3];}
+		_sp_hybrid const rtype& w() const {return (*this)[4];}
+		
+		static std::string name(uint idx)
+		{
+			ctrs::array<std::string, 5> names("P", "T", "U", "V", "W");
+			return names[idx];
+		}
+	};
 
-    template <typename rtype> struct cons_t : public ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>;
-        using base_t::base_t;
-        _sp_hybrid cons_t(){}
-        _sp_hybrid rtype& rho  () {return (*this)[0];}
-        _sp_hybrid rtype& rho_H() {return (*this)[1];}
-        _sp_hybrid rtype& rho_u() {return (*this)[2];}
-        _sp_hybrid rtype& rho_u(const int i) {return (*this)[2+i];}
-        _sp_hybrid rtype& rho_v() {return (*this)[3];}
-        _sp_hybrid rtype& rho_w() {return (*this)[4];}
-        _sp_hybrid const rtype& rho  () const {return (*this)[0];}
-        _sp_hybrid const rtype& rho_H() const {return (*this)[1];}
-        _sp_hybrid const rtype& rho_u() const {return (*this)[2];}
-        _sp_hybrid const rtype& rho_u(const int i) const {return (*this)[2+i];}
-        _sp_hybrid const rtype& rho_v() const {return (*this)[3];}
-        _sp_hybrid const rtype& rho_w() const {return (*this)[4];}
-        
-        static std::string name(uint idx)
-        {
-            ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
-            return names[idx];
-        }
-    };
+	template <typename rtype> struct cons_t : public ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5, cons_t<rtype>>;
+		using base_t::base_t;
+		_sp_hybrid cons_t(){}
+		_sp_hybrid rtype& rho  () {return (*this)[0];}
+		_sp_hybrid rtype& rho_H() {return (*this)[1];}
+		_sp_hybrid rtype& rho_u() {return (*this)[2];}
+		_sp_hybrid rtype& rho_u(const int i) {return (*this)[2+i];}
+		_sp_hybrid rtype& rho_v() {return (*this)[3];}
+		_sp_hybrid rtype& rho_w() {return (*this)[4];}
+		_sp_hybrid const rtype& rho  () const {return (*this)[0];}
+		_sp_hybrid const rtype& rho_H() const {return (*this)[1];}
+		_sp_hybrid const rtype& rho_u() const {return (*this)[2];}
+		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[2+i];}
+		_sp_hybrid const rtype& rho_v() const {return (*this)[3];}
+		_sp_hybrid const rtype& rho_w() const {return (*this)[4];}
+		
+		static std::string name(uint idx)
+		{
+			ctrs::array<std::string, 5> names("rho", "rhoH", "rhoU", "rhoV", "rhoW");
+			return names[idx];
+		}
+	};
     
-    template <typename rtype> struct flux_t : public ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>;
-        using base_t::base_t;
-        _sp_hybrid flux_t(){}
-        _sp_hybrid rtype& continuity() {return (*this)[0];}
-        _sp_hybrid rtype& energy    () {return (*this)[1];}
-        _sp_hybrid rtype& x_momentum() {return (*this)[2];}
-        _sp_hybrid rtype& y_momentum() {return (*this)[3];}
-        _sp_hybrid rtype& z_momentum() {return (*this)[4];}
-        _sp_hybrid const rtype& continuity() const {return (*this)[0];}
-        _sp_hybrid const rtype& energy    () const {return (*this)[1];}
-        _sp_hybrid const rtype& x_momentum() const {return (*this)[2];}
-        _sp_hybrid const rtype& y_momentum() const {return (*this)[3];}
-        _sp_hybrid const rtype& z_momentum() const {return (*this)[4];}
-        static std::string name(uint idx)
-        {
-            ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");
-            return names[idx];
-        }
-    };
+	template <typename rtype> struct flux_t : public ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5, flux_t<rtype>>;
+		using base_t::base_t;
+		_sp_hybrid flux_t(){}
+		_sp_hybrid rtype& continuity() {return (*this)[0];}
+		_sp_hybrid rtype& energy    () {return (*this)[1];}
+		_sp_hybrid rtype& x_momentum() {return (*this)[2];}
+		_sp_hybrid rtype& y_momentum() {return (*this)[3];}
+		_sp_hybrid rtype& z_momentum() {return (*this)[4];}
+		_sp_hybrid const rtype& continuity() const {return (*this)[0];}
+		_sp_hybrid const rtype& energy    () const {return (*this)[1];}
+		_sp_hybrid const rtype& x_momentum() const {return (*this)[2];}
+		_sp_hybrid const rtype& y_momentum() const {return (*this)[3];}
+		_sp_hybrid const rtype& z_momentum() const {return (*this)[4];}
+		static std::string name(uint idx)
+		{
+			ctrs::array<std::string, 5> names("continuity", "energy", "x_momentum", "y_momentum", "z_momentum");
+			return names[idx];
+		}
+	};
 
-    template <typename rtype, const std::size_t num_species> struct prim_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, prim_chem_t<rtype, num_species>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, prim_chem_t<rtype, num_species>>;
-        using base_t::base_t;
-		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid prim_chem_t(){}
-        _sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
+	template <typename rtype, const std::size_t num_species> struct prim_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, prim_chem_t<rtype, num_species>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, prim_chem_t<rtype, num_species>>;
+		using base_t::base_t;
+	_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
+		_sp_hybrid prim_chem_t(){}
+		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& p()  {return (*this)[num_species-1];}
-        _sp_hybrid rtype& T()  {return (*this)[num_species];}
-        _sp_hybrid rtype& Tv() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& u()  {return (*this)[num_species+2];}
-        _sp_hybrid rtype& u(const int i)  {return (*this)[num_species+2+i];}
-        _sp_hybrid rtype& v()  {return (*this)[num_species+3];}
-        _sp_hybrid rtype& w()  {return (*this)[num_species+4];}
-        _sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
+		_sp_hybrid rtype& T()  {return (*this)[num_species];}
+		_sp_hybrid rtype& Tv() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& u()  {return (*this)[num_species+2];}
+		_sp_hybrid rtype& u(const int i)  {return (*this)[num_species+2+i];}
+		_sp_hybrid rtype& v()  {return (*this)[num_species+3];}
+		_sp_hybrid rtype& w()  {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
 		_sp_hybrid const rtype& p() const  {return (*this)[num_species-1];}
-        _sp_hybrid const rtype& T() const  {return (*this)[num_species];}
-        _sp_hybrid const rtype& Tv() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& u() const  {return (*this)[num_species+2];}
-        _sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+2+i];}
-        _sp_hybrid const rtype& v() const  {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& w() const  {return (*this)[num_species+4];}
-        static std::string name(uint idx)
-        {
-			ctrs::array<std::string, 5+num_species> names;
-			for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
-			names[num_species-1] = "P";
-			names[num_species  ] = "T";
-			names[num_species+1] = "Tv";
-			names[num_species+2] = "U";
-			names[num_species+3] = "V";
-			names[num_species+4] = "W";
-            return names[idx];
-        }
+		_sp_hybrid const rtype& T() const  {return (*this)[num_species];}
+		_sp_hybrid const rtype& Tv() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& u() const  {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+2+i];}
+		_sp_hybrid const rtype& v() const  {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& w() const  {return (*this)[num_species+4];}
+		static std::string name(uint idx)
+		{
+		ctrs::array<std::string, 5+num_species> names;
+		for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
+		names[num_species-1] = "P";
+		names[num_species  ] = "T";
+		names[num_species+1] = "Tv";
+		names[num_species+2] = "U";
+		names[num_species+3] = "V";
+		names[num_species+4] = "W";
+			return names[idx];
+		}
 
-    };
+	};
 
-    template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
-        using base_t::base_t;
+	template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
+		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid cons_chem_t(){}
-        _sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
-        _sp_hybrid rtype& E() {return (*this)[num_species];}
-        _sp_hybrid rtype& Ev() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& rho_u() {return (*this)[num_species+2];}
-        _sp_hybrid rtype& rho_v() {return (*this)[num_species+3];}
-        _sp_hybrid rtype& rho_w() {return (*this)[num_species+4];}
+		_sp_hybrid cons_chem_t(){}
+		_sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
+		_sp_hybrid rtype& E() {return (*this)[num_species];}
+		_sp_hybrid rtype& Ev() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& rho_u() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& rho_v() {return (*this)[num_species+3];}
+		_sp_hybrid rtype& rho_w() {return (*this)[num_species+4];}
 		_sp_hybrid rtype& rho_u(const int i) {return (*this)[num_species+2+i];}
-        _sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
-        _sp_hybrid const rtype& E() const {return (*this)[num_species];}
-        _sp_hybrid const rtype& Ev() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& rho_u() const {return (*this)[num_species+2];}
-        _sp_hybrid const rtype& rho_v() const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& rho_w() const {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
+		_sp_hybrid const rtype& E() const {return (*this)[num_species];}
+		_sp_hybrid const rtype& Ev() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& rho_u() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& rho_v() const {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& rho_w() const {return (*this)[num_species+4];}
 		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[num_species+2+i];}
-        static std::string name(uint idx)
-        {
-			ctrs::array<std::string, 5+num_species> names;
-			for (int n = 0; n<num_species; ++n) names[n] = "rho" + std::to_string(n);
-			names[num_species  ] = "E";
-			names[num_species+1] = "Ev";
-			names[num_species+2] = "rhoU";
-			names[num_species+3] = "rhoV";
-			names[num_species+4] = "rhoW";
-            return names[idx];
-        }
-      
-    };
+		static std::string name(uint idx)
+		{
+		ctrs::array<std::string, 5+num_species> names;
+		for (int n = 0; n<num_species; ++n) names[n] = "rho" + std::to_string(n);
+		names[num_species  ] = "E";
+		names[num_species+1] = "Ev";
+		names[num_species+2] = "rhoU";
+		names[num_species+3] = "rhoV";
+		names[num_species+4] = "rhoW";
+			return names[idx];
+		}
+	
+	};
     
-    template <typename rtype, const std::size_t num_species> struct flux_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>;
-        using base_t::base_t;
+	template <typename rtype, const std::size_t num_species> struct flux_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>;
+		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid flux_chem_t(){}
-        _sp_hybrid rtype& continuity(const int i) {return (*this)[i];}
-        _sp_hybrid rtype& energy    () {return (*this)[num_species];}
-        _sp_hybrid rtype& energyVib () {return (*this)[num_species+1];}
-        _sp_hybrid rtype& x_momentum() {return (*this)[num_species+2];}
-        _sp_hybrid rtype& y_momentum() {return (*this)[num_species+3];}
-        _sp_hybrid rtype& z_momentum() {return (*this)[num_species+4];}
-        _sp_hybrid const rtype& continuity(const int i) const {return (*this)[i];}
-        _sp_hybrid const rtype& energy    () const {return (*this)[num_species];}
-        _sp_hybrid const rtype& energyVib () const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& x_momentum() const {return (*this)[num_species+2];}
-        _sp_hybrid const rtype& y_momentum() const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& z_momentum() const {return (*this)[num_species+4];}
-        static std::string name(uint idx)
-        {
-			ctrs::array<std::string, 5+num_species> names;
-			for (int n = 0; n<num_species; ++n) names[n] = "continuity" + std::to_string(n);
-			names[num_species  ] = "energy";
-			names[num_species+1] = "energyVib";
-			names[num_species+2] = "x-momentum";
-			names[num_species+3] = "y-momentum";
-			names[num_species+4] = "z-momentum";
-            return names[idx];
-        }
-    };
+		_sp_hybrid flux_chem_t(){}
+		_sp_hybrid rtype& continuity(const int i) {return (*this)[i];}
+		_sp_hybrid rtype& energy    () {return (*this)[num_species];}
+		_sp_hybrid rtype& energyVib () {return (*this)[num_species+1];}
+		_sp_hybrid rtype& x_momentum() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& y_momentum() {return (*this)[num_species+3];}
+		_sp_hybrid rtype& z_momentum() {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& continuity(const int i) const {return (*this)[i];}
+		_sp_hybrid const rtype& energy    () const {return (*this)[num_species];}
+		_sp_hybrid const rtype& energyVib () const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& x_momentum() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& y_momentum() const {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& z_momentum() const {return (*this)[num_species+4];}
+		static std::string name(uint idx)
+		{
+		ctrs::array<std::string, 5+num_species> names;
+		for (int n = 0; n<num_species; ++n) names[n] = "continuity" + std::to_string(n);
+		names[num_species  ] = "energy";
+		names[num_species+1] = "energyVib";
+		names[num_species+2] = "x-momentum";
+		names[num_species+3] = "y-momentum";
+		names[num_species+4] = "z-momentum";
+			return names[idx];
+		}
+	};
     
-    template <class T> concept state_dependent_gas = std::floating_point<typename T::value_type> && requires(T t, prim_t<typename T::value_type> s)
-    {
-        t.get_R(s);
-        t.get_gamma(s);
-    };
-    template <class T> concept state_independent_gas = requires(T t)
-    {
-        t.get_R();
-        t.get_gamma();
-    };
+	template <class T> concept state_dependent_gas = std::floating_point<typename T::value_type> && requires(T t, prim_t<typename T::value_type> s)
+	{
+		t.get_R(s);
+		t.get_gamma(s);
+	};
+	template <class T> concept state_independent_gas = requires(T t)
+	{
+		t.get_R();
+		t.get_gamma();
+	};
+
+	template <class T> concept is_flux_type = requires(T t)
+	{
+		t.get_R();
+		t.get_gamma();
+	};
 
     // Added to allow for generalization of different flux schemes and viscous models <JRB | Implemented 4-14-24>
 	template <class T> concept is_prim_state_type = is_state_type<T> and requires(T t, size_t idx)
@@ -212,6 +219,7 @@ namespace spade::fluid_state
         t.rho_v();
         t.rho_w();
 	};
+    
 
     template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
     {
@@ -378,6 +386,7 @@ namespace spade::fluid_state
 	{
 		// Get species mass fractions
 		spade::ctrs::array<ptype, prim.nspecies()> Ys = get_Ys(prim);
+		
 
 		// Compute sum(Ys * Rs * T)
 		ptype aux = 0.0;
