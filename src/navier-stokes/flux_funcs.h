@@ -53,10 +53,10 @@ namespace spade::convective
         }
     };
 
-	template <typename ptype, const std::size_t ns>
+	template <typename ptype, const std::size_t ns, const std::size_t nvib>
     struct rusanov_chem_t
     {
-        const fluid_state::multicomponent_gas_t<ptype, ns> gas;
+        const fluid_state::multicomponent_gas_t<ptype, ns, nvib> gas;
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
         using info_type     = own_info_type;
         using float_t       = ptype;
@@ -64,7 +64,7 @@ namespace spade::convective
 		using flux_type     = flux_t;
 
 		// Constructor
-        rusanov_chem_t(const fluid_state::multicomponent_gas_t<ptype, ns>& gas_in) : gas{gas_in} {}
+        rusanov_chem_t(const fluid_state::multicomponent_gas_t<ptype, ns, nvib>& gas_in) : gas{gas_in} {}
         _sp_hybrid ctrs::array<flux_t, 2> operator() (const auto& info) const
         {
             ctrs::array<flux_t, 2> out;
@@ -75,31 +75,35 @@ namespace spade::convective
 
 			// Contravariant velocity
             const float_t u_n          = nv[0]*q.u() + nv[1]*q.v() + nv[2]*q.w();
-
+			
 			// Velocity magnitude
-            const float_t u_norm       = sqrt(q.u()*q.u() + q.v()*q.v() + q.w()*q.w());
+            const float_t KE           = q.u()*q.u() + q.v()*q.v() + q.w()*q.w();
 
 			// Species/Mixture density
 			const spade::ctrs::array<float_t, q.nspecies()> rhos = fluid_state::get_rhos(q, gas);
-            float_t rho                = 0.0;
+            float_t rho                = float_t(0.0);
 			for (int s = 0; s<q.nspecies(); ++s) rho += rhos[s];
 
 			// Vibrational energy
 			const float_t Ev           = fluid_state::get_Ev(q, gas);
 
 			// Total Energy
-			float_t Etot               = float_t(0.5) * rho * u_norm * u_norm + Ev;
+			float_t Etot               = float_t(0.5) * rho * KE + Ev;
 			for (int s = 0; s<q.nspecies(); ++s) Etot += rhos[s] * (gas.get_cvtr(s) * q.T() + gas.hf_s[s]); // Vib energy already added
 
 			// Physical flux
 			for (int s = 0; s<q.nspecies(); ++s) f_u.continuity(s) = float_t(0.5) * rhos[s] * u_n;
-            f_u.x_momentum()           = float_t(0.5)*rho*q.u()*u_n + float_t(0.5)*q.p()*nv[0];
-            f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + float_t(0.5)*q.p()*nv[1];
-            f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + float_t(0.5)*q.p()*nv[2];
-			f_u.energy()               = float_t(0.5)*u_n*(Etot + q.p());
-			f_u.energyVib()            = float_t(0.5)*u_n*Ev;
-            f_d = f_u;
-            const float_t sigma = float_t(0.5)*(u_norm + fluid_state::get_sos(q, gas));
+            f_u.x_momentum()           = float_t(0.5)*rho*q.u()*u_n + q.p()*nv[0];
+            f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + q.p()*nv[1];
+            f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + q.p()*nv[2];
+			f_u.energy()               = float_t(0.5)*(Etot + q.p())*u_n;
+			f_u.energyVib()            = float_t(0.5)*Ev*u_n;
+
+			// Copy to downwind flux
+			for (int n = 0; n<f_u.size(); ++n) f_d[n] = f_u[n];
+
+			// Spectral radius
+            const float_t sigma = float_t(0.5)*(spade::utils::abs(u_n) + fluid_state::get_sos(q, gas));
 			
 			// Add spectral radius X conservative state vector (upwind)
 			for (int s = 0; s<q.nspecies(); ++s) f_u.continuity(s) += sigma * rhos[s];

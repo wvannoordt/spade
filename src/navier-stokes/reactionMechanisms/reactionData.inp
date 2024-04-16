@@ -1,0 +1,10 @@
+diss   N2   M    --    N    N    M    7.00E21        -1.60   1.1320E5   1
+atoms  4.2857142871429
+diss   O2   M    --    O    O    M    2.00E21        -1.50   5.9750E4   1
+atoms  5.0
+diss   NO   M    --    N    O    M    5.00E15         0.00   7.5500E4   3
+atoms  22.0
+NO     22.0
+CO2    22.0
+exch   N2   O    --    NO   N    --   6.40E17        -1.00   3.8400E4   0
+exch   NO   O    --    O2   N    --   8.40E12         0.00   1.9450E4   0
