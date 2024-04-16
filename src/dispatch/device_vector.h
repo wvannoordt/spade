@@ -62,7 +62,7 @@ namespace spade::device
             return *this;
         }
         
-        device_vector(device_vector&& rhs) 
+        device_vector(device_vector&& rhs)
         {
             clear();
             if (rhs.size() != 0)

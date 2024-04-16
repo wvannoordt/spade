@@ -172,6 +172,7 @@ namespace spade::algs
                         }
                     }
                 });
+                threads.sync();
             }
             
             if (threads.isroot())

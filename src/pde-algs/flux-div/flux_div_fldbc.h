@@ -91,7 +91,7 @@ namespace spade::pde_algs
         std::size_t num_sh_vals_flx  = view0[0]*view0[1]*view0[2];
         std::size_t total_sh_vals    = num_sh_vals_flx;
         
-        // Create chared memory array
+        // Create shared memory array
         auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
         using shmem_type = decltype(k_shmem);
         

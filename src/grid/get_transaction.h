@@ -219,7 +219,17 @@ namespace spade::grid
                 }
                 default:
                 {
-                    throw except::sp_exception("illegal grid configuration");
+                    std::stringstream message;
+                    message << "Found illegal grid configuration.\n";
+                    message << "Self.level:  " << self.level  << "\n";
+                    message << "Other.level: " << neigh.level << "\n";
+                    // message << ""
+                    
+                    const auto bbx  = dst_grid.get_bounding_box(utils::tag[partition::global](lb_ini));
+                    const auto bbx2 = src_grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_ini));
+                    using bbx_t = typename utils::remove_all<decltype(bbx)>::type;
+                    std::vector<bbx_t> bbxs{bbx, bbx2};
+                    throw except::bbxs_exception(message.str(), bbxs);
                 }
             }
         }

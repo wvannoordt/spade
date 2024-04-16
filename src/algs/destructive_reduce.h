@@ -51,7 +51,6 @@ namespace spade::algs
                             shvec[minor] = binary_op(shvec[minor], shvec[minor + pitch]);
                         }
                     });
-                    
                     threads.sync();
                 }
                 
