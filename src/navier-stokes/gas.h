@@ -17,6 +17,14 @@ namespace spade::fluid_state
 		typename T::value_type;
 	};
 
+	// This could probably be implemented better <JRB>
+	template <class T> concept is_multicomponent_gas_type = requires(T t)
+	{
+		t.nspecies();
+		t.mw_s[0]; t.mw_si[0]; t.hf_s[0]; t.charge_s[0];
+		t.isMol[0];
+	};
+
 	template <typename derived_t, typename ilist_t = omni::info_list_t<>>
 	struct gas_interface_t
 	{
@@ -36,26 +44,24 @@ namespace spade::fluid_state
         }
     };
 
+	template <typename dtype> struct ideal_gas_t
+	: public gas_interface_t<ideal_gas_t<dtype>>
+	{
+		using base_t = gas_interface_t<ideal_gas_t<dtype>>;
+		using base_t::get_R;
+		using base_t::get_gamma;
+		using base_t::info_type;
 
-  // Reacting flow gas model
-    template <typename dtype> struct ideal_gas_t
-    : public gas_interface_t<ideal_gas_t<dtype>>
-    {
-        using base_t = gas_interface_t<ideal_gas_t<dtype>>;
-        using base_t::get_R;
-        using base_t::get_gamma;
-        using base_t::info_type;
+		typedef dtype value_type;
+		dtype R, gamma;
+		_sp_hybrid ideal_gas_t(){}
+		_sp_hybrid ideal_gas_t(const dtype& gamma_in, const dtype& R_in) : gamma{gamma_in}, R{R_in} {}
+		_sp_hybrid dtype get_R    () const {return this->R;}
+		_sp_hybrid dtype get_gamma() const {return this->gamma;}
+	};
 
-        typedef dtype value_type;
-        dtype R, gamma;
-        _sp_hybrid ideal_gas_t(){}
-        _sp_hybrid ideal_gas_t(const dtype& gamma_in, const dtype& R_in) : gamma{gamma_in}, R{R_in} {}
-        _sp_hybrid dtype get_R    () const {return this->R;}
-        _sp_hybrid dtype get_gamma() const {return this->gamma;}
-    };
-
-    template <typename dtype, const std::size_t num_species, const std::size_t maxVLevel> struct multicomponent_gas_t
-    {
+	template <typename dtype, const std::size_t num_species, const std::size_t maxVLevel> struct multicomponent_gas_t
+	{
 		using float_t = dtype;
 		
 		// Some member variables
@@ -66,7 +72,7 @@ namespace spade::fluid_state
 		spade::linear_algebra::dense_mat<dtype, num_species, maxVLevel> gvib; // Vibrational energy level degeneracy
 		spade::linear_algebra::dense_mat<dtype, num_species, maxVLevel> theta_v; // Vibrational energy level characteristic temp.
 		spade::ctrs::array<int, num_species>   isMol; // Molecule identification flag (0) atom, (1) molecule
-      
+		
 		// Constructors
 		_sp_hybrid multicomponent_gas_t(){}
 
@@ -78,7 +84,7 @@ namespace spade::fluid_state
 
 		// Function -- compute species gas constant
 		_sp_hybrid dtype get_Rs(const int s) const {return spade::consts::Rgas_uni * mw_si[s];}
-      
+		
 		// Function -- compute translational specific heat
 		_sp_hybrid dtype get_cvt(const int s) const {return float_t(1.5) * get_Rs(s);}
 
@@ -113,65 +119,47 @@ namespace spade::fluid_state
 		}
 	};
 
-
   	// Reacting flow gas model
-	template <typename dtype> struct ideal_gas_t
-	: public gas_interface_t<ideal_gas_t<dtype>>
-	{
-		using base_t = gas_interface_t<ideal_gas_t<dtype>>;
-		using base_t::get_R;
-		using base_t::get_gamma;
-		using base_t::info_type;
-
-		typedef dtype value_type;
-		dtype R, gamma;
-		_sp_hybrid ideal_gas_t(){}
-		_sp_hybrid ideal_gas_t(const dtype& gamma_in, const dtype& R_in) : gamma{gamma_in}, R{R_in} {}
-		_sp_hybrid dtype get_R    () const {return this->R;}
-		_sp_hybrid dtype get_gamma() const {return this->gamma;}
-	};
-
 	template <typename dtype, const std::size_t num_species> struct multicomponent_gas_t
 	{
-	using float_t = dtype;
-	
-	// Some member variables
-	spade::ctrs::array<dtype, 	num_species> mw_s, mw_si, hf_s, theta_v;
-	spade::ctrs::array<int, 	num_species> charge_s;
-	spade::ctrs::array<int,   	num_species> isMol;
-	
-	// Constructors
-	_sp_hybrid multicomponent_gas_t(){}
+		using float_t = dtype;
+		
+		// Some member variables
+		spade::ctrs::array<dtype, 	num_species> mw_s, mw_si, hf_s, theta_v;
+		spade::ctrs::array<int, 	num_species> charge_s;
+		spade::ctrs::array<int,   	num_species> isMol;
+		
+		// Constructors
+		_sp_hybrid multicomponent_gas_t(){}
 
-	// Get species count
-	_sp_hybrid constexpr static std::size_t nspecies() {return num_species;}
+		// Get species count
+		_sp_hybrid constexpr static std::size_t nspecies() {return num_species;}
 
-	// Function -- compute species gas constant
-	_sp_hybrid dtype get_Rs(const int& s) const {return spade::consts::Rgas_uni * mw_si[s];}
-	
-	// Function -- compute translational specific heat
-	_sp_hybrid dtype get_cvt(const int& s) const {return float_t(1.5) * get_Rs(s);}
+		// Function -- compute species gas constant
+		_sp_hybrid dtype get_Rs(const int& s) const {return spade::consts::Rgas_uni * mw_si[s];}
+		
+		// Function -- compute translational specific heat
+		_sp_hybrid dtype get_cvt(const int& s) const {return float_t(1.5) * get_Rs(s);}
 
-	// Function -- compute rotational specific heat
-	_sp_hybrid dtype get_cvr(const int& s) const {return get_Rs(s) * float_t(isMol[s]);}
+		// Function -- compute rotational specific heat
+		_sp_hybrid dtype get_cvr(const int& s) const {return get_Rs(s) * float_t(isMol[s]);}
 
-	// Function -- compute translational/rotational specific heat
-	_sp_hybrid dtype get_cvtr(const int& s) const {return get_cvt(s) + get_cvr(s);}
+		// Function -- compute translational/rotational specific heat
+		_sp_hybrid dtype get_cvtr(const int& s) const {return get_cvt(s) + get_cvr(s);}
 
-	// Function -- compute vibrational specific heat
-	_sp_hybrid dtype get_cvv(const int& s, const dtype& T) const
-	{
-		if (isMol[s]>0)
+		// Function -- compute vibrational specific heat
+		_sp_hybrid dtype get_cvv(const int& s, const dtype& T) const
 		{
-			dtype Tinv = float_t(1.0) / T;
-			return get_Rs(s) * (theta_v[s] * Tinv) * (theta_v[s] * Tinv) * exp(theta_v[s] * Tinv) / ((exp(theta_v[s] * Tinv) - float_t(1.0)) * (exp(theta_v[s] * Tinv) - float_t(1.0)));
+			if (isMol[s]>0)
+			{
+				dtype Tinv = float_t(1.0) / T;
+				return get_Rs(s) * (theta_v[s] * Tinv) * (theta_v[s] * Tinv) * exp(theta_v[s] * Tinv) / ((exp(theta_v[s] * Tinv) - float_t(1.0)) * (exp(theta_v[s] * Tinv) - float_t(1.0)));
+			}
+			else
+			{
+				return 0.0;
+			}
 		}
-		else
-		{
-			return 0.0;
-		}
-	}
-
 	};
 
 	// Initialization function for incoming species vibrational energy data
@@ -261,8 +249,7 @@ namespace spade::fluid_state
 			std::string species;
 
 			// Temporary variables
-			ptype mw;
-			ptype hf;
+			ptype mw, hf, charge;
 			int isMol;
 			
 			// Sweep entire file

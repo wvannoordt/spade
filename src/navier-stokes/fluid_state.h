@@ -85,7 +85,7 @@ namespace spade::fluid_state
 	{
 		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, prim_chem_t<rtype, num_species>>;
 		using base_t::base_t;
-	_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
+		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
 		_sp_hybrid prim_chem_t(){}
 		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& p()  {return (*this)[num_species-1];}
@@ -103,19 +103,19 @@ namespace spade::fluid_state
 		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+2+i];}
 		_sp_hybrid const rtype& v() const  {return (*this)[num_species+3];}
 		_sp_hybrid const rtype& w() const  {return (*this)[num_species+4];}
+		
 		static std::string name(uint idx)
 		{
-		ctrs::array<std::string, 5+num_species> names;
-		for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
-		names[num_species-1] = "P";
-		names[num_species  ] = "T";
-		names[num_species+1] = "Tv";
-		names[num_species+2] = "U";
-		names[num_species+3] = "V";
-		names[num_species+4] = "W";
+			ctrs::array<std::string, 5+num_species> names;
+			for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
+			names[num_species-1] = "P";
+			names[num_species  ] = "T";
+			names[num_species+1] = "Tv";
+			names[num_species+2] = "U";
+			names[num_species+3] = "V";
+			names[num_species+4] = "W";
 			return names[idx];
 		}
-
 	};
 
 	template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
@@ -123,25 +123,26 @@ namespace spade::fluid_state
 		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
 		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid prim_chem_t(){}
-        _sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
+		_sp_hybrid prim_chem_t(){}
+		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& p() {return (*this)[num_species-1];}
 		_sp_hybrid rtype& u() {return (*this)[num_species];}
-        _sp_hybrid rtype& u(const int i) {return (*this)[num_species+i];}
-        _sp_hybrid rtype& v() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& w() {return (*this)[num_species+2];}
-        _sp_hybrid rtype& T() {return (*this)[num_species+3];}
-        _sp_hybrid rtype& Tv() {return (*this)[num_species+4];}
-        _sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
+		_sp_hybrid rtype& u(const int i) {return (*this)[num_species+i];}
+		_sp_hybrid rtype& v() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& w() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& T() {return (*this)[num_species+3];}
+		_sp_hybrid rtype& Tv() {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
 		_sp_hybrid const rtype& p() const {return (*this)[num_species-1];}
-        _sp_hybrid const rtype& u() const {return (*this)[num_species];}
-        _sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+i];}
-        _sp_hybrid const rtype& v() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& w() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& u() const {return (*this)[num_species];}
+		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+i];}
+		_sp_hybrid const rtype& v() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& w() const {return (*this)[num_species+2];}
 		_sp_hybrid const rtype& T() const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& Tv() const {return (*this)[num_species+4];}
-        static std::string name(uint idx)
-        {
+		_sp_hybrid const rtype& Tv() const {return (*this)[num_species+4];}
+		
+		static std::string name(uint idx)
+		{
 			ctrs::array<std::string, 5+num_species> names;
 			for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
 			names[num_species-1] = "P";
@@ -150,33 +151,33 @@ namespace spade::fluid_state
 			names[num_species+2] = "W";
 			names[num_species+3] = "T";
 			names[num_species+4] = "Tv";
-            return names[idx];
-        }
+			return names[idx];
+		}
+	};
 
-    };
-
-    template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
-    {
-        using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
-        using base_t::base_t;
+	template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
+	{
+		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
+		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid cons_chem_t(){}
-        _sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
+		_sp_hybrid cons_chem_t(){}
+		_sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& rho_u() {return (*this)[num_species];}
-        _sp_hybrid rtype& rho_v() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& rho_w() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& rho_v() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& rho_w() {return (*this)[num_species+2];}
 		_sp_hybrid rtype& rho_u(const int i) {return (*this)[num_species+i];}
-        _sp_hybrid rtype& E() {return (*this)[num_species+3];}
-        _sp_hybrid rtype& Ev() {return (*this)[num_species+4];}
-        _sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
+		_sp_hybrid rtype& E() {return (*this)[num_species+3];}
+		_sp_hybrid rtype& Ev() {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
 		_sp_hybrid const rtype& rho_u() const {return (*this)[num_species];}
-        _sp_hybrid const rtype& rho_v() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& rho_w() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& rho_v() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& rho_w() const {return (*this)[num_species+2];}
 		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[num_species+i];}
-        _sp_hybrid const rtype& E() const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& Ev() const {return (*this)[num_species+4];}
-        static std::string name(uint idx)
-        {
+		_sp_hybrid const rtype& E() const {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& Ev() const {return (*this)[num_species+4];}
+		
+		static std::string name(uint idx)
+		{
 			ctrs::array<std::string, 5+num_species> names;
 			for (int n = 0; n<num_species; ++n) names[n] = "rho" + std::to_string(n);
 			names[num_species  ] = "rhoU";
@@ -184,31 +185,31 @@ namespace spade::fluid_state
 			names[num_species+2] = "rhoW";
 			names[num_species+3] = "E";
 			names[num_species+4] = "Ev";
-            return names[idx];
-        }
-      
-    };
+			return names[idx];
+		}
+	};
     
 	template <typename rtype, const std::size_t num_species> struct flux_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>
 	{
 		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>;
 		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-        _sp_hybrid flux_chem_t(){}
-        _sp_hybrid rtype& continuity(const int i) {return (*this)[i];}
+		_sp_hybrid flux_chem_t(){}
+		_sp_hybrid rtype& continuity(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& x_momentum() {return (*this)[num_species];}
-        _sp_hybrid rtype& y_momentum() {return (*this)[num_species+1];}
-        _sp_hybrid rtype& z_momentum() {return (*this)[num_species+2];}
-        _sp_hybrid rtype& energy    () {return (*this)[num_species+3];}
-        _sp_hybrid rtype& energyVib () {return (*this)[num_species+4];}
-        _sp_hybrid const rtype& continuity(const int i) const {return (*this)[i];}
+		_sp_hybrid rtype& y_momentum() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& z_momentum() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& energy    () {return (*this)[num_species+3];}
+		_sp_hybrid rtype& energyVib () {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& continuity(const int i) const {return (*this)[i];}
 		_sp_hybrid const rtype& x_momentum() const {return (*this)[num_species];}
-        _sp_hybrid const rtype& y_momentum() const {return (*this)[num_species+1];}
-        _sp_hybrid const rtype& z_momentum() const {return (*this)[num_species+2];}
-        _sp_hybrid const rtype& energy    () const {return (*this)[num_species+3];}
-        _sp_hybrid const rtype& energyVib () const {return (*this)[num_species+4];}
-        static std::string name(uint idx)
-        {
+		_sp_hybrid const rtype& y_momentum() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& z_momentum() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& energy    () const {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& energyVib () const {return (*this)[num_species+4];}
+		
+		static std::string name(uint idx)
+      {
 			ctrs::array<std::string, 5+num_species> names;
 			for (int n = 0; n<num_species; ++n) names[n] = "continuity" + std::to_string(n);
 			names[num_species] = "x-momentum";
@@ -216,11 +217,10 @@ namespace spade::fluid_state
 			names[num_species+2] = "z-momentum";
 			names[num_species+3] = "energy";
 			names[num_species+4] = "energyVib";
-            return names[idx];
-        }
-    };
+			return names[idx];
+      }
+	};
   
-    
 	template <class T> concept state_dependent_gas = std::floating_point<typename T::value_type> && requires(T t, prim_t<typename T::value_type> s)
 	{
 		t.get_R(s);
@@ -232,90 +232,83 @@ namespace spade::fluid_state
 		t.get_gamma();
 	};
 
-	template <class T> concept is_flux_type = requires(T t)
-	{
-		t.get_R();
-		t.get_gamma();
-	};
-
     // Added to allow for generalization of different flux schemes and viscous models <JRB | Implemented 4-14-24>
 	template <class T> concept is_prim_state_type = is_state_type<T> and requires(T t, size_t idx)
 	{
-        // ensures that we have access to following primitive variables
-        t.p();
-        t.T();
-        t.u();
-        t.v();
-        t.w();
+		// ensures that we have access to following primitive variables
+		t.p();
+		t.T();
+		t.u();
+		t.v();
+		t.w();
 	};
 	template <class T> concept is_cons_state_type = is_state_type<T> and requires(T t, size_t idx)
 	{
-        // ensures that we have access to following conservative variables
-        t.rho();
-        t.rho_H();
-        t.rho_u();
-        t.rho_v();
-        t.rho_w();
+		// ensures that we have access to following conservative variables
+		t.rho();
+		t.rho_H();
+		t.rho_u();
+		t.rho_v();
+		t.rho_w();
 	};
-    
 
-    template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
-    {
-       os << "{";
-       for (size_t i = 0; i < state_type::size(); i++)
-       {
-           os << state_type::name(i) << ":" << state.data[i];
-           if (i<state_type::size()-1) os << ", ";
-       }
-       os << "}";
-       return os;
-    }
+	template <is_state_type state_type> static std::ostream & operator<<(std::ostream & os, const state_type& state)
+	{
+		os << "{";
+		for (size_t i = 0; i < state_type::size(); i++)
+		{
+			os << state_type::name(i) << ":" << state.data[i];
+			if (i<state_type::size()-1) os << ", ";
+		}
+		os << "}";
+		return os;
+	}
 
-    template<typename ptype, typename ctype, class gas_t>
-    _sp_inline _sp_hybrid static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
-    {
-        ptype rho = prim.p() / (gas.get_R()*prim.T());
-        ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
-        ptype rhoE = ctype(0.5)*rhoU2 + (prim.p()/((gas.get_gamma() - ctype(1.0))));
-        ptype rhoU = rho*prim.u();
-        ptype rhoV = rho*prim.v();
-        ptype rhoW = rho*prim.w();
-        cons.rho()    = rho;
-        cons.rho_H()  = rhoE;
-        cons.rho_u()  = rhoU;
-        cons.rho_v()  = rhoV;
-        cons.rho_w()  = rhoW;
-    }
+	template<typename ptype, typename ctype, class gas_t>
+	_sp_inline _sp_hybrid static void convert_state(const prim_t<ptype>& prim, cons_t<ctype>& cons, const gas_t& gas)
+	{
+		ptype rho = prim.p() / (gas.get_R()*prim.T());
+		ptype rhoU2 = rho*(prim.u()*prim.u()+prim.v()*prim.v()+prim.w()*prim.w());
+		ptype rhoE = ctype(0.5)*rhoU2 + (prim.p()/((gas.get_gamma() - ctype(1.0))));
+		ptype rhoU = rho*prim.u();
+		ptype rhoV = rho*prim.v();
+		ptype rhoW = rho*prim.w();
+		cons.rho()    = rho;
+		cons.rho_H()  = rhoE;
+		cons.rho_u()  = rhoU;
+		cons.rho_v()  = rhoV;
+		cons.rho_w()  = rhoW;
+	}
 
-    template<typename ptype, typename ctype, class gas_t>
-    _sp_inline _sp_hybrid static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
-    {
-        ptype rho = cons.rho();
-        ptype invrho = ctype(1.0)/rho;
-        ptype u = invrho*cons.rho_u();
-        ptype v = invrho*cons.rho_v();
-        ptype w = invrho*cons.rho_w();
-        
-        ptype rhoU2 = rho*(u*u+v*v+w*w);
-        ptype p = (gas.get_gamma() - ctype(1.0))*(cons.rho_H() - ctype(0.5)*rhoU2);
-        ptype T = p/(gas.get_R()*rho);
-        prim.p() = p;
-        prim.T() = T;
-        prim.u() = u;
-        prim.v() = v;
-        prim.w() = w;
-    }
+	template<typename ptype, typename ctype, class gas_t>
+	_sp_inline _sp_hybrid static void convert_state(const cons_t<ctype>& cons, prim_t<ptype>& prim, const gas_t& gas)
+	{
+		ptype rho = cons.rho();
+		ptype invrho = ctype(1.0)/rho;
+		ptype u = invrho*cons.rho_u();
+		ptype v = invrho*cons.rho_v();
+		ptype w = invrho*cons.rho_w();
+		
+		ptype rhoU2 = rho*(u*u+v*v+w*w);
+		ptype p = (gas.get_gamma() - ctype(1.0))*(cons.rho_H() - ctype(0.5)*rhoU2);
+		ptype T = p/(gas.get_R()*rho);
+		prim.p() = p;
+		prim.T() = T;
+		prim.u() = u;
+		prim.v() = v;
+		prim.w() = w;
+	}
     
-    template<is_state_type stype, class gas_t>
-    _sp_hybrid static void convert_state(const stype& in, stype& out, const gas_t& gas)
-    {
-        out = in;
-    }
-    
-    template <typename from_t, typename to_t, typename gas_t> concept state_convertible = requires(const from_t& from, to_t& to, const gas_t& gas)
-    {
-        convert_state(from, to, gas);
-    };
+	template<is_state_type stype, class gas_t>
+	_sp_hybrid static void convert_state(const stype& in, stype& out, const gas_t& gas)
+	{
+		out = in;
+	}
+	
+	template <typename from_t, typename to_t, typename gas_t> concept state_convertible = requires(const from_t& from, to_t& to, const gas_t& gas)
+	{
+		convert_state(from, to, gas);
+	};
 
 	//
 	// Some reacting flow wizardry
@@ -425,7 +418,6 @@ namespace spade::fluid_state
 	{
 		// Get species mass fractions
 		spade::ctrs::array<ptype, prim.nspecies()> Ys = get_Ys(prim);
-		
 
 		// Compute sum(Ys * Rs * T)
 		ptype aux = 0.0;

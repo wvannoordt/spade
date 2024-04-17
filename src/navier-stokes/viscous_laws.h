@@ -215,11 +215,10 @@ namespace spade::viscous_laws
     };
 
     // Gupta Viscous Model (Multicomponent Gas) <JRB | Implemented: 4-14-24 | Validated: TODO>
-    template <typename dtype, const std::size_t ns, const std::size_t max_vib> struct gupta_visc_t
-    : public visc_law_interface_t<gupta_visc_t<dtype, ns, max_vib>, omni::info_list_t<omni::info::value>>
+    template <typename dtype, const std::size_t ns, fluid_state::is_multicomponent_gas_type gas_t> struct gupta_visc_t
+    : public visc_law_interface_t<gupta_visc_t<dtype, ns>, omni::info_list_t<omni::info::value>>
     {
         typedef dtype value_type;
-        typedef fluid_state::multicomponent_gas_t<dtype, ns, max_vib> gas_type;
 
         using base_t = visc_law_interface_t<gupta_visc_t<dtype, ns, max_vib>, omni::info_list_t<omni::info::value>>;
         using base_t::get_visc;
@@ -243,10 +242,10 @@ namespace spade::viscous_laws
         // the fit parameter arrays, with n(n+1)/2 elements, corresponding to each unique combination of species
         spade::ctrs::array<dtype, std::size_t((ns*(ns+1))/2)> A0, A1, A2, A3;
 
-        const fluid_state::multicomponent_gas_t<dtype, ns, max_vib>& gas;
+        const gas_t& gas;
 
         // store the species molecular weight and charge
-        gupta_visc_t(const gas_type& gas_in) : gas{gas_in} { }
+        gupta_visc_t(const gas_t& gas_in) : gas{gas_in} { }
         
         _sp_hybrid dtype get_visc(const fluid_state::prim_chem_t<dtype, ns>& q) const
         {
@@ -470,8 +469,8 @@ namespace spade::viscous_laws
     };
 
     // Initialization Function for the Collision Integral Fit Parameters <JRB | Implemented: 4-14-24 | Validated: TODO>
-	template<typename dtype, const std::size_t ns, const std::size_t max_vib>
-	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, fluid_state::multicomponent_gas_t<dtype, ns, max_vib>& gas, gupta_visc_t<dtype, ns>& gupta_visc)
+	template<typename dtype, const std::size_t ns, fluid_state::is_multicomponent_gas_type gas_t>
+	static void import_gupta_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, gas_t& gas, gupta_visc_t<dtype, ns, gas_t>& gupta_visc)
 	{
 		// Open the input file
         std::ifstream infile;
