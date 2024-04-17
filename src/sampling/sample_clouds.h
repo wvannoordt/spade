@@ -207,12 +207,18 @@ namespace spade::sampling
           spade::ctrs::array<real_t, nequations> coef_mat(0.);
           std::vector<std::vector<real_t> > mat_b(nequations, std::vector<real_t>(nmx));
           spade::ctrs::array<real_t, nmx> rhs(0.);
+          
+          // ctrs::array<cell_idx_t, 20> indices
+          // sorts "n" elements
+          // std::sort(indices.begin(), indices.begin()+n, [&](const cell_idx_t& a, const cell_idx_t& b) { return dist(a) < dist(b); });
           //
           bool enough_pts = false;
           //
           auto grid_img = grid.image(spade::device::cpu);
           //
           int num_exchange = 2;//cbrehm: needs to be adjusted
+          
+          
           //
           int il = -num_exchange;
           int iu =  grid.get_num_cells(0)+num_exchange;

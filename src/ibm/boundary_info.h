@@ -365,6 +365,7 @@ namespace spade::ibm
                                     pnt_t x_search = x_ghost;
                                     x_search += real_t(2*diag)*normal;
                                     nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
+                                    // nearest_boundary_point = point;
                                 }
                                 
                                 
@@ -422,6 +423,7 @@ namespace spade::ibm
                                         pnt_t x_search = xc_comp_lyr;
                                         x_search += real_t(2*(1+ilayer)*diag)*normal;
                                         nearest_boundary_point_lyr = geom.find_closest_boundary_point(x_search, lyr_search_radius);
+                                        // nearest_boundary_point_lyr = point;
                                     }
                                     
                                     vec_t nv_lyr_bndy = 0.0;
