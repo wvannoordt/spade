@@ -245,16 +245,17 @@ namespace spade::convective
     };
 
     // HLLC Multispecies Flux Scheme <JRB | Implemented: 4-17-24 | Validated: TODO>
-    template <fluid_state::is_multicomponent_gas_type gas_t>
+    template <typename dtype, const std::size_t ns, const std::size_t nvib>
     struct hllc_chem_t
     {
-        const gas_t gas;
-        using g_info_type   = typename gas_t::info_type;
+        const fluid_state::multicomponent_gas_t<dtype, ns, nvib> gas;
+        
+        using gas_t         = fluid_state::multicomponent_gas_t<dtype, ns, nvib>;
         using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
-        using info_type     = omni::info_union<own_info_type, g_info_type>;
-        using float_t       = typename gas_t::value_type;
-        using flux_t        = fluid_state::flux_t<float_t>;
-        using state_t       = fluid_state::prim_chem_t<float_t, gas_t::nspecies()>;
+        using info_type     = own_info_type;
+        using float_t       = dtype;
+        using flux_t        = fluid_state::flux_chem_t<float_t, ns>;
+        using state_t       = fluid_state::prim_chem_t<float_t, ns>;
 
         // constructor
         hllc_chem_t(const gas_t& gas_in) : gas{gas_in} {}
