@@ -114,10 +114,10 @@ namespace spade::fluid_state
 			}
 		}
 
-		_sp_hybrid auto get_gamma(const auto& input) const
+		/*_sp_hybrid auto get_gamma(const auto& input) const
 		{
 			return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_gamma(args...);}, input);
-		}
+		}*/
 	};
 
 	// Initialization function for incoming species vibrational energy data
