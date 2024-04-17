@@ -340,6 +340,71 @@ namespace spade::sampling
         }
     } wlsqr;
     
+    const static struct search_and_average_t
+    {
+        constexpr static int stencil_size() { return 4; }
+        
+        template <
+            ctrs::basic_array                              indices_t,
+            ctrs::basic_array                              coeffs_t,
+            grid::multiblock_grid                          grid_t,
+            ctrs::basic_array                              reduced_t,
+            ctrs::basic_array                              delta_t,
+            std::invocable<typename indices_t::value_type> exclude_t
+            >
+        requires (
+            (indices_t::size() == coeffs_t::size()) &&
+            (indices_t::size() >= stencil_size())
+            )
+        bool try_make_cloud(
+            indices_t& indices,
+            coeffs_t& coeffs,
+            const grid_t& grid,
+            const typename indices_t::value_type& landed_cell,
+            const typename grid_t::coord_point_type& x_sample,
+            const reduced_t& reduced_idx,
+            const delta_t& deltai,
+            const exclude_t& exclude_crit) const
+        {
+            constexpr int required_size = stencil_size();
+            
+            using coeff_t = typename coeffs_t::value_type;
+            
+            int store = 0;
+            indices = landed_cell;
+            
+            constexpr int search_radius = 3;
+            for (int dk = -search_radius; dk <= search_radius; ++dk)
+            {
+                for (int dj = -search_radius; dj <= search_radius; ++dj)
+                {
+                    for (int di = -search_radius; di <= search_radius; ++di)
+                    {
+                        auto idx = landed_cell;
+                        idx.i() += di;
+                        idx.j() += dj;
+                        idx.k() += dk;
+                        
+                        if (!exclude_crit(idx))
+                        {
+                            indices[store] = idx;
+                            ++store;
+                            if (store >= required_size) break;
+                        }
+                    }
+                    if (store >= required_size) break;
+                }
+                if (store >= required_size) break;
+            }
+            
+            bool success =  store >= required_size;
+            
+            coeffs = coeff_t(1.0) / required_size;
+            
+            return success;
+        }
+    } search_and_average;
+    
     template <typename... strategies_t>
     struct sample_strategy_cascade_t;
     
