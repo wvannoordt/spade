@@ -154,40 +154,6 @@ namespace spade::fluid_state
 			return names[idx];
 		}
 	};
-
-	template <typename rtype, const std::size_t num_species> struct cons_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>
-	{
-		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
-		using base_t::base_t;
-		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-		_sp_hybrid cons_chem_t(){}
-		_sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
-		_sp_hybrid rtype& rho_u() {return (*this)[num_species];}
-		_sp_hybrid rtype& rho_v() {return (*this)[num_species+1];}
-		_sp_hybrid rtype& rho_w() {return (*this)[num_species+2];}
-		_sp_hybrid rtype& rho_u(const int i) {return (*this)[num_species+i];}
-		_sp_hybrid rtype& E() {return (*this)[num_species+3];}
-		_sp_hybrid rtype& Ev() {return (*this)[num_species+4];}
-		_sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
-		_sp_hybrid const rtype& rho_u() const {return (*this)[num_species];}
-		_sp_hybrid const rtype& rho_v() const {return (*this)[num_species+1];}
-		_sp_hybrid const rtype& rho_w() const {return (*this)[num_species+2];}
-		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[num_species+i];}
-		_sp_hybrid const rtype& E() const {return (*this)[num_species+3];}
-		_sp_hybrid const rtype& Ev() const {return (*this)[num_species+4];}
-		
-		static std::string name(uint idx)
-		{
-			ctrs::array<std::string, 5+num_species> names;
-			for (int n = 0; n<num_species; ++n) names[n] = "rho" + std::to_string(n);
-			names[num_species  ] = "rhoU";
-			names[num_species+1] = "rhoV";
-			names[num_species+2] = "rhoW";
-			names[num_species+3] = "E";
-			names[num_species+4] = "Ev";
-			return names[idx];
-		}
-	};
     
 	template <typename rtype, const std::size_t num_species> struct flux_chem_t : public ctrs::arithmetic_array_t<rtype, 5+num_species, flux_chem_t<rtype, num_species>>
 	{
