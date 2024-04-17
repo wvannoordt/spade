@@ -228,8 +228,10 @@ namespace spade::grid
                     const auto bbx  = dst_grid.get_bounding_box(utils::tag[partition::global](lb_ini));
                     const auto bbx2 = src_grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_ini));
                     using bbx_t = typename utils::remove_all<decltype(bbx)>::type;
+                    using r_t = typename bbx_t::value_type;
+                    constexpr std::size_t dim = bbx.size();
                     std::vector<bbx_t> bbxs{bbx, bbx2};
-                    throw except::bbxs_exception(message.str(), bbxs);
+                    throw except::bbxs_exception<r_t, dim>(message.str(), bbxs);
                 }
             }
         }
