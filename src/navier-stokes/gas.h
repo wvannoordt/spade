@@ -69,6 +69,7 @@ namespace spade::fluid_state
 		spade::ctrs::array<dtype, num_species> mw_s; // Molecular weight
 		spade::ctrs::array<dtype, num_species> mw_si; // Inverse of molecular weight
 		spade::ctrs::array<dtype, num_species> hf_s; // Heat of formation
+		spade::ctrs::array<dtype, num_species> charge_s; // Species charge
 		spade::ctrs::array<int, num_species> nvib; // Number of vibrationally activated energy levels
 		spade::linear_algebra::dense_mat<dtype, num_species, maxVLevel> gvib; // Vibrational energy level degeneracy
 		spade::linear_algebra::dense_mat<dtype, num_species, maxVLevel> theta_v; // Vibrational energy level characteristic temp.
