@@ -114,54 +114,9 @@ namespace spade::fluid_state
 			}
 		}
 
-		/*_sp_hybrid auto get_gamma(const auto& input) const
+		_sp_hybrid auto get_gamma(const auto& input) const
 		{
 			return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_gamma(args...);}, input);
-		}*/
-	};
-
-  	// Reacting flow gas model
-	template <typename dtype, const std::size_t num_species> 
-	struct multicomponent_gas_t : public gas_interface_t<multicomponent_gas_t<dtype, num_species>>
-	
-	{
-		using float_t = dtype;
-		
-		// Some member variables
-		spade::ctrs::array<dtype, 	num_species> mw_s, mw_si, hf_s, theta_v;
-		spade::ctrs::array<int, 	num_species> charge_s;
-		spade::ctrs::array<int,   	num_species> isMol;
-		
-		// Constructors
-		_sp_hybrid multicomponent_gas_t(){}
-
-		// Get species count
-		_sp_hybrid constexpr static std::size_t nspecies() {return num_species;}
-
-		// Function -- compute species gas constant
-		_sp_hybrid dtype get_Rs(const int& s) const {return spade::consts::Rgas_uni * mw_si[s];}
-		
-		// Function -- compute translational specific heat
-		_sp_hybrid dtype get_cvt(const int& s) const {return float_t(1.5) * get_Rs(s);}
-
-		// Function -- compute rotational specific heat
-		_sp_hybrid dtype get_cvr(const int& s) const {return get_Rs(s) * float_t(isMol[s]);}
-
-		// Function -- compute translational/rotational specific heat
-		_sp_hybrid dtype get_cvtr(const int& s) const {return get_cvt(s) + get_cvr(s);}
-
-		// Function -- compute vibrational specific heat
-		_sp_hybrid dtype get_cvv(const int& s, const dtype& T) const
-		{
-			if (isMol[s]>0)
-			{
-				dtype Tinv = float_t(1.0) / T;
-				return get_Rs(s) * (theta_v[s] * Tinv) * (theta_v[s] * Tinv) * exp(theta_v[s] * Tinv) / ((exp(theta_v[s] * Tinv) - float_t(1.0)) * (exp(theta_v[s] * Tinv) - float_t(1.0)));
-			}
-			else
-			{
-				return 0.0;
-			}
 		}
 	};
 
