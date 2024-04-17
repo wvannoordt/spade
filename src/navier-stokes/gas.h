@@ -60,7 +60,8 @@ namespace spade::fluid_state
 		_sp_hybrid dtype get_gamma() const {return this->gamma;}
 	};
 
-	template <typename dtype, const std::size_t num_species, const std::size_t maxVLevel> struct multicomponent_gas_t
+	template <typename dtype, const std::size_t num_species, const std::size_t maxVLevel> 
+	struct multicomponent_gas_t : public gas_interface_t<multicomponent_gas_t<dtype>>
 	{
 		using float_t = dtype;
 		
@@ -120,7 +121,9 @@ namespace spade::fluid_state
 	};
 
   	// Reacting flow gas model
-	template <typename dtype, const std::size_t num_species> struct multicomponent_gas_t
+	template <typename dtype, const std::size_t num_species> 
+	struct multicomponent_gas_t : public gas_interface_t<multicomponent_gas_t<dtype>>
+	
 	{
 		using float_t = dtype;
 		

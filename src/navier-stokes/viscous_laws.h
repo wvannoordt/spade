@@ -216,11 +216,11 @@ namespace spade::viscous_laws
 
     // Gupta Viscous Model (Multicomponent Gas) <JRB | Implemented: 4-14-24 | Validated: TODO>
     template <typename dtype, const std::size_t ns, fluid_state::is_multicomponent_gas_type gas_t> struct gupta_visc_t
-    : public visc_law_interface_t<gupta_visc_t<dtype, ns>, omni::info_list_t<omni::info::value>>
+    : public visc_law_interface_t<gupta_visc_t<dtype, ns, gas_t>, omni::info_list_t<omni::info::value>>
     {
         typedef dtype value_type;
 
-        using base_t = visc_law_interface_t<gupta_visc_t<dtype, ns, max_vib>, omni::info_list_t<omni::info::value>>;
+        using base_t = visc_law_interface_t<gupta_visc_t<dtype, ns, gas_t>, omni::info_list_t<omni::info::value>>;
         using base_t::get_visc;
         using base_t::get_beta;
         using base_t::get_diffuse;

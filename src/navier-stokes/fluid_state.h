@@ -123,7 +123,7 @@ namespace spade::fluid_state
 		using base_t = ctrs::arithmetic_array_t<rtype, 5+num_species, cons_chem_t<rtype, num_species>>;
 		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
-		_sp_hybrid prim_chem_t(){}
+		_sp_hybrid cons_chem_t(){}
 		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& p() {return (*this)[num_species-1];}
 		_sp_hybrid rtype& u() {return (*this)[num_species];}
