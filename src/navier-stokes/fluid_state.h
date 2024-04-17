@@ -124,33 +124,30 @@ namespace spade::fluid_state
 		using base_t::base_t;
 		_sp_hybrid constexpr static std::size_t nspecies(){return num_species;}
 		_sp_hybrid cons_chem_t(){}
-		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
-		_sp_hybrid rtype& p() {return (*this)[num_species-1];}
-		_sp_hybrid rtype& u() {return (*this)[num_species];}
-		_sp_hybrid rtype& u(const int i) {return (*this)[num_species+i];}
-		_sp_hybrid rtype& v() {return (*this)[num_species+1];}
-		_sp_hybrid rtype& w() {return (*this)[num_species+2];}
-		_sp_hybrid rtype& T() {return (*this)[num_species+3];}
-		_sp_hybrid rtype& Tv() {return (*this)[num_species+4];}
-		_sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
-		_sp_hybrid const rtype& p() const {return (*this)[num_species-1];}
-		_sp_hybrid const rtype& u() const {return (*this)[num_species];}
-		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+i];}
-		_sp_hybrid const rtype& v() const {return (*this)[num_species+1];}
-		_sp_hybrid const rtype& w() const {return (*this)[num_species+2];}
-		_sp_hybrid const rtype& T() const {return (*this)[num_species+3];}
-		_sp_hybrid const rtype& Tv() const {return (*this)[num_species+4];}
+		_sp_hybrid rtype& rhos(const int i) {return (*this)[i];}
+		_sp_hybrid rtype& rho_u() {return (*this)[num_species];}
+		_sp_hybrid rtype& rho_v() {return (*this)[num_species+1];}
+		_sp_hybrid rtype& rho_w() {return (*this)[num_species+2];}
+		_sp_hybrid rtype& rho_u(const int i) {return (*this)[num_species+i];}
+		_sp_hybrid rtype& E() {return (*this)[num_species+3];}
+		_sp_hybrid rtype& Ev() {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& rhos(const int i) const {return (*this)[i];}
+		_sp_hybrid const rtype& rho_u() const {return (*this)[num_species];}
+		_sp_hybrid const rtype& rho_v() const {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& rho_w() const {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& rho_u(const int i) const {return (*this)[num_species+i];}
+		_sp_hybrid const rtype& E() const {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& Ev() const {return (*this)[num_species+4];}
 		
 		static std::string name(uint idx)
 		{
 			ctrs::array<std::string, 5+num_species> names;
-			for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
-			names[num_species-1] = "P";
-			names[num_species  ] = "U";
-			names[num_species+1] = "V";
-			names[num_species+2] = "W";
-			names[num_species+3] = "T";
-			names[num_species+4] = "Tv";
+			for (int n = 0; n<num_species; ++n) names[n] = "rho" + std::to_string(n);
+			names[num_species  ] = "rhoU";
+			names[num_species+1] = "rhoV";
+			names[num_species+2] = "rhoW";
+			names[num_species+3] = "E";
+			names[num_species+4] = "Ev";
 			return names[idx];
 		}
 	};
