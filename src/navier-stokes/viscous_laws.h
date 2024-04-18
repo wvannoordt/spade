@@ -240,7 +240,7 @@ namespace spade::viscous_laws
         constexpr static dtype c2_rep = 0.0274, C2_rep = 0.157,  D2_rep = 1.235;
 
         // the fit parameter arrays, with n(n+1)/2 elements, corresponding to each unique combination of species
-        spade::ctrs::array<dtype, std::size_t((ns*(ns+1))/2)> A0, A1, A2, A3;
+        spade::ctrs::array<dtype, std::size_t((ns*(ns+1))/2)> A0, A1, A2, A3, B0, B1, B2, B3;
 
         const gas_t& gas;
 
@@ -363,6 +363,15 @@ namespace spade::viscous_laws
             return -0.66666666667*this->get_visc(q);
         }
         
+
+        
+
+        // NOTE THESE USE THE WRONG NEUTRAL DATA POINTS
+        // NEED TO ADD CORRECT STORAGE FOR omega11 fit parameters, and can also (in the loading-in function) add the coulomb params (cleaner & faster)
+
+
+
+
         _sp_hybrid spade::ctrs::array<dtype, ns> get_diffuse(const fluid_state::prim_chem_t<dtype, ns>& q) const
         {
             spade::ctrs::array<dtype, ns> diffuse_out;
