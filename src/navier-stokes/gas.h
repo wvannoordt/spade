@@ -57,7 +57,7 @@ namespace spade::fluid_state
     template <typename dtype, const std::size_t num_species, const std::size_t maxVLevel> struct multicomponent_gas_t
     {
 		using float_t = dtype;
-		
+
 		// Some member variables
 		spade::ctrs::array<dtype, num_species> mw_s; // Molecular weight
 		spade::ctrs::array<dtype, num_species> mw_si; // Inverse of molecular weight
@@ -142,6 +142,9 @@ namespace spade::fluid_state
 			{
 				// Read line in file
 				infile >> species >> gvib >> theta_v;
+
+				// Check for end of file
+				if (infile.eof()) break;
 				
 				// Sweep species
 				for (int s = 0; s<gas.nspecies(); ++s)
@@ -157,8 +160,6 @@ namespace spade::fluid_state
 						++gas.nvib[s];
 					}
 				}
-				// Check for end of file
-				if (infile.eof()) break;
 			}
 			
 			// Close file
@@ -206,6 +207,9 @@ namespace spade::fluid_state
 			{
 				// Read line in file
 				infile >> species >> mw >> isMol >> hf;
+
+				// Check for end of file
+				if (infile.eof()) break;
 				
 				// Sweep species
 				for (int s = 0; s<gas.nspecies(); ++s)
@@ -223,8 +227,6 @@ namespace spade::fluid_state
 						count += 1;
 					}
 				}
-				// Check for end of file
-				if (infile.eof()) break;
 			}
 			
 			// Close file
