@@ -317,14 +317,14 @@ namespace spade::time_integration
                 auto r1_i = r1_img.get_elem(ii);
                 
                 auto new_r0_i = dt_t(1.0/6.0)*dt*(r0_i + r1_i);
+                r0_img.set_elem(ii, new_r0_i);
                 
                 cons += dt_t(3.0/2.0)*new_r0_i;
+                cons -= dt*r0_i;
                 alias_type new_q;
                 fluid_state::convert_state(cons, new_q, gas_model);
                 
-                r0_img.set_elem(ii, new_r0_i);
                 q_img.set_elem(ii, new_q);
-                return new_q;
             };
             
             algs::for_each(q, lam);
@@ -342,7 +342,7 @@ namespace spade::time_integration
                 fluid_state::convert_state(q_orig, cons, gas_model);
                 auto r0_i = r0_img.get_elem(ii);
                 auto r1_i = r1_img.get_elem(ii);
-                cons += r0_i;
+                cons -= dt_t(1.0/2.0)*r0_i;
                 cons += dt*dt_t(2.0/3.0)*r1_i;
                 alias_type new_q;
                 fluid_state::convert_state(cons, new_q, gas_model);
@@ -370,8 +370,6 @@ namespace spade::time_integration
         
         //Timestep
         const auto& dt = axis.timestep();
-        
-        auto& rhs0 = data.residual(0);
         const ctrs::array<numeric_type,3> time_coeffs{numeric_type(0.0), numeric_type(1.0), numeric_type(0.5)};
         
         

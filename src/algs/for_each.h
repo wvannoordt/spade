@@ -9,7 +9,7 @@ namespace spade::algs
 {
     template <grid::multiblock_array array_t, class callable_t>
     requires (std::invocable<callable_t, typename array_t::index_type>)
-    void for_each(array_t& arr, callable_t& func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)
+    void for_each(array_t& arr, callable_t func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)
     {
         using index_type        = typename array_t::index_type;
         using val_t             = typename array_t::alias_type;
@@ -34,11 +34,11 @@ namespace spade::algs
         {
             if ((nx[d] % tile_size) != 0)
             {
-                throw except::sp_exception("transform_inplace requires a block size that is a multiple of 4");
+                throw except::sp_exception("for_each requires a block size that is a multiple of 4");
             }
             if (ng[d] != 2)
             {
-                throw except::sp_exception("transform_inplace requires all exchange cells are size 2");
+                throw except::sp_exception("for_each requires all exchange cells are size 2");
             }
             ntiles[d]    = utils::i_div_up(nx_extent[d], tile_size);
         }
