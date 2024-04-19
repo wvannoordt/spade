@@ -93,9 +93,9 @@ namespace spade::convective
 
 			// Physical flux
 			for (int s = 0; s<q.nspecies(); ++s) f_u.continuity(s) = float_t(0.5) * rhos[s] * u_n;
-            f_u.x_momentum()           = float_t(0.5)*rho*q.u()*u_n + q.p()*nv[0];
-            f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + q.p()*nv[1];
-            f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + q.p()*nv[2];
+            f_u.x_momentum()           = float_t(0.5)*(rho*q.u()*u_n + q.p()*nv[0]);
+            f_u.y_momentum()           = float_t(0.5)*(rho*q.v()*u_n + q.p()*nv[1]);
+            f_u.z_momentum()           = float_t(0.5)*(rho*q.w()*u_n + q.p()*nv[2]);
 			f_u.energy()               = float_t(0.5)*(Etot + q.p())*u_n;
 			f_u.energyVib()            = float_t(0.5)*Ev*u_n;
 

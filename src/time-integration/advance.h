@@ -104,9 +104,9 @@ namespace spade::time_integration
     
     
     //explicit RK scheme (TODO: implement concept for this)
-    template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t>
+    template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t, typename advance_lim_t>
     requires (data_t::scheme_type::is_rk_specialization)
-    void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const boundary_t& boundary, const trans_t& trans)
+	void integrate_advance(axis_t& axis, data_t& data, const scheme_t& scheme, const rhs_t& rhs, const boundary_t& boundary, const trans_t& trans, const advance_lim_t& advance_lim)
     {
         //Note that we assume that the boundary has been set before we begin integration.
         //Note also that the boundary pertains to the untransformed state
@@ -156,6 +156,10 @@ namespace spade::time_integration
                     constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
                     auto& resid_j = data.residual(j); //"k_j"
                     resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
+
+					// Update limiter
+					advance_lim(resid_j, sol);
+					
                     sol += resid_j;
                     resid_j *= numeric_type(1.0)/(dt*coeff);
                 }
@@ -194,6 +198,10 @@ namespace spade::time_integration
                         constexpr numeric_type coeff = detail::coeff_value_t<numeric_type, coeff_value_t>::value(); //get the coefficient
                         auto& resid_j = data.residual(j); //"k_j"
                         resid_j *= (dt*coeff); //This requires that "dt" is cheap to multiply, otherwise there is a more efficient way of doing this!
+
+						// Update limiter
+						advance_lim(resid_j, sol);
+						
                         sol -= resid_j;
                         resid_j *= numeric_type(1.0)/(dt*coeff);
                     }
@@ -218,7 +226,10 @@ namespace spade::time_integration
                 auto& resid = data.residual(i);
                 //Multiply the residual by the accumulation coefficient
                 resid *= (coeff*dt);
-                
+
+				// Update limiter
+				advance_lim(resid, new_solution);
+				
                 new_solution += resid;
                 //Divide to avoid modifying the residual unduly (may be unnecessary!)
                 resid *= numeric_type(1.0)/(coeff*dt);
