@@ -13,7 +13,7 @@
 
 namespace spade::ctrs
 {
-    template <class T> concept basic_array = requires(T t, const int& i)
+    template <class T> concept basic_array = !std::same_as<T, std::string> && requires(T t, const int& i)
     {
         typename T::value_type;
         t.size();
