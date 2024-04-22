@@ -92,9 +92,14 @@ namespace spade::pde_algs
         // Get shared memory size in elements
         std::size_t num_sh_vals_flx  = view0[0]*view0[1]*view0[2];
         std::size_t total_sh_vals    = num_sh_vals_flx;
+        if constexpr (use_simple_buffering)
+        {
+            total_sh_vals = tile_size*tile_size*tile_size;
+        }
         
         // Create shared memory array
         auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
+        // auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<real_type>(total_sh_vals));
         using shmem_type = decltype(k_shmem);
         
         // Create a grid-range over the number of tiles in each block and the number of blocks
@@ -437,10 +442,14 @@ namespace spade::pde_algs
                     // Create a view of the shared memory vector to store the residual elements
                     auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
                     auto rawdata = utils::vec_img_cast<flux_type>(tmp);
-                    auto i_rhs_mod = inner_raw;
+                    auto i_rhs_mod   = inner_raw;
+                    auto i_rhs_mod_l = inner_raw;
+                    i_rhs_mod_l[idir]--;
                     
                     // Add the flux to thread's own residual
+                    threads.sync();
                     my_rhs += flux;
+                    
                     
                     // Load this threads RHS into shared memory
                     rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
