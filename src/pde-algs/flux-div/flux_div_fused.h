@@ -99,11 +99,18 @@ namespace spade::pde_algs
         
         
         // Get shared memory size in elements
+        const auto size0 = ctrs::make_array(irange_dims[0] + 4, irange_dims[1],     irange_dims[2]);
+        const auto size1 = ctrs::make_array(irange_dims[0],     irange_dims[1] + 4, irange_dims[2]);
+        const auto size2 = ctrs::make_array(irange_dims[0],     irange_dims[1],     irange_dims[2] + 4);
         
-        std::size_t total_sh_vals = irange_dims[0]*irange_dims[1]*irange_dims[2];
+        const std::size_t total0 = size0[0]*size0[1]*size0[2];
+        const std::size_t total1 = size1[0]*size1[1]*size1[2];
+        const std::size_t total2 = size2[0]*size2[1]*size2[2];
+        
+        const std::size_t total_sh_vals = utils::max(total0, total1, total2);
         
         // Create shared memory array
-        auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<real_type>(total_sh_vals));
+        auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
         using shmem_type = decltype(k_shmem);
         
         // Create a grid-range over the number of tiles in each block and the number of blocks
@@ -158,21 +165,16 @@ namespace spade::pde_algs
                         my_rhs = real_type(0.0);
                     }
                     
+                    // Overwrite the RHS (residual) element
+                    
+                    grid::face_idx_t i_face;
+                    
                     #pragma unroll
-                    for (int t_pm = 0; t_pm < 2; ++t_pm)
+                    for (int idir = 0; idir < dim; ++idir)
                     {
-                        // Quirk for first-capture variables, nothing happens here
-                        const auto nothing = rhs_img.size();
-                        constexpr bool is_incr_modetmp = is_incr_mode;
-                        
-                        // Overwrite the RHS (residual) element
-                        
-                        grid::face_idx_t i_face;
-                        
                         #pragma unroll
-                        for (int idir = 0; idir < dim; ++idir)
+                        for (int t_pm = 0; t_pm < 2; ++t_pm)
                         {
-                            // thin direction
                             i_face = grid::cell_to_face(i_cell, idir, t_pm);
                             omni::retrieve(grid_img, q_img, i_face, input);
                             
