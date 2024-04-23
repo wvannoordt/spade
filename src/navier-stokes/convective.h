@@ -502,7 +502,7 @@ namespace spade::convective
     struct weno_fds_t
     {
         using float_t       = typename flux_func_t::float_t;
-        using output_type   = fluid_state::flux_t<float_t>;
+        using output_type   = typename flux_func_t::flux_t;
         using info_type     = typename flux_func_t::info_type;
         using omni_type     = omni::stencil_t<
                 grid::face_centered,
@@ -520,7 +520,7 @@ namespace spade::convective
         
         _sp_hybrid output_type operator()(const auto& input) const
         {            
-            fluid_state::flux_t<float_t> output;
+            output_type output;
             
             const auto& q0        = omni::access<omni::info::value >(input.cell(0_c));
             const auto& q1        = omni::access<omni::info::value >(input.cell(1_c));
@@ -549,7 +549,24 @@ namespace spade::convective
             }
             else
             {
-                //nothing for now
+				for (int n = 0; n<output.size(); ++n)
+				{
+					const float_t be0 = (q0[n] - q1[n]) * (q0[n] - q1[n]);
+					const float_t be1 = (q1[n] - q2[n]) * (q1[n] - q2[n]);
+					const float_t be2 = (q2[n] - q3[n]) * (q2[n] - q3[n]);
+
+					const float_t eps = float_t(1E-16);
+
+					float_t d0 = float_t(0.25) / ((be0 + eps) * (be0 + eps));
+					float_t d1 = float_t(0.75) / ((be1 + eps) * (be1 + eps));
+
+					ql[n] = d0 * ql0[n] + d1 * ql1[n];
+
+					d0 = float_t(0.75) / ((be1 + eps) * (be1 + eps));
+					d1 = float_t(0.25) / ((be2 + eps) * (be2 + eps));
+					
+					qr[n] = d0 * qr0[n] + d1 * qr1[n];
+				}
             }
             // call flux function                                                                                                                                                                           
             output = flux_func(input.face(0_c),ql,qr);

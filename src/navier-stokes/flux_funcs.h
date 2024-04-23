@@ -168,6 +168,64 @@ namespace spade::convective
         }
     };
 
+	template <typename ptype, const std::size_t ns, const std::size_t nvib>
+    struct rusanov_fds_chem_t
+    {
+        const fluid_state::multicomponent_gas_t<ptype, ns, nvib> gas;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using info_type     = own_info_type;
+        using float_t       = ptype;
+        using flux_t        = fluid_state::flux_chem_t<float_t, ns>;
+		using flux_type     = flux_t;
+
+		// Constructor
+        rusanov_fds_chem_t(const fluid_state::multicomponent_gas_t<ptype, ns, nvib>& gas_in) : gas{gas_in} {}
+        _sp_hybrid flux_t operator() (const auto& infoF, const auto& qL, const auto& qR) const
+        {
+			flux_t out{};
+            auto& flux = out;
+			fluid_state::prim_chem_t<ptype, ns> qAve;
+			for (int n = 0; n<qAve.size(); ++n) qAve[n] = float_t(0.5) * (qL[n] + qR[n]);
+            const auto& nv             = omni::access<omni::info::metric>(infoF);
+
+			// Contravariant velocity
+            const float_t u_n          = nv[0]*qAve.u() + nv[1]*qAve.v() + nv[2]*qAve.w();
+			// Velocity magnitude
+            const float_t KE           = qAve.u()*qAve.u() + qAve.v()*qAve.v() + qAve.w()*qAve.w();
+			// Species/Mixture density
+			const spade::ctrs::array<float_t, qAve.nspecies()> rhos = fluid_state::get_rhos(qAve, gas);
+            float_t rho                = float_t(0.0);
+			for (int s = 0; s<qAve.nspecies(); ++s) rho += rhos[s];
+			// Vibrational energy
+			const float_t Ev           = fluid_state::get_Ev(qAve, gas);
+			// Total Energy
+			float_t Etot               = float_t(0.5) * rho * KE + Ev;
+			for (int s = 0; s<qAve.nspecies(); ++s) Etot += rhos[s] * (gas.get_cvtr(s) * qAve.T() + gas.hf_s[s]); // Vib energy already added
+
+			// Spectral radius
+            const float_t sigma = float_t(0.5)*(spade::utils::abs(u_n) + fluid_state::get_sos(qAve, gas));
+			
+			// Physical flux
+			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) = float_t(0.5) * rhos[s] * u_n;
+            flux.x_momentum()           = float_t(0.5)*(rho*qAve.u()*u_n + qAve.p()*nv[0]);
+            flux.y_momentum()           = float_t(0.5)*(rho*qAve.v()*u_n + qAve.p()*nv[1]);
+            flux.z_momentum()           = float_t(0.5)*(rho*qAve.w()*u_n + qAve.p()*nv[2]);
+			flux.energy()               = float_t(0.5)*(Etot + qAve.p())*u_n;
+			flux.energyVib()            = float_t(0.5)*Ev*u_n;
+
+			// Add dissipation
+			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) += sigma * rhos[s];
+			flux.x_momentum()          += sigma * rho * qAve.u();
+			flux.y_momentum()          += sigma * rho * qAve.v();
+			flux.z_momentum()          += sigma * rho * qAve.w();
+			flux.energy()              += sigma * Etot;
+			flux.energyVib()           += sigma * Ev;
+			
+            // Memory address of "out" mapped to flux
+            return out;
+        }
+    };
+	
     // HLLC Flux Scheme <JRB | Implemented: 4-12-24 | Validated: TODO>
     template <typename gas_t>
     struct hllc_fds_t

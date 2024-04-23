@@ -428,6 +428,7 @@ namespace spade::fluid_state
 				for (int m = 0; m<gas.nvib[s]; ++m)
 				{
 					ev_s[s] += gas.gvib(s,m) * gas.get_Rs(s) * gas.theta_v(s,m) / (exp(gas.theta_v(s,m)*Tinv) - float_t(1.0));
+					//ev_s[s] += (spade::consts::Rgas_uni / 30.0) * 3000.0 / (exp(3000.0*Tinv) - float_t(1.0) + float_t(1E-12));
 				}
 			}
 		}
