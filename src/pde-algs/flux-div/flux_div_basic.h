@@ -43,14 +43,15 @@ namespace spade::pde_algs
         constexpr int grid_dim = ar_grid.dim();
         auto var_range         = dispatch::support_of(prims, grid::exclude_exchanges);
         
-        for(int idir = 0; idir < ar_grid.dim(); ++idir)
+        
+        auto load = [=] _sp_hybrid (const grid::cell_idx_t& icell) mutable
         {
-            auto load = [=] _sp_hybrid (const grid::cell_idx_t& icell) mutable
+            const auto xyz = geom_image.get_comp_coords(icell);
+            const real_type jac = coords::calc_jacobian(geom_image.get_coord_sys(), xyz, icell);
+            auto relem = rhs_img.get_elem(icell);
+            #pragma unroll
+            for(int idir = 0; idir < grid_dim; ++idir)
             {
-                const auto xyz = geom_image.get_comp_coords(icell);
-                const real_type jac = coords::calc_jacobian(geom_image.get_coord_sys(), xyz, icell);
-                auto relem = rhs_img.get_elem(icell);
-                
                 const real_type inv_dx = real_type(1.0)/geom_image.get_dx(idir, icell.lb());
                 algs::static_for<0,2>([&](const auto& ipm)
                 {
@@ -70,8 +71,8 @@ namespace spade::pde_algs
                     relem += accum;
                 });
                 rhs_img.set_elem(icell, relem);
-            };
-            dispatch::execute(var_range, load);
-        }
+            }
+        };
+        dispatch::execute(var_range, load);
     }
 }

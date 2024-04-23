@@ -30,7 +30,8 @@ namespace spade::pde_algs
         if constexpr (std::same_as<fdiv_tag_t, tbfoct_t>       ) flux_div_bfoct(prims, rhs, flux_func, traits);
         if constexpr (std::same_as<fdiv_tag_t, tldbal_t<true>> ) flux_div_ldbal(prims, rhs, flux_func, tldbal_t<true>(),  traits);
         if constexpr (std::same_as<fdiv_tag_t, tldbal_t<false>>) flux_div_ldbal(prims, rhs, flux_func, tldbal_t<false>(), traits);
-        if constexpr (std::same_as<fdiv_tag_t, tfldbc_t>       ) flux_div_fldbc(prims, rhs, flux_func, traits);
+        if constexpr (std::same_as<fdiv_tag_t, tfldbc_t<true>> ) flux_div_fldbc(prims, rhs, flux_func, tfldbc_t<true>(),  traits);
+        if constexpr (std::same_as<fdiv_tag_t, tfldbc_t<false>>) flux_div_fldbc(prims, rhs, flux_func, tfldbc_t<false>(), traits);
     }
     
     template <

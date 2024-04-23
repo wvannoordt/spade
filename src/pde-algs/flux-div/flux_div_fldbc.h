@@ -14,6 +14,7 @@ namespace spade::pde_algs
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
         typename flux_func_t,
+        const bool use_simple_buffering,
         typename traits_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
@@ -21,6 +22,7 @@ namespace spade::pde_algs
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func,
+        const tfldbc_t<use_simple_buffering>&,
         const traits_t& traits)
     {
         using real_type     = sol_arr_t::value_type;
@@ -90,6 +92,10 @@ namespace spade::pde_algs
         // Get shared memory size in elements
         std::size_t num_sh_vals_flx  = view0[0]*view0[1]*view0[2];
         std::size_t total_sh_vals    = num_sh_vals_flx;
+        if constexpr (use_simple_buffering)
+        {
+            total_sh_vals = tile_size*tile_size*tile_size;
+        }
         
         // Create shared memory array
         auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
@@ -189,226 +195,236 @@ namespace spade::pde_algs
                     // face-index of the face whose flux this thread calculates
                     auto i_face    = grid::cell_to_face(i_cell, idir, 0);
                     
-                    if constexpr (has_gradient)
+                    int ncptr = ng;
+                    if constexpr (!use_simple_buffering)
                     {
-                        // Here, we compute tangential components of the gradient
-                        auto& gradient  = omni::access<omni::info::gradient>(input.root());
-                        gradient = real_type(0.0);
+                        if constexpr (has_gradient)
+                        {
+                            // Here, we compute tangential components of the gradient
+                            auto& gradient  = omni::access<omni::info::gradient>(input.root());
+                            gradient = real_type(0.0);
+                            
+                            // Create an appropriately-sized view of the shared memory
+                            auto faces_view = utils::make_vec_image(
+                                shmem_vec,
+                                2,         // -/+
+                                2,         // tan_dir = 0 or 1
+                                tile_size, // idir[norm_dir]
+                                tile_size  // idir[tan_dir]
+                            );
+                            
+                            // Compute indices for face data buffering
+                            int pm        = inner_raw[idir0] & 1;
+                            int fdir_id   = (inner_raw[idir0] & 2) >> 1;
+                            int i_nrm     = inner_raw[idir];
+                            int i_tan     = inner_raw[idir1];
+                            int fdir      = other_dirs[fdir_id];
+                            int other_dir = other_dirs[1-fdir_id];
+                            
+                            // Lower-left indices of this tile
+                            auto ll = ctrs::make_array(tile_id[0]*tile_size, tile_id[1]*tile_size, tile_id[2]*tile_size);
+                            
+                            // Compute the cell address to load into the face array
+                            auto i_targ     = i_cell;
+                            i_targ.i(idir)  = i_cell.i(idir);
+                            i_targ.i(idir0) = ll[idir0];
+                            i_targ.i(idir1) = ll[idir1];
+                            
+                            i_targ.i(fdir)      += (pm*tile_size + (1-pm)*(-1));
+                            i_targ.i(other_dir) += i_tan;
+                            
+                            // Compute the store address
+                            auto& target = faces_view(pm, fdir_id, i_nrm, i_tan);
+                            target = q_img.get_elem(i_targ);
+                            
+                            // Populate the bulk data with thread's own element
+                            auto voldata = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
+                            voldata.ptr  = faces_view.end();
+                            
+                            voldata(inner_raw[0], inner_raw[1], inner_raw[2]) = my_elem;
+                            threads.sync();
+                            
+                            // Computing the gradient in tangential directions using face and volume data
+                            #pragma unroll
+                            for (int i_norm_pm = 0; i_norm_pm < 2; ++i_norm_pm)
+                            {
+                                int idx_nrm = utils::max(i_nrm - (1 - i_norm_pm), 0);
+                                bool lower_face_nrm = (i_nrm == 0);
+                                
+                                // Tangential direction loop
+                                #pragma unroll
+                                for (int i_td = 0; i_td < 2; ++i_td)
+                                {
+                                    int dir_here       = other_dirs[i_td];
+                                    int other_dir_here = other_dirs[1-i_td];
+                                    int pm_here        = inner_raw[dir_here] > 0;
+                                    int tdir_idx       = inner_raw[other_dir_here];
+                                    real_type coeff    = real_type(0.25)*inv_dx[dir_here];
+                                    
+                                    // Zero out if the data isn't actually available
+                                    if (i_norm_pm == 0 && lower_face_nrm) coeff = real_type(0.0);
+                                    const auto& edge_val = faces_view(pm_here, i_td, idx_nrm, tdir_idx);
+                                    
+                                    // Differentiate in tangential direction as though all data is available
+                                    auto raws = inner_raw;
+                                    raws[idir] += (i_norm_pm - 1);
+                                    bool block_left  = raws[dir_here] == 0;
+                                    bool block_right = raws[dir_here] == (tile_size - 1);
+                                    raws[dir_here]--;
+                                    raws[dir_here] = utils::max(0, raws[dir_here]);
+                                    auto left_val  = voldata(raws[0], raws[1], raws[2]);
+                                    raws[dir_here] = inner_raw[dir_here];
+                                    raws[dir_here]++;
+                                    raws[dir_here] = utils::min(tile_size-1, raws[dir_here]);
+                                    auto right_val = voldata(raws[0], raws[1], raws[2]);
+                                    
+                                    // If data is coming from the edge, substitute it in
+                                    if (block_left)  left_val  = edge_val;
+                                    if (block_right) right_val = edge_val;
+                                    
+                                    gradient[dir_here] += coeff*right_val;
+                                    gradient[dir_here] -= coeff*left_val;
+                                }
+                            }
+                            // Note that by this time, not all tangential gradients are computed.
+                            // Cells on the lower face of the tile (in normal direction)
+                            // still require a ring of data around the edge, which
+                            // will be handled later
+                            threads.sync();
+                        } // End fringe gradient pt. 1
                         
-                        // Create an appropriately-sized view of the shared memory
-                        auto faces_view = utils::make_vec_image(
-                            shmem_vec,
-                            2,         // -/+
-                            2,         // tan_dir = 0 or 1
-                            tile_size, // idir[norm_dir]
-                            tile_size  // idir[tan_dir]
-                        );
+                        // Buffering the values along the flux stencil
+                        auto sizes           = ctrs::make_array(tile_size, tile_size, tile_size);
+                        sizes[idir]         += 2*ng - 1;
+                        auto vals            = utils::make_vec_image(shmem_vec, sizes);
+                        auto ring            = utils::make_vec_image(shmem_vec, 2, 2, tile_size); //pm, face_dir, idx
+                        ring.ptr             = vals.end();
+                        auto ii              = inner_raw;
+                        ii[idir]            += ng;
                         
-                        // Compute indices for face data buffering
-                        int pm        = inner_raw[idir0] & 1;
-                        int fdir_id   = (inner_raw[idir0] & 2) >> 1;
-                        int i_nrm     = inner_raw[idir];
-                        int i_tan     = inner_raw[idir1];
-                        int fdir      = other_dirs[fdir_id];
-                        int other_dir = other_dirs[1-fdir_id];
-                        
-                        // Lower-left indices of this tile
-                        auto ll = ctrs::make_array(tile_id[0]*tile_size, tile_id[1]*tile_size, tile_id[2]*tile_size);
-                        
-                        // Compute the cell address to load into the face array
-                        auto i_targ     = i_cell;
-                        i_targ.i(idir)  = i_cell.i(idir);
-                        i_targ.i(idir0) = ll[idir0];
-                        i_targ.i(idir1) = ll[idir1];
-                        
-                        i_targ.i(fdir)      += (pm*tile_size + (1-pm)*(-1));
-                        i_targ.i(other_dir) += i_tan;
-                        
-                        // Compute the store address
-                        auto& target = faces_view(pm, fdir_id, i_nrm, i_tan);
-                        target = q_img.get_elem(i_targ);
-                        
-                        // Populate the bulk data with thread's own element
-                        auto voldata = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
-                        voldata.ptr  = faces_view.end();
-                        
-                        voldata(inner_raw[0], inner_raw[1], inner_raw[2]) = my_elem;
                         threads.sync();
                         
-                        // Computing the gradient in tangential directions using face and volume data
-                        #pragma unroll
-                        for (int i_norm_pm = 0; i_norm_pm < 2; ++i_norm_pm)
+                        auto buf_cell = i_cell;
+                        vals(ii[0], ii[1], ii[2]) = my_elem;
+                        threads.sync();
+                        int other_buf_offset = -(1 + 2*inner_raw[idir]);
+                        if (inner_raw[idir] == 2) other_buf_offset = 2;
+                        buf_cell.i(idir) += other_buf_offset;
+                        ii[idir] += other_buf_offset;
+                        alias_type* to_set = &vals(ii[0], ii[1], ii[2]);
+                        
+                        // Check to see if the data being buffered is redundant, in
+                        // which case we assign an element on the ring to be buffered
+                        if (inner_raw[idir] == tile_size - 1)
                         {
-                            int idx_nrm = utils::max(i_nrm - (1 - i_norm_pm), 0);
-                            bool lower_face_nrm = (i_nrm == 0);
-                            
-                            // Tangential direction loop
-                            #pragma unroll
-                            for (int i_td = 0; i_td < 2; ++i_td)
+                            // Calculate the index of the ring element
+                            int ring_pm        = inner_raw[idir0] & 1;
+                            int ring_fdir_id   = (inner_raw[idir0] & 2) >> 1;
+                            int ring_fdir      = other_dirs[ring_fdir_id];
+                            int ring_other_dir = other_dirs[1 - ring_fdir_id];
+                            int ring_idx       = inner_raw[idir1];
+                            buf_cell.i()  = tile_id[0]*tile_size;
+                            buf_cell.j()  = tile_id[1]*tile_size;
+                            buf_cell.k()  = tile_id[2]*tile_size;
+                            buf_cell.i(idir)--;
+                            buf_cell.i(ring_other_dir) += ring_idx;
+                            buf_cell.i(ring_fdir)      += ring_pm*tile_size + (1-ring_pm)*(-1);
+                            to_set = &ring(ring_pm, ring_fdir_id, ring_idx);
+                        }
+                        *to_set = q_img.get_elem(buf_cell);
+                        threads.sync();
+                        
+                        if constexpr (has_gradient)
+                        {
+                            // Finish tangential gradient calculation using the ring information
+                            auto& gradient  = omni::access<omni::info::gradient>(input.root());
+                            for (int fdir_id = 0; fdir_id < 2; ++fdir_id)
                             {
-                                int dir_here       = other_dirs[i_td];
-                                int other_dir_here = other_dirs[1-i_td];
-                                int pm_here        = inner_raw[dir_here] > 0;
-                                int tdir_idx       = inner_raw[other_dir_here];
-                                real_type coeff    = real_type(0.25)*inv_dx[dir_here];
+                                int real_dir         = other_dirs[fdir_id];
+                                int other_dir        = other_dirs[1-fdir_id];
+                                int pm_here          = int(inner_raw[real_dir]>0);
+                                const auto& edge_val = ring(pm_here, fdir_id, inner_raw[other_dir]);
                                 
-                                // Zero out if the data isn't actually available
-                                if (i_norm_pm == 0 && lower_face_nrm) coeff = real_type(0.0);
-                                const auto& edge_val = faces_view(pm_here, i_td, idx_nrm, tdir_idx);
+                                bool block_left  = inner_raw[real_dir]==0;
+                                bool block_right = inner_raw[real_dir]==tile_size-1;
+                                auto ii_r        = inner_raw;
+                                ii_r[idir]      += ng;
+                                ii_r[idir]--;
                                 
-                                // Differentiate in tangential direction as though all data is available
-                                auto raws = inner_raw;
-                                raws[idir] += (i_norm_pm - 1);
-                                bool block_left  = raws[dir_here] == 0;
-                                bool block_right = raws[dir_here] == (tile_size - 1);
-                                raws[dir_here]--;
-                                raws[dir_here] = utils::max(0, raws[dir_here]);
-                                auto left_val  = voldata(raws[0], raws[1], raws[2]);
-                                raws[dir_here] = inner_raw[dir_here];
-                                raws[dir_here]++;
-                                raws[dir_here] = utils::min(tile_size-1, raws[dir_here]);
-                                auto right_val = voldata(raws[0], raws[1], raws[2]);
+                                auto ii_l = ii_r;
+                                ii_r[real_dir]++;
+                                ii_l[real_dir]--;
                                 
-                                // If data is coming from the edge, substitute it in
-                                if (block_left)  left_val  = edge_val;
-                                if (block_right) right_val = edge_val;
+                                ii_r[real_dir] = utils::min(ii_r[real_dir], tile_size - 1);
+                                ii_l[real_dir] = utils::max(ii_l[real_dir], 0);
                                 
-                                gradient[dir_here] += coeff*right_val;
-                                gradient[dir_here] -= coeff*left_val;
+                                // Similar strategy as above - calculate as if the ring value is used,
+                                // block out otherwise
+                                auto val_left   = vals(ii_l[0], ii_l[1], ii_l[2]);
+                                auto val_right  = vals(ii_r[0], ii_r[1], ii_r[2]);
+                                
+                                if (block_left)  val_left  = edge_val;
+                                if (block_right) val_right = edge_val;
+                                
+                                auto coeff          = real_type(0.25)*inv_dx[real_dir]*(inner_raw[idir]==0);
+                                gradient[real_dir] += coeff*val_right;
+                                gradient[real_dir] -= coeff*val_left;
                             }
                         }
-                        // Note that by this time, not all tangential gradients are computed.
-                        // Cells on the lower face of the tile (in normal direction)
-                        // still require a ring of data around the edge, which
-                        // will be handled later
-                        threads.sync();
-                    } // End fringe gradient pt. 1
-                    
-                    // Buffering the values along the flux stencil
-                    auto sizes           = ctrs::make_array(tile_size, tile_size, tile_size);
-                    sizes[idir]         += 2*ng - 1;
-                    auto vals            = utils::make_vec_image(shmem_vec, sizes);
-                    auto ring            = utils::make_vec_image(shmem_vec, 2, 2, tile_size); //pm, face_dir, idx
-                    ring.ptr             = vals.end();
-                    auto ii              = inner_raw;
-                    ii[idir]            += ng;
-                    
-                    threads.sync();
-                    
-                    auto buf_cell = i_cell;
-                    vals(ii[0], ii[1], ii[2]) = my_elem;
-                    threads.sync();
-                    int other_buf_offset = -(1 + 2*inner_raw[idir]);
-                    if (inner_raw[idir] == 2) other_buf_offset = 2;
-                    buf_cell.i(idir) += other_buf_offset;
-                    ii[idir] += other_buf_offset;
-                    alias_type* to_set = &vals(ii[0], ii[1], ii[2]);
-                    
-                    // Check to see if the data being buffered is redundant, in
-                    // which case we assign an element on the ring to be buffered
-                    if (inner_raw[idir] == tile_size - 1)
-                    {
-                        // Calculate the index of the ring element
-                        int ring_pm        = inner_raw[idir0] & 1;
-                        int ring_fdir_id   = (inner_raw[idir0] & 2) >> 1;
-                        int ring_fdir      = other_dirs[ring_fdir_id];
-                        int ring_other_dir = other_dirs[1 - ring_fdir_id];
-                        int ring_idx       = inner_raw[idir1];
-                        buf_cell.i()  = tile_id[0]*tile_size;
-                        buf_cell.j()  = tile_id[1]*tile_size;
-                        buf_cell.k()  = tile_id[2]*tile_size;
-                        buf_cell.i(idir)--;
-                        buf_cell.i(ring_other_dir) += ring_idx;
-                        buf_cell.i(ring_fdir)      += ring_pm*tile_size + (1-ring_pm)*(-1);
-                        to_set = &ring(ring_pm, ring_fdir_id, ring_idx);
-                    }
-                    *to_set = q_img.get_elem(buf_cell);
-                    threads.sync();
-                    
-                    if constexpr (has_gradient)
-                    {
-                        // Finish tangential gradient calculation using the ring information
-                        auto& gradient  = omni::access<omni::info::gradient>(input.root());
-                        for (int fdir_id = 0; fdir_id < 2; ++fdir_id)
+                        
+                        
+                        // Now we fill the stencil values from the volume data that is loaded
+                        constexpr int num_stencil_vals = 2*ng;
+                        auto ii_l = inner_raw;
+                        
+                        // Loop over stencil elements
+                        algs::static_for<0, num_stencil_vals>([&](const auto& iidx)
                         {
-                            int real_dir         = other_dirs[fdir_id];
-                            int other_dir        = other_dirs[1-fdir_id];
-                            int pm_here          = int(inner_raw[real_dir]>0);
-                            const auto& edge_val = ring(pm_here, fdir_id, inner_raw[other_dir]);
-                            
-                            bool block_left  = inner_raw[real_dir]==0;
-                            bool block_right = inner_raw[real_dir]==tile_size-1;
-                            auto ii_r        = inner_raw;
-                            ii_r[idir]      += ng;
-                            ii_r[idir]--;
-                            
-                            auto ii_l = ii_r;
-                            ii_r[real_dir]++;
-                            ii_l[real_dir]--;
-                            
-                            ii_r[real_dir] = utils::min(ii_r[real_dir], tile_size - 1);
-                            ii_l[real_dir] = utils::max(ii_l[real_dir], 0);
-                            
-                            // Similar strategy as above - calculate as if the ring value is used,
-                            // block out otherwise
-                            auto val_left   = vals(ii_l[0], ii_l[1], ii_l[2]);
-                            auto val_right  = vals(ii_r[0], ii_r[1], ii_r[2]);
-                            
-                            if (block_left)  val_left  = edge_val;
-                            if (block_right) val_right = edge_val;
-                            
-                            auto coeff          = real_type(0.25)*inv_dx[real_dir]*(inner_raw[idir]==0);
-                            gradient[real_dir] += coeff*val_right;
-                            gradient[real_dir] -= coeff*val_left;
+                            const auto idxxx = udci::idx_const_t<iidx.value>();
+                            auto& st_val = omni::access<omni::info::value>(input.cell(idxxx));
+                            st_val = vals(ii_l[0], ii_l[1], ii_l[2]);
+                            ii_l[idir]++;
+                        });
+                        
+                        threads.sync();
+                        
+                        // Compute face-average value directly from stencil
+                        if constexpr (has_face_val)
+                        {
+                            auto& face_val    = omni::access<omni::info::value>(input.root());
+                            constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
+                            constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
+                            auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
+                            auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
+                            face_val          = q_upper;
+                            face_val         += q_lower;
+                            face_val         *= real_type(0.5);
                         }
+                        
+                        // Compute normal gradient directly from stencil
+                        if constexpr (has_gradient)
+                        {
+                            auto& gradient  = omni::access<omni::info::gradient>(input.root());
+                            constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
+                            constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
+                            auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
+                            auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
+                            gradient[idir]    = q_upper;
+                            gradient[idir]   -= q_lower;
+                            gradient[idir]   *= inv_dx[idir];
+                        }
+                        
+                        // Check if stencil has any other necessary information to load, in which case
+                        // simply do it using the naive approach
+                        const auto excluded = omni::info_list_t<omni::info::value, omni::info::gradient>();
+                        if (is_interior) omni::retrieve(grid_img, q_img, i_face, input, excluded);
+                    }
+                    else
+                    {
+                        if (is_interior) omni::retrieve(grid_img, q_img, i_face, input);    
                     }
                     
-                    
-                    // Now we fill the stencil values from the volume data that is loaded
-                    constexpr int num_stencil_vals = 2*ng;
-                    auto ii_l = inner_raw;
-                    
-                    // Loop over stencil elements
-                    algs::static_for<0, num_stencil_vals>([&](const auto& iidx)
-                    {
-                        const auto idxxx = udci::idx_const_t<iidx.value>();
-                        auto& st_val = omni::access<omni::info::value>(input.cell(idxxx));
-                        st_val = vals(ii_l[0], ii_l[1], ii_l[2]);
-                        ii_l[idir]++;
-                    });
-                    
-                    threads.sync();
-                    
-                    // Compute face-average value directly from stencil
-                    if constexpr (has_face_val)
-                    {
-                        auto& face_val    = omni::access<omni::info::value>(input.root());
-                        constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
-                        constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
-                        auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
-                        auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
-                        face_val          = q_upper;
-                        face_val         += q_lower;
-                        face_val         *= real_type(0.5);
-                    }
-                    
-                    // Compute normal gradient directly from stencil
-                    if constexpr (has_gradient)
-                    {
-                        auto& gradient  = omni::access<omni::info::gradient>(input.root());
-                        constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
-                        constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
-                        auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
-                        auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
-                        gradient[idir]    = q_upper;
-                        gradient[idir]   -= q_lower;
-                        gradient[idir]   *= inv_dx[idir];
-                    }
-                    
-                    // Check if stencil has any other necessary information to load, in which case
-                    // simply do it using the naive approach
-                    const auto excluded = omni::info_list_t<omni::info::value, omni::info::gradient>();
-                    if (is_interior) omni::retrieve(grid_img, q_img, i_face, input, excluded);
+                    // if (is_interior) omni::retrieve(grid_img, q_img, i_face, input);
                     
                     // Calculate the flux (expensive compute workload)
                     flux_type flux = flux_func(input);
@@ -425,10 +441,14 @@ namespace spade::pde_algs
                     // Create a view of the shared memory vector to store the residual elements
                     auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
                     auto rawdata = utils::vec_img_cast<flux_type>(tmp);
-                    auto i_rhs_mod = inner_raw;
+                    auto i_rhs_mod   = inner_raw;
+                    auto i_rhs_mod_l = inner_raw;
+                    i_rhs_mod_l[idir]--;
                     
                     // Add the flux to thread's own residual
+                    threads.sync();
                     my_rhs += flux;
+                    
                     
                     // Load this threads RHS into shared memory
                     rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
@@ -477,7 +497,7 @@ namespace spade::pde_algs
         
         // Compute grid range
         const auto outer_range_cor = dispatch::ranges::make_range(0, orange_dims[0]*orange_dims[1]*orange_dims[2], 0, int(grid.get_num_local_blocks()));
-        using threads_type_cor  = decltype(kpool_cor);
+        using threads_type_cor     = decltype(kpool_cor);
         
         using data_type = omni::stencil_data_t<omni_type, sol_arr_t>;
             
