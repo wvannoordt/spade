@@ -490,15 +490,8 @@ namespace spade::mem_map
                 constexpr int i = ii.value;
                 output += get_val<rank - i - 1>(is...) - min[rank - i - 1];
                 output *= size(rank - i - 2);
-                // print("==========");
-                // print("size:", size(rank - i - 2));
-                // print("idx:",  get_val<rank - i - 1>(is...));
-                // print("min:",  min[rank - i - 1]);
-                // print("max:",  max[rank - i - 1]);
-                // print("==========");
             });
             output += get_val<0>(is...) - min[0];
-            // std::cin.get();
             return output;
         }
     };
@@ -636,22 +629,6 @@ namespace spade::mem_map
             
             int kk = k & mask;
             k = k >> tpow;
-            
-            // std::size_t output = v;
-            // output *= nlb;
-            // output += lb;
-            // output *= nk;
-            // output += k;
-            // output *= nj;
-            // output += j;
-            // output *= ni;
-            // output += i;
-            // output *= tsz;
-            // output += kk;
-            // output *= tsz;
-            // output += jj;
-            // output *= tsz;
-            // output += ii;
             
             std::size_t  output = lb;
             output *= nk;

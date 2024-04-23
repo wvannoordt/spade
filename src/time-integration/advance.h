@@ -279,6 +279,125 @@ namespace spade::time_integration
         boundary(q, axis.time());
     }
     
+    namespace detail
+    {
+        //Stupid cuda compiler limitations
+        template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
+        static void opt_rk3_s0(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
+        {
+            using alias_type = typename q_t::alias_type;
+            auto r0_img = r0.image();
+            auto r1_img = r1.image();
+            algs::transform_inplace(q, [=] _sp_hybrid (const grid::cell_idx_t& ii, const alias_type& q_orig)
+            {
+                state_t cons;
+                fluid_state::convert_state(q_orig, cons, gas_model);
+                auto r0_i = r0_img.get_elem(ii);
+                cons += dt*r0_i;
+                alias_type new_q;
+                fluid_state::convert_state(cons, new_q, gas_model);
+                return new_q;
+            });
+        }
+        
+        template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
+        static void opt_rk3_s1(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
+        {
+            using alias_type = typename q_t::alias_type;
+            auto r0_img = r0.image();
+            auto r1_img = r1.image();
+            auto q_img  = q.image();
+            
+            auto lam = [=] _sp_hybrid (const grid::cell_idx_t& ii) mutable
+            {
+                alias_type q_orig = q_img.get_elem(ii);
+                state_t cons;
+                fluid_state::convert_state(q_orig, cons, gas_model);
+                auto r0_i = r0_img.get_elem(ii);
+                auto r1_i = r1_img.get_elem(ii);
+                
+                auto new_r0_i = dt_t(1.0/6.0)*dt*(r0_i + r1_i);
+                r0_img.set_elem(ii, new_r0_i);
+                
+                cons += dt_t(3.0/2.0)*new_r0_i;
+                cons -= dt*r0_i;
+                alias_type new_q;
+                fluid_state::convert_state(cons, new_q, gas_model);
+                
+                q_img.set_elem(ii, new_q);
+            };
+            
+            algs::for_each(q, lam);
+        }
+        
+        template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
+        static void opt_rk3_s2(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
+        {
+            using alias_type = typename q_t::alias_type;
+            auto r0_img = r0.image();
+            auto r1_img = r1.image();
+            algs::transform_inplace(q, [=] _sp_hybrid (const grid::cell_idx_t& ii, const alias_type& q_orig)
+            {
+                state_t cons;
+                fluid_state::convert_state(q_orig, cons, gas_model);
+                auto r0_i = r0_img.get_elem(ii);
+                auto r1_i = r1_img.get_elem(ii);
+                cons -= dt_t(1.0/2.0)*r0_i;
+                cons += dt*dt_t(2.0/3.0)*r1_i;
+                alias_type new_q;
+                fluid_state::convert_state(cons, new_q, gas_model);
+                return new_q;
+            });
+        }
+    }
+    
+    //Another experimental version
+    template <typename axis_t, typename data_t, typename rhs_t, typename boundary_t, typename state_t, typename gas_t>
+    void integrate_advance(axis_t& axis, data_t& data, const tspecial_rk3_t&, const rhs_t& rhs, const boundary_t& boundary, const fluid_state::state_transform_t<gas_t, state_t>& trans)
+    {
+        //Note that we assume that the boundary has been set before we begin integration.
+        
+        auto& q  = data.solution(0);
+        auto& r0 = data.residual(0);
+        auto& r1 = data.residual(1);
+        
+        using parray_t = typename data_t::solution_type;
+        using alias_type = typename parray_t::alias_type;
+        const auto gas_model = trans.gas;
+        
+        //Get the basic numeric type from the solution
+        using numeric_type = typename axis_t::value_type;
+        
+        //Timestep
+        const auto& dt = axis.timestep();
+        const ctrs::array<numeric_type,3> time_coeffs{numeric_type(0.0), numeric_type(1.0), numeric_type(0.5)};
+        
+        
+        axis.time() += time_coeffs[0]*dt;
+        rhs(r0, q, axis.time());
+        axis.time() -= time_coeffs[0]*dt;
+        
+        detail::opt_rk3_s0(q, r0, r1, gas_model, dt, state_t());
+        
+        axis.time() += time_coeffs[1]*dt;
+        boundary(q, axis.time());
+        rhs(r1, q, axis.time());
+        axis.time() -= time_coeffs[1]*dt;
+        
+        detail::opt_rk3_s1(q, r0, r1, gas_model, dt, state_t());
+        
+        axis.time() += time_coeffs[2]*dt;
+        boundary(q, axis.time());
+        rhs(r1, q, axis.time());
+        axis.time() -= time_coeffs[2]*dt;
+        
+        detail::opt_rk3_s2(q, r0, r1, gas_model, dt, state_t());
+        
+        //After it all, we set boundary conditions
+        axis.time() += dt;
+        boundary(q, axis.time());
+    }
+    
     
     template <typename axis_t, typename data_t, typename scheme_t, typename rhs_t, typename boundary_t, typename trans_t>
     requires (data_t::scheme_type::is_crank_nichol_specialization)
