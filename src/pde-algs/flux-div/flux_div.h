@@ -6,6 +6,7 @@
 #include "pde-algs/flux-div/flux_div_ldbal.h"
 #include "pde-algs/flux-div/flux_div_bfoct.h"
 #include "pde-algs/flux-div/flux_div_fldbc.h"
+#include "pde-algs/flux-div/flux_div_fused.h"
 
 namespace spade::pde_algs
 {
@@ -32,6 +33,7 @@ namespace spade::pde_algs
         if constexpr (std::same_as<fdiv_tag_t, tldbal_t<false>>) flux_div_ldbal(prims, rhs, flux_func, tldbal_t<false>(), traits);
         if constexpr (std::same_as<fdiv_tag_t, tfldbc_t<true>> ) flux_div_fldbc(prims, rhs, flux_func, tfldbc_t<true>(),  traits);
         if constexpr (std::same_as<fdiv_tag_t, tfldbc_t<false>>) flux_div_fldbc(prims, rhs, flux_func, tfldbc_t<false>(), traits);
+        if constexpr (std::same_as<fdiv_tag_t, tfused_t>       ) flux_div_fused(prims, rhs, flux_func, traits);
     }
     
     template <
@@ -49,5 +51,3 @@ namespace spade::pde_algs
         flux_div(prims, rhs, flux_func, default_traits);
     }
 }
-
-
