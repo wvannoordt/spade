@@ -27,13 +27,21 @@ namespace spade::omni
                 using grid_t = utils::remove_all<decltype(ar_grid)>::type;
                 const int idir0 = idx.dir();
                 const ctrs::array<int,3> idir(idir0, (idir0+1)%ar_grid.dim(), (idir0+2)%ar_grid.dim());
+                using vl_t  = typename array_t::value_type;
                 using flt_t = typename grid_t::coord_type;
-                const ctrs::array<flt_t, 3> invdx
-                (
-                    flt_t(1.0)/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
-                    flt_t(1.0)/ar_grid.get_dx(1, idx.lb()),
-                    flt_t(1.0)/ar_grid.get_dx(2, idx.lb())
-                );
+                const auto inv_dx_native   = ar_grid.get_inv_dx(idx.lb());
+                ctrs::array<vl_t,3> invdx;
+                
+                #pragma unroll
+                for (int d = 0; d < 3; ++d) invdx[d] = vl_t(inv_dx_native[d]);
+                
+                // const ctrs::array<flt_t, 3> invdx
+                // (
+                //     flt_t(1.0)/ar_grid.get_dx(0, idx.lb()), //todo: update with block index
+                //     flt_t(1.0)/ar_grid.get_dx(1, idx.lb()),
+                //     flt_t(1.0)/ar_grid.get_dx(2, idx.lb())
+                // );
+                
                 grid::cell_idx_t ic = grid::face_to_cell(idx, 0);
 
                 out = 0.0;
@@ -43,6 +51,7 @@ namespace spade::omni
                     auto q = array.get_elem(idx_in);
                     if constexpr (ctrs::basic_array<typename array_t::alias_type>)
                     {
+                        #pragma unroll
                         for (std::size_t i = 0; i < out[iset].size(); ++i) out[iset][i] += coeff*q[i]*invdx[iset];
                     }
                     else
@@ -51,7 +60,6 @@ namespace spade::omni
                     }
                 };
                 
-                using vl_t = typename array_t::value_type;
                 apply_coeff_at(idir[0],  vl_t(-1.0), ic);
                 for (int ii = 1; ii < grid_t::dim(); ++ii)
                 {

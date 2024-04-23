@@ -10,13 +10,15 @@ namespace spade::pde_algs
     template <
         grid::multiblock_array sol_arr_t,
         grid::multiblock_array rhs_arr_t,
-        typename flux_func_t>
+        typename flux_func_t,
+        typename traits_t>
     requires
         grid::has_centering_type<sol_arr_t, grid::cell_centered>
     static void flux_div_basic(
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
-        const flux_func_t& flux_func)
+        const flux_func_t& flux_func,
+        const traits_t& traits)
     {
         
         // Note: this is a naive implementation for the gpu
@@ -25,6 +27,13 @@ namespace spade::pde_algs
         using alias_type       = sol_arr_t::alias_type;
         using omni_union_type  = omni::combine_omni_stencils<flux_func_t>;
         using flux_out_t       = rhs_arr_t::alias_type;
+        
+        using namespace sym::literals;
+        const auto& incr = algs::get_trait(traits, "pde_increment"_sym, increment);
+        using incr_mode_t = typename utils::remove_all<decltype(incr)>::type;
+        constexpr bool is_incr_mode = incr_mode_t::increment_mode;
+        if constexpr (!is_incr_mode) rhs = real_type(0.0);
+        
         
         const auto& ar_grid    = prims.get_grid();
         const auto geom_image  = ar_grid.image(prims.device());

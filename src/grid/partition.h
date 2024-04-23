@@ -110,7 +110,7 @@ namespace spade::partition
                 else return utils::tag[local](global_block_to_local_block[lb.value]);
             }
             
-        private:
+        // private:
             //To-do: IMPROVE THIS CRAP
             std::size_t num_local_blocks, num_global_blocks;
             std::vector<std::size_t> local_block_to_global_block;

@@ -21,10 +21,13 @@ namespace spade::grid
         
         output.rank_send = src_grid.get_partition().get_rank(lb_ini);
         output.rank_recv = dst_grid.get_partition().get_rank(lb_term);
+        
+        output.glob_source_blk = lb_ini.value;
+        output.glob_dest_blk   = lb_term.value;
 
-        output.source.min(3) = src_grid.get_partition().get_any_local(lb_ini);
+        output.source.min(3) = src_grid.get_partition().to_local(lb_ini);
         output.source.max(3) = output.source.min(3) + 1;
-        output.dest.min(3)   = dst_grid.get_partition().get_any_local(lb_term);
+        output.dest.min(3)   = dst_grid.get_partition().to_local(lb_term);
         output.dest.max(3)   = output.dest.min(3) + 1;
         
         // Here we need to classify this transaction
@@ -89,6 +92,7 @@ namespace spade::grid
             output.dest.min(2)   = 0;
             output.dest.max(2)   = 1;
         }
+        
         return output;
     };
     
@@ -105,7 +109,8 @@ namespace spade::grid
         base_relation.edge = -1*relation.edge;
         if constexpr (grid_t::dim() == 2) base_relation.edge[2] = 0;
         base_relation.lb_ini  = relation.endpoint.get().tag;
-        base_relation.lb_term = lb_ini;        
+        base_relation.lb_term = lb_ini;
+        
         
         //NOTE: here, we ASK the neighbor for data instead of tell it about the data we send.
         auto ptch = get_transaction(num_exchgs, src_grid, dst_grid, lb_ini, base_relation);
@@ -214,10 +219,45 @@ namespace spade::grid
                 }
                 default:
                 {
-                    throw except::sp_exception("illegal grid configuration");
+                    std::stringstream message;
+                    message << "Found illegal grid configuration.\n";
+                    message << "Self.level:  " << self.level  << "\n";
+                    message << "Other.level: " << neigh.level << "\n";
+                    // message << ""
+                    
+                    const auto bbx  = dst_grid.get_bounding_box(utils::tag[partition::global](lb_ini));
+                    const auto bbx2 = src_grid.get_bounding_box(utils::tag[partition::global](base_relation.lb_ini));
+                    using bbx_t = typename utils::remove_all<decltype(bbx)>::type;
+                    using r_t = typename bbx_t::value_type;
+                    constexpr std::size_t dim = bbx.size();
+                    std::vector<bbx_t> bbxs{bbx, bbx2};
+                    throw except::bbxs_exception<r_t, dim>(message.str(), bbxs);
                 }
             }
         }
+        
+        // if (global::debug)
+        // {
+        //     const auto& group = src_grid.group();
+        //     int lb_loc = output.patches.dest.min(3);
+        //     int lb_glob = src_grid.get_partition().local_block_to_global_block[lb_loc];
+        //     group.exclusive([&](){
+        //     if (lb_glob == 6859 && relation.edge[0] == 0 && relation.edge[1] == 0 && relation.edge[2] < 0)
+        //     {
+        //         print("=========================");
+        //         print("lb loc/glob", lb_loc, lb_glob);
+        //         print("rank", group.rank());
+        //         print("reducible", output.reducible());
+        //         print("source", output.patches.source, src_grid.get_partition().local_block_to_global_block[output.patches.source.min(3)]);
+        //         print("dest", output.patches.dest, src_grid.get_partition().local_block_to_global_block[output.patches.dest.min(3)]);
+        //         print("sender", output.sender());
+        //         print("receiver", output.receiver());
+        //         print("lb_ini (G)", lb_ini);
+        //         print("lb_term (G)", relation.endpoint->tag);
+        //         print("=========================");
+        //     }
+        //     });
+        // }
         
         return output;
     };

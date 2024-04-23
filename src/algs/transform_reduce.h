@@ -103,9 +103,10 @@ namespace spade::algs
         {
             throw except::sp_exception("Attempted reduce operation on an array with odd number of cells per block, which is unsupported");
         }
-        
-        auto range = dispatch::ranges::make_range(0, nblkx, 0, nblky, 0, nblkz*grid.get_num_local_blocks());
-        
+
+        //auto range = dispatch::ranges::make_range(0, nblkx, 0, nblky, 0, nblkz*grid.get_num_local_blocks());
+		auto range = dispatch::ranges::make_range(0, nblkz*grid.get_num_local_blocks(), 0, nblkx, 0, nblky);
+
         using index_t      = decltype(range)::index_type;
         using shmem_t      = decltype(k_shmem);
         using threads_t    = decltype(kpool);
@@ -119,11 +120,15 @@ namespace spade::algs
         auto loop = [=] _sp_hybrid (const index_t& idx, const threads_t& threads, shmem_t& shmem) mutable
         {
             //First start by filling the shmem vector with the results of the kernel invocation
-            int i_blk  = idx[0];
-            int j_blk  = idx[1];
-            int k_blk  = idx[2] % nblkz;
-            int lb_loc = (idx[2] - k_blk)/nblkz;
-            
+            //int i_blk  = idx[0];
+            //int j_blk  = idx[1];
+            //int k_blk  = idx[2] % nblkz;
+            //int lb_loc = (idx[2] - k_blk)/nblkz;
+			int i_blk  = idx[1];
+			int j_blk  = idx[2];
+			int k_blk  = idx[0] % nblkz;
+			int lb_loc = (idx[0] - k_blk)/nblkz;
+
             auto& block_result_vec = shmem[0_c];
             auto& block_mask_vec   = shmem[1_c];
             
@@ -172,6 +177,7 @@ namespace spade::algs
                         }
                     }
                 });
+                threads.sync();
             }
             
             if (threads.isroot())

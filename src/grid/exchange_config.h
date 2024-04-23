@@ -326,11 +326,13 @@ namespace spade::grid
             using grid_type = typename array_t::grid_type;
             exchange_config_t<grid_type> output;
             output.my_rank = group.rank();
+            
+            std::size_t ct = 0;
             for (auto lb = utils::tag[partition::global](0); lb.value < grid.get_num_global_blocks(); ++lb.value)
             {
                 const auto& neighs = grid.get_blocks().get_neighs(lb.value);
                 for (const auto& e:neighs)
-                {
+                {                    
                     bool ignore_from_periodic = false;
                     const auto& is_dom_bdy = grid.is_domain_boundary(lb);
                     for (int d = 0; d < array_t::dim(); ++d)
@@ -338,12 +340,14 @@ namespace spade::grid
                         bool loc = !periodic[d] && ((is_dom_bdy.min(d) && e.edge[d] == -1) || (is_dom_bdy.max(d) && e.edge[d] == 1));
                         ignore_from_periodic = ignore_from_periodic || loc;
                     }
+                    
                     if (!ignore_from_periodic)
                     {
                         const auto transaction = get_transaction(num_exchanges, grid, grid, lb.value, e);
                         
                         // Note that we add as both and the internal logic inside
                         // these calls will handle the rank checking
+                        
                         if (transaction.reducible())
                         {
                             output.add_send(transaction.reduce());
@@ -357,6 +361,7 @@ namespace spade::grid
                     }
                 }
             }
+            
             output.send_data[0_c].transfer();
             output.send_data[1_c].transfer();
             output.recv_data[0_c].transfer();
@@ -380,12 +385,12 @@ namespace spade::grid
         
         const auto recv_direct_inj_sort = [&](const auto& ex1, const auto& ex2)
         {
-            if (ex1.sender() != ex2.sender())      return ex1.sender()   < ex2.sender();
+            if (ex1.sender()   != ex2.sender())    return ex1.sender()   < ex2.sender();
             if (ex1.get_tag()  != ex2.get_tag())   return ex1.get_tag()  > ex2.get_tag();
             return ex1.recv_volume()  < ex2.recv_volume(); //We should never actually get here!
         };
-
-        //Note that use of stable_sort is critical!        
+        
+        //Note that use of stable_sort is critical!
         std::stable_sort(config.send_data[0_c].begin(), config.send_data[0_c].end(), send_direct_inj_sort);
         std::stable_sort(config.recv_data[0_c].begin(), config.recv_data[0_c].end(), recv_direct_inj_sort);
         std::stable_sort(config.send_data[1_c].begin(), config.send_data[1_c].end(), send_direct_inj_sort);
@@ -409,7 +414,7 @@ namespace spade::grid
         // std::ofstream mf1(fname1);
         // config.intrp_offsets.report(mf1, config.send_data[1_c], config.recv_data[1_c]);
         
-        
+        group.sync();
         return config;
     }
 }

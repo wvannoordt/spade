@@ -291,12 +291,12 @@ namespace spade::ibm
                         
                         // We will do this at every intersection point
                         int isect_count = 0;
-                        const int sign = is_external?(-1):(1);
+                        const int sign = is_external?(1):(-1);
                         const auto on_intersection = [&](const auto& point, const auto& normal)
                         {
                             ++isect_count;
                             
-                            const auto  gp_sign  = -utils::sign(normal[idir]*sign);
+                            const auto  gp_sign  = utils::sign(normal[idir]);
                             const auto  lb       = utils::tag[partition::local](icell_orig.lb());
                             const auto& b_point  = point;
                             const auto& bbox     = grid.get_bounding_box(lb);
@@ -365,6 +365,7 @@ namespace spade::ibm
                                     pnt_t x_search = x_ghost;
                                     x_search += real_t(2*diag)*normal;
                                     nearest_boundary_point = geom.find_closest_boundary_point(x_search, search_radius);
+                                    // nearest_boundary_point = point;
                                 }
                                 
                                 
@@ -422,6 +423,7 @@ namespace spade::ibm
                                         pnt_t x_search = xc_comp_lyr;
                                         x_search += real_t(2*(1+ilayer)*diag)*normal;
                                         nearest_boundary_point_lyr = geom.find_closest_boundary_point(x_search, lyr_search_radius);
+                                        // nearest_boundary_point_lyr = point;
                                     }
                                     
                                     vec_t nv_lyr_bndy = 0.0;
@@ -483,6 +485,13 @@ namespace spade::ibm
                             nv_new -= xg;
                             nv_new /= ctrs::array_norm(nv_new);
                             list.closest_normals[id][ilayer] = nv_new;
+                            
+                            //Something to do with the dot product
+                            // if (true)
+                            // {
+                            //     list.closest_points[id][ilayer] = list.boundary_points[id];
+                            //     list.closest_normals[id][ilayer] = list.boundary_normals[id];
+                            // }
                         }
                     }
                 }
@@ -650,14 +659,15 @@ namespace spade::ibm
                 const auto tol  = 5e-3;
                 const auto dist = ctrs::array_norm(x_bndy-xg);
                 const auto diag = ctrs::array_norm(dxs);
+                bool can_fill_lc = (geom.is_interior(xg) == is_external);
                 if (dist > tol*diag)
                 {
                     vec_t nvec = ctrs::array_cast<vec_t>(x_bndy - xg);
+                    if (!can_fill_lc) nvec = ctrs::array_cast<vec_t>(xg - x_bndy);
                     nvec /= ctrs::array_norm(nvec);
                     output.closest_normals[id] = nvec;
                 }
                 output.closest_points.push_back(x_bndy);
-                bool can_fill_lc = (geom.is_interior(xg) == is_external);
                 output.can_fill.push_back(can_fill_lc);
             }
             output.transfer();

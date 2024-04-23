@@ -127,10 +127,10 @@ namespace spade::ctrs
         }
         
         _sp_hybrid dtype* begin() noexcept {return &data[0];}
-        _sp_hybrid dtype* end()   noexcept {return &data[0]+ar_size;}
+        _sp_hybrid dtype* end()   noexcept {return &data[0] + ar_size;}
 
         _sp_hybrid const dtype* begin() const noexcept {return &data[0];}
-        _sp_hybrid const dtype* end()   const noexcept {return &data[0]+ar_size;}
+        _sp_hybrid const dtype* end()   const noexcept {return &data[0] + ar_size;}
 
         _sp_hybrid constexpr static index_type size() {return ar_size;}
         
