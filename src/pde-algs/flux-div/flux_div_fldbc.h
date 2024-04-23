@@ -99,7 +99,6 @@ namespace spade::pde_algs
         
         // Create shared memory array
         auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<alias_type>(total_sh_vals));
-        // auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<real_type>(total_sh_vals));
         using shmem_type = decltype(k_shmem);
         
         // Create a grid-range over the number of tiles in each block and the number of blocks
