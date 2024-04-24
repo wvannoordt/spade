@@ -511,12 +511,22 @@ namespace spade::fluid_state
 		return;
 	}
 
-	// Compute forward reaction rates
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const bool is_image>
-	_sp_hybrid static void compute_forwardRates(const prim_chem_t<ptype, ns>& prim, const reactionMechanism_t<ptype, ns, nr, is_image>& react, spade::ctrs::array<ptype, nr>& kf, spade::ctrs::array<ptype, nr>& kfb)
+	// Compute chemical source term
+	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
+	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_chemSource(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
 	{
-		// Loop reactions
-		ptype Tf, Tb;
+		using float_t = ptype;
+		
+		// Allocate vectors for reactions
+		ptype kfb;
+		spade::ctrs::array<ptype, react.nreact()> kf,kb;
+		spade::ctrs::array<ptype, prim.nspecies()> source = float_t(0.0);
+		
+		// Initialize
+		ptype Tf,Tb,hi,si,gibbs,Kc,vr;
+		spade::ctrs::array<ptype, 9> coefs;
+		
+		// Loop reactions and compute forward/backward reaction rates
 		for (int r = 0; r<react.nreact(); ++r)
 		{
 			// Forward controlling temperature
@@ -531,61 +541,34 @@ namespace spade::fluid_state
 
 			// Compute rates
 			kf[r]  = react.compute_rates(r, Tf);
-			kfb[r] = react.compute_rates(r, Tb);
-		}
+			kfb    = react.compute_rates(r, Tb);
 
-		return;
-	}
-
-	// Compute forward reaction rates
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const bool is_image>
-	_sp_hybrid static spade::ctrs::array<ptype, nr> compute_backwardRates(const prim_chem_t<ptype, ns>& prim, const reactionMechanism_t<ptype, ns, nr, is_image>& react, const spade::ctrs::array<ptype, nr>& kfb)
-	{
-		using float_t = ptype;
-
-		// Initialize
-		spade::ctrs::array<ptype, react.nreact()> kb = 0.0;
-		ptype Tb,hi,si,gibbs,Kc,vr;
-		spade::ctrs::array<ptype, 9> coefs;
-		ptype T,T2,T3,T4,logT;
-		
-		// Sweep reactions
-		for (int r = 0; r<react.nreact(); ++r)
-		{
 			// Initialize gibbs energy
 			gibbs = float_t(0.0);
 
 			// Initialize stoichiometric summation
 			vr = float_t(0.0);
 
-			// Backward controlling temperature
-			Tb = react.compute_Tb(r, prim.T(), prim.Tv());
-			Tb = react.limiting(Tb);
-
-			// Pre-compute some values
-			T    = Tb;
-			T2   = Tb*Tb;
-			T3   = T2*Tb;
-			T4   = T3*Tb;
-			logT = log(Tb);
-			
 			// Sweep species
 			for (int s = 0; s<prim.nspecies(); ++s)
 			{
-				// Get curve fitting coefficients
-				react.get_NASA9_coefficients(s, Tb, coefs);
-				
-				// Enthalpy norm
-				hi = react.evaluate_enthalpyNorm(s, Tb, coefs);
-				
-				// Entropy norm
-				si = react.evaluate_entropyNorm(s, Tb, coefs);
-				
-				// Gibbs energy summation
-				gibbs += (react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s)) * (hi - si);
-				
-				// Stoichiometric summation
-				vr += react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s);
+				if (utils::abs(react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s)) > 0.5)
+				{
+					// Get curve fitting coefficients
+					react.get_NASA9_coefficients(s, Tb, coefs);
+					
+					// Enthalpy norm
+					hi = react.evaluate_enthalpyNorm(s, Tb, coefs);
+					
+					// Entropy norm
+					si = react.evaluate_entropyNorm(s, Tb, coefs);
+					
+					// Gibbs energy summation
+					gibbs += (react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s)) * (hi - si);
+					
+					// Stoichiometric summation
+					vr += react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s);
+				}
 			}
 
 			// Compute equilibrium constant
@@ -593,24 +576,13 @@ namespace spade::fluid_state
 
 			// Compute backward reaction rate
 			const auto kb_max = react.reactionData.kb_max;
-			kb[r] = utils::min(kfb[r] / Kc, kb_max);
+			kb[r] = utils::min(kfb / Kc, kb_max);
 		}
 
-		return kb;
-	}
-
-	// Compute reaction product
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_reactionProduct(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react, const spade::ctrs::array<ptype, nr>& kf, const spade::ctrs::array<ptype, nr>& kb)
-	{
-		using float_t = ptype;
 		// Initialize some variables
 		spade::ctrs::array<ptype, react.nreact()> con   = float_t(0.0);
 		spade::ctrs::array<ptype, react.nreact()> Rf_kf = float_t(1000.0);
 		spade::ctrs::array<ptype, react.nreact()> Rb_kb = float_t(1000.0);
-
-		// Initialize source term
-		spade::ctrs::array<ptype, prim.nspecies()> source = float_t(0.0);
 
 		// Compute species density
 		spade::ctrs::array<ptype, prim.nspecies()> rhos = fluid_state::get_rhos(prim, gas);
@@ -642,10 +614,10 @@ namespace spade::fluid_state
 			for (int s = 0; s<prim.nspecies(); ++s)
 			{
 				// Forward reaction rate
-				if (react.reactionData.vreact(r,s) != float_t(0.0)) Rf_kf[r] *= pow(1E-3 * rhos[s] * gas.mw_si[s], react.reactionData.vreact(r,s));
+				if (react.reactionData.vreact(r,s) > float_t(0.5)) Rf_kf[r] *= pow(1E-3 * rhos[s] * gas.mw_si[s], react.reactionData.vreact(r,s));
 
 				// Backward reaction rate
-				if (react.reactionData.vprod(r,s) != float_t(0.0)) Rb_kb[r] *= pow(1E-3 * rhos[s] * gas.mw_si[s], react.reactionData.vprod(r,s));
+				if (react.reactionData.vprod(r,s) > float_t(0.5)) Rb_kb[r] *= pow(1E-3 * rhos[s] * gas.mw_si[s], react.reactionData.vprod(r,s));
 			}
 		}
 
@@ -658,26 +630,6 @@ namespace spade::fluid_state
 				source[s] += (react.reactionData.vprod(r,s) - react.reactionData.vreact(r,s)) * (kf[r] * Rf_kf[r] - kb[r] * Rb_kb[r]) * gas.mw_s[s] * con[r];
 			}
 		}
-
-		return source;
-	}
-
-	// Compute chemical source term
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-	_sp_hybrid static spade::ctrs::array<ptype, ns> compute_chemSource(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
-	{
-		// Allocate vectors for reactions
-		spade::ctrs::array<ptype, react.nreact()> kf,kfb,kb;
-		spade::ctrs::array<ptype, prim.nspecies()> source;
-		
-		// Compute forward reaction rates
-		compute_forwardRates(prim, react, kf, kfb);
-		
-		// Compute backward reaction rates
-		kb = compute_backwardRates(prim, react, kfb);
-
-		// Compute reaction product
-		source = compute_reactionProduct(prim, gas, react, kf, kb);
 		
 		return source;
 	}
