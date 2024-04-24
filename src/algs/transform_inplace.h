@@ -63,10 +63,6 @@ namespace spade::algs
             {
                 throw except::sp_exception("transform_inplace requires a block size that is a multiple of 4");
             }
-            if (ng[d] != 2)
-            {
-                throw except::sp_exception("transform_inplace requires all exchange cells are size 2");
-            }
             ntiles[d]    = utils::i_div_up(nx_extent[d], tile_size);
         }
         
