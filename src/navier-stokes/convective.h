@@ -528,16 +528,16 @@ namespace spade::convective
             const auto& q2        = omni::access<omni::info::value >(input.cell(2_c));
             const auto& q3        = omni::access<omni::info::value >(input.cell(3_c));
 
-            //upwind
+            // Left state
             const auto ql0  = float_t(-0.5)*q0+float_t(1.5)*q1; //candidate 0
             const auto ql1  = float_t( 0.5)*q1+float_t(0.5)*q2; //candidate 1
 
-            //downwind
-            const auto qr0  =  float_t(0.5)*q1+float_t(0.5)*q2; //candidate 0
-            const auto qr1  =  float_t(1.5)*q2-float_t(0.5)*q3; //candidate 1
+            // Right state
+            const auto qr0  = float_t(-0.5)*q3+float_t(1.5)*q2; //candidate 0
+            const auto& qr1 = ql1; //candidate 1
 
             auto ql = ql1;
-            auto qr = qr0;
+            auto qr = qr1;
             if constexpr (use_smooth == disable_smooth)
             {
                 //use this for MMS!!                                                                                                                                                           
@@ -545,27 +545,34 @@ namespace spade::convective
                 qr *= float_t(2.0/3.0);
           
                 ql += float_t(1.0/3.0)*ql0;
-                qr += float_t(1.0/3.0)*qr1;
+                qr += float_t(1.0/3.0)*qr0;
             }
             else
             {
+				// Prevent division by zero
+				const float_t eps = float_t(1E-16);
+
+				// Sweep variables
 				for (int n = 0; n<output.size(); ++n)
 				{
 					const float_t be0 = (q0[n] - q1[n]) * (q0[n] - q1[n]);
 					const float_t be1 = (q1[n] - q2[n]) * (q1[n] - q2[n]);
 					const float_t be2 = (q2[n] - q3[n]) * (q2[n] - q3[n]);
 
-					const float_t eps = float_t(1E-16);
+					const float_t d0 = float_t(0.25) / (be0 + eps);
+					const float_t d1 = float_t(0.75) / (be1 + eps);
+					const float_t d2 = float_t(0.25) / (be2 + eps);
+					const float_t& d3= d1;
 
-					float_t d0 = float_t(0.25) / ((be0 + eps) * (be0 + eps));
-					float_t d1 = float_t(0.75) / ((be1 + eps) * (be1 + eps));
+					// Weno weights
+					const float_t w0 = d0 / (d0 + d1);
+					const float_t w1 = float_t(1.0) - w0;
+					const float_t w2 = d2 / (d2 + d3);
+					const float_t w3 = float_t(1.0) - w2;
 
-					ql[n] = d0 * ql0[n] + d1 * ql1[n];
-
-					d0 = float_t(0.75) / ((be1 + eps) * (be1 + eps));
-					d1 = float_t(0.25) / ((be2 + eps) * (be2 + eps));
-					
-					qr[n] = d0 * qr0[n] + d1 * qr1[n];
+					// State reconstruction
+					ql[n] = w0 * ql0[n] + w1 * ql1[n];
+					qr[n] = w2 * qr0[n] + w3 * qr1[n];
 				}
             }
             // call flux function                                                                                                                                                                           
