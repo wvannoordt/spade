@@ -63,7 +63,7 @@ namespace spade::algs
             {
                 throw except::sp_exception("transform_inplace requires a block size that is a multiple of 4");
             }
-            ntiles[d]    = utils::i_div_up(nx_extent[d], tile_size);
+            ntiles[d] = utils::i_div_up(nx_extent[d], tile_size);
         }
         
         const auto outer_range = dispatch::ranges::make_range(0, ntiles[0], 0, ntiles[1]*ntiles[2], 0, int(arr.get_grid().get_num_local_blocks()));
