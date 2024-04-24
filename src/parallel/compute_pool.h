@@ -61,16 +61,37 @@ namespace spade::parallel
         >;
     
     using barrier_t = std::barrier<void(*)()>;
+    
+    enum message_channel_spec
+    {
+        gpu_p2p_messg,
+        cpu_messg
+    };
+    
+    template <device::is_gpu dev_t>
+    static message_channel_spec channel_from_device(const dev_t&)
+    {
+        return gpu_p2p_messg;
+    }
+    
+    template <device::is_cpu dev_t>
+    static message_channel_spec channel_from_device(const dev_t&)
+    {
+        return cpu_messg;
+    }
+    
     //Triple vector, nice
-    using mailbox_t = std::vector<std::vector<std::vector<message_buf_t>>>;
+    using mailbox_t  = std::vector<std::vector<std::vector<message_buf_t>>>;
+    using channels_t = std::vector<std::vector<std::vector<message_channel_spec>>>;
     struct common_thread_data_t
     {
         mutable std::mutex mut;
         mutable barrier_t barrier;
         mutable std::vector<communicable_t> buffer;
         
-        mutable mailbox_t outbox;
-        mutable mailbox_t inbox;
+        mutable mailbox_t  outbox;
+        mutable mailbox_t  inbox;
+        mutable channels_t mesg_channel;
         
         std::vector<proc_id_t> rank_pids;
         bool p2p_enabled;
@@ -90,10 +111,11 @@ namespace spade::parallel
         const common_thread_data_t& env;
         
         template <typename buffer_type>
-        void post_send(const buffer_type& buf, int recv) const
+        void post_send(const buffer_type& buf, int recv, const message_channel_spec& chan = cpu_messg) const
         {
             message_buf_t bf = buf;
             env.outbox[this->rank()][recv].push_back(bf);
+            env.mesg_channel[this->rank()][recv].push_back(chan);
         }
         
         template <typename buffer_type>
@@ -120,6 +142,7 @@ namespace spade::parallel
                 {
                     auto& recv_list = inbox[donor];
                     auto& send_list = env.outbox[donor][myrank];
+                    auto& chan_list = env.mesg_channel[donor][myrank];
                     std::string msg0 = "invalid communication: list size for sender and receiver do not match";
                     std::string msg1 = "invalid communication: message size mismatch";
                     if (recv_list.size() != send_list.size()) throw except::sp_exception(msg0);
@@ -128,7 +151,20 @@ namespace spade::parallel
                         auto recv_buf = std::get<buf_t>(recv_list[i_msg]);
                         auto send_buf = std::get<buf_t>(send_list[i_msg]);
                         if (recv_buf.size() != send_buf.size()) throw except::sp_exception(msg1);
-                        std::copy(&send_buf[0], &send_buf[0] + send_buf.size(), &recv_buf[0]);
+                        const auto chan = chan_list[i_msg];
+                        if (chan == cpu_messg)     std::copy(&send_buf[0], &send_buf[0] + send_buf.size(), &recv_buf[0]);
+                        if (chan == gpu_p2p_messg)
+                        {
+                            auto er_code = cudaMemcpy(recv_buf.ptr, send_buf.ptr, send_buf.size()*sizeof(typename buf_t::value_type), cudaMemcpyDeviceToDevice);
+                            if ((er_code != cudaSuccess))
+                            {
+                                print(recv_buf.ptr);
+                                print(send_buf.ptr);
+                                print(send_buf.size()*sizeof(buf_t));
+                                print(cudaGetErrorString(er_code));
+                                print("that sucks");
+                            }
+                        }
                     }
                 }
                 else
@@ -142,8 +178,9 @@ namespace spade::parallel
             
             this->sync();
             
-            for (auto& list:  inbox) list.clear();
-            for (auto& list: outbox) list.clear();
+            for (auto& list:  inbox)                   list.clear();
+            for (auto& list: outbox)                   list.clear();
+            for (auto& list: env.mesg_channel[myrank]) list.clear();
             
             this->sync();
         }
@@ -340,6 +377,7 @@ namespace spade::parallel
             std::vector<communicable_t>(),
             mailbox_t(),
             mailbox_t(),
+            channels_t(),
             std::vector<proc_id_t>(),
             false}
         {
@@ -389,6 +427,7 @@ namespace spade::parallel
             
             data.inbox.resize(total_threads);
             data.outbox.resize(total_threads);
+            data.mesg_channel.resize(total_threads);
             
             data.rank_pids.resize(total_threads);
             
@@ -420,8 +459,9 @@ namespace spade::parallel
                 
                 data.p2p_enabled = device::enable_p2p(pool.thread(), devices);
                 
-                data.inbox [pool.rank()].resize(pool.size());
-                data.outbox[pool.rank()].resize(pool.size());
+                data.inbox       [pool.rank()].resize(pool.size());
+                data.outbox      [pool.rank()].resize(pool.size());
+                data.mesg_channel[pool.rank()].resize(pool.size());
                 
                 func(pool);
             };

@@ -126,9 +126,8 @@ namespace spade::pde_algs
             tile_id_1d /= ntiles[1];
             tile_id[2]  = tile_id_1d;
 
-            // This is the input data structure for the flux calculation
+            input_type input0;
             input_type input;
-            
             // Block index
             int lb = outer_raw[2];
             
@@ -167,40 +166,6 @@ namespace spade::pde_algs
                         my_rhs = real_type(0.0);
                     }
                     threads.sync();
-                }
-                
-                
-                #pragma unroll
-                for (int t_id = 0; t_id < 2; ++t_id)
-                {
-                    grid::cell_idx_t i_cell;
-                    i_cell.lb()         = lb;
-                    i_cell.i(thin_dir)  = tile_id[thin_dir ]*tile_size        + inner_raw[thin_dir];
-                    i_cell.i(seq_dir )  = (2*tile_id[seq_dir]+t_id)*tile_size + inner_raw[seq_dir];
-                    i_cell.i(fuse_dir)  = 2*tile_id[fuse_dir]*tile_size       + inner_raw[fuse_dir];
-                    
-                    // Overwrite the RHS (residual) element
-                    
-                    grid::face_idx_t i_face;
-                    
-                    #pragma unroll
-                    for (int idir = 0; idir < dim; ++idir)
-                    {
-                        i_face = grid::cell_to_face(i_cell, idir, 0);
-                        omni::retrieve(grid_img, q_img, i_face, input);
-                        
-                        flux_type flux0 = flux_func(input);
-                        flux0  *= inv_dx[idir];
-                        
-                        auto ii = inner_raw;
-                        ii[seq_dir] += tile_size*t_id;
-                        auto iil = ii;
-                        iil[idir]--;
-                        threads.sync();
-                        sh_rhs(ii[0], ii[1], ii[2]) += flux0;
-                        threads.sync();
-                        if (iil[idir] >= 0) sh_rhs(iil[0], iil[1], iil[2]) -= flux0;
-                    }
                 }
                 
                 const auto get_offsts = [&](const spade::ctrs::array<int, 3>& ii)
@@ -242,8 +207,8 @@ namespace spade::pde_algs
                 i_cell_bdy.i(2) += idx[2];
                 
                 grid::face_idx_t i_face = grid::cell_to_face(i_cell_bdy, flux_dir, 1);
-                omni::retrieve(grid_img, q_img, i_face, input);
-                flux_type flux0 = flux_func(input);
+                omni::retrieve(grid_img, q_img, i_face, input0);
+                flux_type flux0 = flux_func(input0);
                 flux0  *= inv_dx[flux_dir];
                 
                 #pragma unroll
@@ -254,6 +219,38 @@ namespace spade::pde_algs
                         sh_rhs(idx[0], idx[1], idx[2]) -= flux0;
                     }
                     threads.sync();
+                }
+                
+                #pragma unroll
+                for (int t_id = 0; t_id < 2; ++t_id)
+                {
+                    grid::cell_idx_t i_cell;
+                    i_cell.lb()         = lb;
+                    i_cell.i(thin_dir)  = tile_id[thin_dir ]*tile_size        + inner_raw[thin_dir];
+                    i_cell.i(seq_dir )  = (2*tile_id[seq_dir]+t_id)*tile_size + inner_raw[seq_dir];
+                    i_cell.i(fuse_dir)  = 2*tile_id[fuse_dir]*tile_size       + inner_raw[fuse_dir];
+                    
+                    
+                    grid::face_idx_t i_face;
+                    
+                    #pragma unroll
+                    for (int idir = 0; idir < dim; ++idir)
+                    {
+                        i_face = grid::cell_to_face(i_cell, idir, 0);
+                        omni::retrieve(grid_img, q_img, i_face, input);
+                        
+                        flux_type flux0 = flux_func(input);
+                        flux0  *= inv_dx[idir];
+                        
+                        auto ii = inner_raw;
+                        ii[seq_dir] += tile_size*t_id;
+                        auto iil = ii;
+                        iil[idir]--;
+                        threads.sync();
+                        sh_rhs(ii[0], ii[1], ii[2]) += flux0;
+                        threads.sync();
+                        if (iil[idir] >= 0) sh_rhs(iil[0], iil[1], iil[2]) -= flux0;
+                    }
                 }
                 
                 #pragma unroll
