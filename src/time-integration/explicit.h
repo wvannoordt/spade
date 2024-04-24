@@ -108,4 +108,10 @@ namespace spade::time_integration
         detail::sr_vec_t<std::ratio<1,8>, std::ratio<3,8>, std::ratio<3,8>, std::ratio<1,8>>,
         detail::sr_vec_t<std::ratio<0>,   std::ratio<1,3>, std::ratio<2,3>, std::ratio<1>>
     >;
+    
+    static struct tspecial_rk3_t
+    {
+        static constexpr std::size_t var_size() {return 1;}
+        static constexpr std::size_t rhs_size() {return 2;}
+    } ssprk3_opt;
 }

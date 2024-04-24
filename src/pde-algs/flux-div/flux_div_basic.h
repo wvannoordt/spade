@@ -18,7 +18,7 @@ namespace spade::pde_algs
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func,
-        const traits_t&)
+        const traits_t& traits)
     {
         
         // Note: this is a naive implementation for the gpu
@@ -28,6 +28,13 @@ namespace spade::pde_algs
         using omni_union_type  = omni::combine_omni_stencils<flux_func_t>;
         using flux_out_t       = rhs_arr_t::alias_type;
         
+        using namespace sym::literals;
+        const auto& incr = algs::get_trait(traits, "pde_increment"_sym, increment);
+        using incr_mode_t = typename utils::remove_all<decltype(incr)>::type;
+        constexpr bool is_incr_mode = incr_mode_t::increment_mode;
+        if constexpr (!is_incr_mode) rhs = real_type(0.0);
+        
+        
         const auto& ar_grid    = prims.get_grid();
         const auto geom_image  = ar_grid.image(prims.device());
         const auto prims_img   = prims.image();
@@ -36,14 +43,15 @@ namespace spade::pde_algs
         constexpr int grid_dim = ar_grid.dim();
         auto var_range         = dispatch::support_of(prims, grid::exclude_exchanges);
         
-        for(int idir = 0; idir < ar_grid.dim(); ++idir)
+        
+        auto load = [=] _sp_hybrid (const grid::cell_idx_t& icell) mutable
         {
-            auto load = [=] _sp_hybrid (const grid::cell_idx_t& icell) mutable
+            const auto xyz = geom_image.get_comp_coords(icell);
+            const real_type jac = coords::calc_jacobian(geom_image.get_coord_sys(), xyz, icell);
+            auto relem = rhs_img.get_elem(icell);
+            #pragma unroll
+            for(int idir = 0; idir < grid_dim; ++idir)
             {
-                const auto xyz = geom_image.get_comp_coords(icell);
-                const real_type jac = coords::calc_jacobian(geom_image.get_coord_sys(), xyz, icell);
-                auto relem = rhs_img.get_elem(icell);
-                
                 const real_type inv_dx = real_type(1.0)/geom_image.get_dx(idir, icell.lb());
                 algs::static_for<0,2>([&](const auto& ipm)
                 {
@@ -63,8 +71,8 @@ namespace spade::pde_algs
                     relem += accum;
                 });
                 rhs_img.set_elem(icell, relem);
-            };
-            dispatch::execute(var_range, load);
-        }
+            }
+        };
+        dispatch::execute(var_range, load);
     }
 }

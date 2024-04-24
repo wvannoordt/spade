@@ -56,7 +56,7 @@ namespace spade::sampling
     };
     
     template <
-        typename arr_t, 
+        typename arr_t,
         ctrs::basic_array container_t,
         typename strategy_t,
         std::invocable<typename arr_t::index_type> exclusion_crit_t>

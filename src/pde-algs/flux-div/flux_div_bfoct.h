@@ -18,7 +18,7 @@ namespace spade::pde_algs
         const sol_arr_t& prims,
         rhs_arr_t& rhs,
         const flux_func_t& flux_func,
-        const traits_t&)
+        const traits_t& traits)
     {
         using real_type     = sol_arr_t::value_type;
         using alias_type    = sol_arr_t::alias_type;
@@ -32,6 +32,12 @@ namespace spade::pde_algs
         const auto grid_img = grid.image(partition::local, prims.device());
         const auto q_img    = prims.image();
         auto rhs_img        = rhs.image();
+        
+        using namespace sym::literals;
+        const auto& incr = algs::get_trait(traits, "pde_increment"_sym, increment);
+        using incr_mode_t = typename utils::remove_all<decltype(incr)>::type;
+        constexpr bool is_incr_mode = incr_mode_t::increment_mode;
+        if constexpr (!is_incr_mode) rhs = real_type(0.0);
         
         constexpr int dim = grid.dim();
         
@@ -104,6 +110,7 @@ namespace spade::pde_algs
             {
                 if constexpr (has_gradient)
                 {
+                    #pragma once
                     for (int idir = 0; idir < input.size(); ++idir)
                     {
                         //Initialize gradient to zero

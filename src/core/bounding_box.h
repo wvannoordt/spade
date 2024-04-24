@@ -9,6 +9,7 @@ namespace spade
 {
     template <typename dtype, const std::size_t ar_size> struct bound_box_t
     {
+        using value_type = dtype;
         ctrs::array<dtype, 2*ar_size> bnds;
         
         using index_type = ctrs::array<dtype, ar_size>;
