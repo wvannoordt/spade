@@ -372,6 +372,7 @@ namespace spade::sampling
             
             int store = 0;
             indices = landed_cell;
+            coeffs = coeff_t(0.0);
             
             constexpr int search_radius = 3;
             for (int dk = -search_radius; dk <= search_radius; ++dk)
@@ -399,7 +400,7 @@ namespace spade::sampling
             
             bool success =  store >= required_size;
             
-            coeffs = coeff_t(1.0) / required_size;
+            for (int ii = 0; ii < required_size; ++ii)coeffs[ii] = coeff_t(1.0) / required_size;
             
             return success;
         }
