@@ -83,8 +83,13 @@ namespace spade::pde_algs
         
         spade::ctrs::array<int, 3> irange_dims = tile_size;
         irange_dims[fuse_dir] *= 2;
+        // irange_dims[seq_dir] *= 2;
+        
         ntiles[fuse_dir] /= 2;
         ntiles[seq_dir]  /= 2;
+        
+        constexpr int n_tid_thin = 1;
+        ntiles[thin_dir]  /= n_tid_thin;
         
         // Create a range for the individual tile size
         const auto tile_range = dispatch::ranges::make_range(0, irange_dims[0], 0, irange_dims[1], 0, irange_dims[2]);
@@ -103,10 +108,10 @@ namespace spade::pde_algs
         constexpr int lb_fs = 1;
         const auto outer_range = dispatch::ranges::make_range(0, ntiles[0], 0, ntiles[1]*ntiles[2], 0, int(grid.get_num_local_blocks())/lb_fs);
         
-        // Create a lambda for the bulk workload
-        auto loop = [=] _sp_hybrid (const ctrs::array<int, 3>& outer_raw, const threads_type& threads, shmem_type& shmem) mutable
+        for (int lb_par = 0; lb_par < lb_fs; ++lb_par)
         {
-            for (int lb_par = 0; lb_par < lb_fs; ++lb_par)
+            // Create a lambda for the bulk workload
+            auto loop = [=] _sp_hybrid (const ctrs::array<int, 3>& outer_raw, const threads_type& threads, shmem_type& shmem) mutable
             {
                 // Compute the tile index for this thread block
                 int tile_id_1d = outer_raw[1];
@@ -117,8 +122,8 @@ namespace spade::pde_algs
                 tile_id_1d -= tile_id[1];
                 tile_id_1d /= ntiles[1];
                 tile_id[2]  = tile_id_1d;
-    
-                // This is the input data structure for the flux calculation
+        
+                    // This is the input data structure for the flux calculation
                 input_type input;
                 
                 // Block index
@@ -134,52 +139,59 @@ namespace spade::pde_algs
                 
                 threads.exec([&](const ctrs::array<int, 3>& inner_raw)
                 {
-                    #pragma unroll
-                    for (int t_id = 0; t_id < 2; ++t_id)
+                    constexpr int n_tid      = 2;
+                    
+                    // #pragma unroll << intentionally left out!
+                    for (int t_id_thin = 0; t_id_thin < n_tid_thin; ++t_id_thin)
                     {
-                        grid::cell_idx_t i_cell;
-                        i_cell.lb()         = lb;
-                        i_cell.i(thin_dir)  = tile_id[thin_dir ]*tile_size        + inner_raw[thin_dir];
-                        i_cell.i(seq_dir )  = (2*tile_id[seq_dir]+t_id)*tile_size + inner_raw[seq_dir];
-                        i_cell.i(fuse_dir)  = 2*tile_id[fuse_dir]*tile_size       + inner_raw[fuse_dir];
-                        flux_type my_rhs;
-                        const auto nothing = rhs_img.size();
-                        constexpr bool is_incr_modetmp = is_incr_mode;
-                        if constexpr (is_incr_modetmp)
-                        {
-                            my_rhs = rhs_img.get_elem(i_cell);
-                        }
-                        else
-                        {
-                            my_rhs = real_type(0.0);
-                        }
-                        
-                        // Overwrite the RHS (residual) element
-                        
-                        grid::face_idx_t i_face;
-                        
                         #pragma unroll
-                        for (int idir = 0; idir < dim; ++idir)
+                        for (int t_id = 0; t_id < n_tid; ++t_id)
                         {
-                            #pragma unroll
-                            for (int t_pm = 0; t_pm < 2; ++t_pm)
+                            const int t_id_eff = t_id*t_id_thin + (1-t_id_thin)*(1-t_id);
+                            grid::cell_idx_t i_cell;
+                            i_cell.lb()         = lb;
+                            i_cell.i(thin_dir)  = (n_tid_thin*tile_id[thin_dir] + t_id_thin)*tile_size        + inner_raw[thin_dir];
+                            i_cell.i(seq_dir )  = (2*tile_id[seq_dir]+t_id_eff)*tile_size + inner_raw[seq_dir];
+                            i_cell.i(fuse_dir)  = 2*tile_id[fuse_dir]*tile_size       + inner_raw[fuse_dir];
+                            flux_type my_rhs;
+                            const auto nothing = rhs_img.size();
+                            constexpr bool is_incr_modetmp = is_incr_mode;
+                            if constexpr (is_incr_modetmp)
                             {
-                                i_face = grid::cell_to_face(i_cell, idir, t_pm);
-                                omni::retrieve(grid_img, q_img, i_face, input);
-                                
-                                flux_type flux0 = flux_func(input);
-                                flux0 *= inv_dx[idir];
-                                const auto coeff = 1 - 2*t_pm;
-                                my_rhs += coeff*flux0;
+                                my_rhs = rhs_img.get_elem(i_cell);
                             }
+                            else
+                            {
+                                my_rhs = real_type(0.0);
+                            }
+                            
+                            // Overwrite the RHS (residual) element
+                            
+                            grid::face_idx_t i_face;
+                            
+                            #pragma unroll
+                            for (int idir = 0; idir < dim; ++idir)
+                            {
+                                #pragma unroll
+                                for (int t_pm = 0; t_pm < 2; ++t_pm)
+                                {
+                                    i_face = grid::cell_to_face(i_cell, idir, t_pm);
+                                    omni::retrieve(grid_img, q_img, i_face, input);
+                                    
+                                    flux_type flux0 = flux_func(input);
+                                    flux0 *= inv_dx[idir];
+                                    const auto coeff = 1 - 2*t_pm;
+                                    my_rhs += coeff*flux0;
+                                }
+                            }
+                            rhs_img.set_elem(i_cell, my_rhs);
                         }
-                        rhs_img.set_elem(i_cell, my_rhs);
                     }
                 });
-            }
-        };
-        
-        // Execute the bulk workload
-        dispatch::execute(outer_range, loop, kpool, k_shmem);
+            };
+            
+            // Execute the bulk workload
+            dispatch::execute(outer_range, loop, kpool, k_shmem);
+        }
     }
 }
