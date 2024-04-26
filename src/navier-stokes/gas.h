@@ -115,6 +115,13 @@ namespace spade::fluid_state
 			}
 		}
 
+		// Function -- compute electronic specific heat
+		_sp_hybrid dtype get_cve(const int s, const dtype T) const
+		{
+			// only compute for flows with ionization
+			return dtype(0.0);
+		}
+
 		/*_sp_hybrid auto get_gamma(const auto& input) const
 		{
 			return omni::invoke_call(info_type(), [&](const auto&... args){return this->self().get_gamma(args...);}, input);

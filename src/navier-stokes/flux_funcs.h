@@ -168,6 +168,152 @@ namespace spade::convective
         }
     };
 
+
+    // WIP CODE
+    //
+    //
+
+    enum steger_warming_switch_type
+    {
+        no_switch,
+        default_switch,
+        exponential_switch
+    };
+
+    // Steger-Warming FDS (Multicomponent Gas) <JRB>
+    template <typename dtype, const std::size_t ns, const std::size_t nvib, const steger_warming_switch_type switch_type = default_switch>
+    struct steger_warming_fds_chem_t
+    {
+        using gas_t         = fluid_state::multicomponent_gas_t<dtype, ns, nvib>;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using info_type     = own_info_type;
+        using float_t       = dtype;
+        using flux_t        = fluid_state::flux_chem_t<float_t, ns>;
+        using state_t       = fluid_state::prim_chem_t<dtype, ns>;
+        
+        const gas_t gas;
+
+        // scheme parameters
+        const float_t alpha;
+        const float_t bl;
+        const float_t eps;
+
+        // constructor
+        hllc_fds_t(const gas_t& gas_in, const float_t& alpha_in, const float_t& bl_in, const float_t& eps_in) : 
+            gas{gas_in}, alpha{alpha_in}, bl{bl_in}, eps{eps_in} {}
+
+        // overloading parentheses operator
+        _sp_hybrid flux_t operator() (const auto& infoF, const state_t& qL, const state_t& qR) const
+        {
+            flux_t out{};
+            auto& flx = out;
+            const auto& nv = omni::access<omni::info::metric>(infoF);
+
+            // the pressure gradient across the interface
+            const float_t dP = std::abs(qL.p() - qR.p())/std::min(qR.p(), qL.p());
+
+            // the modified state weighting term
+            float_t weight = 0.0;
+            if constexpr(switch_type == no_switch)
+                weight = 0.0;
+            else if constexpr(switch_type == default_switch)
+                weight = 0.5/(alpha*alpha*dP*dP + 1.0);
+            else
+                weight = 0.25 - 0.25*spade::utils::sign(dP-0.3)*(1.0-std::exp(-100.0*std::abs(dP-0.3)));
+
+            // modified Steger-Warming [check this]
+            const state_t qL_modif = (1-weight)*qL + weight*qR;
+            const state_t qR_modif = weight*qL + (1-weight)*qR;
+
+            // compute the eigenvector matrices
+            spade::linear_algebra::dense_mat<float_t, ns+4, ns+4> eigenLeft, eigenRight, eigenVal_minus, eigenVal_plus;
+            convective::compute_eigenvector_matrices(qL_modif, qR_modif, nv, gas, eigenLeft, eigenRight);
+
+            // computing the Roe-averaged face state
+            const dtype rhoL = fluid_state::get_rho(qL_modif, gas);
+            const dtype rhoR = fluid_state::get_rho(qR_modif, gas);
+            fluid_state::prim_chem_t<dtype, qL_modif.nspecies()> qface;
+            for (int n = 0; n < qL_modif.size(); n++) qface[n] = (sqrt(rhoL) * qL_modif[n] + sqrt(rhoR) * qR_modif[n]) / (sqrt(rhoL) + sqrt(rhoR));	
+            
+            // get the mass fractions
+		    const spade::ctrs::array<rtype, qface.nspecies()> Ys = fluid_state::get_Ys(qface);
+
+            dtype Cvtr = 0.0;
+		    for (int s = 0; s < qface.nspecies(); s++) Cvtr += Ys[s] * gas.get_cvtr(s);
+            
+            dtype beta = 0.0;
+            for (int s = 0; s < qface.nspecies(); s++) beta += Ys[s] * gas.mw_si[s];
+            beta *= spade::consts::Rgas_uni / Cvtr;
+
+            // mixture density on the face
+            const dtype rho = fluid_state::get_rho(qface, gas);
+
+            // compute speed of sound
+            const dtype a = sqrt((dtype(1.0) + beta) * qface.p() / rho);
+
+            // compute the face-normal velocity
+            const dtype U = nv[0]*qface.u() + nv[1]*qface.v() + nv[2]*qface.w();
+
+            // the dissipation term
+            dtype eps_temp = 0.0;
+
+            // now compute the dissipated eigenvalues
+            if constexpr(switch_type != exponential_switch)
+                eps_temp = eps*(a+std::abs(U));
+            else
+                eps_temp = eps;
+
+            for (int s = 0; s < qface.nspecies(); s++)
+            {
+                eigenVal_plus (s,s) = U + sqrt(U*U + eps_temp*eps_temp)
+                eigenVal_minus(s,s) = U - sqrt(U*U + eps_temp*eps_temp);
+            }
+
+            // @NOTE JRB: need to find out what c1i2 is 
+            eigenVal_plus (qface.nspecies()+0,qface.nspecies()+0) = U   + sqrt(U*U + eps_temp*eps_temp);         // u
+            eigenVal_plus (qface.nspecies()+1,qface.nspecies()+1) = U   + sqrt(U*U + eps_temp*eps_temp);         // v
+            eigenVal_plus (qface.nspecies()+2,qface.nspecies()+2) = U+a + sqrt((U+a)*(U+a) + eps_temp*eps_temp); // w
+            eigenVal_plus (qface.nspecies()+3,qface.nspecies()+3) = U-a + sqrt((U-a)*(U-a) + eps_temp*eps_temp); // T
+            eigenVal_plus (qface.nspecies()+3,qface.nspecies()+3) = U   + sqrt(U*U + eps_temp*eps_temp);         // Tv
+
+            eigenVal_minus(qface.nspecies()+0,qface.nspecies()+0) = U   - sqrt(U*U + eps_temp*eps_temp);         // u
+            eigenVal_minus(qface.nspecies()+1,qface.nspecies()+1) = U   - sqrt(U*U + eps_temp*eps_temp);         // v
+            eigenVal_minus(qface.nspecies()+2,qface.nspecies()+2) = U+a - sqrt((U+a)*(U+a) + eps_temp*eps_temp); // w
+            eigenVal_minus(qface.nspecies()+3,qface.nspecies()+3) = U-a - sqrt((U-a)*(U-a) + eps_temp*eps_temp); // T
+            eigenVal_minus(qface.nspecies()+3,qface.nspecies()+3) = U   - sqrt(U*U + eps_temp*eps_temp);         // Tv
+
+            // compute the Jacobians
+            const auto A_plus  = eigenRight*(eigenVal_plus*eigenLeft);
+            const auto A_minus = eigenRight*(eigenVal_minus*eigenLeft);
+
+            // compute the flux
+            const auto flux_vec = A_plus*qL + A_minus*qR;
+        
+            // pull the values into the output flux
+            for (int s = 0; s < qface.nspecies(); s++)
+                flx.continuity(s) = flux_vec[s];
+            flx.x_momentum() = flux_vec[qface.nspecies()+0];
+            flx.y_momentum() = flux_vec[qface.nspecies()+1];
+            flx.z_momentum() = flux_vec[qface.nspecies()+2];
+            flx.energy()     = flux_vec[qface.nspecies()+3];
+            flx.energyVib()  = flux_vec[qface.nspecies()+4];
+
+            return out;
+        }
+    };
+
+
+    //
+    //
+    // END WIP CODE
+
+
+
+
+
+
+
+
     // HLLC Flux Scheme <JRB>
     template <typename gas_t>
     struct hllc_fds_t
