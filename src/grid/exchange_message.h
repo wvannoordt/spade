@@ -13,28 +13,46 @@ namespace spade::grid
         template <typename group_t>
         void send_all(const group_t& group)
         {
-            //Horribly inefficient implementation!
-            if constexpr (device::is_gpu<device_t>)
-            {
-                for (auto& s:send_buffers) s.itransfer();
-            }
+            //Do some logic here!
+            const auto dev = device_t();
+            // const auto dev = device::cpu;
             
-            //Let's forget about optimizations for now!
+            // if constexpr (device::is_gpu<device_t>)
+            // {
+            //     int rank = 0;
+            //     for (auto& s:send_buffers)
+            //     {
+            //         const auto channel = parallel::channel_from_device(dev);
+            //         if (channel == parallel::cpu_messg) s.itransfer();
+            //         ++rank;
+            //     }
+            // }
+            
             using message_type = utils::vec_image_t<data_t>;
             for (int p = 0; p < group.size(); ++p)
             {
-                auto send_buf = utils::make_vec_image(send_buffers[p].data(device::cpu));
-                auto recv_buf = utils::make_vec_image(recv_buffers[p].data(device::cpu));
-                group.post_send(send_buf, p);
+                const auto sender   = group.pid();
+                const auto receiver = group.pid(p);
+                const auto send_channel  = parallel::channel_from_device(sender, receiver, dev);
+                // const auto dev = device::cpu;
+                auto send_buf = utils::make_vec_image(send_buffers[p].data(dev));
+                auto recv_buf = utils::make_vec_image(recv_buffers[p].data(dev));
+                group.post_send(send_buf, p, send_channel);
                 group.post_recv(recv_buf, p);
             }
             
             group.template send_all<message_type>();
             
-            if constexpr (device::is_gpu<device_t>)
-            {
-                for (auto& r:recv_buffers) r.transfer();
-            }
+            // if constexpr (device::is_gpu<device_t>)
+            // {
+            //     int rank = 0;
+            //     for (auto& r:recv_buffers)
+            //     {
+            //         const auto channel = parallel::channel_from_device(dev);
+            //         if (channel == parallel::cpu_messg) r.transfer();
+            //         ++rank;
+            //     }
+            // }
         }
         
         // Used to resize receive buffers to the correct size 
