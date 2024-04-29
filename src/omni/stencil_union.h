@@ -87,4 +87,38 @@ namespace spade::omni
     }
 
     template <typename... kernels_t> using combine_omni_stencils = typename detail::combine_omni_impl<kernels_t...>::type;
+    
+    
+    namespace detail
+    {
+        template <typename ielem_t, typename ioffst_t> struct shift_elem_impl_t;
+        template <const int di, const int dj, const int dk, const int ddi, const int ddj, const int ddk, typename stuffs_t>
+        struct shift_elem_impl_t<elem_t<offset_t<di, dj, dk>, stuffs_t>, offset_t<ddi, ddj, ddk>>
+        {
+            using offst_type = offset_t<di+ddi, dj+ddj, dk+ddk>;
+            using type = elem_t<offst_type, stuffs_t>;
+        };
+        
+        template <typename ioffst_t, typename istencil_t, typename ostencil_t>
+        struct shift_sten_impl_t;
+        
+        template <typename ioffst_t, typename ostencil_t, const grid::array_centering ictr>
+        struct shift_sten_impl_t<ioffst_t, stencil_t<ictr>, ostencil_t>
+        {
+            using type = ostencil_t;
+        };
+        
+        template <typename ioffst_t, typename ostencil_t, const grid::array_centering ictr, typename ielem_t, typename... ielems_t>
+        struct shift_sten_impl_t<ioffst_t, stencil_t<ictr, ielem_t, ielems_t...>, ostencil_t>
+        {
+            
+            using istencil_t  = stencil_t<ictr, ielem_t, ielems_t...>;
+            using part_sten_t = stencil_t<ostencil_t::center(), typename shift_elem_impl_t<ielem_t, ioffst_t>::type>;
+            using next_t      = stencil_union<ostencil_t, part_sten_t>;
+            using type        = typename shift_sten_impl_t<ioffst_t, stencil_t<ictr, ielems_t...>, next_t>::type;
+        };
+    }
+    
+    template <typename istencil_t, typename ioffst_t>
+    using shift_stencil = typename detail::shift_sten_impl_t<ioffst_t, istencil_t, stencil_t<ioffst_t::template relative_node_centering<istencil_t::center()>>>::type;
 }

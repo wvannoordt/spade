@@ -180,9 +180,11 @@ namespace spade::pde_algs
                 }
                 
                 // Direction (x,y,z) loop
-                #pragma unroll
-                for (int idir = 0; idir < dim; ++idir)
-                {
+                // #pragma unroll
+                // for (int idir = 0; idir < dim; ++idir)
+                algs::static_for<0,dim>([&](const auto& iiii){
+                // {
+                    constexpr int idir = iiii.value;
                     // Compute the tangential directions
                     int idir0 = idir + 1;
                     int idir1 = idir + 2;
@@ -462,7 +464,7 @@ namespace spade::pde_algs
                     // Pull the new RHS element from shared memory
                     my_rhs = rawdata(inner_raw[0], inner_raw[1], inner_raw[2]);
                     threads.sync();
-                } // Direction loop
+                }); // Direction loop
                 
                 if (is_interior) rhs_img.set_elem(i_cell, my_rhs);
                 
@@ -527,9 +529,11 @@ namespace spade::pde_algs
                 tile_id[combine_dim] *= 2;
                 tile_id[combine_dim] += is_i[2];
                 
-                #pragma unroll
-                for (int idir = 0; idir < dim; ++idir)
+                // #pragma unroll
+                // for (int idir = 0; idir < dim; ++idir)
+                algs::static_for<0, dim>([&](const auto& ii)
                 {
+                    constexpr int idir = ii.value;
                     int idir0 = idir + 1;
                     int idir1 = idir + 2;
                     if (idir0 >= dim) idir0 -= dim;
@@ -554,7 +558,7 @@ namespace spade::pde_algs
                     flux *= inv_dx;
                     rhs_img.decr_elem(upper, flux);
                     threads.sync();
-                }
+                });
             });
         };
         dispatch::execute(outer_range_cor, loop_cor, kpool_cor);

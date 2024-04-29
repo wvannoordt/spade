@@ -75,7 +75,52 @@ namespace spade::pde_algs
         }
         
         // Create data structure for the flux kernel
-        using input_type = typename omni::stencil_data_t<omni_type, sol_arr_t>;
+        
+        using omni_left_type  = omni::shift_stencil<omni_type, omni::offset_t< 0, 0, 0>>;
+        using omni_right_type = omni::shift_stencil<omni_type, omni::offset_t< 2, 0, 0>>;
+        using omni_all_type   = omni::stencil_union<omni_left_type, omni_right_type>;
+        
+        using omni_left_view  = omni::shift_stencil<omni_all_type, omni::offset_t< 0, 0, 0>>;
+        using omni_right_view = omni::shift_stencil<omni_all_type, omni::offset_t<-2, 0, 0>>;
+        
+        
+        using input_type     = typename omni::stencil_data_t<omni_type, sol_arr_t>;
+        using input_all_type = typename omni::stencil_data_t<omni_all_type, sol_arr_t>;
+        
+        // debug::print_type(omni_left_view());
+        // debug::print_type(omni_right_view());
+        
+        input_all_type inp;
+        grid::face_idx_t i_facee(0, 5, 5, 5, 5);
+        
+        omni::access<omni::info::value>(inp.cell(0_c)) = 0.0;
+        omni::access<omni::info::value>(inp.cell(1_c)) = 1.0;
+        omni::access<omni::info::value>(inp.cell(2_c)) = 2.0;
+        omni::access<omni::info::value>(inp.cell(3_c)) = 3.0;
+        omni::access<omni::info::value>(inp.cell(4_c)) = 4.0;
+        
+        // omni::retrieve(grid_img, q_img, i_facee, inp);
+        const auto d0L = omni::interpret_stencil_at<omni_type, omni::offset_t<0, 0, 0>>(inp);
+        const auto d0R = omni::interpret_stencil_at<omni_type, omni::offset_t<2, 0, 0>>(inp);
+        
+        
+        // print(omni::access<omni::info::value>(d0L.cell(0_c)));
+        // print(omni::access<omni::info::value>(d0L.cell(1_c)));
+        // print(omni::access<omni::info::value>(d0L.cell(2_c)));
+        // print(omni::access<omni::info::value>(d0L.cell(3_c)));
+        // print("aaaa");
+        // print(omni::access<omni::info::value>(d0R.cell(0_c)));
+        // print(omni::access<omni::info::value>(d0R.cell(1_c)));
+        // print(omni::access<omni::info::value>(d0R.cell(2_c)));
+        // print(omni::access<omni::info::value>(d0R.cell(3_c)));
+        
+        // debug::print_type(all_1_t());
+        // debug::print_type(all_2_t());
+        
+        // debug::print_type(omni_left_view());
+        // debug::print_type(omni_right_view());
+        
+        // std::cin.get();
         
         constexpr int thin_dir = 0;
         constexpr int fuse_dir = 2;
@@ -98,7 +143,7 @@ namespace spade::pde_algs
         dispatch::kernel_threads_t kpool(tile_range, prims.device());
         using threads_type = decltype(kpool);
         
-        const std::size_t total_sh_vals = tile_size*tile_size*tile_size;
+        const std::size_t total_sh_vals = 0;//tile_size*tile_size*tile_size;
         
         // Create shared memory array
         auto k_shmem = dispatch::shmem::make_shmem(dispatch::shmem::vec<flux_type>(total_sh_vals));
@@ -122,9 +167,6 @@ namespace spade::pde_algs
                 tile_id_1d -= tile_id[1];
                 tile_id_1d /= ntiles[1];
                 tile_id[2]  = tile_id_1d;
-        
-                    // This is the input data structure for the flux calculation
-                input_type input;
                 
                 // Block index
                 int lb = lb_fs*outer_raw[2] + lb_par;
@@ -165,25 +207,61 @@ namespace spade::pde_algs
                                 my_rhs = real_type(0.0);
                             }
                             
-                            // Overwrite the RHS (residual) element
-                            
-                            grid::face_idx_t i_face;
-                            
-                            #pragma unroll
-                            for (int idir = 0; idir < dim; ++idir)
+                            constexpr bool use_fused_data = true;
+                            const auto ff = flux_func;
+                            const auto qq = q_img;
+                            if constexpr (!use_fused_data)
                             {
+                                // Overwrite the RHS (residual) element
+                                grid::face_idx_t i_face;
+                                
                                 #pragma unroll
-                                for (int t_pm = 0; t_pm < 2; ++t_pm)
+                                for (int idir = 0; idir < dim; ++idir)
+                                // algs::static_for<0, dim>([&](const auto& ii)
                                 {
-                                    i_face = grid::cell_to_face(i_cell, idir, t_pm);
+                                    // constexpr int idir = ii.value;
+                                    #pragma unroll
+                                    for (int t_pm = 0; t_pm < 2; ++t_pm)
+                                    // algs::static_for<0, 2>([&](const auto& jj)
+                                    {
+                                        // constexpr int t_pm = jj.value;
+                                        i_face = grid::cell_to_face(i_cell, idir, t_pm);
+                                        input_type input;
+                                        omni::retrieve(grid_img, q_img, i_face, input);
+                                        
+                                        flux_type flux0 = flux_func(input);
+                                        flux0 *= inv_dx[idir];
+                                        const auto coeff = 1 - 2*t_pm;
+                                        my_rhs += coeff*flux0;
+                                    // });
+                                    }
+                                }
+                                // });
+                            }
+                            else
+                            {
+                                // #pragma unroll
+                                // for (int idir = 0; idir < dim; ++idir)
+                                algs::static_for<0, dim>([&](const auto& ii)
+                                {
+                                    constexpr int idir = ii.value;
+                                    const grid::face_idx_t i_face = grid::cell_to_face(i_cell, idir, 0);
+                                    input_all_type input;
                                     omni::retrieve(grid_img, q_img, i_face, input);
                                     
-                                    flux_type flux0 = flux_func(input);
-                                    flux0 *= inv_dx[idir];
-                                    const auto coeff = 1 - 2*t_pm;
-                                    my_rhs += coeff*flux0;
-                                }
+                                    const auto ll = omni::interpret_stencil_at<omni_type, omni::offset_t<0, 0, 0>>(input);
+                                    const auto rr = omni::interpret_stencil_at<omni_type, omni::offset_t<2, 0, 0>>(input);
+                                    
+                                    flux_type fluxL = flux_func(ll);
+                                    flux_type fluxR = flux_func(rr);
+                                    
+                                    fluxL -= fluxR;
+                                    fluxL *= inv_dx[idir];
+                                    my_rhs += fluxL;
+                                });
+                                // }
                             }
+                            
                             rhs_img.set_elem(i_cell, my_rhs);
                         }
                     }

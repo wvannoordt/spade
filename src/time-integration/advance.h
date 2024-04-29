@@ -285,6 +285,7 @@ namespace spade::time_integration
         template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
         static void opt_rk3_s0(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
         {
+            // timing::scoped_tmr_t tt("adv-s0");
             using alias_type = typename q_t::alias_type;
             auto r0_img = r0.image();
             auto r1_img = r1.image();
@@ -303,6 +304,7 @@ namespace spade::time_integration
         template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
         static void opt_rk3_s1(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
         {
+            // timing::scoped_tmr_t tt("adv-s1");
             using alias_type = typename q_t::alias_type;
             auto r0_img = r0.image();
             auto r1_img = r1.image();
@@ -333,6 +335,7 @@ namespace spade::time_integration
         template <typename q_t, typename r_t, typename gas_t, typename dt_t, typename state_t>
         static void opt_rk3_s2(q_t& q, r_t& r0, r_t& r1, const gas_t& gas_model, const dt_t& dt, const state_t&)
         {
+            // timing::scoped_tmr_t tt("adv-s2");
             using alias_type = typename q_t::alias_type;
             auto r0_img = r0.image();
             auto r1_img = r1.image();
