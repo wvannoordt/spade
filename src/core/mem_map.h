@@ -637,10 +637,10 @@ namespace spade::mem_map
             output += j;
             output *= ni;
             output += i;
-            output *= nv;
-            output += v;
             output *= tsz;
             output += kk;
+            output *= nv;
+            output += v;
             output *= tsz;
             output += jj;
             output *= tsz;
