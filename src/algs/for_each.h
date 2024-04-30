@@ -4,41 +4,14 @@
 #include "dispatch/support_of.h"
 #include "dispatch/device_type.h"
 #include "dispatch/execute.h"
-#include "omni/omni.h"
-#include "core/invoke.h"
 
 namespace spade::algs
 {
-    /*
     template <grid::multiblock_array array_t, class callable_t>
-    void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)
+    requires (std::invocable<callable_t, typename array_t::index_type>)
+    void for_each(array_t& arr, callable_t func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)
     {
-        const auto ctr       = array_t::centering_type();
-        auto kernel          = omni::to_omni<ctr>(func, arr);
-        auto var_range       = dispatch::support_of(arr, exchange_policy);
-        using index_type     = typename decltype(var_range)::index_type;
-        auto d_image         = arr.image();
-        const auto g_image   = arr.get_grid().image(arr.device());
-        
-        using val_t = typename array_t::alias_type;
-        auto loop_load = [=] _sp_hybrid (const index_type& index) mutable
-        {
-            const val_t data = invoke_at(g_image, d_image, index, kernel);
-            d_image.set_elem(index, data);
-        };
-        dispatch::execute(var_range, loop_load);
-    }
-    */
-    // This seems to be marginally better than the simple one above
-    template <grid::multiblock_array array_t, class callable_t>
-    void transform_inplace(array_t& arr, const callable_t& func, const grid::exchange_inclusion_e& exchange_policy = grid::exclude_exchanges)
-    {
-        const auto ctr          = array_t::centering_type();
-        auto kernel             = omni::to_omni<ctr>(func, arr);
-        auto var_range          = dispatch::support_of(arr, exchange_policy);
-        using index_type        = typename decltype(var_range)::index_type;
-        auto d_image            = arr.image();
-        const auto g_image      = arr.get_grid().image(arr.device());
+        using index_type        = typename array_t::index_type;
         using val_t             = typename array_t::alias_type;
         constexpr int tile_size = 4;
         const auto tile_range   = dispatch::ranges::make_range(0, tile_size, 0, tile_size, 0, tile_size);
@@ -61,9 +34,13 @@ namespace spade::algs
         {
             if ((nx[d] % tile_size) != 0)
             {
-                throw except::sp_exception("transform_inplace requires a block size that is a multiple of 4");
+                throw except::sp_exception("for_each requires a block size that is a multiple of 4");
             }
-            ntiles[d] = utils::i_div_up(nx_extent[d], tile_size);
+            if (ng[d] != 2)
+            {
+                throw except::sp_exception("for_each requires all exchange cells are size 2");
+            }
+            ntiles[d]    = utils::i_div_up(nx_extent[d], tile_size);
         }
         
         const auto outer_range = dispatch::ranges::make_range(0, ntiles[0], 0, ntiles[1]*ntiles[2], 0, int(arr.get_grid().get_num_local_blocks()));
@@ -87,17 +64,9 @@ namespace spade::algs
                 int k  = tile_id[2]*tile_size + inner_raw[2] - iexch*ng[2];
                 int lb = outer_raw[2];
                 index_type index(i, j, k, lb);
-                const val_t data = invoke_at(g_image, d_image, index, kernel);
-                d_image.set_elem(index, data);
+                func(index);
             });
         };
         dispatch::execute(outer_range, loop_load, kpool);
-    }
-    
-
-    template <class array_t, class kernel_t>
-    void fill_array(array_t& arr, const kernel_t& kernel, const grid::exchange_inclusion_e& exchange_policy = grid::include_exchanges)
-    {
-        transform_inplace(arr, kernel, exchange_policy);
     }
 }

@@ -50,6 +50,12 @@ namespace spade::omni
     {
         retrieve_impl(grid, array, idx_center, idx_center.dir(), data, excluded);
     }
+    
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, int dir, stencil_data_t& data, const exclude_list_t& excluded)
+    {
+        retrieve_impl(grid, array, idx_center, dir, data, excluded);
+    }
 
     template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
     _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data, const exclude_list_t& excluded)
@@ -68,6 +74,12 @@ namespace spade::omni
     _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
     {
         retrieve(grid, array, idx_center, data, info_list_t<>());
+    }
+    
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, int dir, stencil_data_t& data)
+    {
+        retrieve(grid, array, idx_center, dir, data, info_list_t<>());
     }
     
     //Shared memory, buffered version

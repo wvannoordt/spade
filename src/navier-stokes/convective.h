@@ -256,7 +256,7 @@ namespace spade::convective
     struct weno_t
     {
         using float_t       = typename flux_func_t::float_t;
-        using output_type   = fluid_state::flux_t<float_t>;
+        using output_type   = typename flux_func_t::flux_type;
         using info_type     = typename flux_func_t::info_type;
         using omni_type     = omni::stencil_t<
                 grid::face_centered,
@@ -526,13 +526,13 @@ namespace spade::convective
             const auto& q2        = omni::access<omni::info::value >(input.cell(2_c));
             const auto& q3        = omni::access<omni::info::value >(input.cell(3_c));
 
-            //upwind                                                                                                                                                                                        
-            const auto ql0  = float_t(-0.5)*q0+float_t(1.5)*q1; //candidate 0                                                                                                                               
-            const auto ql1  = float_t( 0.5)*q1+float_t(0.5)*q2; //candidate 1                                                                                                                               
-                
-            //downwind                                                                                                                                                                                      
-            const auto qr0  =  float_t(0.5)*q1+float_t(0.5)*q2; //candidate 0                                                                                                                               
-            const auto qr1  =  float_t(1.5)*q2-float_t(0.5)*q3; //candidate 1                                                                                                                               
+            //upwind
+            const auto ql0  = float_t(-0.5)*q0+float_t(1.5)*q1; //candidate 0
+            const auto ql1  = float_t( 0.5)*q1+float_t(0.5)*q2; //candidate 1
+
+            //downwind
+            const auto qr0  =  float_t(0.5)*q1+float_t(0.5)*q2; //candidate 0
+            const auto qr1  =  float_t(1.5)*q2-float_t(0.5)*q3; //candidate 1
 
             auto ql = ql1;
             auto qr = qr0;

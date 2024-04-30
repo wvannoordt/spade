@@ -268,8 +268,56 @@ namespace spade::geom
         }
     };
     
-    template <const int dim, const int n_edge, typename float_t>
-    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf, const bool is_external)
+    namespace detail
+    {
+        static bool read_scalars_impl(const std::string& name, const std::string& type, const std::size_t num_scalar, utils::ascii_file_t& fh)
+        {
+            return false;
+        }
+        template <typename name_t, typename data_t, typename... datas_t>
+        static bool read_scalars_impl(const std::string& name, const std::string& type, const std::size_t num_scalar, utils::ascii_file_t& fh, const name_t& found_name, data_t& data, datas_t&&... datas)
+        {
+            const std::string name_str = std::string(found_name);
+            if (name_str == name)
+            {
+                data.resize(num_scalar);
+                for (auto& d: data)
+                {
+                    fh.next_line();
+                    fh.try_parse(d);
+                }
+                return true;
+            }
+            return read_scalars_impl(name, type, num_scalar, fh, std::forward<datas_t>(datas)...);
+        }
+        template <typename... datas_t>
+        static void vtk_scalars_read(utils::ascii_file_t& fh, const std::size_t num_scalar, datas_t&&... datas)
+        {
+            int num_read = 0;
+            while (2*num_read < sizeof...(datas_t))
+            {
+                fh.next_line();
+                std::string junk, name, type;
+                fh.parse(junk, name, type);
+                
+                fh.next_line();
+                fh.expect("LOOKUP_TABLE default");
+                
+                if (read_scalars_impl(name, type, num_scalar, fh, std::forward<datas_t>(datas)...))
+                {
+                    ++num_read;
+                }
+                else
+                {
+                    for (std::size_t j = 0; j < num_scalar; ++j) fh.next_line();
+                }
+            }
+        }
+    }
+    
+    template <const int dim, const int n_edge, typename float_t, typename... datas_t>
+    requires(2*(sizeof...(datas_t)/2) == sizeof...(datas_t))
+    static std::string read_vtk_geom(const std::string& fname, vtk_geom_t<dim, n_edge, float_t>& surf, const bool is_external, datas_t&&... datas)
     {
         using uint_t = typename vtk_geom_t<dim, n_edge, float_t>::uint_t;
         using face_t = typename vtk_geom_t<dim, n_edge, float_t>::face_t;
@@ -354,6 +402,21 @@ namespace spade::geom
             n /= ctrs::array_norm(n);
             surf.normals.push_back(n);
         }
+        
+        if constexpr (sizeof...(datas_t)>0)
+        {
+            //read scalars
+            fh.next_line();
+            std::size_t n_scalar;
+            std::string junk;
+            if (!fh.try_parse(junk, n_scalar))
+            {
+                throw except::sp_exception("Scalar data requested, but found no scalars");
+            }
+            
+            detail::vtk_scalars_read(fh, n_scalar, std::forward<datas_t>(datas)...);
+        }
+        
         
         surf.calc_bvhs();
         
