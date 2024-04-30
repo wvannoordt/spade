@@ -292,8 +292,8 @@ namespace spade::time_integration
             algs::transform_inplace(q, [=] _sp_hybrid (const grid::cell_idx_t& ii, const alias_type& q_orig)
             {
                 state_t cons;
-                fluid_state::convert_state(q_orig, cons, gas_model);
                 auto r0_i = r0_img.get_elem(ii);
+                fluid_state::convert_state(q_orig, cons, gas_model);
                 cons += dt*r0_i;
                 alias_type new_q;
                 fluid_state::convert_state(cons, new_q, gas_model);
@@ -314,9 +314,9 @@ namespace spade::time_integration
             {
                 alias_type q_orig = q_img.get_elem(ii);
                 state_t cons;
-                fluid_state::convert_state(q_orig, cons, gas_model);
                 auto r0_i = r0_img.get_elem(ii);
                 auto r1_i = r1_img.get_elem(ii);
+                fluid_state::convert_state(q_orig, cons, gas_model);
                 
                 auto new_r0_i = dt_t(1.0/6.0)*dt*(r0_i + r1_i);
                 r0_img.set_elem(ii, new_r0_i);
@@ -342,9 +342,9 @@ namespace spade::time_integration
             algs::transform_inplace(q, [=] _sp_hybrid (const grid::cell_idx_t& ii, const alias_type& q_orig)
             {
                 state_t cons;
-                fluid_state::convert_state(q_orig, cons, gas_model);
                 auto r0_i = r0_img.get_elem(ii);
                 auto r1_i = r1_img.get_elem(ii);
+                fluid_state::convert_state(q_orig, cons, gas_model);
                 cons -= dt_t(1.0/2.0)*r0_i;
                 cons += dt*dt_t(2.0/3.0)*r1_i;
                 alias_type new_q;
