@@ -126,10 +126,6 @@ namespace spade::pde_algs
         constexpr int fuse_dir = 2;
         constexpr int seq_dir  = 1;
         
-        // constexpr int thin_dir = 2;
-        // constexpr int fuse_dir = 0;
-        // constexpr int seq_dir  = 1;
-        
         spade::ctrs::array<int, 3> irange_dims = tile_size;
         irange_dims[fuse_dir] *= 2;
         // irange_dims[seq_dir] *= 2;

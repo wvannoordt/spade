@@ -381,5 +381,19 @@ namespace spade::grid
                 ctrs::array<bool, dim()> periodic = periodic_refinement_default;
                 this->refine_blocks(list, periodic, rtype, amr::constraints::factor2);
             }
+            
+            template <typename func_t>
+            void mask_blocks(const func_t& func)
+            {
+                const auto mfc = [&](const typename blocks_type::node_type& node)
+                {
+                    auto lb_glob = utils::tag[partition::global](node.tag);
+                    return node.terminal() && func(lb_glob);
+                };
+                
+                this->get_blocks().enumerate(mfc);
+                
+                compute_geometry();
+            }
     };
 }
