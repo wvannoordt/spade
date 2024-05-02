@@ -184,58 +184,63 @@ namespace spade::convective
         {
 			flux_t out{};
             auto& flux = out;
+			
 			fluid_state::prim_chem_t<ptype, ns> qAve;
 			for (int n = 0; n<qAve.size(); ++n) qAve[n] = float_t(0.5) * (qL[n] + qR[n]);
             const auto& nv             = omni::access<omni::info::metric>(infoF);
 
 			// Contravariant velocity
-            const float_t unL          = nv[0]*qL.u() + nv[1]*qL.v() + nv[2]*qL.w();
+            float_t un          = nv[0]*qL.u() + nv[1]*qL.v() + nv[2]*qL.w();
 			// Velocity magnitude
-            const float_t KEL          = qL.u()*qL.u() + qL.v()*qL.v() + qL.w()*qL.w();
+            float_t KE          = qL.u()*qL.u() + qL.v()*qL.v() + qL.w()*qL.w();
 			// Species/Mixture density
-			const spade::ctrs::array<float_t, qL.nspecies()> rhosL = fluid_state::get_rhos(qL, gas);
-            float_t rhoL               = float_t(0.0);
-			for (int s = 0; s<qL.nspecies(); ++s) rhoL += rhosL[s];
+			spade::ctrs::array<float_t, qL.nspecies()> rhos = fluid_state::get_rhos(qL, gas);
+            float_t rho               = float_t(0.0);
+			for (int s = 0; s<qL.nspecies(); ++s) rho += rhos[s];
 			// Vibrational energy
-			const float_t EvL          = fluid_state::get_Ev(qL, gas);
+			spade::ctrs::array<float_t, qL.nspecies()> ev_s = fluid_state::get_evs(qL.Tv(), gas);
+			float_t Ev                = float_t(0.0);
+			for (int s = 0; s<qL.nspecies(); ++s) Ev += rhos[s] * ev_s[s];
 			// Total Energy
-			float_t EtotL              = float_t(0.5) * rhoL * KEL + EvL;
-			for (int s = 0; s<qL.nspecies(); ++s) EtotL += rhosL[s] * (gas.get_cvtr(s) * qL.T() + gas.hf_s[s]); // Vib energy already added
-
-			// Contravariant velocity
-            const float_t unR          = nv[0]*qR.u() + nv[1]*qR.v() + nv[2]*qR.w();
-			// Velocity magnitude
-            const float_t KER          = qR.u()*qR.u() + qR.v()*qR.v() + qR.w()*qR.w();
-			// Species/Mixture density
-			const spade::ctrs::array<float_t, qR.nspecies()> rhosR = fluid_state::get_rhos(qR, gas);
-            float_t rhoR               = float_t(0.0);
-			for (int s = 0; s<qR.nspecies(); ++s) rhoR += rhosR[s];
-			// Vibrational energy
-			const float_t EvR          = fluid_state::get_Ev(qR, gas);
-			// Total Energy
-			float_t EtotR              = float_t(0.5) * rhoR * KER + EvR;
-			for (int s = 0; s<qR.nspecies(); ++s) EtotR += rhosR[s] * (gas.get_cvtr(s) * qR.T() + gas.hf_s[s]); // Vib energy already added
+			float_t Etot              = float_t(0.5) * rho * KE + Ev;
+			for (int s = 0; s<qL.nspecies(); ++s) Etot += rhos[s] * (gas.get_cvtr(s) * qL.T() + gas.hf_s[s]); // Vib energy already added
 
 			// Face velocity
-            const float_t unF           = nv[0]*qAve.u() + nv[1]*qAve.v() + nv[2]*qAve.w();			
+            const float_t unF          = nv[0]*qAve.u() + nv[1]*qAve.v() + nv[2]*qAve.w();			
 			// Spectral radius
-            const float_t sigma = float_t(0.5)*(spade::utils::abs(unF) + fluid_state::get_sos(qAve, gas));
+            const float_t sigma        = float_t(0.5)*(spade::utils::abs(unF) + fluid_state::get_sos(qAve, gas));
 			
-			// Physical flux
-			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) = float_t(0.5) * (rhosL[s] * unL + rhosR[s] * unR);
-            flux.x_momentum()           = float_t(0.5)*(rhoL*qL.u()*unL + qL.p()*nv[0] + rhoR*qR.u()*unR + qR.p()*nv[0]);
-			flux.y_momentum()           = float_t(0.5)*(rhoL*qL.v()*unL + qL.p()*nv[1] + rhoR*qR.v()*unR + qR.p()*nv[1]);
-			flux.z_momentum()           = float_t(0.5)*(rhoL*qL.w()*unL + qL.p()*nv[2] + rhoR*qR.w()*unR + qR.p()*nv[2]);
-			flux.energy()               = float_t(0.5)*((EtotL + qL.p())*unL +(EtotR + qR.p())*unR);
-			flux.energyVib()            = float_t(0.5)*(EvL*unL + EvR * unR);
+			// Physical flux + left state dissipation
+			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) = float_t(0.5) * rhos[s] * un + sigma * rhos[s];
+            flux.x_momentum()           = float_t(0.5)*(rho*qL.u()*un + qL.p()*nv[0]) + sigma * rho * qL.u();
+			flux.y_momentum()           = float_t(0.5)*(rho*qL.v()*un + qL.p()*nv[1]) + sigma * rho * qL.v();
+			flux.z_momentum()           = float_t(0.5)*(rho*qL.w()*un + qL.p()*nv[2]) + sigma * rho * qL.w();
+			flux.energy()               = float_t(0.5)*(Etot + qL.p())*un + sigma * Etot;
+			flux.energyVib()            = float_t(0.5)*Ev*un + sigma * Ev;
+			
+			// Contravariant velocity
+            un          = nv[0]*qR.u() + nv[1]*qR.v() + nv[2]*qR.w();
+			// Velocity magnitude
+            KE          = qR.u()*qR.u() + qR.v()*qR.v() + qR.w()*qR.w();
+			// Species/Mixture density
+			rhos = fluid_state::get_rhos(qR, gas);
+            rho               = float_t(0.0);
+			for (int s = 0; s<qR.nspecies(); ++s) rho += rhos[s];
+			// Vibrational energy
+			ev_s = fluid_state::get_evs(qR.Tv(), gas);
+			Ev                = float_t(0.0);
+			for (int s = 0; s<qR.nspecies(); ++s) Ev += rhos[s] * ev_s[s];
+			// Total Energy
+			Etot              = float_t(0.5) * rho * KE + Ev;
+			for (int s = 0; s<qR.nspecies(); ++s) Etot += rhos[s] * (gas.get_cvtr(s) * qR.T() + gas.hf_s[s]); // Vib energy already added
 
-			// Add dissipation
-			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) += sigma * (rhosL[s] - rhosR[s]);
-			flux.x_momentum()          += sigma * (rhoL * qL.u() - rhoR * qR.u());
-			flux.y_momentum()          += sigma * (rhoL * qL.v() - rhoR * qR.v());
-			flux.z_momentum()          += sigma * (rhoL * qL.w() - rhoR * qR.w());
-			flux.energy()              += sigma * (EtotL - EtotR);
-			flux.energyVib()           += sigma * (EvL - EvR);
+			// Physical flux + right state dissipation
+			for (int s = 0; s<qAve.nspecies(); ++s) flux.continuity(s) += float_t(0.5) * rhos[s] * un - sigma * rhos[s];
+            flux.x_momentum()          += float_t(0.5)*(rho*qL.u()*un + qL.p()*nv[0]) - sigma * rho * qL.u();
+			flux.y_momentum()          += float_t(0.5)*(rho*qL.v()*un + qL.p()*nv[1]) - sigma * rho * qL.v();
+			flux.z_momentum()          += float_t(0.5)*(rho*qL.w()*un + qL.p()*nv[2]) - sigma * rho * qL.w();
+			flux.energy()              += float_t(0.5)*(Etot + qL.p())*un - sigma * Etot;
+			flux.energyVib()           += float_t(0.5)*Ev*un - sigma * Ev;
 			
             // Memory address of "out" mapped to flux
             return out;

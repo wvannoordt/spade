@@ -730,14 +730,14 @@ namespace spade::fluid_state
 		// Total relaxation time
 		return tau_molar + tau_park;
 	}
-	
-	// Compute translational to vibrational source term
+
+	// Compute chemical to vibrational source term
 	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-	_sp_hybrid static ptype compute_St2v(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
+    _sp_hybrid static ptype compute_vibRelax(const prim_chem_t<ptype, ns>& prim, const spade::ctrs::array<ptype, ns>& source, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
 	{
 		// Vibrational energy
-		spade::ctrs::array<ptype, prim.nspecies()> ev_st = get_evs(prim.T(), gas);
 		spade::ctrs::array<ptype, prim.nspecies()> ev_s  = get_evs(prim.Tv(), gas);
+		spade::ctrs::array<ptype, prim.nspecies()> ev_st = get_evs(prim.T(), gas);
 			
 		// Compute relaxation time
 		spade::ctrs::array<ptype, prim.nspecies()> tau_s = compute_relaxationTime(prim, gas, react);
@@ -745,45 +745,23 @@ namespace spade::fluid_state
 		// Compute species densities
 		spade::ctrs::array<ptype, prim.nspecies()> rhos = fluid_state::get_rhos(prim, gas);
 
-		// Compute source term component
+		// Initialize vibrational relaxation source term
 		ptype St2v = 0.0;
-		for (int s = 0; s<prim.nspecies(); ++s)
-		{
-			if (gas.isMol[s]>0) St2v += rhos[s] * (ev_st[s] - ev_s[s]) / tau_s[s];
-		}
-		return St2v;
-	}
-
-	// Compute chemical to vibrational source term
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-    _sp_hybrid static ptype compute_Sc2v(const prim_chem_t<ptype, ns>& prim, const spade::ctrs::array<ptype, ns>& source, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
-	{
-		// Vibrational energy
-		spade::ctrs::array<ptype, prim.nspecies()> ev_s  = get_evs(prim.Tv(), gas);
-			
-		// Compute source term component
 		ptype Sc2v = 0.0;
+		ptype Sh2e = 0.0;
+		ptype Se2i = 0.0;
+
+		// Compute translational to vibtrational relaxation term
 		for (int s = 0; s<prim.nspecies(); ++s)
 		{
-			if (gas.isMol[s]>0) Sc2v += source[s] * ev_s[s];
+			if (gas.isMol[s]>0)
+			{
+				St2v += rhos[s] * (ev_st[s] - ev_s[s]) / tau_s[s];
+				Sc2v += source[s] * ev_s[s];
+			}
 		}
-		return Sc2v;
-	}
 
-	// Compute heavy particle to electron source term
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-    _sp_hybrid static ptype compute_Sh2e(const prim_chem_t<ptype, ns>& prim, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
-	{
-		// Compute source term component
-		return 0.0;
-	}
-
-	// Compute electron impact ionization source term
-	template<typename ptype, const std::size_t ns, const std::size_t nr, const std::size_t nvib, const bool is_image>
-	_sp_hybrid static ptype compute_Se2i(const prim_chem_t<ptype, ns>& prim, const spade::ctrs::array<ptype, ns>& source, const multicomponent_gas_t<ptype, ns, nvib>& gas, const reactionMechanism_t<ptype, ns, nr, is_image>& react)
-	{
-		// Compute source term component
-		return 0.0;
+		return St2v + Sc2v + Sh2e - Se2i;
 	}
 
 	// Chemical source term structure. Primary driver
@@ -817,18 +795,12 @@ namespace spade::fluid_state
 
 			// Compute chemical source term
 			source = compute_chemSource(q, gas, reactions);
-			
-			// Compute vibrational source term components
-			St2v = compute_St2v(q, gas, reactions);
-			Sc2v = compute_Sc2v(q, source, gas, reactions);
-
-			// Ionization-specific terms
-			Sh2e = compute_Sh2e(q, gas, reactions);
-			Se2i = compute_Se2i(q, source, gas, reactions);
 
 			// Assign to out-going vector
 			for (int s = 0; s<q.nspecies(); ++s) output.continuity(s) = source[s];
-			output.energyVib() = St2v + Sc2v + Sh2e - Se2i;
+
+			// Vibrational relaxation source term
+			output.energyVib() = compute_vibRelax(q, source, gas, reactions);
 			
 			// Return vector for assignment onto the RHS
 			return output;
