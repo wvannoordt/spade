@@ -198,8 +198,13 @@ namespace spade::io
             vec_t  data_raw;
             cvec_t coord_raw;
             
+            constexpr int num_vars = [&]()
+            {
+                if constexpr (ctrs::basic_array<alias_type>) return alias_type::size();
+                else return 1;
+            }();
             std::size_t coord_raw_size = 3*(grid.get_num_cells(0) + 1)*(grid.get_num_cells(1) + 1)*(grid.get_num_cells(2) + 1);
-            std::size_t data_raw_size  = alias_type::size()*(grid.get_num_cells(0))*(grid.get_num_cells(1))*(grid.get_num_cells(2));
+            std::size_t data_raw_size  = num_vars*(grid.get_num_cells(0))*(grid.get_num_cells(1))*(grid.get_num_cells(2));
             
             data_raw.resize(data_raw_size);
             coord_raw.resize(coord_raw_size);
@@ -213,8 +218,8 @@ namespace spade::io
             std::size_t cbytes = coord_raw_size*sizeof(coord_float_t);
             std::size_t dbytes = data_raw_size*sizeof(data_float_t);
             
-            std::size_t c_size_cmpr = 4*(cbytes/3 + 1) + head_size;
-            std::size_t v_size_cmpr = (4*(dbytes/3 + 1) + head_size)*alias_type::size();
+            std::size_t c_size_cmpr = 4*(cbytes/3 + 4) + head_size;
+            std::size_t v_size_cmpr = (4*(dbytes/3 + 4) + num_vars*head_size);
             std::size_t obuf_size = c_size_cmpr + v_size_cmpr;
             
             obuf.resize(obuf_size, '=');

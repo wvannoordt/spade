@@ -90,6 +90,11 @@ namespace spade::io::detail
         timing::tmr_t otmr;
         // timing::scoped_tmr_t stmr("blk");
         using alias_type = arr_t::alias_type;
+        constexpr int num_vars = [&]()
+        {
+            if constexpr (ctrs::basic_array<alias_type>) return alias_type::size();
+            else return 1;
+        }();
         auto& target = obuf.data(arr.device());
         const auto g_img = grid.image(partition::global, arr.device());
         auto range = dispatch::support_of(arr, grid::exclude_exchanges);
@@ -99,7 +104,7 @@ namespace spade::io::detail
         range2.upper.k()++;
         int the_lb = lb_glob.value;
         range.lower.lb() = 0;
-        range.upper.lb() = alias_type::size();
+        range.upper.lb() = num_vars;
         
         range2.lower.lb() = 0;
         range2.upper.lb() = 1;
@@ -175,14 +180,24 @@ namespace spade::io::detail
             return base_size;
         };
         
+        //In characters
+        const auto b64_resid = [](std::size_t sz)
+        {
+            std::size_t base_size = sz%3;
+            return base_size;
+        };
+        
         std::size_t header_size = b64_size(sizeof(unsigned int));
-        std::size_t var_size_b64 = header_size + b64_size(data_size);
+        std::size_t var_size_b64 = header_size + b64_size(data_size/num_vars);
         std::size_t cor_size_b64 = header_size + b64_size(coord_size);
         
-        std::size_t var_bulk = b64_bulk_range(data_size);
+        std::size_t var_bulk = b64_bulk_range(data_size/num_vars);
         std::size_t crd_bulk = b64_bulk_range(coord_size);
         
-        const auto bulk_range = dispatch::ranges::make_range(0UL, crd_bulk + alias_type::size()*var_bulk);
+        std::size_t var_resid = b64_resid(data_size/num_vars);
+        std::size_t crd_resid = b64_resid(coord_size);
+        
+        const auto bulk_range = dispatch::ranges::make_range(0UL, crd_bulk + num_vars*var_bulk);
         
         std::size_t var_bytes = ni*nj*nk*sizeof(data_t);
         
@@ -193,15 +208,25 @@ namespace spade::io::detail
             constexpr char nil = '=';
             char* read_addr = coord_base + 3*idx;
             std::size_t o_idx = header_size + 4*idx;
+            bool iscoord = true;
+            std::size_t index = 0;
+            std::size_t var = 0;
             if (idx >= crd_bulk)
             {
-                std::size_t var   = (idx - crd_bulk)/var_bulk;
-                std::size_t index = (idx - crd_bulk) - var*var_bulk;
+                std::size_t delta = idx - crd_bulk;
+                var   = delta/var_bulk;
+                index = delta % var_bulk;
                 o_idx = cor_size_b64 + var*var_size_b64 + 4*index + header_size;
-                read_addr = data_base;
+                read_addr =  data_base;
                 read_addr += var*var_bytes;
                 read_addr += 3*index;
+                iscoord = false;
             }
+            
+            // if (!iscoord && ( >= data_size))
+            // {
+                
+            // }
             
             char b0, b1, b2, c0, c1, c2, c3;
             b0 = read_addr[0];
@@ -216,31 +241,78 @@ namespace spade::io::detail
             target_img[o_idx + 1] = table[c1];
             target_img[o_idx + 2] = table[c2];
             target_img[o_idx + 3] = table[c3];
+            
+            std::size_t resid = iscoord?crd_resid:var_resid;
+            if (resid > 0)
+            {
+                char* read_end        = coord_base + 3*crd_bulk;
+                std::size_t write_idx = header_size + 4*crd_bulk;
+                if (!iscoord)
+                {
+                    read_end = data_base + var*var_bytes + 3*var_bulk;
+                    write_idx = cor_size_b64 + var*var_size_b64 + header_size + 4*var_bulk;
+                }
+                char last3[3]    = {0, 0, 0};
+                char last4[4]    = {0, 0, 0, 0};
+                char writebuf[4] = {nil, nil, nil, nil};
+                int num2write[3] = {0, 2, 3};
+                int numTerms[3] = {0, 2, 1};
+                for (int i = 0; i < resid; i++)
+                {
+                    last3[i] = read_end[i];
+                }
+                b0 = last3[0];
+                b1 = last3[1];
+                b2 = last3[2];
+                c0 = ((b0 & 0b11111100) >> 2);
+                c1 = ((b0 & 0b00000011) << 4) | ((b1 & 0b11110000) >> 4);
+                c2 = ((b1 & 0b00001111) << 2) | ((b2 & 0b11000000) >> 6);
+                c3 = ((b2 & 0b00111111));
+                last4[0] = c0;
+                last4[1] = c1;
+                last4[2] = c2;
+                last4[3] = c3;
+                for (int i = 0; i < num2write[resid]; ++i)
+                {
+                    writebuf[i] = table[last4[i]];
+                }
+                
+                target_img[write_idx + 0] = writebuf[0];
+                target_img[write_idx + 1] = writebuf[1];
+                target_img[write_idx + 2] = writebuf[2];
+                target_img[write_idx + 3] = writebuf[3];
+            }
         };
-        
         
         dispatch::execute(bulk_range, load2, arr.device());
         obuf.itransfer();
         
         std::stringstream ssv, ssc;
-        unsigned int vbytes = data_raw.size()  * sizeof(data_t);
+        unsigned int vbytes = data_raw.size()  * sizeof(data_t) / num_vars;
         unsigned int cbytes = coord_raw.size() * sizeof(data_t);
         stream_base_64(ssv, &vbytes, 1);
         stream_base_64(ssc, &cbytes, 1);
         std::string sc = ssc.str();
         std::string sv = ssv.str();
         
+        //Add the headers
         for (int i = 0; i < header_size; ++i)
         {
             obuf[i] = sc[i];
-            for (std::size_t v = 0; v < alias_type::size(); ++v)
+            for (std::size_t v = 0; v < num_vars; ++v)
             {
                 std::size_t offst = v*var_size_b64 + cor_size_b64;
                 obuf[offst + i] = sv[i];
             }
         }
         
-        //Need to touch up the rest of the base 64
+        /*
+        std::vector<float> allcrd = coord_raw.data(arr.device());
+        std::stringstream ss;
+        stream_base_64(ss, allcrd);
+        std::ofstream f("crd" + std::to_string(the_lb));
+        f << ss.str();
+        */
         
         return std::make_pair(var_size_b64, cor_size_b64);
     }
