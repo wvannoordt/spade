@@ -323,7 +323,9 @@ namespace spade::grid
             const auto& grid  = array.get_grid();
             const auto& group = grid.group();
             const auto  num_exchanges = array.get_num_exchange();
-            using grid_type = typename array_t::grid_type;
+            using grid_type   = typename array_t::grid_type;
+            using blocks_type = typename grid_type::blocks_type;
+            using node_type   = typename blocks_type::node_type;
             exchange_config_t<grid_type> output;
             output.my_rank = group.rank();
             
@@ -341,7 +343,9 @@ namespace spade::grid
                         ignore_from_periodic = ignore_from_periodic || loc;
                     }
                     
-                    if (!ignore_from_periodic)
+                    bool ignore_from_masked = (e.endpoint->tag == node_type::invalid_tag);
+                    
+                    if (!ignore_from_periodic && !ignore_from_masked)
                     {
                         const auto transaction = get_transaction(num_exchanges, grid, grid, lb.value, e);
                         

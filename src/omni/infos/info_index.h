@@ -14,6 +14,11 @@ namespace spade::omni
             template <typename array_t, const grid::array_centering center>
             using array_data_type = typename grid::get_index_type<center>::array_type;
             
+            std::string get_name() const
+            {
+                return "index";
+            }
+            
             template <typename grid_view_t, typename array_t, typename index_t>
             _sp_hybrid static void compute(
                 const grid_view_t&,

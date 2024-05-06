@@ -14,6 +14,16 @@ namespace spade::omni
         template <typename derived_t> struct info_base
         {
             constexpr static bool info_tag = true;
+            
+            std::string get_name() const
+            {
+                return "[base]";
+            }
+            
+            std::string name() const
+            {
+                return static_cast<derived_t*>(this)->get_name();
+            }
         };
 
         static struct undirected_tag_t{} undirected;

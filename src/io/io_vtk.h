@@ -89,13 +89,6 @@ namespace spade::io
             }
         }
         
-        template <typename data_t, typename idx_t>
-        requires (ctrs::basic_array<data_t>)
-        _sp_hybrid static auto ith_elem(const data_t& d, const idx_t& i) { return d[i]; }
-        
-        template <typename data_t, typename idx_t>
-        _sp_hybrid static auto ith_elem(const data_t& d, const idx_t&) { return d; }
-        
         template <typename arr_t, typename vec_t, typename var_idx_t>
         static void copy_block_variable_data(
             const arr_t& arr,
@@ -118,7 +111,7 @@ namespace spade::io
             if constexpr (is_gpu_vec) ptr = &(data.devc_data[0]);
             auto img = arr.image();
             using index_type = decltype(range)::index_type;
-            auto load = _sp_lambda (const index_type& i) mutable
+            auto load = [=] _sp_hybrid (const index_type& i) mutable
             {
                 std::size_t offst = i.i() + ni*i.j() + ni*nj*i.k();
                 const auto data   = img.get_elem(i);
@@ -195,23 +188,49 @@ namespace spade::io
             vtk_extent.max(0) = grid.get_num_cells(0);// - 1;
             vtk_extent.max(1) = grid.get_num_cells(1);// - 1;
             vtk_extent.max(2) = grid.get_num_cells(2);// - 1;
-            std::vector<coord_float_t> coord_raw;
             
             using device_t = typename arr_t::device_type;
             constexpr bool is_gpu_device = device::is_gpu<device_t>;
-            using vec_t = std::conditional<
-                is_gpu_device,
-                device::shared_vector<data_float_t, device::pinned_allocator_t<data_float_t>,
-                device::device_allocator_t<data_float_t>>, std::vector<data_float_t>>::type;
-            vec_t data_raw;
+            using vec_t  = device::shared_vector<data_float_t>;
+            using cvec_t = device::shared_vector<coord_float_t>;
+            using wvec_t = device::shared_vector<char, device::pinned_allocator_t<char>, device::device_allocator_t<char>>;
             
-            coord_raw.reserve(3*(grid.get_num_cells(0)+1)*(grid.get_num_cells(1)+1)*(grid.get_num_cells(2)+1));
+            vec_t  data_raw;
+            cvec_t coord_raw;
+            
+            constexpr int num_vars = [&]()
+            {
+                if constexpr (ctrs::basic_array<alias_type>) return alias_type::size();
+                else return 1;
+            }();
+            std::size_t coord_raw_size = 3*(grid.get_num_cells(0) + 1)*(grid.get_num_cells(1) + 1)*(grid.get_num_cells(2) + 1);
+            std::size_t data_raw_size  = num_vars*(grid.get_num_cells(0))*(grid.get_num_cells(1))*(grid.get_num_cells(2));
+            
+            data_raw.resize(data_raw_size);
+            coord_raw.resize(coord_raw_size);
+            
+            wvec_t obuf;
+            int nx = grid.get_num_cells(0);
+            int ny = grid.get_num_cells(1);
+            int nz = grid.get_num_cells(2);
+            
+            std::size_t head_size = 8;
+            std::size_t cbytes = coord_raw_size*sizeof(coord_float_t);
+            std::size_t dbytes = data_raw_size*sizeof(data_float_t);
+            
+            std::size_t c_size_cmpr = 4*(cbytes/3 + 4) + head_size;
+            std::size_t v_size_cmpr = (4*(dbytes/3 + 4) + num_vars*head_size);
+            std::size_t obuf_size = c_size_cmpr + v_size_cmpr;
+            
+            obuf.resize(obuf_size, '=');
+            obuf.transfer();
+            
             const auto names = get_var_names(typename arr_t::alias_type());
-            data_raw.resize(grid.get_num_cells(0)*grid.get_num_cells(1)*grid.get_num_cells(2));
             const std::string format_str = "binary";
             for (std::size_t lb = 0; lb < grid.get_num_local_blocks(); ++lb)
             {
                 auto lb_glob = grid.get_partition().to_global(utils::tag[partition::local](lb));
+                const auto [variable_compressed_size, coord_compressed_size] = detail::vtk_b64_dev_impl(obuf, data_raw, coord_raw, grid, arr, lb_glob);                
                 bound_box_t<std::size_t, 3> blk_extent = vtk_extent;
                 blk_extent.min(2) = 0*lb_glob.value     * grid.get_num_cells(2);
                 blk_extent.max(2) = (0*lb_glob.value+1) * grid.get_num_cells(2);// - 1;
@@ -225,44 +244,19 @@ namespace spade::io
                 int ct = 0;
                 for (const auto& name: names)
                 {
-                    copy_block_variable_data(arr, data_raw, ct, lb);
-                    
                     bf << "<DataArray type=\"" << get_fundamental_str(data_float_t()) << "\" Name=\"" << name << "\" format=\"" << format_str << "\">\n";
-                    const auto& rdat = [&]()
-                    {
-                        if constexpr (is_gpu_device)
-                        {
-                            return data_raw.host_data;
-                        }
-                        else
-                        {
-                            return data_raw;
-                        }
-                    }();
-                    spade::detail::stream_base_64(bf, rdat);
+                    // spade::detail::stream_base_64(bf, rdat);
+                    bf.write(&obuf[ct*variable_compressed_size+coord_compressed_size], variable_compressed_size);
                     bf << "\n</DataArray>\n";
                     ++ct;
                 }
                 bf << "</" << get_center_str(arr.centering_type()) << ">\n";
                 bf << "<Points>\n";
                 bf << "<DataArray type=\"" << get_fundamental_str(coord_float_t()) << "\" NumberOfComponents=\"3\" format=\"" << format_str << "\">\n";
-                grid::node_idx_t idx(0,0,0,lb);
-                coord_raw.clear();
-                for (idx.k() = 0; idx.k() <= grid.get_num_cells(2); ++idx.k())
-                {
-                    for (idx.j() = 0; idx.j() <= grid.get_num_cells(1); ++idx.j())
-                    {
-                        for (idx.i() = 0; idx.i() <= grid.get_num_cells(0); ++idx.i())
-                        {
-                            auto pt = geom.get_coords(idx);
-                            if constexpr (grid.dim() == 2) pt[2] = 0.0;
-                            coord_raw.push_back(pt[0]);
-                            coord_raw.push_back(pt[1]);
-                            coord_raw.push_back(pt[2]);
-                        }
-                    }
-                }
-                spade::detail::stream_base_64(bf, coord_raw);
+                
+                // spade::detail::stream_base_64(bf, coord_raw);
+                bf.write(&obuf[0], coord_compressed_size);
+                
                 bf << "\n</DataArray>\n";
                 bf << "</Points>\n";
                 bf << "</Piece>\n";

@@ -158,7 +158,8 @@ namespace spade::amr
         
         // re-collects the global list of amr nodes and their bounding boxes,
         // must be called after every single refinement operation
-        template <typename crit_t> void enumerate(const crit_t& criterion)
+        template <typename crit_t>
+        void enumerate(const crit_t& criterion)
         {
             std::size_t block_count = 0;
             for (auto& n: root_nodes)
@@ -202,7 +203,19 @@ namespace spade::amr
                 p->tag = -1;
             }
             
-            for (int lb = 0; lb < enumerated_nodes.size(); ++lb) enumerated_nodes[lb]->tag = lb;
+            int counter = 0;
+            for (int lb = 0; lb < enumerated_nodes.size(); ++lb)
+            {
+                if (criterion(*enumerated_nodes[lb]))
+                {
+                    enumerated_nodes[lb]->tag = counter;
+                    ++counter;
+                }
+                else
+                {
+                    enumerated_nodes[lb]->tag = node_type::invalid_tag;
+                }
+            }
         }
         
         void enumerate()
@@ -362,7 +375,7 @@ namespace spade::amr
         const auto&       get_neighs(const std::size_t lb)                    const { return enumerated_nodes[lb].get().neighbors; }
         
         template <typename condition_t>
-        std::vector<handle_type> select(const condition_t& condition)
+        std::vector<handle_type> select(const condition_t& condition) const
         {
             std::vector<handle_type> output;
             for (auto& lb: enumerated_nodes)

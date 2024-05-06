@@ -18,6 +18,11 @@ namespace spade::omni
                 utils::unit_vector_t,
                 ctrs::array<typename array_t::grid_type::coord_type,3>>::type;
             
+            std::string get_name() const
+            {
+                return "metric";
+            }
+            
             // using array_data_type = ctrs::array<typename array_t::grid_type::coord_type,3>;
             
             template <typename grid_view_t, typename array_t, typename index_t>
