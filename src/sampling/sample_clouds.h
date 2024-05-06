@@ -76,14 +76,17 @@ namespace spade::sampling
             {
               success=false;
               coeffs = 0.0;
+	      int countPts = 0;
               for (int ct = 0; ct < nmx; ++ct)
                 {
                   if (!exclude_crit(indices[ct]))
                     {
                       coeffs[ct] = 1.0;
+		      countPts = countPts + 1;
                       success = true;
                     }
                 }
+	      for (int ct = 0; ct < nmx; ++ct) coeffs[ct] /= coeff_t(countPts);
             }
 
             return success;
@@ -369,7 +372,14 @@ namespace spade::sampling
             constexpr int required_size = stencil_size();
             
             using coeff_t = typename coeffs_t::value_type;
-            
+
+	    int nx = grid.get_num_cells(0);
+	    int ny = grid.get_num_cells(1);
+	    int nz = grid.get_num_cells(2);
+	    int nxg= 2;//grid.num_exch[0];
+	    int nyg= 2;//grid.num_exch[1];
+	    int nzg= 2;//grid.num_exch[2];
+	    
             int store = 0;
             indices = landed_cell;
             coeffs = coeff_t(0.0);
@@ -385,6 +395,10 @@ namespace spade::sampling
                         idx.i() += di;
                         idx.j() += dj;
                         idx.k() += dk;
+
+			idx.i() = max(min(idx.i(),nx+nxg),-nxg);
+			idx.i() = max(min(idx.j(),ny+nyg),-nyg);
+			idx.i() = max(min(idx.k(),nz+nzg),-nzg);
                         
                         if (!exclude_crit(idx))
                         {
@@ -399,8 +413,18 @@ namespace spade::sampling
             }
             
             bool success =  store >= required_size;
-            
-            for (int ii = 0; ii < required_size; ++ii)coeffs[ii] = coeff_t(1.0) / required_size;
+
+            for (int ii = 0; ii < required_size; ++ii)coeffs[ii] = coeff_t(1.0) / coeff_t(required_size);
+
+	    //sum check
+	    coeff_t sum = 0.;
+	    for (int ii = 0; ii < required_size; ++ii) sum+=coeffs[ii];
+	    if (sum>1.0)
+	      {
+		success = false;
+		for (int ii = 0; ii < required_size; ++ii) printf("i = %d, coef = %f",ii,coeffs[ii]);
+		std::cin.get();
+	      }
             
             return success;
         }
