@@ -199,7 +199,7 @@ namespace spade::convective
         const float_t eps;
 
         // constructor
-        hllc_fds_t(const gas_t& gas_in, const float_t& alpha_in, const float_t& bl_in, const float_t& eps_in) : 
+        steger_warming_fds_chem_t(const gas_t& gas_in, const float_t& alpha_in, const float_t& bl_in, const float_t& eps_in) : 
             gas{gas_in}, alpha{alpha_in}, bl{bl_in}, eps{eps_in} {}
 
         // overloading parentheses operator
@@ -227,7 +227,7 @@ namespace spade::convective
 
             // compute the eigenvector matrices
             spade::linear_algebra::dense_mat<float_t, ns+4, ns+4> eigenLeft, eigenRight, eigenVal_minus, eigenVal_plus;
-            convective::compute_eigenvector_matrices(qL_modif, qR_modif, nv, gas, eigenLeft, eigenRight);
+            compute_eigenvector_matrices(qL_modif, qR_modif, nv, gas, eigenLeft, eigenRight);
 
             // computing the Roe-averaged face state
             const dtype rhoL = fluid_state::get_rho(qL_modif, gas);
@@ -236,7 +236,7 @@ namespace spade::convective
             for (int n = 0; n < qL_modif.size(); n++) qface[n] = (sqrt(rhoL) * qL_modif[n] + sqrt(rhoR) * qR_modif[n]) / (sqrt(rhoL) + sqrt(rhoR));	
             
             // get the mass fractions
-		    const spade::ctrs::array<rtype, qface.nspecies()> Ys = fluid_state::get_Ys(qface);
+		    const spade::ctrs::array<float_t, qface.nspecies()> Ys = fluid_state::get_Ys(qface);
 
             dtype Cvtr = 0.0;
 		    for (int s = 0; s < qface.nspecies(); s++) Cvtr += Ys[s] * gas.get_cvtr(s);
@@ -265,7 +265,7 @@ namespace spade::convective
 
             for (int s = 0; s < qface.nspecies(); s++)
             {
-                eigenVal_plus (s,s) = U + sqrt(U*U + eps_temp*eps_temp)
+                eigenVal_plus (s,s) = U + sqrt(U*U + eps_temp*eps_temp);
                 eigenVal_minus(s,s) = U - sqrt(U*U + eps_temp*eps_temp);
             }
 

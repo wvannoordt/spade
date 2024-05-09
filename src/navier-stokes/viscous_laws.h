@@ -4,7 +4,6 @@
 #include "omni/omni.h"
 #include "navier-stokes/fluid_state.h"
 
-
 namespace spade::viscous_laws
 {
     template <class T> concept state_independent_viscosity = std::floating_point<typename T::value_type> && requires(T t)
@@ -233,66 +232,118 @@ namespace spade::viscous_laws
     // TEMPORARY NAMES <JRB>
     enum gupta_collision_fit_type
     {
-        pow_log2,   
-        exp_log3,
-        frac_T_T2,
-        frac_T2_T3,
+        coulomb    = 0,
+        pow_log2   = 1,
+        frac_T_T2  = 2,
+        frac_T2_T3 = 3,
+        exp_log3   = 4,
+    }; 
+
+    // overloading the stream operator for this enumerated type
+    std::istream& operator >> (std::istream& in, gupta_collision_fit_type& fit_type) 
+    {
+        std::string value;
+        if(in >> value)
+        {
+            if      (value == "0") fit_type = coulomb;
+            else if (value == "1") fit_type = pow_log2;
+            else if (value == "2") fit_type = frac_T_T2;
+            else if (value == "3") fit_type = frac_T2_T3;
+            else if (value == "4") fit_type = exp_log3;
+        }
+        return in;
     };
 
     // Gupta Collision Integral Fit Functions <JRB>
-    template <typename dtype, const std::size_t ns, const std::size_t num_fit_params, const gupta_collision_fit_type fit_type> struct gupta_collision_fit_t
+    template <typename dtype, typename gas_t> struct gupta_collision_fit_t
     {
         typedef dtype float_t;
+
+        // the maximum number of collision integral fit parameters
+        constexpr static std::size_t max_num_params = 6;
         
-        _sp_hybrid constexpr static std::size_t num_species()    { return ns; }
-        _sp_hybrid constexpr static std::size_t num_params()     { return num_fit_params; }
-        _sp_hybrid constexpr static std::size_t num_collisions() { return std::size_t((ns*(ns+1))/2); }
+        _sp_hybrid constexpr static std::size_t num_species()    { return gas_t::nspecies(); }
+        //_sp_hybrid constexpr static std::size_t num_params()     { return num_fit_params; }
+        _sp_hybrid constexpr static std::size_t num_collisions() { return std::size_t((num_species()*(num_species()+1))/2); }
 
         // this function maps down a triangular matrix into a linear array
         _sp_hybrid constexpr static std::size_t map_indices(const std::size_t s1, const std::size_t s2)
         {
-            return std::size_t(ns*std::min(s1, s2) + std::max(s2, s1) - (std::min(s1, s2)*(std::min(s1, s2)+1))/2);
+            return std::size_t(num_species()*std::min(s1, s2) + std::max(s2, s1) - (std::min(s1, s2)*(std::min(s1, s2)+1))/2);
+        }
+
+        // this function returns the number of parameters used by different fit types
+        _sp_hybrid constexpr static std::size_t num_params(const gupta_collision_fit_type fit_type)
+        {
+            switch (fit_type) 
+            {
+                case coulomb:    return 3;
+                case pow_log2:   return 4;
+                case frac_T_T2:  return 4;
+                case frac_T2_T3: return 6;
+                case exp_log3:   return 4;
+            }
+            return 0;
         }
 
         // the fit parameter matrices, with n(n+1)/2 elements, corresponding to each unique combination of species
-        spade::linear_algebra::dense_mat<float_t, num_fit_params, std::size_t((ns*(ns+1))/2)> omega11_params, omega22_params;
+        spade::linear_algebra::dense_mat<float_t, max_num_params, std::size_t((num_species()*(num_species()+1))/2)> omega11_params, omega22_params;
+        gupta_collision_fit_type fit_types[std::size_t((num_species()*(num_species()+1))/2)];
 
         // the coulomb shieliding collision fit parameters (not sure if there's a better way of storing these)
-        constexpr static float_t coulomb_fit_params_11[2, 3] = {{0.0313, -0.476, 0.784}, {0.0106, 0.138, 0.765}}; // {{att}, {rep}}
-        constexpr static float_t coulomb_fit_params_22[2, 3] = {{0.0377, -0.146, 1.262}, {0.0274, 0.157, 1.235}}; // {{att}, {rep}}
+        // float_t coulomb_fit_params_11[2][3], coulomb_fit_params_11[2][3];
+
+        // constexpr static float_t coulomb_fit_params_11[2][3] = {{0.0313, -0.476, 0.784}, {0.0106, 0.138, 0.765}}; // {{att}, {rep}}
+        // constexpr static float_t coulomb_fit_params_22[2][3] = {{0.0377, -0.146, 1.262}, {0.0274, 0.157, 1.235}}; // {{att}, {rep}}
 
         // the constructor
         gupta_collision_fit_t() 
         {
             // the fit type and number of fit parameters need to be consistent
-            if constexpr(fit_type == pow_log2 || fit_type == exp_log3 || fit_type == frac_T_T2) 
-                static_assert(num_fit_params == 4, "Selected collision integral fit type requires four fit parameters");
-            else if constexpr(fit_type == frac_T2_T3) 
-                static_assert(num_fit_params == 6, "Selected collision integral fit type requires six fit parameters"); 
-        };
+            //if constexpr(fit_type == pow_log2 || fit_type == exp_log3 || fit_type == frac_T_T2) 
+            //    static_assert(num_fit_params == 4, "Selected collision integral fit type requires four fit parameters");
+            //else if constexpr(fit_type == frac_T2_T3) 
+            //    static_assert(num_fit_params == 6, "Selected collision integral fit type requires six fit parameters"); 
+        }
 
-        // this loads in the fit data from a specified data file
-        _sp_hybrid void load_collision_integral_data(const std::string& fname, const std::vector<std::string>& speciesNames, gas_t& gas)
+        // this loads in the fit data from the specified data files
+        _sp_hybrid void load_collision_integral_data(const std::string& neutral_fname, const std::string& ion_fname, const std::vector<std::string>& speciesNames, gas_t& gas)
         {
-            // Open the input file
-            std::ifstream infile;
-            std::string full_fname = std::getenv("SPADE") + std::string("/src/navier-stokes/speciesCollision/") + fname; // we need a better way of accessing data files
-            infile.open(full_fname);
+            // Open the neutrals input file
+            std::ifstream neutrals_file;
+            std::string full_neutral_fname = std::getenv("SPADE") + std::string("/src/navier-stokes/speciesTransport/") + neutral_fname; // we need a better way of accessing data files
+            neutrals_file.open(full_neutral_fname);
+            constexpr std::size_t skip_neutral_lines = 1;
+
+            // Open the ions input file
+            std::ifstream ions_file;
+            std::string full_ion_fname = std::getenv("SPADE") + std::string("/src/navier-stokes/speciesTransport/") + ion_fname; // we need a better way of accessing data files
+            ions_file.open(full_ion_fname);
+            constexpr std::size_t skip_ion_lines = 2;
             
-            if (infile)
+            // read in the collision integral fit data from the neutrals input file
+            if (neutrals_file)
             {
+                // skip the specified number of lines
+                for (int i = 0; i < skip_neutral_lines; i++)
+                    neutrals_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
                 // variables to temporarily store data
                 std::string species1, species2;
-                float_t collision_params_11[num_fit_params];
-                float_t collision_params_22[num_fit_params];
+                gupta_collision_fit_type fit_type;
+                std::string integral_type;
+                float_t collision_params[max_num_params];
 
-                spade::ctrs::array<std::size_t, ns*ns> unique_indices, unique_indices_check;
+                // check arrays to make sure each species collision is accounted for
+                spade::ctrs::array<std::size_t, num_species()*num_species()> unique_indices, unique_indices_check;
 
                 // sweep entire file
                 while (true)
                 {
-                    // collision file is formatted: collision species, omega11 params (A), omega22 params (B)
-                    infile >> species1 >> species2 >> collision_params_11 >> collision_params_22;
+                    // collision file format
+                    neutrals_file >> species1 >> species2 >> fit_type >> integral_type;
+                    for (int i = 0; i < num_params(fit_type); i++)
+                        neutrals_file >> collision_params[i];
                     
                     // sweep through each combination of species
                     for (int s1 = 0; s1 < speciesNames.size(); s1++)
@@ -305,25 +356,29 @@ namespace spade::viscous_laws
                                 // also check to make sure the collision is neutral
                                 if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                                 {
-                                    for (int i = 0; i < num_params; i++)
+                                    fit_types[map_indices(s1, s2)] = fit_type;
+
+                                    for (int i = 0; i < num_params(fit_type); i++)
                                     {
-                                        omega11_params(i, map_indices(s1, s2)) = collision_params_11[i];
-                                        omega22_params(i, map_indices(s1, s2)) = collision_params_22[i];
+                                        if (integral_type == "11")
+                                            omega11_params(i, map_indices(s1, s2)) = collision_params[i];
+                                        else if (integral_type == "22")
+                                            omega22_params(i, map_indices(s1, s2)) = collision_params[i];
                                     }
 
-                                    unique_indices[s1*ns+s2] = map_indices(s1, s2);
-                                    unique_indices[s2*ns+s1] = map_indices(s1, s2);
+                                    unique_indices[s1*num_species()+s2] = map_indices(s1, s2);
+                                    unique_indices[s2*num_species()+s1] = map_indices(s1, s2);
                                 }
                             }
                         }
                     }
 
                     // check for end of file
-                    if (infile.eof()) break;
+                    if (neutrals_file.eof()) break;
                 }
                 
-                // close file
-                infile.close();
+                // close neutrals file
+                neutrals_file.close();
 
                 // check to make sure all neutral collisions are loaded in
                 for (int s1 = 0; s1 < speciesNames.size(); s1++)
@@ -332,80 +387,137 @@ namespace spade::viscous_laws
                     {
                         if(gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                         {
-                            unique_indices_check[s1*ns+s2] = gupta_visc.map_indices(s1, s2);
-                            unique_indices_check[s2*ns+s1] = gupta_visc.map_indices(s1, s2);
+                            unique_indices_check[s1*num_species()+s2] = map_indices(s1, s2);
+                            unique_indices_check[s2*num_species()+s1] = map_indices(s1, s2);
                         }
                     }
                 }
-                if (unique_indices != unique_indices_check)
-                    std::cerr << "Missing neutral collision data in collision file!" << std::endl;
+                /*if (unique_indices != unique_indices_check)
+                    std::cout << "Missing neutral collision data in collision file!" << std::endl;*/
             }
-            else std::cerr << "Can not open provided species collision file!" << std::endl;
+            /*else std::cout << "Can not open provided neutral species collision file!" << std::endl;*/ // NEED TO THROW EXCEPTIONS HERE?
+
+            // read in the data from the ions file
+            if (ions_file)
+            {
+                // skip the specified number of lines
+                for (int i = 0; i < skip_ion_lines; i++)
+                    ions_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+                // temporary variables to parse the data
+                std::string integral_type;
+                float_t coulomb_fit_params[2][3];
+
+                // sweep entire file
+                while (true)
+                {
+                    // now read in the shielding fit parameters
+                    ions_file >> integral_type;
+                    for (int i = 0; i < num_params(coulomb); i++)
+                        for (int j = 0; j < 2; j++)
+                            ions_file >> coulomb_fit_params[j][i];
+                    
+                    // sweep through each combination of species
+                    for (int s1 = 0; s1 < speciesNames.size(); s1++)
+                    {
+                        for (int s2 = 0; s2 < speciesNames.size(); s2++)
+                        {
+                            // check to see if the collision is not neutral
+                            if (gas.charge_s[s1] != 0 && gas.charge_s[s2] != 0)
+                            {
+                                // add the fit type to the corresponding array
+                                fit_types[map_indices(s1, s2)] = coulomb;
+
+                                // check if the collision is attractive or repulsive
+                                int rep = 0;
+                                if (gas.charge_s[s1] == gas.charge_s[s2]) 
+                                    rep = 1;
+
+                                for (int i = 0; i < num_params(coulomb); i++)
+                                {
+                                    if (integral_type == "11")
+                                        omega11_params(i, map_indices(s1, s2)) = coulomb_fit_params[rep][i];
+                                    else if (integral_type == "22")
+                                        omega22_params(i, map_indices(s1, s2)) = coulomb_fit_params[rep][i];
+                                }
+                            }
+                        }
+                    }
+
+                    // check for end of file
+                    if (ions_file.eof()) break;
+                }
+                
+                // close neutrals file
+                ions_file.close();
+            }
+            //else std::cout << "Can not open provided ion collision file!" << '\n';
+
+
+
         }
 
         // collision integral for neutrals
-        _sp_hybrid float_t omega_fit(const float_t& T, const std::size_t& s1, const std::size_t& s2, auto& omega_params) const
+        _sp_hybrid float_t omega_fit(const std::size_t& s1, const std::size_t& s2, const float_t& T, const auto& omega_params) const
         {
+            const gupta_collision_fit_type fit_type = fit_types[map_indices(s1, s2)];
+
             float_t omega_nn;
-            if constexpr(fit_type == pow_log2)
-                omega_nn = omega_params(3, map_indices(s1, s2))*std::pow(T, omega_params(0, map_indices(s1, s2))*std::log(T)*std::log(T) + omega_params(1, map_indices(s1, s2))*std::log(T) + omega_params(3, map_indices(s1, s2)));
-            else if constexpr(fit_type == exp_log3)
+            if (fit_type == pow_log2)
+                omega_nn = omega_params(3, map_indices(s1, s2))*std::pow(T, omega_params(0, map_indices(s1, s2))*std::log(T)*std::log(T) + omega_params(1, map_indices(s1, s2))*std::log(T) + omega_params(2, map_indices(s1, s2)));
+            else if (fit_type == exp_log3)
                 omega_nn = std::exp(omega_params(0, map_indices(s1, s2))*std::log(T)*std::log(T)*std::log(T) + omega_params(2, map_indices(s1, s2))*std::log(T)*std::log(T) + omega_params(3, map_indices(s1, s2))*std::log(T) + omega_params(0, map_indices(s1, s2))*std::log(T));
-            else if constexpr(fit_type == frac_T_T2)
+            else if (fit_type == frac_T_T2)
                 omega_nn = (omega_params(0, map_indices(s1, s2))*T + omega_params(1, map_indices(s1, s2))) / (T*T + omega_params(2, map_indices(s1, s2))*T + omega_params(3, map_indices(s1, s2)));
-            else if constexpr(fit_type == frac_T2_T3)
+            else if (fit_type == frac_T2_T3)
                 omega_nn = (omega_params(0, map_indices(s1, s2))*T*T + omega_params(1, map_indices(s1, s2))*T + omega_params(2, map_indices(s1, s2))) / (T*T*T + omega_params(3, map_indices(s1, s2))*T*T + omega_params(4, map_indices(s1, s2))*T + omega_params(5, map_indices(s1, s2)));
             else omega_nn = 0.0; // FIT NOT IMPLEMENTED
+
             return omega_nn;
         }
 
         // collision integral using coulomb shielding fit for ion-ion and ion-electron
-        _sp_hybrid float_t omega_fit(const float_t& T_star, const float_t& lambda_D, const int& sign, auto& omega_params) const
+        _sp_hybrid float_t omega_fit(const std::size_t& s1, const std::size_t& s2, const float_t& T_star, const float_t& lambda_D, auto& omega_params) const
         {
-            float_t omega_nn;
-            if constexpr(sign < 0)
-                omega_nn = float_t(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(T_star*T_star))*std::log(omega_params[0][2]*T_star*(float_t(1)-omega_params[0][1]*std::exp(-1*omega_params[0][0]*T_star))+float_t(1)); // attractive
-            else
-                omega_nn = float_t(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(T_star*T_star))*std::log(omega_params[1][2]*T_star*(float_t(1)-omega_params[1][1]*std::exp(-1*omega_params[1][0]*T_star))+float_t(1)); // repulsive
+            const float_t omega_nn = float_t(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(T_star*T_star))*std::log(omega_params(0, map_indices(s1, s2))*T_star*(float_t(1)-omega_params(1, map_indices(s1, s2))*std::exp(-1*omega_params(2, map_indices(s1, s2))*T_star))+float_t(1));
             return omega_nn;
         }
 
         // omega_11 collision integral (for neutrals)
-        _sp_hybrid float_t omega_11(const float_t& T, const std::size_t& s1, const std::size_t& s2) const
-        { return omega_fit(T, s1, s2, omega11_params); }
+        _sp_hybrid float_t omega_11(const std::size_t& s1, const std::size_t& s2, const float_t& T) const
+        { return omega_fit(s1, s2, T, omega11_params); }
 
         // omega_11 collision integral (using coulomb shielding fit for ion-ion and ion-electron)
-        _sp_hybrid float_t omega_11(const float_t& T_star, const float_t& lambda_D, const int& sign) const
-        { return omega_fit(T_star, lambda_D, sign, coulomb_fit_params_11); }
+        _sp_hybrid float_t omega_11(const std::size_t& s1, const std::size_t& s2, const float_t& T_star, const float_t& lambda_D) const
+        { return omega_fit(s1, s2, T_star, lambda_D, omega11_params); }
         
         // omega_22 collision integral (for neutrals)
-        _sp_hybrid float_t omega_22(const float_t& T, const std::size_t& s1, const std::size_t& s2) const
-        { return omega_fit(T, s1, s2, omega22_params); }
+        _sp_hybrid float_t omega_22(const std::size_t& s1, const std::size_t& s2, const float_t& T) const
+        { return omega_fit(s1, s2, T, omega22_params); }
 
         // omega_22 collision integral (using coulomb shielding fit for ion-ion and ion-electron)
-        _sp_hybrid float_t omega_22(const float_t& T_star, const float_t& lambda_D, const int& sign) const
-        { return omega_fit(T_star, lambda_D, sign, coulomb_fit_params_22); }
+        _sp_hybrid float_t omega_22(const std::size_t& s1, const std::size_t& s2, const float_t& T_star, const float_t& lambda_D) const
+        { return omega_fit(s1, s2, T_star, lambda_D, omega22_params); }
 
-    }
-
+    };
 
     // NEED TO ADD THERMAL CONDUCTIVITY
     // ALSO CAN CLEAN UP BY BRANCHING OFF FOR DIFF T and FIT FUNCTION
     // ALSO FIX Ys (spade::ctrs::array<rtype, qface.nspecies()> Ys = fluid_state::get_Ys(qface);)
     // Gupta Viscous Model (Multicomponent Gas) <JRB | Implemented: 4-14-24 | Validated: TODO>
-    template <typename dtype, const std::size_t ns, const std::size_t num_fit_params, const gupta_collision_fit_type fit_type, typename gas_t> struct gupta_visc_t
-    : public visc_law_interface_t<gupta_visc_t<dtype, ns, gas_t>, omni::info_list_t<omni::info::value>>
+    template <typename dtype, typename gas_t> struct gupta_visc_t
+    : public visc_law_interface_t<gupta_visc_t<dtype, gas_t>, omni::info_list_t<omni::info::value>>
     {
         typedef dtype float_t;
 
-        using base_t = visc_law_interface_t<gupta_visc_t<dtype, ns, gas_t>, omni::info_list_t<omni::info::value>>;
+        using base_t = visc_law_interface_t<gupta_visc_t<dtype, gas_t>, omni::info_list_t<omni::info::value>>;
         using base_t::get_visc;
         using base_t::get_beta;
         using base_t::get_diffuse;
         using base_t::info_type;
-        using fit_t = gupta_collision_fit_t<dtype, ns, num_fit_params, fit_type>;
-        
-        _sp_hybrid constexpr static std::size_t num_species(){return ns;}
+        using fit_t = gupta_collision_fit_t<dtype, gas_t>;
+
+        _sp_hybrid constexpr static std::size_t num_species(){return gas_t::nspecies();}
 
         /*
         // this function maps down a triangular matrix into a linear array
@@ -424,15 +536,18 @@ namespace spade::viscous_laws
         gupta_visc_t(const gas_t& gas_in, const fit_t& fit_fns_in) : gas{gas_in}, fit_fns{fit_fns_in} { }
         
         // compute the viscosity
-        _sp_hybrid float_t get_visc(const fluid_state::prim_chem_t<float_t, ns>& q) const
+        _sp_hybrid float_t get_visc(const fluid_state::prim_chem_t<float_t, num_species()>& q) const
         {
+
+            //std::cout << "TEST T: " << q.T() << "\n";
+
             // the output variable
             float_t mu_out = 0;
 
             // get the molar concentrations and density
             //const spade::ctrs::array<float_t, ns> Xr   = fluid_state::get_Xr(q, gas);
-            const spade::ctrs::array<float_t, ns> Ys   = fluid_state::get_Ys(q, gas);
-            const spade::ctrs::array<float_t, ns> rhos = fluid_state::get_rhos(q, gas);
+            const spade::ctrs::array<float_t, num_species()> Ys   = fluid_state::get_Ys(q);
+            const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
             float_t n_e = 0;
@@ -476,15 +591,16 @@ namespace spade::viscous_laws
                     // if interaction is neutral, use the neutral fit functions
                     if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                     {
-                        omega_22 = fit_fns.omega_22(T, s1, s2);
+                        omega_22 = fit_fns.omega_22(s1, s2, T);
                     }
                     // otherwise use the coulomb-shielding fit functions
                     else
                     {
-                        omega_22 = fit_fns.omega_22(T_star, lambda_D, gas.charge_s[s1]*gas.charge_s[s2]);
+                        omega_22 = fit_fns.omega_22(s1, s2, T_star, lambda_D);
                     }
                     delta_22 = float_t(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_22;
-
+                    //std::cout << "TEST omega22: " << omega_22 << "\n";
+                    //std::cout << "TEST delta22: " << delta_22 << "\n";
                     /*
 
                     float_t delta2 = 0;
@@ -553,37 +669,38 @@ namespace spade::viscous_laws
                     } */
 
                     // add the result to the denominator term
-                    denominator += Ys(s2)*gas.mw_si[s2]*delta_22;
+                    denominator += Ys[s2]*gas.mw_si[s2]*delta_22;
+                    //std::cout << "TEST: " << denominator << "\n";
                 }
 
                 // now add the result to the viscosity
-                mu_out += mass_s*Ys(s1)*gas.mw_si[s1] / denominator;
+                mu_out += mass_s*Ys[s1]*gas.mw_si[s1] / denominator;
             }
 
             return mu_out;
         }
         
         // compute the second viscosity
-        _sp_hybrid dtype get_beta(const fluid_state::prim_chem_t<dtype, ns>& q) const
+        _sp_hybrid dtype get_beta(const fluid_state::prim_chem_t<dtype, num_species()>& q) const
         {
             return -0.66666666667*this->get_visc(q);
         }
         
         // compute the species' diffusion coefficients
-        _sp_hybrid spade::ctrs::array<dtype, ns> get_diffuse(const fluid_state::prim_chem_t<dtype, ns>& q) const
+        _sp_hybrid spade::ctrs::array<dtype, num_species()> get_diffuse(const fluid_state::prim_chem_t<dtype, num_species()>& q) const
         {
-            spade::ctrs::array<dtype, ns> diffuse_out;
+            spade::ctrs::array<dtype, num_species()> diffuse_out;
 
             // get the molar concentrations and density
             //const spade::ctrs::array<dtype, ns> Xr = fluid_state::get_Xr(q, gas);
-            const spade::ctrs::array<dtype, ns> Ys = fluid_state::get_Ys(q, gas);
-            const spade::ctrs::array<dtype, ns> rhos = fluid_state::get_rhos(q, gas);
+            const spade::ctrs::array<dtype, num_species()> Ys = fluid_state::get_Ys(q);
+            const spade::ctrs::array<dtype, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // compute the sum of molar concentrations
             dtype Ys_sum = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
-                Ys_sum +=  Ys(s1)*gas.mw_si[s1];
+                Ys_sum +=  Ys[s1]*gas.mw_si[s1];
             }
 
             // get the electron number density in (#/cm^3)
@@ -607,10 +724,6 @@ namespace spade::viscous_laws
                 {
                     if (s2 != s1)
                     {
-                        // binary diffusion coefficient
-                        dtype binary_diff = 0;
-                        dtype delta1      = 0;
-                        dtype omega1      = 0;
 
                         // variables used to calulate transport properties
                         float_t T, T_star, lambda_D, omega_11, delta_11, binary_diff;
@@ -632,12 +745,12 @@ namespace spade::viscous_laws
                         // if interaction is neutral, use the neutral fit functions
                         if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                         {
-                            omega_11 = fit_fns.omega_11(T, s1, s2);
+                            omega_11 = fit_fns.omega_11(s1, s2, T);
                         }
                         // otherwise use the coulomb-shielding fit functions
                         else
                         {
-                            omega_11 = fit_fns.omega_11(T_star, lambda_D, gas.charge_s[s1]*gas.charge_s[s2]);
+                            omega_11 = fit_fns.omega_11(s1, s2, T_star, lambda_D);
                         }
                         delta_11 = float_t(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2] / (consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_11;
                         binary_diff = consts::kSI*T/(q.p()*delta_11);
@@ -691,27 +804,27 @@ namespace spade::viscous_laws
                         } */
 
                         // add the term to the denominator
-                        denominator += Ys(s2)*gas.mw_si[s2]/binary_diff;
+                        denominator += Ys[s2]*gas.mw_si[s2]/binary_diff;
                     }
                 }
 
                 // now compute and store the species diffusion coefficient
-                diffuse_out[s1] = Ys_sum*Ys_sum*gas.mw_s[s1]*(1-Ys(s1))/denominator;
+                diffuse_out[s1] = Ys_sum*Ys_sum*gas.mw_s[s1]*(1-Ys[s1])/denominator;
             }
 
             return diffuse_out;
         }
 
         // compute the translational & rotational thermal conductivity
-        _sp_hybrid float_t get_kappa_tr(const fluid_state::prim_chem_t<float_t, ns>& q) const
+        _sp_hybrid float_t get_kappa_tr(const fluid_state::prim_chem_t<float_t, num_species()>& q) const
         {
             // the translational and rotational conductivities
             float_t kappa_t, kappa_r = 0;
 
             // get the molar concentrations and density
             //const spade::ctrs::array<float_t, ns> Xr   = fluid_state::get_Xr(q, gas);
-            const spade::ctrs::array<float_t, ns> Ys   = fluid_state::get_Ys(q, gas);
-            const spade::ctrs::array<float_t, ns> rhos = fluid_state::get_rhos(q, gas);
+            const spade::ctrs::array<float_t, num_species()> Ys   = fluid_state::get_Ys(q);
+            const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
             float_t n_e = 0;
@@ -762,53 +875,52 @@ namespace spade::viscous_laws
                         // if interaction is neutral, use the neutral fit functions
                         if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                         {
-                            omega_11 = fit_fns.omega_11(T, s1, s2);
-                            omega_22 = fit_fns.omega_22(T, s1, s2);
+                            omega_11 = fit_fns.omega_11(s1, s2, T);
+                            omega_22 = fit_fns.omega_22(s1, s2, T);
                         }
                         // otherwise use the coulomb-shielding fit functions
                         else
                         {
-                            omega_11 = fit_fns.omega_11(T_star, lambda_D, gas.charge_s[s1]*gas.charge_s[s2]);
-                            omega_22 = fit_fns.omega_22(T_star, lambda_D, gas.charge_s[s1]*gas.charge_s[s2]);
+                            omega_11 = fit_fns.omega_11(s1, s2, T_star, lambda_D);
+                            omega_22 = fit_fns.omega_22(s1, s2, T_star, lambda_D);
                         }
 
                         delta_11 = float_t(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_11;
                         delta_22 = float_t(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_22;
 
-                        // if first species is a molecule, increment the denominator term for rotational thermal conductivity
-                        if (gas.isMol[s1])
-                        {
-                            denominator_rot += Ys(s2)*gas.mw_si[s2]*delta_11;
-                        }
+                        // increment the denominator term for rotational thermal conductivity
+                        denominator_rot += Ys[s2]*gas.mw_si[s2]*delta_11;
+
+                        // increment the denominator term for translational thermal conductivity
                         if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
                         {
-                            denominator_trans += float_t(3.54)*Ys(s2)*gas.mw_si[s2]*delta_22;
+                            denominator_trans += float_t(3.54)*Ys[s2]*gas.mw_si[s2]*delta_22;
                         }
                         else
                         {
                             const float_t a_sr = float_t(1)+(float_t(1)-mass_s/mass_r)*(float_t(0.45)-2.54*mass_s/mass_r)/((float_t(1)+mass_s/mass_r)*(float_t(1)+mass_s/mass_r));
-                            denominator_trans += a_sr*Ys(s2)*gas.mw_si[s2]*delta_22;
+                            denominator_trans += a_sr*Ys[s2]*gas.mw_si[s2]*delta_22;
                         }
                     }
 
                     // now add the result to the conductivities
-                    kappa_t += float_t(15)/4*consts::k_SI*Ys(s1)*gas.mw_si[s1] / denominator;
-                    kappa_r += consts::k_SI*Ys(s1)*gas.mw_si[s1] / denominator;
+                    kappa_t += float_t(15)/4*consts::kSI*Ys[s1]*gas.mw_si[s1] / denominator_trans;
+                    kappa_r += consts::kSI*Ys[s1]*gas.get_cvr(s1) / (denominator_rot*consts::Na*float_t(1000));
                 }
             }
             return kappa_t + kappa_r;
         }
 
         // compute the vibrational & electronic thermal conductivity
-        _sp_hybrid float_t get_kappa_ve(const fluid_state::prim_chem_t<float_t, ns>& q) const
+        _sp_hybrid float_t get_kappa_ve(const fluid_state::prim_chem_t<float_t, num_species()>& q) const
         {
             // the translational and rotational conductivities
             float_t kappa_ve = 0;
 
             // get the molar concentrations and density
             //const spade::ctrs::array<float_t, ns> Xr   = fluid_state::get_Xr(q, gas);
-            const spade::ctrs::array<float_t, ns> Ys   = fluid_state::get_Ys(q, gas);
-            const spade::ctrs::array<float_t, ns> rhos = fluid_state::get_rhos(q, gas);
+            const spade::ctrs::array<float_t, num_species()> Ys   = fluid_state::get_Ys(q);
+            const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
             float_t n_e = 0;
@@ -822,10 +934,10 @@ namespace spade::viscous_laws
             }
 
             // now we want to compute the species' heat capacity at constant pressure
-            spade::ctrs::array<float_t, ns> cp_ve;
+            spade::ctrs::array<float_t, num_species()> cp_ve;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
-                cp_ve(s1) = gas.mw_s(s1) * (gas.get_cvv(s1, q.Tv()) + gas.get_cve(s1, q.Tv())) / (float_t(1e3) * consts::Na)
+                cp_ve[s1] = gas.mw_s[s1] * (gas.get_cvv(s1, q.Tv()) + gas.get_cve(s1, q.Tv())) / (float_t(1e3) * consts::Na);
             }
 
             // now we can compute the vibrational/electronic thermal conductivity
@@ -854,19 +966,19 @@ namespace spade::viscous_laws
                     // if interaction is neutral, use the neutral fit functions
                     if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                     {
-                        omega_11 = fit_fns.omega_11(T, s1, s2);
+                        omega_11 = fit_fns.omega_11(s1, s2, T);
                     }
                     // otherwise use the coulomb-shielding fit functions
                     else
                     {
-                        omega_11 = fit_fns.omega_11(T_star, lambda_D, gas.charge_s[s1]*gas.charge_s[s2]);
+                        omega_11 = fit_fns.omega_11(s1, s2, T_star, lambda_D);
                     }
 
                     delta_11 = float_t(8)/3*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_11;
-                    denominator += Ys(s2)*gas.mw_si[s2]*delta_11
+                    denominator += Ys[s2]*gas.mw_si[s2]*delta_11;
                 }
 
-                kappa_ve += Ys(s1)*gas.mw_si[s1]*cp_ve(s1) / denominator;
+                kappa_ve += Ys[s1]*gas.mw_si[s1]*cp_ve[s1] / denominator;
             }
 
             return kappa_ve;
