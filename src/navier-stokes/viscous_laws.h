@@ -413,9 +413,9 @@ namespace spade::viscous_laws
                 {
                     // now read in the shielding fit parameters
                     ions_file >> integral_type;
-                    for (int i = 0; i < num_params(coulomb); i++)
-                        for (int j = 0; j < 2; j++)
-                            ions_file >> coulomb_fit_params[j][i];
+                    for (int i = 0; i < 2; i++)
+                        for (int j = 0; j < num_params(coulomb); j++)
+                            ions_file >> coulomb_fit_params[i][j];
                     
                     // sweep through each combination of species
                     for (int s1 = 0; s1 < speciesNames.size(); s1++)
@@ -479,7 +479,11 @@ namespace spade::viscous_laws
         // collision integral using coulomb shielding fit for ion-ion and ion-electron
         _sp_hybrid float_t omega_fit(const std::size_t& s1, const std::size_t& s2, const float_t& T_star, const float_t& lambda_D, auto& omega_params) const
         {
-            const float_t omega_nn = float_t(5)*std::pow(10, 15)*consts::pi*(lambda_D*lambda_D/(T_star*T_star))*std::log(omega_params(0, map_indices(s1, s2))*T_star*(float_t(1)-omega_params(1, map_indices(s1, s2))*std::exp(-1*omega_params(2, map_indices(s1, s2))*T_star))+float_t(1));
+            //printf("T_star: %.20f\n", T_star);
+            //printf("lambda_D: %.20f\n", lambda_D);
+            // Note: Scalabrin thesis has factor of PI, but we believe this is a typo..
+            const float_t omega_nn = float_t(5)*std::pow(10, 15)*(lambda_D*lambda_D/(T_star*T_star))*std::log(omega_params(0, map_indices(s1, s2))*T_star*(float_t(1)-omega_params(1, map_indices(s1, s2))*std::exp(-1*omega_params(2, map_indices(s1, s2))*T_star))+float_t(1));
+            //printf("omega_nn: %f\n", omega_nn);
             return omega_nn;
         }
 
@@ -550,15 +554,19 @@ namespace spade::viscous_laws
             const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
-            float_t n_e = 0;
+            float_t n_e_CGS = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 if (gas.mw_s[s1] < 1)
                 {
-                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
+                    n_e_CGS = consts::Na*rhos[s1]/gas.mw_s[s1]/1000;
+                    //printf("mw: %f\n", gas.mw_s[s1]);
+                    //printf("rhos: %.13f\n", rhos[s1]);
                     break;
                 }
             }
+
+            //printf("n_e: %f\n", n_e_CGS);
 
             for (int s1 = 0; s1 < num_species(); s1++)
             {
@@ -578,27 +586,35 @@ namespace spade::viscous_laws
                     if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
                     {
                         T = q.Tv();
-                        T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
-                        lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                        lambda_D = sqrt(consts::kCGS*T/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
+                        T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*T));
+                        //printf("T_star: %.13f\n", T_star);
+                        //printf("lambda_D: %.13f\n", lambda_D);
                     }
                     else
                     {
                         T = q.T();
+                        lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                         T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
-                        lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
+                        //printf("T_star: %.13f\n", T_star);
+                        //printf("lambda_D: %.13f\n", lambda_D);
                     }
 
                     // if interaction is neutral, use the neutral fit functions
                     if (gas.charge_s[s1] == 0 || gas.charge_s[s2] == 0)
                     {
                         omega_22 = fit_fns.omega_22(s1, s2, T);
+                        //printf("omega_22: %e\n", omega_22);
+                        
                     }
                     // otherwise use the coulomb-shielding fit functions
                     else
                     {
                         omega_22 = fit_fns.omega_22(s1, s2, T_star, lambda_D);
+                        //printf("omega_22: %e\n", omega_22);
                     }
                     delta_22 = float_t(16)/5*sqrt(2*gas.mw_s[s1]*gas.mw_s[s2]/(consts::pi*consts::Rgas_uni*T*(gas.mw_s[s1]+gas.mw_s[s2])))*std::pow(10,-20)*omega_22;
+                    //printf("delta_22: %e\n", delta_22);
                     //std::cout << "TEST omega22: " << omega_22 << "\n";
                     //std::cout << "TEST delta22: " << delta_22 << "\n";
                     /*
@@ -670,8 +686,12 @@ namespace spade::viscous_laws
 
                     // add the result to the denominator term
                     denominator += Ys[s2]*gas.mw_si[s2]*delta_22;
-                    //std::cout << "TEST: " << denominator << "\n";
+                    //printf("Ys[s2]: %f\n", Ys[s2]);
+                    //printf("gas.mw_si[s2]: %f\n", gas.mw_si[s2]);
+                    //printf("delta_22: %f\n", delta_22);
                 }
+
+                //printf("s=%2d, denom1(s): %e \n", s1, denominator);
 
                 // now add the result to the viscosity
                 mu_out += mass_s*Ys[s1]*gas.mw_si[s1] / denominator;
@@ -704,12 +724,12 @@ namespace spade::viscous_laws
             }
 
             // get the electron number density in (#/cm^3)
-            dtype n_e = 0;
+            dtype n_e_CGS = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 if (gas.mw_s[s1] < 1)
                 {
-                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
+                    n_e_CGS = consts::Na*rhos[s1]/gas.mw_s[s1]/1000;
                     break;
                 }
             }
@@ -732,14 +752,14 @@ namespace spade::viscous_laws
                         if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
                         {
                             T = q.Tv();
+                            lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                             T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
-                            lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                         }
                         else
                         {
                             T = q.T();
+                            lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                             T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
-                            lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                         }
 
                         // if interaction is neutral, use the neutral fit functions
@@ -827,12 +847,12 @@ namespace spade::viscous_laws
             const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
-            float_t n_e = 0;
+            float_t n_e_CGS = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 if (gas.mw_s[s1] < 1)
                 {
-                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
+                    n_e_CGS = consts::Na*rhos[s1]/gas.mw_s[s1]/1000;
                     break;
                 }
             }
@@ -862,14 +882,14 @@ namespace spade::viscous_laws
                         if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
                         {
                             T = q.Tv();
+                            lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                             T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
-                            lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                         }
                         else
                         {
                             T = q.T();
+                            lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                             T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
-                            lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                         }
 
                         // if interaction is neutral, use the neutral fit functions
@@ -892,7 +912,7 @@ namespace spade::viscous_laws
                         denominator_rot += Ys[s2]*gas.mw_si[s2]*delta_11;
 
                         // increment the denominator term for translational thermal conductivity
-                        if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
+                        if (gas.mw_s[s2] < 1)
                         {
                             denominator_trans += float_t(3.54)*Ys[s2]*gas.mw_si[s2]*delta_22;
                         }
@@ -905,7 +925,7 @@ namespace spade::viscous_laws
 
                     // now add the result to the conductivities
                     kappa_t += float_t(15)/4*consts::kSI*Ys[s1]*gas.mw_si[s1] / denominator_trans;
-                    kappa_r += consts::kSI*Ys[s1]*gas.get_cvr(s1) / (denominator_rot*consts::Na*float_t(1000));
+                    kappa_r += Ys[s1]*gas.mw_si[s1]*gas.mw_s[s1]*gas.get_cvr(s1) / (denominator_rot*consts::Na*float_t(1000));
                 }
             }
             return kappa_t + kappa_r;
@@ -923,12 +943,12 @@ namespace spade::viscous_laws
             const spade::ctrs::array<float_t, num_species()> rhos = fluid_state::get_rhos(q, gas);
 
             // get the electron number density in (#/cm^3)
-            float_t n_e = 0;
+            float_t n_e_CGS = 0;
             for (int s1 = 0; s1 < num_species(); s1++)
             {
                 if (gas.mw_s[s1] < 1)
                 {
-                    n_e = std::pow(10, 6)*consts::Na_kmol*rhos[s1]/gas.mw_s[s1];
+                    n_e_CGS = consts::Na*rhos[s1]/gas.mw_s[s1]/1000;
                     break;
                 }
             }
@@ -953,14 +973,14 @@ namespace spade::viscous_laws
                     if (gas.mw_s[s1] < 1 || gas.mw_s[s2] < 1)
                     {
                         T = q.Tv();
+                        lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                         T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.Tv()));
-                        lambda_D = sqrt(consts::kCGS*q.Tv()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                     }
                     else
                     {
                         T = q.T();
+                        lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e_CGS*consts::eCGS*consts::eCGS));
                         T_star = lambda_D/(consts::eCGS*consts::eCGS/(consts::kCGS*q.T()));
-                        lambda_D = sqrt(consts::kCGS*q.T()/(4*consts::pi*n_e*consts::eCGS*consts::eCGS));
                     }
 
                     // if interaction is neutral, use the neutral fit functions
