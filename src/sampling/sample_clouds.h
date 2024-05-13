@@ -396,9 +396,9 @@ namespace spade::sampling
                         idx.j() += dj;
                         idx.k() += dk;
 
-			idx.i() = max(min(idx.i(),nx+nxg),-nxg);
-			idx.i() = max(min(idx.j(),ny+nyg),-nyg);
-			idx.i() = max(min(idx.k(),nz+nzg),-nzg);
+			idx.i() = utils::max(utils::min(idx.i(),nx+nxg),-nxg);
+			idx.i() = utils::max(utils::min(idx.j(),ny+nyg),-nyg);
+			idx.i() = utils::max(utils::min(idx.k(),nz+nzg),-nzg);
                         
                         if (!exclude_crit(idx))
                         {
