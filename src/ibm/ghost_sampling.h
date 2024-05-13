@@ -4,8 +4,8 @@
 
 namespace spade::ibm
 {
-    template <typename ghosts_t, typename grid_t, typename sample_dist_t>
-    auto compute_ghost_sample_points(const ghosts_t& ghosts, const grid_t& grid, const sample_dist_t& sfunc)
+    template <typename ghosts_t, typename grid_t, typename geom_t, typename sample_dist_t>
+    auto compute_ghost_sample_points(const ghosts_t& ghosts, const grid_t& grid, const geom_t& geom, const sample_dist_t& sfunc)
     {
         using pnt_t = typename ghosts_t::pnt_t;
         spade::device::shared_vector<pnt_t> ips;
@@ -27,6 +27,15 @@ namespace spade::ibm
                     const auto sampldist = sfunc;
                     pnt_t ip = xc;
                     ip += sampldist*nv;
+                    
+                    if (geom.is_interior(ip))
+                    {
+                        auto irreg_idx = ghosts.aligned[dir].indices[idx][0];
+                        const auto gp_sign = ghosts.aligned[dir].signs[idx];
+                        irreg_idx.i(dir) += gp_sign;
+                        ip = grid.get_coords(irreg_idx);
+                    }
+                    
                     ips.push_back(ip);
                 }
             }

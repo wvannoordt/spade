@@ -331,7 +331,6 @@ namespace spade::grid
             for (auto lb = utils::tag[partition::global](0); lb.value < grid.get_num_global_blocks(); ++lb.value)
             {
                 const auto& neighs = grid.get_blocks().get_neighs(lb.value);
-                // if (global::debug) mf << ct << ": " << lb.value << " --> " << neighs.size() << "\n";
                 for (const auto& e:neighs)
                 {                    
                     bool ignore_from_periodic = false;

@@ -93,9 +93,9 @@ namespace spade::convective
 
 			// Physical flux
 			for (int s = 0; s<q.nspecies(); ++s) f_u.continuity(s) = float_t(0.5) * rhos[s] * u_n;
-            f_u.x_momentum()           = float_t(0.5)*rho*q.u()*u_n + q.p()*nv[0];
-            f_u.y_momentum()           = float_t(0.5)*rho*q.v()*u_n + q.p()*nv[1];
-            f_u.z_momentum()           = float_t(0.5)*rho*q.w()*u_n + q.p()*nv[2];
+            f_u.x_momentum()           = float_t(0.5)*(rho*q.u()*u_n + q.p()*nv[0]);
+            f_u.y_momentum()           = float_t(0.5)*(rho*q.v()*u_n + q.p()*nv[1]);
+            f_u.z_momentum()           = float_t(0.5)*(rho*q.w()*u_n + q.p()*nv[2]);
 			f_u.energy()               = float_t(0.5)*(Etot + q.p())*u_n;
 			f_u.energyVib()            = float_t(0.5)*Ev*u_n;
 
@@ -379,6 +379,95 @@ namespace spade::convective
                 {
                     const float_t rho_star = rhoR*(sR-uR_n)/(sR-s_star);
                     flx.continuity() += sR*(rho_star - rhoR);
+                    flx.x_momentum() += sR*(rho_star*(s_star*nv[0] + qR.u()*(float_t(1)-nv[0])) - rhoR*qR.u());
+                    flx.y_momentum() += sR*(rho_star*(s_star*nv[1] + qR.v()*(float_t(1)-nv[1])) - rhoR*qR.v());
+                    flx.z_momentum() += sR*(rho_star*(s_star*nv[2] + qR.w()*(float_t(1)-nv[2])) - rhoR*qR.w());
+                    flx.energy()     += sR*(rho_star*(engyR/rhoR+(s_star-uR_n)*(s_star+qR.p()/(rhoR*(sR-uR_n)))) - engyR);
+                }
+            }
+
+            return out;
+        }
+    };
+
+    // HLLC Multispecies Flux Scheme <JRB | Implemented: 4-17-24 | Validated: TODO>
+    template <fluid_state::is_multicomponent_gas_type gas_t>
+    struct hllc_chem_t
+    {
+        const gas_t gas;
+        using g_info_type   = typename gas_t::info_type;
+        using own_info_type = omni::info_list_t<omni::info::value, omni::info::metric>;
+        using info_type     = omni::info_union<own_info_type, g_info_type>;
+        using float_t       = typename gas_t::value_type;
+        using flux_t        = fluid_state::flux_t<float_t>;
+        using state_t       = fluid_state::prim_chem_t<float_t, gas_t::nspecies()>;
+
+        // constructor
+        hllc_chem_t(const gas_t& gas_in) : gas{gas_in} {}
+
+        // overloading parentheses operator
+        _sp_hybrid flux_t operator() (const auto& infoF, const state_t& qL, const state_t& qR) const
+        {
+            flux_t out{};
+            auto& flx = out;
+            const auto& nv          = omni::access<omni::info::metric>(infoF);
+            const float_t uL_n      = nv[0]*qL.u() + nv[1]*qL.v() + nv[2]*qL.w();
+            const float_t uR_n      = nv[0]*qR.u() + nv[1]*qR.v() + nv[2]*qR.w();
+            const float_t rhoL      = qL.p()/(gas.get_R(infoF)*qL.T());
+            const float_t engyL     = float_t(0.5)*(qL.u()*qL.u()+qL.v()*qL.v()+qL.w()*qL.w()) + qL.p()/(rhoL*(gas.get_gamma(infoF)-float_t(1.0)));
+            const float_t rhoR      = qR.p()/(gas.get_R(infoF)*qR.T());
+            const float_t engyR     = float_t(0.5)*(qR.u()*qR.u()+qR.v()*qR.v()+qR.w()*qR.w()) + qR.p()/(rhoR*(gas.get_gamma(infoF)-float_t(1.0)));
+
+            const float_t aL        = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qL.T());
+            const float_t aR        = sqrt(gas.get_gamma(infoF)*gas.get_R(infoF)*qR.T());
+            const float_t z         = (gas.get_gamma(infoF)-1)/(2*gas.get_gamma(infoF));
+            const float_t p_star    = std::pow((aL+aR-(gas.get_gamma(infoF)-1)/2*(uR_n-uL_n))/(aL/std::pow(qL.p(), z)+aR/std::pow(qR.p(), z)), 1/z);
+            const float_t sL        = uL_n - (p_star <= qL.p())? aL : aL*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qL.p()-1));
+            const float_t sR        = uR_n + (p_star <= qR.p())? aR : aR*sqrt(1+(gas.get_gamma(infoF)+1)/(2*gas.get_gamma(infoF))*(p_star/qR.p()-1));
+            const float_t s_star    = (qR.p()-qL.p()+rhoL*uL_n*(sL-uL_n)-rhoR*uR_n*(sR-uR_n))/(rhoL*(sL-uL_n)-rhoR*(sR-uR_n));
+
+            if (sL >= 0 || (sL < 0 && s_star >= 0))
+            {
+                for (int i = 0; i < gas.nspecies(); i++)
+                {
+                    flx.continuity(i) = rhoL*uL_n*qL.Ys(i);
+                }
+                flx.x_momentum() = rhoL*qL.u()*uL_n+qL.p()*nv[0];
+                flx.y_momentum() = rhoL*qL.v()*uL_n+qL.p()*nv[1];
+                flx.z_momentum() = rhoL*qL.w()*uL_n+qL.p()*nv[2];
+                flx.energy()     = uL_n*(engyL+qL.p());
+
+                if (sL < 0 && s_star >= 0)
+                {
+                    const float_t rho_star = rhoL*(sL-uL_n)/(sL-s_star);
+                    for (int i = 0; i < gas.nspecies(); i++)
+                    {
+                        flx.continuity(i) += sL*(rho_star*qL.Ys(i) - rhoL*qL.Ys(i));
+                    }
+                    flx.x_momentum() += sL*(rho_star*(s_star*nv[0] + qL.u()*(float_t(1)-nv[0])) - rhoL*qL.u());
+                    flx.y_momentum() += sL*(rho_star*(s_star*nv[1] + qL.v()*(float_t(1)-nv[1])) - rhoL*qL.v());
+                    flx.z_momentum() += sL*(rho_star*(s_star*nv[2] + qL.w()*(float_t(1)-nv[2])) - rhoL*qL.w());
+                    flx.energy()     += sL*(rho_star*(engyL/rhoL+(s_star-uL_n)*(s_star+qL.p()/(rhoL*(sL-uL_n)))) - engyL);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < gas.nspecies(); i++)
+                {
+                    flx.continuity(i) = rhoR*uR_n*qR.Ys(i);
+                }
+                flx.x_momentum() = rhoR*qR.u()*uR_n+qR.p()*nv[0];
+                flx.y_momentum() = rhoR*qR.v()*uR_n+qR.p()*nv[1];
+                flx.z_momentum() = rhoR*qR.w()*uR_n+qR.p()*nv[2];
+                flx.energy()     = uR_n*(engyR+qR.p());
+
+                if (sR > 0 && s_star <= 0)
+                {
+                    const float_t rho_star = rhoR*(sR-uR_n)/(sR-s_star);
+                    for (int i = 0; i < gas.nspecies(); i++)
+                    {
+                        flx.continuity(i) += sR*(rho_star*qR.Ys(i) - rhoR*qR.Ys(i));
+                    }
                     flx.x_momentum() += sR*(rho_star*(s_star*nv[0] + qR.u()*(float_t(1)-nv[0])) - rhoR*qR.u());
                     flx.y_momentum() += sR*(rho_star*(s_star*nv[1] + qR.v()*(float_t(1)-nv[1])) - rhoR*qR.v());
                     flx.z_momentum() += sR*(rho_star*(s_star*nv[2] + qR.w()*(float_t(1)-nv[2])) - rhoR*qR.w());

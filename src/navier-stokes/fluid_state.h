@@ -89,31 +89,31 @@ namespace spade::fluid_state
 		_sp_hybrid prim_chem_t(){}
 		_sp_hybrid rtype& Ys(const int i) {return (*this)[i];}
 		_sp_hybrid rtype& p()  {return (*this)[num_species-1];}
-		_sp_hybrid rtype& T()  {return (*this)[num_species];}
-		_sp_hybrid rtype& Tv() {return (*this)[num_species+1];}
-		_sp_hybrid rtype& u()  {return (*this)[num_species+2];}
-		_sp_hybrid rtype& u(const int i)  {return (*this)[num_species+2+i];}
-		_sp_hybrid rtype& v()  {return (*this)[num_species+3];}
-		_sp_hybrid rtype& w()  {return (*this)[num_species+4];}
+		_sp_hybrid rtype& u()  {return (*this)[num_species];}
+		_sp_hybrid rtype& u(const int i)  {return (*this)[num_species+i];}
+		_sp_hybrid rtype& v()  {return (*this)[num_species+1];}
+		_sp_hybrid rtype& w()  {return (*this)[num_species+2];}
+		_sp_hybrid rtype& T()  {return (*this)[num_species+3];}
+		_sp_hybrid rtype& Tv() {return (*this)[num_species+4];}
 		_sp_hybrid const rtype& Ys(const int i) const {return (*this)[i];}
 		_sp_hybrid const rtype& p() const  {return (*this)[num_species-1];}
-		_sp_hybrid const rtype& T() const  {return (*this)[num_species];}
-		_sp_hybrid const rtype& Tv() const {return (*this)[num_species+1];}
-		_sp_hybrid const rtype& u() const  {return (*this)[num_species+2];}
-		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+2+i];}
-		_sp_hybrid const rtype& v() const  {return (*this)[num_species+3];}
-		_sp_hybrid const rtype& w() const  {return (*this)[num_species+4];}
+		_sp_hybrid const rtype& u() const  {return (*this)[num_species];}
+		_sp_hybrid const rtype& u(const int i) const {return (*this)[num_species+i];}
+		_sp_hybrid const rtype& v() const  {return (*this)[num_species+1];}
+		_sp_hybrid const rtype& w() const  {return (*this)[num_species+2];}
+		_sp_hybrid const rtype& T() const  {return (*this)[num_species+3];}
+		_sp_hybrid const rtype& Tv() const {return (*this)[num_species+4];}
 		
 		static std::string name(uint idx)
 		{
 			ctrs::array<std::string, 5+num_species> names;
 			for (int n = 0; n<num_species-1; ++n) names[n] = "Y" + std::to_string(n);
 			names[num_species-1] = "P";
-			names[num_species  ] = "T";
-			names[num_species+1] = "Tv";
-			names[num_species+2] = "U";
-			names[num_species+3] = "V";
-			names[num_species+4] = "W";
+			names[num_species  ] = "U";
+			names[num_species+1] = "V";
+			names[num_species+2] = "W";
+			names[num_species+3] = "T";
+			names[num_species+4] = "Tv";
 			return names[idx];
 		}
 	};
@@ -428,6 +428,7 @@ namespace spade::fluid_state
 				for (int m = 0; m<gas.nvib[s]; ++m)
 				{
 					ev_s[s] += gas.gvib(s,m) * gas.get_Rs(s) * gas.theta_v(s,m) / (exp(gas.theta_v(s,m)*Tinv) - float_t(1.0));
+					//ev_s[s] += (spade::consts::Rgas_uni / 30.0) * 3000.0 / (exp(3000.0*Tinv) - float_t(1.0) + float_t(1E-12));
 				}
 			}
 		}
@@ -527,7 +528,7 @@ namespace spade::fluid_state
 		for (int s = 0; s<prim.nspecies(); ++s) rho += rhos[s];
 
 		// Set conserved variables
-		for (int s = 0; s<prim.nspecies(); ++s) cons.rhos(s)   = rhos[s];
+		for (int s = 0; s<prim.nspecies(); ++s) cons.rhos(s)   = utils::max(rhos[s], ptype(1E-20));
 		for (int i = 0; i<3; ++i) cons.rho_u(i) = rho * prim.u(i);
 		cons.E()      = get_E(prim, gas);
 		cons.Ev()     = get_Ev(prim, gas);

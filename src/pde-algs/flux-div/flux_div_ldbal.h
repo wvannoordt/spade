@@ -310,31 +310,16 @@ namespace spade::pde_algs
                                 }
                                 
                                 // Do the normal gradient calculation
-                                auto i_upper     = inner_raw;
-                                i_upper[idir]   += ng;
-                                auto& q_upper    = vals(i_upper[0], i_upper[1], i_upper[2]);
-                                i_upper[idir]   -= 1;
-                                auto& q_lower    = vals(i_upper[0], i_upper[1], i_upper[2]);
-                                gradient[idir]  += q_upper;
-                                gradient[idir]  -= q_lower;
-                                gradient[idir]  *= inv_dx[idir];
+                                // auto i_upper     = inner_raw;
+                                // i_upper[idir]   += ng;
+                                // auto& q_upper    = vals(i_upper[0], i_upper[1], i_upper[2]);
+                                // i_upper[idir]   -= 1;
+                                // auto& q_lower    = vals(i_upper[0], i_upper[1], i_upper[2]);
+                                // gradient[idir]  += q_upper;
+                                // gradient[idir]  -= q_lower;
+                                // gradient[idir]  *= inv_dx[idir];
                             }
                             
-                            if constexpr (has_face_val)
-                            {
-                                auto& face_val   = omni::access<omni::info::value>(input.root());
-                                face_val         = real_type(0.0);
-                                auto i_upper     = inner_raw;
-                                i_upper[idir]   += ng;
-                                auto& q_upper    = vals(i_upper[0], i_upper[1], i_upper[2]);
-                                auto tmp0 = i_upper;
-                                i_upper[idir]   -= 1;
-                                auto tmp1 = i_upper;
-                                auto& q_lower    = vals(i_upper[0], i_upper[1], i_upper[2]);
-                                face_val        += q_upper;
-                                face_val        += q_lower;
-                                face_val        *= real_type(0.5);
-                            }
                             
                             // assign the stencil values
                             constexpr int num_stencil_vals = 2*ng;
@@ -349,6 +334,30 @@ namespace spade::pde_algs
                                 ii_l[idir]++;
                             });
                             
+                            if constexpr (has_face_val)
+                            {
+                                auto& face_val    = omni::access<omni::info::value>(input.root());
+                                constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
+                                constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
+                                auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
+                                auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
+                                face_val          = q_upper;
+                                face_val         += q_lower;
+                                face_val         *= real_type(0.5);
+                            }
+                            
+                            if constexpr (has_gradient)
+                            {
+                                auto& gradient  = omni::access<omni::info::gradient>(input.root());
+                                constexpr int lft = omni::index_of<omni_type, omni::offset_t<-1, 0, 0>>;
+                                constexpr int rgt = omni::index_of<omni_type, omni::offset_t< 1, 0, 0>>;
+                                auto& q_upper     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<rgt>()));
+                                auto& q_lower     = omni::access<omni::info::value>(input.cell(udci::idx_const_t<lft>()));
+                                gradient[idir]    = q_upper;
+                                gradient[idir]   -= q_lower;
+                                gradient[idir]   *= inv_dx[idir];
+                            }
+                            
                             const auto excluded = omni::info_list_t<omni::info::value, omni::info::gradient>();
                             if (is_interior) omni::retrieve(grid_img, q_img, i_face, input, excluded);
                             
@@ -359,13 +368,14 @@ namespace spade::pde_algs
                             
                             bool do_lft = i_cell_l.i(idir) >= 0;
                             if constexpr (!use_parity_loop) do_lft = do_lft && (inner_raw[idir] > 0);
-                            threads.sync();
+                            
                             
                             //Residual modification
                             auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
                             auto rawdata = utils::vec_img_cast<flux_type>(tmp);
                             auto i_rhs_mod = inner_raw;
                             my_rhs += flux;
+                            threads.sync();
                             rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
                             threads.sync();
                             i_rhs_mod[idir]--;                            

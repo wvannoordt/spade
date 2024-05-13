@@ -259,6 +259,39 @@ namespace spade::amr
         }
         
         template <typename interface_constraint_t>
+        void ensure_constraint(const ctrs::array<bool, dim()>& is_periodic, const interface_constraint_t& constraint)
+        {
+            this->enumerate();
+            std::vector<handle_type>                      further_refines;
+            std::vector<typename node_type::amr_refine_t> further_direcs;
+            for (auto& node: enumerated_nodes)
+            {
+                for (auto& neigh: node->neighbors)
+                {
+                    const auto idomain_boundary = node->is_domain_boundary();
+                    auto new_refine = constraint(*node, neigh);
+                    bool any = false;
+                    for (auto b: new_refine) any = any | b;
+                    bool reject_domain_boundary = false;
+                    for (int i = 0; i < dim(); ++i)
+                    {
+                        reject_domain_boundary = reject_domain_boundary || ((neigh.edge[i] == -1) && idomain_boundary.min(i) && !is_periodic[i]);
+                        reject_domain_boundary = reject_domain_boundary || ((neigh.edge[i] ==  1) && idomain_boundary.max(i) && !is_periodic[i]);
+                    }
+                    if (any && !reject_domain_boundary)
+                    {
+                        further_refines.push_back(neigh.endpoint);
+                        further_direcs.push_back(new_refine);
+                    }
+                }
+            }
+            if (further_refines.size() > 0)
+            {
+                this->refine(further_refines, is_periodic, further_direcs, constraint);
+            }
+        }
+        
+        template <typename interface_constraint_t>
         void refine(
             std::vector<handle_type>& lbs,
             const ctrs::array<bool, dim()>& is_periodic,
@@ -266,7 +299,7 @@ namespace spade::amr
             const interface_constraint_t& constraint)
         {
             this->refine_recurse(lbs, is_periodic, directions, constraint);
-            this->enumerate();
+            this->ensure_constraint(is_periodic, constraint);
         }
         
         template <typename interface_constraint_t>

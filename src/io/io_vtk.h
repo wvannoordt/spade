@@ -54,6 +54,7 @@ namespace spade::io
         template <typename fundamental_t>
         static std::string get_fundamental_str(const fundamental_t&)
         {
+            if constexpr (std::same_as<fundamental_t, char>)   return "Int8";
             if constexpr (std::same_as<fundamental_t, int>)    return "Int32";
             if constexpr (std::same_as<fundamental_t, float>)  return "Float32";
             if constexpr (std::same_as<fundamental_t, double>) return "Float64";
