@@ -381,20 +381,21 @@ namespace spade::io
             }
             else
             {
-                mf << bnd.min(0) << " " << bnd.min(1) << "\n";
-                mf << bnd.max(0) << " " << bnd.min(1) << "\n";
-                mf << bnd.min(0) << " " << bnd.max(1) << "\n";
-                mf << bnd.max(0) << " " << bnd.max(1) << "\n";
+                mf << bnd.min(0) << " " << bnd.min(1) << " 0.0" << "\n";
+                mf << bnd.max(0) << " " << bnd.min(1) << " 0.0" << "\n";
+                mf << bnd.min(0) << " " << bnd.max(1) << " 0.0" << "\n";
+                mf << bnd.max(0) << " " << bnd.max(1) << " 0.0" << "\n";
             }
         }
 
         if constexpr (bdim == 3) mf << "CELLS " << blist.size() << " " << 9*blist.size() << "\n";
         if constexpr (bdim == 2) mf << "CELLS " << blist.size() << " " << 5*blist.size() << "\n";
         std::size_t ipt = 0;
+        int np = (bdim==3)?8:4;
         for (std::size_t i = 0; i < blist.size(); ++i)
         {
-            mf << "8";
-            for (int pp = 0; pp < ((bdim==3)?8:4); ++pp)
+            mf << np;
+            for (int pp = 0; pp < np; ++pp)
             {
                 mf << " " << ipt++;
             }
@@ -417,7 +418,7 @@ namespace spade::io
     static void output_vtk(const std::string& fname, const grid_t& grid)
     {
         const auto& group = grid.group();
-        using bbx_type = decltype(grid.get_bounding_box(0));
+        using bbx_type = bound_box_t<typename grid_t::coord_type, grid_t::dim()>;
         std::vector<bbx_type> boxes;
         std::vector<int> ranks;
         std::vector<int> block_local;
@@ -431,7 +432,14 @@ namespace spade::io
             ranks.push_back(pp.get_rank(lbt));
             block_local.push_back(pp.get_any_local(lbt)); //TODO
             block_global.push_back(lb);
-            boxes.push_back(grid.get_bounding_box(lbt));
+            const auto bbx_l = grid.get_bounding_box(lbt);
+            bbx_type bbx;
+            for (int i = 0; i < grid.dim(); ++i)
+            {
+                bbx.min(i) = bbx_l.min(i);
+                bbx.max(i) = bbx_l.max(i);
+            }
+            boxes.push_back(bbx);
         }
         
         if (group.isroot()) output_vtk(fname, boxes, "rank", ranks, "block_id_local", block_local, "block_id_global", block_global);

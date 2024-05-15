@@ -38,8 +38,8 @@ namespace spade::grid
         grid_geometry_t(const coord_t& coords_in, const carr_t& num_cell_in)
         : coords{coords_in}
         {
+            num_cell = 1;
             ctrs::copy_array(num_cell_in, num_cell, 1);
-            
             //Geometry data is currently populated outside, need to make this a little cleaner.
         }
         

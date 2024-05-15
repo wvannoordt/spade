@@ -90,18 +90,18 @@ namespace spade::pde_algs
         // debug::print_type(omni_left_view());
         // debug::print_type(omni_right_view());
         
-        input_all_type inp;
-        grid::face_idx_t i_facee(0, 5, 5, 5, 5);
+        // input_all_type inp;
+        // grid::face_idx_t i_facee(0, 5, 5, 5, 5);
         
-        omni::access<omni::info::value>(inp.cell(0_c)) = 0.0;
-        omni::access<omni::info::value>(inp.cell(1_c)) = 1.0;
-        omni::access<omni::info::value>(inp.cell(2_c)) = 2.0;
-        omni::access<omni::info::value>(inp.cell(3_c)) = 3.0;
-        omni::access<omni::info::value>(inp.cell(4_c)) = 4.0;
+        // omni::access<omni::info::value>(inp.cell(0_c)) = 0.0;
+        // omni::access<omni::info::value>(inp.cell(1_c)) = 1.0;
+        // omni::access<omni::info::value>(inp.cell(2_c)) = 2.0;
+        // omni::access<omni::info::value>(inp.cell(3_c)) = 3.0;
+        // omni::access<omni::info::value>(inp.cell(4_c)) = 4.0;
         
-        // omni::retrieve(grid_img, q_img, i_facee, inp);
-        const auto d0L = omni::interpret_stencil_at<omni_type, omni::offset_t<0, 0, 0>>(inp);
-        const auto d0R = omni::interpret_stencil_at<omni_type, omni::offset_t<2, 0, 0>>(inp);
+        // // omni::retrieve(grid_img, q_img, i_facee, inp);
+        // const auto d0L = omni::interpret_stencil_at<omni_type, omni::offset_t<0, 0, 0>>(inp);
+        // const auto d0R = omni::interpret_stencil_at<omni_type, omni::offset_t<2, 0, 0>>(inp);
         
         
         // print(omni::access<omni::info::value>(d0L.cell(0_c)));
@@ -125,6 +125,13 @@ namespace spade::pde_algs
         constexpr int thin_dir = 0;
         constexpr int fuse_dir = 2;
         constexpr int seq_dir  = 1;
+        
+        std::string msg = "one of the following special requirements for fused flux_div is not met:\n";
+        msg += "cell count in direction " + std::to_string(thin_dir) + " should be a multiple of " + std::to_string(  tile_size) + " (value is " + std::to_string(nx[thin_dir]) + ")\n";
+        msg += "cell count in direction " + std::to_string(fuse_dir) + " should be a multiple of " + std::to_string(2*tile_size) + " (value is " + std::to_string(nx[fuse_dir]) + ")\n";
+        msg += "cell count in direction " + std::to_string(seq_dir ) + " should be a multiple of " + std::to_string(2*tile_size) + " (value is " + std::to_string(nx[seq_dir ]) + ")\n";
+        
+        if ((nx[fuse_dir] % (2*tile_size) != 0) || (nx[thin_dir] % (tile_size) != 0) || (nx[seq_dir] % (2*tile_size) != 0)) throw except::sp_exception(msg);
         
         spade::ctrs::array<int, 3> irange_dims = tile_size;
         irange_dims[fuse_dir] *= 2;
