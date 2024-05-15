@@ -547,6 +547,30 @@ namespace spade::convective
             else
             {
                 //nothing for now
+                // #pragma unroll
+                // for (int k = 0; k < output_type::size(); ++k)
+                // {
+                //     const float_t be0 = (f0_u[k]-f1_u[k])*(f0_u[k]-f1_u[k]);
+                //     const float_t be1 = (f1_u[k]-f2_u[k])*(f1_u[k]-f2_u[k]);
+                    
+                //     const float_t be2 = (f1_d[k]-f2_d[k])*(f1_d[k]-f2_d[k]);
+                //     const float_t be3 = (f2_d[k]-f3_d[k])*(f2_d[k]-f3_d[k]);
+                    
+                //     const float_t eps = float_t(1e-16);
+                //     const float_t a0  = float_t(1.0/3.0)/((be0+eps)*(be0+eps));
+                //     const float_t a1  = float_t(2.0/3.0)/((be1+eps)*(be1+eps));
+                //     const float_t a2  = float_t(2.0/3.0)/((be2+eps)*(be2+eps));
+                //     const float_t a3  = float_t(1.0/3.0)/((be3+eps)*(be3+eps));
+                    
+                //     // We can do some floptimizations here
+                //     const float_t w0 = a0/(a0+a1);
+                //     // const float_t w1 = a1/(a0+a1);
+                //     const float_t w1 = float_t(1.0) - w0;
+                //     const float_t w2 = a2/(a2+a3);
+                //     // const float_t w3 = a3/(a2+a3);
+                //     const float_t w3 = float_t(1.0) - w2;
+                //     output[k] = w0*r0 + w1*r1 + w2*r2 + w3*r3;
+                // }
             }
             // call flux function
             output = flux_func(input.face(0_c),ql,qr);

@@ -13,7 +13,7 @@ namespace spade::omni
     // effectively re-numbers the elements for the sake of 
     // nesting.
     // Note that input_t could be an alias itself!
-    template <typename interpret_t, typename input_t>
+    template <typename interpret_t, typename input_t, typename offst_t = offset_t<0,0,0>>
     struct stencil_alias_t
     {
         using stencil_type        = interpret_t; // used for any further (deeper) aliases
@@ -31,7 +31,11 @@ namespace spade::omni
             // strategy: generate as much heat as possible during compilation so the
             // data center doesn't get too cold
             using offset_type     = offset_at<interpret_t, ctr, ii>;
-            constexpr int trans_i = index_of<native_stencil_type, offset_type>;
+            using new_offset_type = offset_t<
+                offset_type::template elem<0> + offst_t::template elem<0>,
+                offset_type::template elem<1> + offst_t::template elem<1>,
+                offset_type::template elem<2> + offst_t::template elem<2>>;
+            constexpr int trans_i = index_of<native_stencil_type, new_offset_type>;
             return native.template seek_element<ctr>(udci::idx_const_t<trans_i>());
         }
         
@@ -40,7 +44,11 @@ namespace spade::omni
         _sp_hybrid decltype(auto) seek_element(const udci::idx_const_t<ii>& idx)
         {
             using offset_type     = offset_at<interpret_t, ctr, ii>;
-            constexpr int trans_i = index_of<native_stencil_type, offset_type>;
+            using new_offset_type = offset_t<
+                offset_type::template elem<0> + offst_t::template elem<0>,
+                offset_type::template elem<1> + offst_t::template elem<1>,
+                offset_type::template elem<2> + offst_t::template elem<2>>;
+            constexpr int trans_i = index_of<native_stencil_type, new_offset_type>;
             return native.template seek_element<ctr>(udci::idx_const_t<trans_i>());
         }
         
@@ -104,6 +112,12 @@ namespace spade::omni
 
     };
 
+    template <typename interpret_t, typename offst_t, typename input_t>
+    _sp_hybrid auto interpret_stencil_at(const input_t& input)
+    {
+        return stencil_alias_t<interpret_t, input_t, offst_t>(input);
+    }
+    
     template <typename interpret_t, typename input_t>
     _sp_hybrid auto interpret_stencil(const input_t& input)
     {

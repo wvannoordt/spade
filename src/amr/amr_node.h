@@ -31,6 +31,7 @@ namespace spade::amr
         ctrs::array<int, grid_dim>            level;
         handle_type                           parent = handle_type::null();
         tag_t                                 tag; //this holds the blocks value!!!!!!!
+        constexpr static tag_t                invalid_tag = -1;
         
         amr_node_t(const amr_node_t&) = default;
         

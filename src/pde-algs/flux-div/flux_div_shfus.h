@@ -171,7 +171,6 @@ namespace spade::pde_algs
                 const auto get_offsts = [&](const spade::ctrs::array<int, 3>& ii)
                 {
                     spade::ctrs::array<int, 4> output;
-                    
                     bool is_seq_face  = ii[seq_dir] == (tile_size - 1);
                     bool is_fuse_face = ii[seq_dir] == (tile_size - 2);
                     bool is_big_face  = !(is_seq_face || is_fuse_face);
@@ -210,6 +209,7 @@ namespace spade::pde_algs
                 omni::retrieve(grid_img, q_img, i_face, input0);
                 flux_type flux0 = flux_func(input0);
                 flux0  *= inv_dx[flux_dir];
+                
                 
                 #pragma unroll
                 for (int dir = 0; dir < dim; ++dir)

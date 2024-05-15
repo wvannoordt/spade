@@ -169,13 +169,14 @@ namespace spade::grid
     //offset has 3 entries that are either 0 or 1, indicating which corner of the cell to be chosen
     _sp_hybrid static node_idx_t cell_to_node(const cell_idx_t& i_cell, const ctrs::array<int,3>& offset)
     {
-        // print("NOT IMPLEMENTED:", __FILE__, __LINE__);
-        abort();
-        // node_idx_t output((int)i_cell[0], (int)i_cell[1], (int)i_cell[2], (int)i_cell[3]);
         node_idx_t output;
-        // output[0] += offset[0];
-        // output[1] += offset[1];
-        // output[2] += offset[2];
+        output.i()  = i_cell.i();
+        output.j()  = i_cell.j();
+        output.k()  = i_cell.k();
+        output.lb() = i_cell.lb();
+        output.i()  += offset[0];
+        output.j()  += offset[1];
+        output.k()  += offset[2];
         return output;
     }
     

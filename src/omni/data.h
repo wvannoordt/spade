@@ -8,7 +8,7 @@ namespace spade::omni
 {
     struct end_data_t {};
     
-    template <const int i0, const int i1, typename info_list_t, typename array_t, const grid::array_centering center>
+    template <const int i0, const int num_left, const int i1, typename info_list_t, typename array_t, const grid::array_centering center>
     struct info_list_data_t
     {
         constexpr static int num_info_elems() { return i1; }
@@ -18,11 +18,23 @@ namespace spade::omni
         using data_type = typename info_type::array_data_type<array_t, center>;
         using list_type = info_list_t;
         data_type data;
-        info_list_data_t<i0+1, i1, info_list_t, array_t, center> next;
+        info_list_data_t<i0+1, num_left-1, i1, info_list_t, array_t, center> next;
     };
     
+    // template <const int i0, const int i1, typename info_list_t, typename array_t, const grid::array_centering center>
+    // struct info_list_data_t<i0, 1, i1, info_list_t, array_t, center>
+    // {        
+    //     constexpr static int num_info_elems() { return 1; }
+    //     constexpr static grid::array_centering info_center = center;
+    //     using array_type = array_t;
+    //     using info_type = typename info_list_t::info_elem<i0>;
+    //     using data_type = typename info_type::array_data_type<array_t, center>;
+    //     using list_type = info_list_t;
+    //     data_type data;
+    // };
+    
     template <const int i0, typename info_list_t, typename array_t, const grid::array_centering center>
-    struct info_list_data_t<i0, i0, info_list_t, array_t, center>
+    struct info_list_data_t<i0, 0, i0, info_list_t, array_t, center>
     {
         constexpr static int num_info_elems() { return 0; }
         constexpr static grid::array_centering info_center = center;
@@ -48,7 +60,7 @@ namespace spade::omni
     }
     
     template <typename list_t, typename array_t, grid::array_centering ctr> using get_list_data = 
-        info_list_data_t<0, list_t::num_infos(), list_t, array_t, ctr>;
+        info_list_data_t<0, list_t::num_infos(), list_t::num_infos(), list_t, array_t, ctr>;
     
     template <const int i0, const int i1, typename stencil_t, typename array_t>
     struct stencil_data_sublist_t
@@ -61,7 +73,7 @@ namespace spade::omni
         
         constexpr static grid::array_centering centering_at_i0_elem = stencil_ofst_t::template relative_node_centering<stencil_t::center()>;
         
-        info_list_data_t<0, stencil_info_t::num_infos(), stencil_info_t, array_t, centering_at_i0_elem> data;
+        info_list_data_t<0, stencil_info_t::num_infos(), stencil_info_t::num_infos(), stencil_info_t, array_t, centering_at_i0_elem> data;
         next_type next;
 
         template <typename offset_query_t>

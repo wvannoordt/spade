@@ -16,6 +16,11 @@ namespace spade::omni
             using array_data_type
             = ctrs::array<typename array_t::alias_type, array_t::grid_type::coord_point_type::size()>;
             
+            std::string get_name() const
+            {
+                return "gradient";
+            }
+            
             template <typename grid_view_t, typename array_t, typename index_t>
             requires((index_t::centering_type() == grid::face_centered) && (grid::cell_centered == array_t::centering_type()))
             _sp_hybrid static void compute(

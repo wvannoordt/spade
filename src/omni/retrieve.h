@@ -4,6 +4,26 @@
 
 namespace spade::omni
 {
+    namespace detail
+    {
+        template <typename sten_t, typename offs_t, typename info_t, typename excl_t>
+        struct is_excluded_impl;
+        
+        template <typename sten_t, typename offs_t, typename info_t, typename... excl_infos_t>
+        struct is_excluded_impl<sten_t, offs_t, info_t, info_list_t<excl_infos_t...>>
+        {
+            constexpr static bool value = info_list_t<excl_infos_t...>::template contains<info_t>;
+        };
+        
+        template <typename sten_t, typename offs_t, typename info_t, const grid::array_centering ctr, typename... elems_t>
+        struct is_excluded_impl<sten_t, offs_t, info_t, stencil_t<ctr, elems_t...>>
+        {
+            using excl_sten_t    = stencil_t<ctr, elems_t...>;
+            using list_t         = excl_sten_t::template info_at<offs_t>;
+            constexpr static bool value = list_t::template contains<info_t>;
+        };
+    }
+    
     template <typename info_t, typename grid_view_t, typename array_t, typename index_t, typename direction_t, typename data_t>
     requires (info_t::requires_direction)
     _sp_inline _sp_hybrid void invoke_compute(const grid_view_t& grid, const array_t& array, const index_t& index, const direction_t& direction, data_t& data)
@@ -26,18 +46,18 @@ namespace spade::omni
             const int i = ii.value;
             
             //fetch the list of info that we need at the current stencil element
-            auto& info_list = detail::get_info_list_at<i,0>(data);
+            auto& info_list      = detail::get_info_list_at<i,0>(data);
             using info_list_type = typename utils::remove_all<decltype(info_list)>::type;
-            using offset_type = typename stencil_data_t::stencil_type::stencil_element<i>::position_type;
-            const auto idx  = offset_type::compute_index(idx_center);
+            using offset_type    = typename stencil_data_t::stencil_type::stencil_element<i>::position_type;
+            const auto idx       = offset_type::compute_index(idx_center);
             algs::static_for<0,info_list.num_info_elems()>([&](const auto& jj)
             {
-                const int j = jj.value;
+                const int j          = jj.value;
                 auto& info_list_data = detail::get_info_list_data_at<j,0>(info_list);
-                using info_type = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
-                if constexpr (!exclude_list_t::template contains<info_type>)
+                using info_type      = typename utils::remove_all<decltype(info_list_data)>::type::info_type;
+                constexpr bool is_excluded = detail::is_excluded_impl<typename stencil_data_t::stencil_type, offset_type, info_type, exclude_list_t>::value;
+                if constexpr (!is_excluded)
                 {
-                    // constexpr bool use_dir = requires{info_type::compute(grid, array, idx, direction, info_list_data.data);};
                     invoke_compute<info_type>(grid, array, idx, direction, info_list_data.data);
                 }
             });
@@ -49,6 +69,12 @@ namespace spade::omni
     _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data, const exclude_list_t& excluded)
     {
         retrieve_impl(grid, array, idx_center, idx_center.dir(), data, excluded);
+    }
+    
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, int dir, stencil_data_t& data, const exclude_list_t& excluded)
+    {
+        retrieve_impl(grid, array, idx_center, dir, data, excluded);
     }
 
     template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t, typename exclude_list_t>
@@ -68,6 +94,12 @@ namespace spade::omni
     _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, stencil_data_t& data)
     {
         retrieve(grid, array, idx_center, data, info_list_t<>());
+    }
+    
+    template <typename grid_view_t, typename index_t, typename array_t, typename stencil_data_t>
+    _sp_inline _sp_hybrid void retrieve(const grid_view_t& grid, const array_t& array, const index_t& idx_center, int dir, stencil_data_t& data)
+    {
+        retrieve(grid, array, idx_center, dir, data, info_list_t<>());
     }
     
     //Shared memory, buffered version

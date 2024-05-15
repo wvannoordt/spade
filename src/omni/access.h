@@ -43,6 +43,24 @@ namespace spade::omni
         }
     }
     
+    template <typename info_t, typename offst_t, typename data_t>
+    _sp_inline auto& _sp_hybrid access_at(data_t& data)
+    {
+        constexpr grid::array_centering ctr = offst_t::template relative_node_centering<data_t::stencil_type::center()>;
+        constexpr int idx = index_of<typename data_t::stencil_type, offst_t>;
+        using idx_t = udci::idx_const_t<idx>;
+        return access<info_t>(data.template seek_element<ctr>(idx_t()));
+    }
+    
+    template <typename info_t, typename offst_t, typename data_t>
+    _sp_inline const auto& _sp_hybrid access_at(const data_t& data)
+    {
+        constexpr grid::array_centering ctr = offst_t::template relative_node_centering<data_t::stencil_type::center()>;
+        constexpr int idx = index_of<typename data_t::stencil_type, offst_t>;
+        using idx_t = udci::idx_const_t<idx>;
+        return access<info_t>(data.template seek_element<ctr>(idx_t()));
+    }
+    
     template <typename info_t, typename local_data_t, typename shared_data_t>
     requires(local_data_t::list_type::template contains<info_t>)
     _sp_inline _sp_hybrid const auto& access(const disparate_data_t<local_data_t, shared_data_t>& data)

@@ -32,6 +32,7 @@ namespace spade::pde_algs
         using grid_type     = typename sol_arr_t::grid_type;
         
         static_assert(std::same_as<typename grid_type::coord_sys_type, coords::identity<typename grid_type::coord_type>>, "flux divergence does not yet account for the jacobian!");
+        static_assert(!use_parity, "ldbal not supported!");
         
         using namespace sym::literals;
         
@@ -279,6 +280,7 @@ namespace spade::pde_algs
                             {
                                 // Finish fringe calculation
                                 auto& gradient  = omni::access<omni::info::gradient>(input.root());
+                                #pragma unroll
                                 for (int fdir_id = 0; fdir_id < 2; ++fdir_id)
                                 {
                                     int real_dir         = other_dirs[fdir_id];
@@ -366,23 +368,31 @@ namespace spade::pde_algs
                             auto i_cell_l = i_cell;
                             i_cell_l.i(idir)--;
                             
-                            bool do_lft = i_cell_l.i(idir) >= 0;
-                            if constexpr (!use_parity_loop) do_lft = do_lft && (inner_raw[idir] > 0);
-                            
-                            
-                            //Residual modification
-                            auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
-                            auto rawdata = utils::vec_img_cast<flux_type>(tmp);
-                            auto i_rhs_mod = inner_raw;
-                            my_rhs += flux;
-                            threads.sync();
-                            rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
-                            threads.sync();
-                            i_rhs_mod[idir]--;                            
-                            if (do_lft && is_interior) rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) -= flux;
-                            threads.sync();
-                            my_rhs = rawdata(inner_raw[0], inner_raw[1], inner_raw[2]);
-                            threads.sync();
+                            if constexpr (use_parity_loop)
+                            {
+                                bool do_lft = i_cell_l.i(idir) >= 0;
+                                
+                            }
+                            else
+                            {
+                                bool do_lft = i_cell_l.i(idir) >= 0;
+                                do_lft = do_lft && (inner_raw[idir] > 0);
+                                
+                                
+                                //Residual modification
+                                auto tmp     = utils::make_vec_image(shmem_vec, tile_size, tile_size, tile_size);
+                                auto rawdata = utils::vec_img_cast<flux_type>(tmp);
+                                auto i_rhs_mod = inner_raw;
+                                my_rhs += flux;
+                                threads.sync();
+                                rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) = my_rhs;
+                                threads.sync();
+                                i_rhs_mod[idir]--;
+                                if (do_lft && is_interior) rawdata(i_rhs_mod[0], i_rhs_mod[1], i_rhs_mod[2]) -= flux;
+                                threads.sync();
+                                my_rhs = rawdata(inner_raw[0], inner_raw[1], inner_raw[2]);
+                                threads.sync();
+                            }
                         }
                         
                         if (is_interior) rhs_img.set_elem(i_cell, my_rhs);

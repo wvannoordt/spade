@@ -112,8 +112,9 @@ namespace spade::geom
         }
         
         template <typename pt_flt_t>
-        T_pnt_t<pt_flt_t> find_closest_boundary_point(const T_pnt_t<pt_flt_t>& x_in, const pt_flt_t& search_radius) const
+        T_pnt_t<pt_flt_t> find_closest_boundary_point(const T_pnt_t<pt_flt_t>& x_in, const pt_flt_t& search_radius_tmp) const
         {
+	  const auto search_radius = search_radius_tmp*float_t(2.);
             // if (!(bbox_inflated.contains(x_in)))
             // {
             //     throw except::sp_exception("can't find closest point if outside bvh!");
