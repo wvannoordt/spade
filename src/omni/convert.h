@@ -172,7 +172,8 @@ namespace spade::omni
         using output_type = decltype(std::declval<omni_lambda_wrapper_t>().operator()(stencil_data_t<omni_type, array_t>()));
     };
 
-    template <const grid::array_centering ctr, typename kernel_t, typename array_t> static auto to_omni(const kernel_t& func, const array_t& array)
+    template <const grid::array_centering ctr, typename kernel_t, typename array_t>
+    static auto to_omni(const kernel_t& func, const array_t& array)
     {
         using index_type = grid::get_index_type<ctr>::array_type;
         index_type i = 0;

@@ -18,6 +18,8 @@ namespace spade::amr
         using handle_type     = node_handle_t<array_designator_t::size()>;
         using refine_type     = ctrs::array<bool, array_designator_t::size()>;
         using coord_val_type  = coord_val_t;
+        using slice_type      = amr_blocks_t<coord_val_t, typename array_designator_t::template change_size<2>>;
+        using desig_type      = array_designator_t;
         
         ctrs::array<int, 3>                      num_blocks;
         bound_box_t<coord_val_t, 3>              bounds;
@@ -30,16 +32,17 @@ namespace spade::amr
         constexpr static std::size_t dim() { return array_designator_t::size(); }
         
         amr_blocks_t(const array_designator_t& num_blocks_in,
-            const bound_box_t<coord_val_t, array_designator_t::size()>& bounds_in)
+            const bound_box_t<coord_val_t, array_designator_t::size()>& bounds_in,
+            const coord_val_type& zmin = 0.0, const coord_val_type& zmax = 1.0)
         {
-            init(num_blocks_in, bounds_in);
+            init(num_blocks_in, bounds_in, zmin, zmax);
         }
         
-        void init(const auto& num_blocks_in, const auto& bounds_in)
+        void init(const auto& num_blocks_in, const auto& bounds_in, const coord_val_type& zmin = 0.0, const coord_val_type& zmax = 1.0)
         {
             ctrs::copy_array(num_blocks_in, num_blocks, 1);
-            bounds.min(2) = 0.0;
-            bounds.max(2) = 1.0;
+            bounds.min(2) = zmin;
+            bounds.max(2) = zmax;
             for (auto d: range(0, dim()))
             {
                 bounds.min(d) = bounds_in.min(d);
@@ -116,10 +119,26 @@ namespace spade::amr
         
         amr_blocks_t(const amr_blocks_t& rhs)
         {
+            this->assimilate(rhs);
+        }
+        
+        void assimilate(const amr_blocks_t& rhs)
+        {
             init(rhs.num_blocks, rhs.bounds);
-            if (rhs.total_num_blocks() > rhs.num_blocks[0]*rhs.num_blocks[1]*rhs.num_blocks[2])
+            for (std::size_t ii = 0; ii < root_nodes.size(); ++ii)
             {
-                throw except::sp_exception("amr_blocks_t copy constructor not implemented for refined grid");
+                auto& my_node         = root_nodes[ii];
+                const auto their_node = rhs.root_nodes[ii];
+                my_node.assimilate(their_node);
+            }
+            this->enumerate();
+            if (all_nodes.size() != rhs.all_nodes.size())
+            {
+                throw except::sp_exception("incorrect node list size after block copy and assimilate!");
+            }
+            for (std::size_t ii = 0; ii < all_nodes.size(); ++ii)
+            {
+                all_nodes[ii]->tag = rhs.all_nodes[ii]->tag;
             }
         }
         
@@ -189,8 +208,8 @@ namespace spade::amr
             {
                 const auto& amr_bbox  = enumerated_nodes[i].get().amr_position;
                 auto& comp_bbox = block_boxes[i];
-                comp_bbox.min(2) = 0.0;
-                comp_bbox.max(2) = 1.0;
+                comp_bbox.min(2) = bounds.min(2);
+                comp_bbox.max(2) = bounds.max(2);
                 for (auto d: range(0, dim()))
                 {
                     comp_bbox.min(d) = amr_bbox.min(d).convert_to_coordinate(bounds.min(d), dx[d]);

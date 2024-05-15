@@ -191,6 +191,10 @@ namespace spade::grid
         using coord_point_type    = grid_t::coord_point_type;
         using alias_type          = data_alias_t;
         
+        template <typename alias_t>
+        using slice_type = grid_array<typename grid_type::slice_type, alias_t, device_t, mem_map::tlinear_t, centering>; //todo: fix this!
+        // using slice_type = grid_array<typename grid_type::slice_type, alias_t, device_t, mmap_t, centering>;
+        
         template <typename c_data_t>
         using container_type
             = std::conditional<
@@ -214,6 +218,7 @@ namespace spade::grid
         container_type<fundamental_type> data;
         mem_map_type                     mmap;
         std::size_t                      var_offset;
+        mmap_t                           mmap_tag;
         
         constexpr static int dim() { return grid_t::dim(); }
         
@@ -246,11 +251,13 @@ namespace spade::grid
             const data_alias_t& fill_elem,
             const typename grid_t::array_desig_type& num_exch_in,
             const device_t& dev_in,
-            const mmap_t& mmap_tag = mem_map::linear
-            ) : grid{&grid_in}, num_exch{num_exch_in}
+            const mmap_t& mmap_tag_in = mem_map::linear
+            ) : grid{&grid_in}, mmap_tag{mmap_tag_in}
         {
+            num_exch = 0;
+            ctrs::copy_array(num_exch_in, num_exch);
             mmap = mem_map::make_grid_map(
-                mmap_tag, alias_type(), device_type(),
+                mmap_tag_in, alias_type(), device_type(),
                 ctrs::make_array(-num_exch[0], grid->get_num_cells(0) + num_exch[0]),
                 ctrs::make_array(-num_exch[1], grid->get_num_cells(1) + num_exch[1]),
                 ctrs::make_array(-num_exch[2], grid->get_num_cells(2) + num_exch[2]),

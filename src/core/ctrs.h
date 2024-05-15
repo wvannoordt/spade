@@ -60,6 +60,17 @@ namespace spade::ctrs
         return {v0[1]*v1[2] - v0[2]*v1[1], v0[2]*v1[0] - v0[0]*v1[2], v0[0]*v1[1] - v0[1]*v1[0]};
     }
     
+    template <basic_array arr_t>
+    requires (std::same_as<typename arr_t::value_type, bool>)
+    _sp_hybrid bool any(const arr_t& arr)
+    {
+        for (int i = 0; i < arr.size(); ++i)
+        {
+            if (arr[i]) return true;
+        }
+        return false;
+    }
+    
     template <basic_array arr1_t, basic_array arr2_t>
     requires (arr1_t::size() == arr2_t::size())
     _sp_hybrid constexpr static auto dot_prod(const arr1_t& arr1, const arr2_t& arr2)
@@ -106,11 +117,24 @@ namespace spade::ctrs
         using value_type = dtype;
         using index_type = int;
         
+        constexpr static bool has_no_derived = std::same_as<derived_t, detail::no_type_t>;
+        
+        template <const std::size_t new_size>
+        requires (has_no_derived)
+        using change_size = arithmetic_array_t<dtype, new_size, detail::no_type_t>;
+        
         constexpr static bool has_derived = std::same_as<derived_t, detail::no_type_t>;
         
         dtype data[ar_size];
-        _sp_hybrid dtype& operator [] (index_type idx) {return data[idx];}
-        _sp_hybrid const dtype& operator [] (index_type idx) const {return data[idx];}
+        _sp_hybrid dtype& operator [] (index_type idx)
+        {
+            return data[idx];
+        }
+        
+        _sp_hybrid const dtype& operator [] (index_type idx) const
+        {
+            return data[idx];
+        }
         
         template <udci::integral_t ii>
         requires(ii < ar_size)
