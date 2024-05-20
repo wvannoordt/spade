@@ -20,6 +20,11 @@ namespace spade::sampling
         std::vector<tagged_type> source_block;   // block number on 2d grid to source block on 3d grid
         std::vector<tagged_type> collapse_block; // block number on 3d grid to dest.  block on 2d grid, empty if not collapsible
         
+        bool collapsible() const
+        {
+            return is_collapsible;
+        }
+        
         template <typename iarr_t>
         _sp_hybrid auto reduce_array(const iarr_t& iarr) const
         {
