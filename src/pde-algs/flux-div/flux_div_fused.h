@@ -216,7 +216,7 @@ namespace spade::pde_algs
                             
                             constexpr bool use_fused_data   = true;
                             constexpr bool load_first       = false;
-                            constexpr bool manual_fvgc_eval = true;
+                            constexpr bool manual_fvgc_eval = false;
                             
                             const auto ff = flux_func;
                             const auto qq = q_img;
