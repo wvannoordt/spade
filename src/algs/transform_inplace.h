@@ -76,15 +76,36 @@ namespace spade::algs
             ntiles[d] = utils::i_div_up(nx_extent[d], ts[d]);
         }
         
-        const auto outer_range = dispatch::ranges::make_range(0, ntiles[0], 0, ntiles[1]*ntiles[2], 0, int(arr.get_grid().get_num_local_blocks()));
+        using dev_t = typename array_t::device_type;
+        int p_i0 = 0;
+        int p_i1 = 1;
+        int p_i2 = 2;
+        
+        int nblock = arr.get_grid().get_num_local_blocks();
+        
+        if ((nblock > 32000) && device::is_gpu<dev_t>)
+        {
+            p_i0 = 1;
+            p_i1 = 2;
+            p_i2 = 0;
+        }
+        
+        
+        ctrs::array<int, 3> orange_bnd;
+        orange_bnd[p_i0] = ntiles[0];
+        orange_bnd[p_i1] = ntiles[1]*ntiles[2];
+        orange_bnd[p_i2] = nblock;
+        
+        const auto outer_range = dispatch::ranges::make_range(0, orange_bnd[0], 0, orange_bnd[1], 0, orange_bnd[2]);
+        
         int iexch = int(exchange_policy == grid::include_exchanges);
         
         
         auto loop_load = [=] _sp_hybrid (const ctrs::array<int, 3>& outer_raw, const threads_type& threads) mutable
         {
-            int tile_id_1d = outer_raw[1];
+            int tile_id_1d = outer_raw[p_i1];
             ctrs::array<int, 3> tile_id;
-            tile_id[0] = outer_raw[0];
+            tile_id[0] = outer_raw[p_i0];
             // tile_id[0]  = tile_id_1d % ntiles[0];
             // tile_id_1d -= tile_id[0];
             // tile_id_1d /= ntiles[0];
@@ -97,7 +118,7 @@ namespace spade::algs
                 int i  = tile_id[0]*ts[0] + inner_raw[0] - iexch*ng[0];
                 int j  = tile_id[1]*ts[1] + inner_raw[1] - iexch*ng[1];
                 int k  = tile_id[2]*ts[2] + inner_raw[2] - iexch*ng[2];
-                int lb = outer_raw[2];
+                int lb = outer_raw[p_i2];
                 bool valid = true;
                 auto nxx = nx;
                 bool d = is_3d;

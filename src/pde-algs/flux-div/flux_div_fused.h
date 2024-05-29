@@ -166,9 +166,9 @@ namespace spade::pde_algs
         
         if ((grid.get_num_local_blocks() > 32000) && device::is_gpu<dev_t>)
         {
-            int p_i0 = 1;
-            int p_i1 = 2;
-            int p_i2 = 0;
+            p_i0 = 1;
+            p_i1 = 2;
+            p_i2 = 0;
         }
         
         ctrs::array<int, 3> orange_bnd;
