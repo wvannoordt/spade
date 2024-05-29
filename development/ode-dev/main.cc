@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         constexpr real_t T_ref  = 110.4;
         constexpr real_t mu_ref = 1.0e-3;
         const real_t T = data[T_wm][i];
-        return mu_ref*pow(T, real_t(1.5))/(T_ref + T);
+        return mu_ref*pow(T, real_t(1.5))/(T_ref + T); 
     }, spade::ode::xplicit);
     
     const real_t p_F = 101325.0;

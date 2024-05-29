@@ -63,49 +63,49 @@ namespace spade::ode
         const auto& device = sys.device();
         
         constexpr int num_vars = osystem_t::variable_list::size();
-        ctrs::array<real_t, num_vars> eps, eps_i;
         
-        // dispatch::shared_t shdata(eps_i, eps);
+        auto rng2 = dispatch::ranges::make_range(0UL, instances);
         
-        // auto inner_range = dispatch::ranges::make_range({0UL, mesh_size}, device);
-        // auto outer_range = dispatch::ranges::make_range({0UL, instances}, device);
-        // dispatch::threads_t g_threads(inner_range);
-        
-        // auto solve = [=] _sp_hybrid (const std::size_t& i_inst, const dispatch::threads_t& thrds) mutable
-        // {
-        //     auto& eps_ini = data[0_c];
-        //     auto& eps_cur = data[1_c];
-            
-        //     auto buf = img.get_buffer(inst);
-            
-        //     if (thrds.isroot()) eps_cur = real_t(0.0);
-        //     if (thrds.isroot()) eps_ini = real_t(0.0);
-            
-        //     thrds.do([&](const int iw)
-        //     {
+        auto solve = [=] _sp_hybrid (const std::size_t& i_inst) mutable
+        {
+            auto buf = img.get_buffer(i_inst);
+            int its = 0;
+            while(its++ < params.max_its())
+            {
+                // Newton Method:
+                // x_{n+1} = x_{n} - J^{-1}(x_{n})*f(x_{n})
                 
-        //     });
-            
-            
-            
-        //     thrds.sync();
-            
-        //     int its = 0;
-        //     while(its++ < params.max_its())
-        //     {
-        //         // Newton Method:
-        //         // x_{n+1} = x_{n} - J^{-1}(x_{n})*f(x_{n})
+                //First, update all of the algebraic relations:
                 
-        //         //First, update all of the algebraic relations:
+                for (int i = 0; i < mesh_size; ++i)
+                {
+                    algs::static_for<0, vars_t::size()>([&](const auto& jj)
+                    {
+                        constexpr static int j = jj.value;
+                        using sym_t       = typename vars_t::elem<j>;
+                        const auto& expr  = get_expression(sym_t(), expressions);
+                        
+                        // If expr is an ODE, this gives the boundary conditions.
+                        // If not an ODE, gives the kind of expression that expr is (explicit, algebraic, etc)
+                        const auto spec      = expr.specifier;
+                        const auto mesh_sym  = sys.mesh_symbol();
+                        
+                        //Initialize the solution with linear initial guess
+                        if constexpr (!is_ode<decltype(spec)>)
+                        {
+                            const real_t oldv = buf[mesh_sym][i];
+                            const real_t newv = expr(i_inst, i, buf);
+                            
+                        }
+                    });
+                }
                 
                 
-        //         //Need some kind of check
-        //     }
-        // };
+                //Need some kind of check
+            }
+        };
         
-        // dispatch::kernel_t k_solve(inner, shdata);
-        
-        dispatch::execute(rng, init);
-        // dispatch::execute(outer_range, g_threads, k_solve);
+        dispatch::execute(rng,  init);
+        dispatch::execute(rng2, solve, sys.device());
     }
 }
