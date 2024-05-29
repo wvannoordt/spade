@@ -55,7 +55,6 @@ namespace spade::grid
     class cartesian_grid_t
     {
         public:
-            
             using dtype              = coord_t::coord_type;
             using coord_type         = coord_t::coord_type;
             using coord_sys_type     = coord_t;
@@ -65,6 +64,8 @@ namespace spade::grid
             using dependent_type     = grid_dependent_t;
             using blocks_type        = block_arrangement_t;
             using array_desig_type   = array_descriptor_t;
+            
+            using slice_type         = cartesian_grid_t<typename array_descriptor_t::change_size<2>, coord_t, typename block_arrangement_t::slice_type, par_group_t>;
             
             using geometry_type      = grid_geometry_t<coord_t, array_descriptor_t::size(), device::shared_vector>;
             using geomety_image_type = grid_geometry_t<coord_t, array_descriptor_t::size(), utils::const_vec_image_t>;
@@ -96,9 +97,9 @@ namespace spade::grid
             }
             
             //deleted until I can figure out this dependency thing
-            cartesian_grid_t(const cartesian_grid_t&) = delete;
+            // cartesian_grid_t(const cartesian_grid_t&) = delete;
             
-            cartesian_grid_t(){}            
+            cartesian_grid_t(){}
             
             void compute_geometry()
             {

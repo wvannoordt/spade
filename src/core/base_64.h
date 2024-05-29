@@ -289,7 +289,7 @@ namespace spade::io::detail
         
         std::stringstream ssv, ssc;
         unsigned int vbytes = data_raw.size()  * sizeof(data_t) / num_vars;
-        unsigned int cbytes = coord_raw.size() * sizeof(data_t);
+        unsigned int cbytes = coord_raw.size() * sizeof(coor_t);
         stream_base_64(ssv, &vbytes, 1);
         stream_base_64(ssc, &cbytes, 1);
         std::string sc = ssc.str();

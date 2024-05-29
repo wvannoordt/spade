@@ -339,7 +339,10 @@ namespace spade::geom
         fh.next_line();
         std::string j0, j1;
         std::size_t num_points;
-        fh.parse(j0, num_points, j1);
+        if (!fh.try_parse(j0, num_points, j1))
+        {
+            throw except::sp_exception("Failed to read number of VTK points on line " + std::to_string(fh.get_line_num()) + " of file " + fname);
+        }
         
         surf.bbox.min(0) =  1e50;
         surf.bbox.min(1) =  1e50;
@@ -379,7 +382,11 @@ namespace spade::geom
         
         std::size_t num_faces, junk;
         fh.next_line();
-        fh.parse(j0, num_faces, junk);
+        if (!fh.try_parse(j0, num_faces, junk))
+        {
+            throw except::sp_exception("Failed to read number of VTK faces on line " + std::to_string(fh.get_line_num()) + " of file " + fname);
+        }
+        
 
         uint_t fsiz;
         face_t floc;

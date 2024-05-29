@@ -34,6 +34,8 @@
 
 #include "sampling/sample_operator.h"
 #include "sampling/sample_clouds.h"
+#include "sampling/array_slice.h"
+#include "sampling/collapse_array.h"
 
 #include "omni/omni.h"
 #include "omni/prefab.h"

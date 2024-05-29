@@ -22,6 +22,8 @@ namespace spade::utils
         }
         bool eof() const { return f_eof; }
         
+        std::size_t get_line_num() const { return line_num; }
+        
         const std::string& next_line()
         {
             ++line_num;

@@ -190,6 +190,37 @@ namespace spade::amr
             this->create_neighbor(candidate, [](const auto&){return true;}, periodic_neighs);
         }
         
+        amr_refine_t get_refine_type() const
+        {
+            amr_refine_t output = false;
+            if (this->terminal()) return output;
+            for (int d = 0; d < grid_dim; ++d)
+            {
+                for (const auto& node: this->subnodes)
+                {
+                    if ((node.amr_position.max(d) < amr_position.max(d) )|| (node.amr_position.min(d) > amr_position.min(d))) output[d] = true;
+                }
+            }
+            return output;
+        }
+        
+        void assimilate(const amr_node_t& other_node)
+        {
+            const auto refine_type = other_node.get_refine_type();
+            if (ctrs::any(refine_type))
+            {
+                this->refine_node(refine_type);
+                if (subnodes.size() != other_node.subnodes.size())
+                {
+                    throw except::sp_exception("impossible error in amr_node::assimilate!");
+                }
+                for (int i = 0; i < subnodes.size(); ++i)
+                {
+                    subnodes[i].assimilate(other_node.subnodes[i]);
+                }
+            }
+        }
+        
         template <typename condition_t>
         void remove_neighbors(const condition_t& condition)
         {

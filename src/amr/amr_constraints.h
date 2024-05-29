@@ -17,5 +17,13 @@ namespace spade::amr
             }
             return out;
         };
+        
+        const static auto none = [](const auto& node, const auto& neigh)
+        {
+            using out_t = typename utils::remove_all<decltype(node)>::type::amr_refine_t;
+            const auto& neigh_node = neigh.endpoint.get();
+            out_t out = false;
+            return out;
+        };
     }
 }
