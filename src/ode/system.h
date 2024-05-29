@@ -121,11 +121,11 @@ namespace spade::ode
         using const_image_type = system_image_t<utils::const_vec_image_t<data_t>, data_t, mesh_t, variables_t>;
         image_type image()
         {
-            return image_type{utils::make_vec_image(mesh.xs), utils::make_vec_image(data)};
+            return image_type{utils::make_vec_image(mesh.xs.data(devc)), utils::make_vec_image(data)};
         }
         const const_image_type image() const
         {
-            return const_image_type{utils::make_vec_image(mesh.xs), utils::make_vec_image(data)};
+            return const_image_type{utils::make_vec_image(mesh.xs.data(devc)), utils::make_vec_image(data)};
         }
     };
 }

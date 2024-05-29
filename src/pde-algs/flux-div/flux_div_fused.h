@@ -158,7 +158,25 @@ namespace spade::pde_algs
         
         // Create a grid-range over the number of tiles in each block and the number of blocks
         constexpr int lb_fs = 1;
-        const auto outer_range = dispatch::ranges::make_range(0, ntiles[0], 0, ntiles[1]*ntiles[2], 0, int(grid.get_num_local_blocks())/lb_fs);
+        
+        using dev_t = typename sol_arr_t::device_type;
+        int p_i0 = 0;
+        int p_i1 = 1;
+        int p_i2 = 2;
+        
+        if ((grid.get_num_local_blocks() > 32000) && device::is_gpu<dev_t>)
+        {
+            int p_i0 = 1;
+            int p_i1 = 2;
+            int p_i2 = 0;
+        }
+        
+        ctrs::array<int, 3> orange_bnd;
+        orange_bnd[p_i0] = ntiles[0];
+        orange_bnd[p_i1] = ntiles[1]*ntiles[2];
+        orange_bnd[p_i2] = int(grid.get_num_local_blocks());
+        
+        const auto outer_range = dispatch::ranges::make_range(0, orange_bnd[0], 0, orange_bnd[1], 0, orange_bnd[2]);
         
         for (int lb_par = 0; lb_par < lb_fs; ++lb_par)
         {
@@ -166,17 +184,17 @@ namespace spade::pde_algs
             auto loop = [=] _sp_hybrid (const ctrs::array<int, 3>& outer_raw, const threads_type& threads, shmem_type& shmem) mutable
             {
                 // Compute the tile index for this thread block
-                int tile_id_1d = outer_raw[1];
+                int tile_id_1d = outer_raw[p_i1];
                 auto& shmem_vec = shmem[0_c];
                 ctrs::array<int, 3> tile_id;
-                tile_id[0]  = outer_raw[0];
+                tile_id[0]  = outer_raw[p_i0];
                 tile_id[1]  = tile_id_1d % ntiles[1];
                 tile_id_1d -= tile_id[1];
                 tile_id_1d /= ntiles[1];
                 tile_id[2]  = tile_id_1d;
                 
                 // Block index
-                int lb = lb_fs*outer_raw[2] + lb_par;
+                int lb = outer_raw[p_i2];
                 
                 // 1 / (grid spacing) for differentiation
                 const auto inv_dx_native = grid_img.get_inv_dx(lb);
