@@ -113,6 +113,7 @@ namespace spade::viscous_laws
             using base_t::get_beta;
             using base_t::get_diffuse;
             using base_t::info_type;
+		    using result_type = visc_result_t<value_type>;
             
             power_law_t(const dtype& mu_ref_in, const dtype& T_ref_in, const dtype& power_in, const dtype& prandtl_in)
             : mu_ref{mu_ref_in}, T_ref{T_ref_in}, power{power_in}, prandtl{prandtl_in}
@@ -132,6 +133,56 @@ namespace spade::viscous_laws
             {
                 return this->get_visc(q)/prandtl;
             }
+
+		    _sp_hybrid result_type get_all(const auto& q) const
+            {
+				return result_type{this->get_visc(q), this->get_beta(q), this->get_diffuse(q)};
+			}
+    };
+
+	template <typename dtype> struct sutherlands_law_t
+    : public visc_law_interface_t<power_law_t<dtype>, omni::info_list_t<omni::info::value>>
+    {
+            typedef dtype value_type;
+            dtype C1=1.45151376745308E-6;
+            dtype T_ref=110.4;
+            dtype power=1.5;
+            dtype prandtl;
+
+            using base_t = visc_law_interface_t<power_law_t<dtype>, omni::info_list_t<omni::info::value>>;
+            using base_t::get_visc;
+            using base_t::get_beta;
+            using base_t::get_diffuse;
+            using base_t::info_type;
+		    using result_type = visc_result_t<value_type>;
+            
+		    sutherlands_law_t(const dtype& C1_in, const dtype& T_ref_in, const dtype& power_in, const dtype& prandtl_in)
+            : C1{C1_in}, T_ref{T_ref_in}, power{power_in}, prandtl{prandtl_in}
+            { }
+
+			sutherlands_law_t(const dtype& prandtl_in)
+            : prandtl{prandtl_in}
+            { }
+            
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_visc(const state_t& q) const
+            {
+                return C1*std::pow(q.T(), power) / (T_ref + q.T());
+            }
+            
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_beta(const state_t& q) const
+            {
+                return -0.66666666667*this->get_visc(q);
+            }
+            
+            template <fluid_state::is_state_type state_t> _sp_hybrid dtype get_diffuse(const state_t& q) const
+            {
+                return this->get_visc(q)/prandtl;
+            }
+
+		    _sp_hybrid result_type get_all(const auto& q) const
+            {
+				return result_type{this->get_visc(q), this->get_beta(q), this->get_diffuse(q)};
+			}
     };
     
     template <typename state_t, typename visc_func_t, typename beta_func_t, typename cond_func_t> struct udf_t
