@@ -47,15 +47,15 @@ namespace spade::ode
                 const auto mesh_sym  = sys.mesh_symbol();
                 
                 //Initialize the solution with linear initial guess
-                if constexpr (is_ode<decltype(spec)>)
-                {
-                    const auto m_b   = detail::lin_coeffs(spec, buf[mesh_sym][0], buf[mesh_sym].back());
-                    buf[sym_t()][iw] = m_b[0] + buf[mesh_sym][iw]*m_b[1];
-                }
-                else
-                {
-                    buf[sym_t()][iw] = expr.func(inst, iw, buf);
-                }
+                // if constexpr (is_ode<decltype(spec)>)
+                // {
+                //     const auto m_b   = detail::lin_coeffs(spec, buf[mesh_sym][0], buf[mesh_sym].back());
+                //     buf[sym_t()][iw] = m_b[0] + buf[mesh_sym][iw]*m_b[1];
+                // }
+                // else
+                // {
+                //     buf[sym_t()][iw] = expr.func(inst, iw, buf);
+                // }
             });
         };
         
@@ -94,11 +94,28 @@ namespace spade::ode
                         if constexpr (!is_ode<decltype(spec)>)
                         {
                             const real_t oldv = buf[mesh_sym][i];
-                            const real_t newv = expr(i_inst, i, buf);
-                            
+                            const real_t newv = expr.func(i_inst, i, buf);
                         }
                     });
                 }
+                
+                algs::static_for<0, vars_t::size()>([&](const auto& jj)
+                {
+                    constexpr static int j = jj.value;
+                    using sym_t       = typename vars_t::elem<j>;
+                    const auto& expr  = get_expression(sym_t(), expressions);
+                    
+                    // If expr is an ODE, this gives the boundary conditions.
+                    // If not an ODE, gives the kind of expression that expr is (explicit, algebraic, etc)
+                    const auto spec      = expr.specifier;
+                    const auto mesh_sym  = sys.mesh_symbol();
+                    
+                    //Initialize the solution with linear initial guess
+                    if constexpr (is_ode<decltype(spec)>)
+                    {
+                        
+                    }
+                });
                 
                 
                 //Need some kind of check

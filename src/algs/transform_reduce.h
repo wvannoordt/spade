@@ -10,6 +10,32 @@
 
 namespace spade::algs
 {
+    template <typename data_t, typename other_t>
+    struct annotated_t
+    {
+        data_t resultm;
+        other_t otherm;
+        
+        data_t  result() const { return resultm; }
+        other_t other()  const { return otherm;  }
+        
+        _sp_hybrid bool operator < (const annotated_t& rhs) const
+        {
+            return resultm < rhs.resultm;
+        }
+        
+        _sp_hybrid bool operator > (const annotated_t& rhs) const
+        {
+            return resultm > rhs.resultm;
+        }
+    };
+    
+    template <typename data_t, typename other_t>
+    static _sp_hybrid annotated_t<data_t, other_t> annotate(const data_t& data, const other_t& idx)
+    {
+        return annotated_t<data_t, other_t>{data, idx};
+    }
+    
     const static struct max_t
     {
         template <typename data_t>

@@ -38,12 +38,12 @@ int main(int argc, char** argv)
         return mu_ref*pow(T, real_t(1.5))/(T_ref + T); 
     }, spade::ode::xplicit);
     
-    const real_t p_F = 101325.0;
     const real_t rgas  = 287.15;
     spade::ode::expression_t rho_expr(rho_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
         const int i = i_wall;
-        return p_F/(rgas*data[T_wm][i]);
+        const real_t rho_F = data[rho_wm].last();
+        return rho_F*(data[T_wm].last()/data[T_wm][i]);
     }, spade::ode::xplicit);
     
     spade::ode::expression_t ystar_expr(ystar_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
@@ -67,7 +67,6 @@ int main(int argc, char** argv)
     }, spade::ode::xplicit);
     
     //So on and so forth
-    const real_t u_F = 69.54;
     spade::ode::expression_t u_expr (u_wm, [=] _sp_hybrid (const std::size_t i_inst, const int i_wall, const buffer_type& data)
     {
         const int i = i_wall;
@@ -85,7 +84,7 @@ int main(int argc, char** argv)
         real_t rhs  = lhs0*data[u_wm][i-1] + lhs1*data[u_wm][i] + lhs2*data[u_wm][i+1];
         
         return spade::ode::tridiag(lhs0, lhs1, lhs2, rhs);
-    }, spade::ode::make_bcs(spade::ode::dirichlet(0.0), spade::ode::dirichlet(u_F)));
+    }, spade::ode::make_bcs(spade::ode::dirichlet, spade::ode::dirichlet));
     
     const real_t T_F   = 300.0;
     const real_t gamma = 1.4;
@@ -109,10 +108,20 @@ int main(int argc, char** argv)
         real_t rhs  = lhs0*data[T_wm][i-1] + lhs1*data[T_wm][i] + lhs2*data[T_wm][i+1];
         
         return spade::ode::tridiag(lhs0, lhs1, lhs2, rhs);
-    }, spade::ode::make_bcs(spade::ode::neumann(0.0), spade::ode::dirichlet(T_F))); //Note that we need to adjust the boundary condition to be e.g. a lambda
+    }, spade::ode::make_bcs(spade::ode::zerograd, spade::ode::dirichlet)); //Note that we need to adjust the boundary condition to be e.g. a lambda
     
     auto expressions = spade::ode::make_expressions(rho_expr, mu_expr, ystar_expr, mut_expr, u_expr, T_expr);
     //The order in which these expressions are presented is the order in which they are solved
+    
+    const real_t uF = 69.54;
+    const real_t TF = 300.0;
+    system.set_bcs(
+        u_wm, [=] _sp_hybrid (const std::size_t& i_inst) { return 69.54; },
+        u_wm, [=] _sp_hybrid (const std::size_t& i_inst) { return 0.0;   },
+        u_wm, [=] _sp_hybrid (const std::size_t& i_inst) { return 69.54; },
+        u_wm, [=] _sp_hybrid (const std::size_t& i_inst) { return 0.0;   },
+        );
+    
     spade::ode::solve_bvp(system, expressions, spade::utils::converge_crit_t{1.0e-7, 100});
     
     std::ofstream sol("out.dat");
