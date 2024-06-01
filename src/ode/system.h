@@ -19,6 +19,7 @@ namespace spade::ode
         constexpr static int num_buffers = 1 + variable_list::size();
         
         using buf_type = container_img_t;
+        int csize;
         ctrs::array<buf_type, num_buffers> buffers;
         
         template <sym::is_symbol sym_t> _sp_hybrid

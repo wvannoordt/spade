@@ -102,7 +102,8 @@ namespace spade::io::detail
         range2.upper.i()++;
         range2.upper.j()++;
         range2.upper.k()++;
-        int the_lb = lb_glob.value;
+        int the_lb      = grid.get_partition().to_local(lb_glob).value;
+        int the_lb_glob = lb_glob.value;
         range.lower.lb() = 0;
         range.upper.lb() = num_vars;
         
@@ -147,7 +148,7 @@ namespace spade::io::detail
         {
             auto i = iii;
             int iv = i.lb();
-            i.lb() = the_lb;
+            i.lb() = the_lb_glob;
             
             ctrs::array<int, 3> offst(0,0,0);
             grid::node_idx_t inode = grid::cell_to_node(i, offst);

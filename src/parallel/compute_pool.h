@@ -10,6 +10,7 @@
 #include "mpi.h"
 #include "core/except.h"
 #include "core/vec_image.h"
+#include "core/to_chars.h"
 #include "dispatch/copy.h"
 #include "dispatch/device_type.h"
 #include "dispatch/device_vector.h"
@@ -257,6 +258,31 @@ namespace spade::parallel
             return sum;
         }
         
+        template <typename data_t, typename binary_t>
+        requires (!spade::utils::variant_contains<data_t, communicable_t> && std::is_trivially_copyable<data_t>::value)
+        auto thread_reduce(const data_t& local_val, const binary_t& bin_op) const
+        {
+            auto raw = utils::to_chars(local_val);
+            using chars_t = decltype(raw);
+            std::vector<chars_t> stuff(this->num_threads());
+            constexpr int nc = chars_t::size();
+            for (int i = 0; i < nc; ++i)
+            {
+                this->post(raw[i]);
+                for (int pp = 0; pp < this->num_threads(); ++pp)
+                {
+                    char byt   = std::get<char>(env.buffer[pp]);
+                    stuff[pp][i] = byt;
+                }
+            }            
+            data_t sum = utils::from_chars<data_t>(stuff[0]);
+            for (int pp = 1; pp < this->num_threads(); ++pp)
+            {
+                sum = bin_op(sum, utils::from_chars<data_t>(stuff[pp]));
+            }
+            return sum;
+        }
+        
         template <typename data_t>
         data_t thread_broadcast(const int thread_id, const data_t value) const
         {
@@ -268,6 +294,11 @@ namespace spade::parallel
         auto reduce(const data_t& val, const binary_t& bin_op) const
         {
             data_t reduc_val = this->thread_reduce(val, bin_op);
+            if (this->num_nodes() > 1)
+            {
+                throw except::sp_exception("group reduce not yet supported for multiple nodes");
+            }
+            /*
             auto   dtype     = get_mpi_type(reduc_val);
             auto   base      = this->base_id();
             data_t output;
@@ -279,8 +310,10 @@ namespace spade::parallel
                 mpi_check(MPI_Allgather(&reduc_val, 1, dtype, &alldata[0], 1, dtype, this->comm));
                 output = alldata[0];
                 for (int pp = 1; pp < alldata.size(); ++pp) output = bin_op(output, alldata[pp]);
-            } 
-            return this->thread_broadcast(base, output);
+            }
+            return this->thread_broadcast(something something...);
+            */
+            return reduc_val;
         }
         
         template <typename data_t>
